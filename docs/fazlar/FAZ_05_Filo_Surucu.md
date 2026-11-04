@@ -1,0 +1,48 @@
+# FAZ 5 — Filo ve Sürücü Yönetimi
+
+**Amaç:** Araç/çekici/dorse envanteri, bakım-muayene-sigorta-lastik-yakıt takibi; sürücü ve
+belgeleri; atama ve harcırah. Giderler finansa, müsaitlik/belge dispatch'e beslenir.
+
+**Bağımlılık:** Faz 2 (gider→finans), Faz 1, X2 (hatırlatma). **Faz 5A** (görev 1–6, 8) Faz 4'ten önce; **Faz 5B**
+(görev 7 ve dispatch entegrasyonu) Faz 4 ile birlikte yapılır. | **Çıktı:** Filo+sürücü kütüğü ve
+operasyona hazır müsaitlik/belge verisi.
+
+---
+
+## Kapsam / Görevler
+
+1. **Araç/Çekici & Dorse:** `Vehicle`, `Trailer` — plaka, tip, kapasite (ton/m³/palet), yakıt tipi,
+   sahiplik (öz mal/kiralık/taşeron), durum (aktif/bakımda/hariç).
+2. **Belge & Hatırlatma:** muayene, zorunlu/kasko sigorta, K/U-ETT belgesi, egzoz, ADR; bitiş
+   tarihleri + **otomatik hatırlatma/uyarı** (süresi dolan belge → uyarı + atama engeli opsiyonu).
+3. **Bakım/Onarım:** periyodik bakım planı, arıza/onarım kaydı, maliyet → gider/finans.
+4. **Lastik:** takım/konum, km, değişim; maliyet.
+5. **Yakıt:** `FuelLog` (litre, tutar, km, istasyon/kart) → tüketim (L/100km) + gider. Yakıt kartı
+   entegrasyon kancası (Faz 8).
+6. **Sürücü:** `Driver` — kişi, ehliyet sınıfı/bitiş, SRC, psikoteknik, ADR sertifikası, sağlık,
+   durum; belge hatırlatma.
+7. **Atama & Harcırah:** `DriverAssignment` (sürücü↔araç↔sefer), çalışma/dinlenme süresi (tahograf
+   opsiyonel), **harcırah/avans** hesabı → finansa (sürücü carisi/masraf).
+8. **Müsaitlik:** araç/sürücü takvimi; dispatch'e "uygun kaynak" sorgusu.
+
+## İş Kuralları
+- Belgesi dolmuş araç/sürücü için atama uyarısı/engeli (tenant ayarı).
+- Yakıt tüketim anomali uyarısı (ortalamanın çok üstü).
+- Harcırah onay akışı (opsiyonel, finans onayına bağlanabilir).
+
+## Kabul Kriterleri
+- [ ] Araç/dorse/sürücü CRUD + belge bitiş tarihleri ve hatırlatma listesi çalışır.
+- [ ] (5B) Belgesi geçersiz kaynak dispatch'te uyarı/engel üretir (Faz 4 ile entegre).
+- [ ] Bakım/lastik/yakıt kaydı ilgili gideri finansa (araç maliyetine) yazar.
+- [ ] Yakıt tüketimi (L/100km) ve araç başına maliyet raporlanır.
+- [ ] (5B) Sürücü ataması çakışma kontrollü; harcırah sürücü carisine ALACAK olarak düşer.
+
+## ERP Referansı
+Araç/tedarikçi/şoför kütükleri: `SupplierTruckController`, `SupplierChauffeurController`,
+`ExpertReportTruck*` modelleri (araç + barkod + masraf + finans). Bakım/gider deseni için
+`ProductionExpenses`/`ExpenseTypes`.
+
+## Açık Sorular
+- Tahograf/sürüş-dinlenme süresi mevzuat takibi MVP'de mi? (Öneri: temel kayıt MVP; mevzuat
+  denetimi sonraki faz.)
+- Araç kiralama/taşeron araç maliyet modeli (günlük/km/sefer) nasıl? (Faz 3 tarife ile hizalanır.)

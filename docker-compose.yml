@@ -1,0 +1,15 @@
+# Yalnız yerel geliştirme içindir.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: blackrose
+      POSTGRES_USER: blackrose
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-blackrose}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:

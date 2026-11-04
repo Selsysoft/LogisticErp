@@ -1,0 +1,4 @@
+app:
+  tenancy:
+    base-domain: blackrose.test
+    admin-api-key: test-admin-key
