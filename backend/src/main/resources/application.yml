@@ -30,6 +30,10 @@ logging:
       console: logstash
 
 app:
+  finance:
+    tcmb:
+      enabled: ${TCMB_ENABLED:true}
+      url: ${TCMB_URL:https://www.tcmb.gov.tr/kurlar/today.xml}
   tenancy:
     base-domain: ${TENANCY_BASE_DOMAIN:blackrose.local}
   security:

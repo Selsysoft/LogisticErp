@@ -1,4 +1,7 @@
 app:
+  finance:
+    tcmb:
+      enabled: false
   tenancy:
     base-domain: blackrose.test
   security:

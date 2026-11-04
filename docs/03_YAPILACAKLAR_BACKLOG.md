@@ -24,19 +24,19 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - ✅ B6 Kullanıcı yönetimi UI
 
 ## EPİK C — Finans Çekirdeği (Faz 2) — P0
-- ⬜ C1 Currency + ExchangeRate + TCMB kur servisi
-- ⬜ C2 Cari hesap + hareket + bakiye (çok döviz, şube kırılımı) + ekstre
-- ⬜ C3 Banka/BankAccount/BankTransaction + transfer + ekstre
-- ⬜ C4 Kasa/CashTransaction
-- ⬜ C5 Çek/Senet + durum makinesi + hareket + eşleştirme
-- ⬜ C6 Ödeme + günlük ödeme raporu (şube-gruplu çoklu seçim)
-- ⬜ C7 Tahsilat + günlük tahsilat raporu + müşteri kredi özeti
-- ⬜ C8 Ödeme planlama + onay akışı + ısı haritası + döviz yoğunluk eşikleri + dashboard
-- ⬜ C9 ExpenseType/ExpenseItem
-- ⬜ C10 Finans raporları (ekstre, yaşlandırma, günlük)
-- ⬜ C11 **Uçtan uca finans senaryo testi**
+- ✅ C1 Currency + ExchangeRate + TCMB kur servisi
+- ✅ C2 Cari hesap + hareket + bakiye (çok döviz, şube kırılımı) + ekstre
+- ✅ C3 Banka/BankAccount/BankTransaction + transfer + ekstre
+- ✅ C4 Kasa/CashTransaction
+- ✅ C5 Çek/Senet + durum makinesi + hareket + eşleştirme
+- ✅ C6 Ödeme + günlük ödeme raporu (şube-gruplu çoklu seçim)
+- ✅ C7 Tahsilat + günlük tahsilat raporu + müşteri kredi özeti
+- ✅ C8 Ödeme planlama + onay akışı + ısı haritası + döviz yoğunluk eşikleri + dashboard
+- ✅ C9 ExpenseType/ExpenseItem
+- ✅ C10 Finans raporları (ekstre, yaşlandırma, günlük)
+- ✅ C11 **Uçtan uca finans senaryo testi**
 - ⬜ C12 (P1) ERP'den açılış bakiyesi import aracı
-- ⬜ C13 PurchaseInvoice (tedarikçi/taşeron faturası) → cari + ödeme planı
+- ✅ C13 PurchaseInvoice (tedarikçi/taşeron faturası) → cari + ödeme planı
 - ⬜ C14 (P2) Kredi/finansman modülü (faz ataması bekliyor)
 
 ## EPİK D — CRM + Fiyatlandırma (Faz 3) — P0

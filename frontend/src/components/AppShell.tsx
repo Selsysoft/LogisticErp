@@ -55,7 +55,9 @@ export function AppShell() {
           key={item.path}
           component={RouterLink}
           to={item.path}
-          selected={location.pathname === item.path}
+          selected={
+            location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
+          }
           onClick={() => setOpen(false)}
         >
           <ListItemText primary={t(item.label)} />

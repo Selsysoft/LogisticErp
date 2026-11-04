@@ -39,8 +39,13 @@ function isPublic(path: string) {
   return PUBLIC_AUTH_PATHS.some((prefix) => path.startsWith(prefix));
 }
 
-async function send(method: Method, path: string, body?: unknown): Promise<Response> {
-  const headers: Record<string, string> = { Accept: "application/json" };
+async function send(
+  method: Method,
+  path: string,
+  body?: unknown,
+  extraHeaders?: Record<string, string>,
+): Promise<Response> {
+  const headers: Record<string, string> = { Accept: "application/json", ...extraHeaders };
   if (body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
@@ -83,11 +88,16 @@ export function refreshSession(): Promise<boolean> {
   return refreshInFlight;
 }
 
-export async function apiRequest<T>(method: Method, path: string, body?: unknown): Promise<T> {
-  let response = await send(method, path, body);
+export async function apiRequest<T>(
+  method: Method,
+  path: string,
+  body?: unknown,
+  headers?: Record<string, string>,
+): Promise<T> {
+  let response = await send(method, path, body, headers);
   if (response.status === 401 && !isPublic(path) && session.getRefreshToken()) {
     if (await refreshSession()) {
-      response = await send(method, path, body);
+      response = await send(method, path, body, headers);
     } else {
       session.clear();
       sessionExpiredListener();

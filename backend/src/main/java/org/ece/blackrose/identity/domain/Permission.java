@@ -9,6 +9,7 @@ public enum Permission {
   BRANCH_VIEW("organization"),
   BRANCH_MANAGE("organization"),
   FINANCE_VIEW("finance"),
+  FINANCE_MANAGE("finance"),
   FINANCE_PAYMENT_CREATE("finance"),
   FINANCE_APPROVE("finance"),
   CRM_VIEW("crm"),
