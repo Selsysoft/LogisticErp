@@ -30,12 +30,12 @@ class TenantProvisioningIT extends AbstractIntegrationTest {
   }
 
   @Test
-  void createsSchemaAndAppliesAllMigrations() throws Exception {
+  void createsSchemaAppliesMigrationsAndInvitesOwner() throws Exception {
     createTenant("gamma-lojistik");
 
     assertThat(tenants.findByCode("gamma-lojistik").orElseThrow().getStatus())
         .isEqualTo(TenantStatus.ACTIVE);
-    mvc.perform(get("/api/v1/organization/branches").with(tenant("gamma-lojistik")))
+    mvc.perform(get("/api/v1/organization/branches").with(asOwner("gamma-lojistik")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalElements").value(0));
   }
@@ -60,33 +60,36 @@ class TenantProvisioningIT extends AbstractIntegrationTest {
 
     assertThat(tenants.findByCode("omega").orElseThrow().getStatus())
         .isEqualTo(TenantStatus.FAILED);
-    mvc.perform(get("/api/v1/organization/branches").with(tenant("omega")))
+    mvc.perform(
+            post("/api/v1/auth/login")
+                .with(tenant("omega"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginJson(ownerEmail("omega"), PASSWORD, null)))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.code").value("TENANT_NOT_ACTIVE"));
 
     doCallRealMethod().when(migrator).migrate(anyString());
-    postTenant("omega").andExpect(status().isCreated());
-    mvc.perform(get("/api/v1/organization/branches").with(tenant("omega")))
+    createTenant("omega");
+    mvc.perform(get("/api/v1/organization/branches").with(asOwner("omega")))
         .andExpect(status().isOk());
   }
 
   @Test
-  void adminEndpointRequiresValidKey() throws Exception {
+  void adminEndpointRequiresSaasAdmin() throws Exception {
+    createTenant("zeta");
+
     mvc.perform(
             post("/api/v1/admin/tenants")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(tenantJson("sigma")))
         .andExpect(status().isUnauthorized())
-        .andExpect(jsonPath("$.code").value("ADMIN_KEY_INVALID"));
+        .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    mvc.perform(
+            post("/api/v1/admin/tenants")
+                .with(asOwner("zeta"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(tenantJson("sigma")))
+        .andExpect(status().isUnauthorized());
     assertThat(tenants.findByCode("sigma")).isEmpty();
-  }
-
-  private org.springframework.test.web.servlet.ResultActions postTenant(String code)
-      throws Exception {
-    return mvc.perform(
-        post("/api/v1/admin/tenants")
-            .header("X-Admin-Key", "test-admin-key")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(tenantJson(code)));
   }
 }

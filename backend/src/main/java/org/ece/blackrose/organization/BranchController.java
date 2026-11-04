@@ -6,6 +6,7 @@ import org.ece.blackrose.organization.BranchDtos.BranchResponse;
 import org.ece.blackrose.organization.BranchDtos.CreateBranchRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,12 +27,14 @@ public class BranchController {
   }
 
   @GetMapping
+  @PreAuthorize("hasAuthority('BRANCH_VIEW')")
   PageResponse<BranchResponse> list(Pageable pageable) {
     return PageResponse.from(branches.findAll(pageable), mapper::toResponse);
   }
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
+  @PreAuthorize("hasAuthority('BRANCH_MANAGE')")
   BranchResponse create(@Valid @RequestBody CreateBranchRequest request) {
     return mapper.toResponse(branches.save(new Branch(request.code(), request.name())));
   }

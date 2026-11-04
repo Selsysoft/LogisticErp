@@ -1,4 +1,8 @@
 app:
   tenancy:
     base-domain: blackrose.test
-    admin-api-key: test-admin-key
+  security:
+    jwt-secret: test-only-jwt-secret-with-at-least-32-bytes
+    totp-key: test-only-totp-key-with-at-least-32-bytes
+    bootstrap-admin-email: saas@blackrose.test
+    bootstrap-admin-password: Test-Admin-12345

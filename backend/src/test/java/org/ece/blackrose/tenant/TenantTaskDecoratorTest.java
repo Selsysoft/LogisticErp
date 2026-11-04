@@ -18,7 +18,7 @@ class TenantTaskDecoratorTest {
   void carriesTenantToWorkerAndCleansUpAfterwards() throws Exception {
     ExecutorService pool = Executors.newSingleThreadExecutor();
     try {
-      TenantContext.setSchema("tenant_alpha");
+      TenantContext.set("alpha", "tenant_alpha");
       Runnable decorated =
           new TenantTaskDecorator()
               .decorate(() -> assertThat(TenantContext.currentSchema()).contains("tenant_alpha"));

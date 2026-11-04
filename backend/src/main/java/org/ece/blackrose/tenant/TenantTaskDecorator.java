@@ -11,12 +11,12 @@ public class TenantTaskDecorator implements TaskDecorator {
 
   @Override
   public Runnable decorate(Runnable task) {
-    String schema = TenantContext.currentSchema().orElse(null);
+    TenantContext.Current tenant = TenantContext.current().orElse(null);
     Map<String, String> mdc = MDC.getCopyOfContextMap();
     return () -> {
       try {
-        if (schema != null) {
-          TenantContext.setSchema(schema);
+        if (tenant != null) {
+          TenantContext.restore(tenant);
         }
         if (mdc != null) {
           MDC.setContextMap(mdc);

@@ -78,7 +78,7 @@ sıkı denetlenir ve loglanır).
 
 - **Kimlik:** Kullanıcı (tenant'a bağlı) + SaaS yöneticisi (admin şeması). JWT (erişim kısa ömürlü +
   yenileme). Parola BCrypt; 2FA (TOTP) opsiyonel.
-  İzinler JWT'ye gömülmez, her istekte sunucudan (önbellekli) okunur; refresh token veritabanında tutulur, çıkışta
+  İzinler JWT'ye gömülmez, her istekte sunucudan okunur; refresh token veritabanında tutulur, çıkışta
   erişim token'ı `jti` iptal listesine girer.
 - **İzin modeli:** `Permission` (örn. `FINANCE_PAYMENT_CREATE`, `SHIPMENT_DISPATCH`, `FLEET_EDIT`),
   `Role` (izin kümesi), `User` ↔ `Role` (çoklu). Uçlar `@PreAuthorize` ile izin kontrollü.

@@ -38,7 +38,7 @@ class TenantIsolationIT extends AbstractIntegrationTest {
   }
 
   private Void assertSeesOnly(String tenantCode, String branchCode) throws Exception {
-    mvc.perform(get("/api/v1/organization/branches").with(tenant(tenantCode)))
+    mvc.perform(get("/api/v1/organization/branches").with(asOwner(tenantCode)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalElements").value(1))
         .andExpect(jsonPath("$.content[0].code").value(branchCode));

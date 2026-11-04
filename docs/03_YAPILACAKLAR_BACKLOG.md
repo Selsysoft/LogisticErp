@@ -16,12 +16,12 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - ✅ A6 Actuator health/metrics, JSON log, Testcontainers test altyapısı
 
 ## EPİK B — Kimlik & Yetki (Faz 1) — P0
-- ⬜ B1 User/Role/Permission modeli + tohum roller
-- ⬜ B2 JWT erişim+refresh, parola, (ops.) 2FA + JWT tenant claim ve subdomain çakışma kontrolü
-- ⬜ B3 `@PreAuthorize` izin koruması + izin matrisi
-- ⬜ B4 Rol-bazlı açılış + React route guard
-- ⬜ B5 AuditLog (giriş/çıkış/yetki reddi)
-- ⬜ B6 Kullanıcı yönetimi UI
+- ✅ B1 User/Role/Permission modeli + tohum roller
+- ✅ B2 JWT erişim+refresh, parola, (ops.) 2FA + JWT tenant claim ve subdomain çakışma kontrolü
+- ✅ B3 `@PreAuthorize` izin koruması + izin matrisi
+- ✅ B4 Rol-bazlı açılış + React route guard
+- ✅ B5 AuditLog (giriş/çıkış/yetki reddi)
+- ✅ B6 Kullanıcı yönetimi UI
 
 ## EPİK C — Finans Çekirdeği (Faz 2) — P0
 - ⬜ C1 Currency + ExchangeRate + TCMB kur servisi

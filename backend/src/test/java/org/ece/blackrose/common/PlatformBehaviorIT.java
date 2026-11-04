@@ -33,7 +33,7 @@ class PlatformBehaviorIT extends AbstractIntegrationTest {
 
     mvc.perform(
             post("/api/v1/organization/branches")
-                .with(tenant("errors"))
+                .with(asOwner("errors"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"\",\"name\":\"Merkez\"}"))
         .andExpect(status().isBadRequest())
@@ -77,9 +77,14 @@ class PlatformBehaviorIT extends AbstractIntegrationTest {
   }
 
   @Test
+  void metricsRequireSaasAdmin() throws Exception {
+    mvc.perform(get("/actuator/metrics")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
   void defaultAsyncExecutorCarriesTenantContext() throws Exception {
     CompletableFuture<String> seen = new CompletableFuture<>();
-    TenantContext.setSchema("tenant_async");
+    TenantContext.set("async", "tenant_async");
     try {
       executor.execute(() -> seen.complete(TenantContext.currentSchema().orElse("yok")));
     } finally {

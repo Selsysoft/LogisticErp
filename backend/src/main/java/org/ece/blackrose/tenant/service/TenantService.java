@@ -3,6 +3,10 @@ package org.ece.blackrose.tenant.service;
 import java.util.Optional;
 import java.util.Set;
 import org.ece.blackrose.common.error.BusinessException;
+import org.ece.blackrose.identity.domain.AuditEvent;
+import org.ece.blackrose.identity.service.AuditService;
+import org.ece.blackrose.identity.service.UserService;
+import org.ece.blackrose.tenant.TenantContext;
 import org.ece.blackrose.tenant.domain.Tenant;
 import org.ece.blackrose.tenant.domain.TenantStatus;
 import org.ece.blackrose.tenant.repository.TenantRepository;
@@ -24,10 +28,15 @@ public class TenantService {
 
   private final TenantRepository tenants;
   private final TenantMigrator migrator;
+  private final UserService users;
+  private final AuditService audit;
 
-  public TenantService(TenantRepository tenants, TenantMigrator migrator) {
+  public TenantService(
+      TenantRepository tenants, TenantMigrator migrator, UserService users, AuditService audit) {
     this.tenants = tenants;
     this.migrator = migrator;
+    this.users = users;
+    this.audit = audit;
   }
 
   public Tenant create(CreateTenantRequest request) {
@@ -49,6 +58,7 @@ public class TenantService {
     tenant = tenants.save(tenant);
     try {
       migrator.migrate(tenant.getSchemaName());
+      createOwner(tenant, request);
     } catch (RuntimeException ex) {
       log.error("Tenant sağlama başarısız: {}", tenant.getCode(), ex);
       tenant.markFailed();
@@ -59,6 +69,17 @@ public class TenantService {
           "Firma altyapısı oluşturulamadı.");
     }
     tenant.activate();
-    return tenants.save(tenant);
+    tenant = tenants.save(tenant);
+    audit.record(AuditEvent.TENANT_CREATED, tenant.getCode(), null);
+    return tenant;
+  }
+
+  private void createOwner(Tenant tenant, CreateTenantRequest request) {
+    TenantContext.set(tenant.getCode(), tenant.getSchemaName());
+    try {
+      users.ensureOwner(request.ownerEmail(), request.ownerFullName());
+    } finally {
+      TenantContext.clear();
+    }
   }
 }
