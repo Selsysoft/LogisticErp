@@ -1,13 +1,13 @@
 # FAZ 2 — Finans Çekirdeği (ERP'den en yoğun devralınan modül)
 
-> **Uygulama Notu (2026-11-05) — Durum: kabul kriterleri yerelde karşılandı, CI bekliyor**
+> **Uygulama Notu (2026-11-05) — Durum: kabul kriterleri karşılandı**
 >
 > **Yapılanlar:** Cari (çok döviz, TL karşılığı, ekstre), banka ve kasa (hareket, transfer, ekstre), çek/senet yaşam döngüsü,
 > ödeme ve tahsilat, tedarikçi faturası, ödeme planı ve onayı, ısı haritası, yoğunluk eşikleri, özet ekranı, günlük rapor,
 > yaşlandırma, gider tanımları, TCMB kuru ve bunların React ekranları.
 >
-> **Doğrulama:** `mvn verify` 13 birim + 58 entegrasyon testiyle geçti (yerelde Java 17). Java 21 ile yalnız derleme
-> doğrulandı. Frontend lint, 14 test ve build geçti. Tarayıcıda fatura → onaya gönderme → onay → banka ödemesi akışı,
+> **Doğrulama:** GitHub Actions CI (`41927991632`) yeşil: Java 21 ile 13 birim + 58 entegrasyon testi, Spotless, container imajı;
+> frontend lint, format, 14 test ve build. Tarayıcıda fatura → onaya gönderme → onay → banka ödemesi akışı,
 > onay yetkisi farkı, bakiyeler, ısı haritası ve kur listesi denendi; TCMB'den gerçek kur çekildi. Çek/senet, transfer,
 > tahsilat ve rapor ekranları tarayıcıda denenmedi; arka planları entegrasyon testlidir.
 >
