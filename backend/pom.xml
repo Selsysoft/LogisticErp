@@ -21,6 +21,8 @@
         <mapstruct.version>1.6.3</mapstruct.version>
         <springdoc.version>2.8.9</springdoc.version>
         <spotless.version>2.44.5</spotless.version>
+        <!-- Docker 29 ve sonrası eski API istemcisini reddeder; 1.21.3 bu yüzden CI'da çalışmaz. -->
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <dependencies>
