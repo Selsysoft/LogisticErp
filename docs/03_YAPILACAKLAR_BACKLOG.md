@@ -8,7 +8,7 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 ---
 
 ## EPİK A — Altyapı & Çok Kiracılık (Faz 0) — P0
-- 🟦 A1 Monorepo + Spring Boot + React iskelet, kod stili/CI
+- ✅ A1 Monorepo + Spring Boot + React iskelet, kod stili/CI
 - ✅ A2 PostgreSQL + Flyway (admin + tenant şema yolları)
 - ✅ A3 Şema-başına-tenant çözümleme (subdomain; JWT claim Faz 1'de) + TenantContext
 - ✅ A4 Yeni tenant sağlama servisi (şema + migration)

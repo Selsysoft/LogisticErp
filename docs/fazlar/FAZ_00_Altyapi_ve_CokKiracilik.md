@@ -1,14 +1,13 @@
 # FAZ 0 — Altyapı ve Çok Kiracılık (Temel)
 
-> **Uygulama Notu (2026-11-04) — Durum: açık, CI ve Java 21 testi bekliyor**
+> **Uygulama Notu (2026-11-04) — Durum: kabul kriterleri karşılandı**
 >
 > **Yapılanlar:** `backend/` (Spring Boot 3.5, şema-başına-tenant, Flyway, `common` katmanı, Actuator, JSON log),
 > `frontend/` (Vite, React, TypeScript, MUI), `docker-compose.yml`, `backend/Dockerfile`, `.github/workflows/ci.yml`.
 >
-> **Doğrulama:** `mvn verify` 5 birim + 10 entegrasyon testiyle geçti, ancak kurulu JDK nedeniyle
-> `-Djava.version=17` ile çalıştı. Java 21 ile yalnız derleme doğrulandı (`docker build`, testler atlanarak).
-> Frontend lint, test ve build geçti. Gerçek uygulamada health, tenant açma, yeniden başlatma ve Vite üzerinden ping
-> elle denendi. React ekranı tarayıcıda açılmadı. CI hiç çalışmadı (proje henüz git deposu değil).
+> **Doğrulama:** GitHub Actions CI (`41910682514`) yeşil: Java 21 ile 5 birim + 10 entegrasyon testi, Spotless, container
+> imajı; frontend lint, format, test ve build. Gerçek uygulamada health, tenant açma, yeniden başlatma ve Vite üzerinden
+> ping elle denendi. React ekranı tarayıcıda açılmadı.
 >
 > **Sapmalar ve eklemeler:**
 > - Yalıtımı gerçek API üzerinden test etmek için en küçük `Branch` (şube) kaynağı eklendi.
@@ -59,7 +58,7 @@ hata, sayfalama), CI ve test altyapısı.
 - [x] `@Async` işte `TenantContext` korunur; iş bitince bağlam temizlenir — testle doğrulanır.
 - [x] `Money` ile 0,1 + 0,2 = 0,3 (BigDecimal) ve yapılandırılan yuvarlama kuralı testle doğrulanır.
 - [x] Hatalı istek standart `{code,message,details,traceId}` döndürür.
-- [ ] CI yeşil: derleme + migration + testler Testcontainers üzerinde geçer.
+- [x] CI yeşil: derleme + migration + testler Testcontainers üzerinde geçer.
 - [x] Actuator `/health` UP; log'da `traceId` görünür.
 - [x] React iskelet build olur, API istemci bir "ping" ucunu tüketir.
 
