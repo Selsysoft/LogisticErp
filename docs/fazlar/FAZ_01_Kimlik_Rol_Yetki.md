@@ -1,13 +1,13 @@
 # FAZ 1 — Kimlik, Rol ve Yetki (RBAC)
 
-> **Uygulama Notu (2026-11-05) — Durum: kabul kriterleri yerelde karşılandı, CI bekliyor**
+> **Uygulama Notu (2026-11-05) — Durum: kabul kriterleri karşılandı**
 >
 > **Yapılanlar:** Tenant kullanıcıları, roller ve izinler; davetle hesap açma; JWT + dönen refresh token; çıkış ve iptal;
 > TOTP 2FA; hesap kilitleme; AuditLog; ayrı SaaS yöneticisi girişi. Ekranlar: giriş, şifre belirleme/sıfırlama, role göre
 > açılış ve menü, kullanıcı yönetimi, izin matrisi, denetim günlüğü, hesabım.
 >
-> **Doğrulama:** `mvn verify` 9 birim + 32 entegrasyon testiyle geçti (yerelde Java 17). Java 21 ile yalnız derleme
-> doğrulandı. Frontend lint ve 11 test geçti. Tarayıcıda davet kabulü, giriş, rol bazlı açılış, menü filtreleme, yetkisiz
+> **Doğrulama:** GitHub Actions CI (`41919783388`) yeşil: Java 21 ile 9 birim + 32 entegrasyon testi, Spotless, container
+> imajı; frontend lint, format, 11 test ve build. Tarayıcıda davet kabulü, giriş, rol bazlı açılış, menü filtreleme, yetkisiz
 > ekran, kullanıcı daveti, çıkış ve sayfa yenilemede oturum korunması denendi. 2FA ekranı, rol düzenleme ekranı ve şifre
 > sıfırlama ekranı tarayıcıda denenmedi; 2FA ve sıfırlama API tarafında testlidir. Gerçek SMTP gönderimi denenmedi.
 >
