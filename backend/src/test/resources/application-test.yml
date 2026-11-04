@@ -1,4 +1,6 @@
 app:
+  files:
+    root: ./target/test-files
   finance:
     tcmb:
       enabled: false

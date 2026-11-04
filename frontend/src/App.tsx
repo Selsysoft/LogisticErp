@@ -5,6 +5,14 @@ import { useAuthStore } from "./auth/authStore";
 import { LandingRedirect, RequireAuth, RequirePermission } from "./auth/guards";
 import { AppShell, MODULE_ITEMS } from "./components/AppShell";
 import { EmptyState } from "./components/EmptyState";
+import { ContractsPage } from "./pages/crm/ContractsPage";
+import { CrmDashboardPage } from "./pages/crm/CrmDashboardPage";
+import { CrmLayout } from "./pages/crm/CrmLayout";
+import { CustomerDetailPage, CustomersPage } from "./pages/crm/CustomersPage";
+import { OpportunitiesPage } from "./pages/crm/OpportunitiesPage";
+import { PriceCalculatorPage } from "./pages/crm/PriceCalculatorPage";
+import { QuoteDetailPage, QuotesPage } from "./pages/crm/QuotesPage";
+import { TariffDetailPage, TariffsPage } from "./pages/crm/TariffsPage";
 import { AccountDetailPage, AccountsPage } from "./pages/finance/AccountsPage";
 import { DefinitionsPage } from "./pages/finance/DefinitionsPage";
 import { FinanceDashboardPage } from "./pages/finance/FinanceDashboardPage";
@@ -62,19 +70,38 @@ export function App() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="definitions" element={<DefinitionsPage />} />
           </Route>
-          {MODULE_ITEMS.filter((item) => item.permission && item.path !== "/finance").map(
-            (item) => (
-              <Route
-                key={item.path}
-                path={item.path}
-                element={
-                  <RequirePermission permission={item.permission!}>
-                    <ModulePage label={item.label} />
-                  </RequirePermission>
-                }
-              />
-            ),
-          )}
+          <Route
+            path="/crm"
+            element={
+              <RequirePermission permission="CRM_VIEW">
+                <CrmLayout />
+              </RequirePermission>
+            }
+          >
+            <Route index element={<CrmDashboardPage />} />
+            <Route path="customers" element={<CustomersPage />} />
+            <Route path="customers/:id" element={<CustomerDetailPage />} />
+            <Route path="opportunities" element={<OpportunitiesPage />} />
+            <Route path="quotes" element={<QuotesPage />} />
+            <Route path="quotes/:id" element={<QuoteDetailPage />} />
+            <Route path="contracts" element={<ContractsPage />} />
+            <Route path="tariffs" element={<TariffsPage />} />
+            <Route path="tariffs/:id" element={<TariffDetailPage />} />
+            <Route path="pricing" element={<PriceCalculatorPage />} />
+          </Route>
+          {MODULE_ITEMS.filter(
+            (item) => item.permission && item.path !== "/finance" && item.path !== "/crm",
+          ).map((item) => (
+            <Route
+              key={item.path}
+              path={item.path}
+              element={
+                <RequirePermission permission={item.permission!}>
+                  <ModulePage label={item.label} />
+                </RequirePermission>
+              }
+            />
+          ))}
           <Route
             path="/users"
             element={

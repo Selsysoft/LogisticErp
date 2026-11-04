@@ -46,7 +46,8 @@ async function send(
   extraHeaders?: Record<string, string>,
 ): Promise<Response> {
   const headers: Record<string, string> = { Accept: "application/json", ...extraHeaders };
-  if (body !== undefined) {
+  const isForm = body instanceof FormData;
+  if (body !== undefined && !isForm) {
     headers["Content-Type"] = "application/json";
   }
   const token = session.getAccessToken();
@@ -60,7 +61,7 @@ async function send(
   return fetch(`/api/v1${path}`, {
     method,
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: isForm ? (body as FormData) : body === undefined ? undefined : JSON.stringify(body),
   });
 }
 
@@ -88,12 +89,12 @@ export function refreshSession(): Promise<boolean> {
   return refreshInFlight;
 }
 
-export async function apiRequest<T>(
+async function authorizedFetch(
   method: Method,
   path: string,
   body?: unknown,
   headers?: Record<string, string>,
-): Promise<T> {
+): Promise<Response> {
   let response = await send(method, path, body, headers);
   if (response.status === 401 && !isPublic(path) && session.getRefreshToken()) {
     if (await refreshSession()) {
@@ -106,6 +107,16 @@ export async function apiRequest<T>(
   if (!response.ok) {
     throw new ApiError(response.status, await readErrorBody(response));
   }
+  return response;
+}
+
+export async function apiRequest<T>(
+  method: Method,
+  path: string,
+  body?: unknown,
+  headers?: Record<string, string>,
+): Promise<T> {
+  const response = await authorizedFetch(method, path, body, headers);
   if (response.status === 204 || response.status === 202) {
     return undefined as T;
   }
@@ -113,6 +124,23 @@ export async function apiRequest<T>(
 }
 
 export const apiGet = <T>(path: string) => apiRequest<T>("GET", path);
+
+export function apiUpload<T>(path: string, form: FormData) {
+  return apiRequest<T>("POST", path, form);
+}
+
+/** Oturumla korunan dosyayı indirir. Dosya adı sunucunun verdiği addır. */
+export async function apiDownload(path: string, fallbackName: string) {
+  const response = await authorizedFetch("GET", path);
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = encoded ? decodeURIComponent(encoded) : fallbackName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 async function readErrorBody(response: Response): Promise<ApiErrorBody> {
   try {

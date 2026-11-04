@@ -40,12 +40,12 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - ⬜ C14 (P2) Kredi/finansman modülü (faz ataması bekliyor)
 
 ## EPİK D — CRM + Fiyatlandırma (Faz 3) — P0
-- ⬜ D1 Account (CRM görünümü) + Contact + segment/etiket
-- ⬜ D2 Fırsat/huni + aktivite/hatırlatma
-- ⬜ D3 Teklif (versiyon, PDF, gönderim, dönüşüm)
-- ⬜ D4 Sözleşme
-- ⬜ D5 Tarife + fiyat motoru (güzergâh/km/ton/araç + yakıt ek + KDV/tevkifat)
-- ⬜ D6 CRM dashboard
+- ✅ D1 Account (CRM görünümü) + Contact + segment/etiket
+- ✅ D2 Fırsat/huni + aktivite/hatırlatma
+- ✅ D3 Teklif (versiyon, PDF, gönderim, dönüşüm)
+- ✅ D4 Sözleşme
+- ✅ D5 Tarife + fiyat motoru (güzergâh/km/ton/araç + yakıt ek + KDV/tevkifat)
+- ✅ D6 CRM dashboard
 
 ## EPİK E — Sevkiyat/Sefer + CMR + İrsaliye + POD (Faz 4) — P0
 - ⬜ E1 Taşıma emri + durum makinesi
@@ -111,7 +111,7 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 ---
 
 ## Çapraz kesen (tüm fazlar) — P0/P1
-- ⬜ X1 Belge/dosya yönetimi (yükleme, saklama, virüs tarama, erişim izni) — Faz 3 başlamadan
+- 🟦 X1 Belge/dosya yönetimi (yükleme, saklama, virüs tarama, erişim izni) — Faz 3 başlamadan; yerel disk ve izinler hazır, S3 ve virüs tarama açık
 - ⬜ X2 Bildirim altyapısı (e-posta/SMS/uygulama içi) + belge süresi hatırlatmaları — Faz 5A
 - ⬜ X3 i18n (TR birincil; EN altyapısı)
 - ⬜ X4 Audit/aktivite günlüğü standardı

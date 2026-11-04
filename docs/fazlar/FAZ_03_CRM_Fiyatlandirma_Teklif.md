@@ -1,5 +1,31 @@
 # FAZ 3 — CRM + Fiyatlandırma / Teklif / Sözleşme
 
+> **Uygulama Notu (2026-11-05) — Durum: kabul kriterleri yerelde karşılandı, CI bekliyor**
+>
+> **Yapılanlar:** Dosya yönetimi (X1), müşteri/aday, kişi, segment/etiket, fırsat hunisi, aktivite ve hatırlatma, vergi oranı,
+> tarife ve fiyat motoru, sürümlü teklif, PDF, sözleşme, CRM özeti ve bunların React ekranları.
+>
+> **Doğrulama:** `mvn verify` 14 birim + 73 entegrasyon testiyle geçti (yerelde Java 17). Java 21 ile yalnız derleme
+> doğrulandı. Frontend lint, 14 test ve build geçti. Tarayıcıda teklif oluşturma, tarifeden fiyat, gönderme, kabul, sözleşme
+> ve özet ekranı denendi. Müşteri, kişi, aktivite, dosya yükleme, tarife formu ve fiyat hesaplama ekranları tarayıcıda
+> denenmedi; arka planları entegrasyon testlidir. PDF içeriği metin olarak doğrulandı, görünümüne elle bakılmadı.
+>
+> **Kararlar:** Tarife önceliği güzergâh, sonra km. E-imza yok; kabul elle işlenir. Virüs taraması yok.
+>
+> **Sapmalar ve varsayımlar:**
+> - Yalnız yerel disk depolaması var; `FileStorage` arayüzü S3 için hazır, S3 uyarlayıcısı yazılmadı.
+> - Virüs taraması olmadığı için izinli türler dar tutuldu (pdf, png, jpg, xlsx, docx, txt) ve dosyalar yalnız indirilir.
+> - "Gönderildi" düğmesi teklifi işaretler ve PDF'i arşivler; e-posta göndermez (bildirim altyapısı X2'de).
+> - KDV ve tevkifat oranları kodda yoktur; firma ekrandan tanımlar. Doğru oranlar mali müşavirle belirlenmeli.
+> - Tevkifat KDV üzerinden hesaplanır; ödenecek = net + KDV − tevkifat.
+> - Sözleşme yakıt eki ve bekleme ücretini geçersiz kılar; diğer ekler tarifeden gelir.
+> - Bir müşterinin aynı dönemde tek aktif sözleşmesi olabilir.
+> - Teklif satırı fiyatı eklendiği anda dondurulur; tarife değişse satır değişmez.
+> - Tekliften sefer oluşturma ve sefer fiyatı Faz 4'te doğrulanacak.
+>
+> **Bulunan hata:** Sunucu tarihi UTC'den aldığı için İstanbul'da gece yarısından sonra "bugün" başlayan tarife geçersiz
+> sayılıyordu. İş kurallarındaki "bugün" artık firmanın saat diliminden gelir (`TenantClock`).
+
 **Amaç:** Müşteri/aday yönetimi, fırsat→teklif→sözleşme hunisi, tarife/fiyat motoru ve navlun
 fiyatlandırması. Operasyon (Faz 4) buradan fiyat ve müşteri bilgisini alır.
 
@@ -29,11 +55,11 @@ fiyatlandırması. Operasyon (Faz 4) buradan fiyat ve müşteri bilgisini alır.
 - Sözleşmeli müşteride sefer fiyatı otomatik tarifeden; sözleşmesizde el ile/teklif bazlı.
 
 ## Kabul Kriterleri
-- [ ] Aday→fırsat→teklif→sözleşme hunisi uçtan uca ilerler, aşama geçişleri loglanır.
-- [ ] Fiyat motoru aynı girdiye hep aynı fiyatı ve açıklamalı kırılımı döner (test).
-- [ ] Yakıt eki ve KDV/tevkifat fiyata doğru yansır.
-- [ ] Teklif PDF üretir; kazanınca sözleşme oluşturulur. (Tekliften sefer oluşturma Faz 4'te doğrulanır.)
-- [ ] Sözleşmeli müşteri ve verilen sefer girdisi için fiyat motoru tarifeden fiyat döner. (Sefere yansıması Faz 4'te doğrulanır.)
+- [x] Aday→fırsat→teklif→sözleşme hunisi uçtan uca ilerler, aşama geçişleri loglanır.
+- [x] Fiyat motoru aynı girdiye hep aynı fiyatı ve açıklamalı kırılımı döner (test).
+- [x] Yakıt eki ve KDV/tevkifat fiyata doğru yansır.
+- [x] Teklif PDF üretir; kazanınca sözleşme oluşturulur. (Tekliften sefer oluşturma Faz 4'te doğrulanır.)
+- [x] Sözleşmeli müşteri ve verilen sefer girdisi için fiyat motoru tarifeden fiyat döner. (Sefere yansıması Faz 4'te doğrulanır.)
 
 ## ERP Referansı
 Müşteri/tedarikçi CRM tohumu: `CustomerController`, `SupplierController`, `SupplierTrader/Chauffeur/Truck`,
@@ -41,6 +67,5 @@ Müşteri/tedarikçi CRM tohumu: `CustomerController`, `SupplierController`, `Su
 desenleri (yaş meyve siparişi → navlun teklifi mantığına uyarlanır).
 
 ## Açık Sorular
-- Tarife birincil boyutu km mi, güzergâh (il/ülke çifti) mi, ikisi birden mi? (Öneri: ikisi; güzergâh
-  tablosu + km fallback.)
-- Teklif onay/imza süreci (e-imza) MVP'de mi?
+- ~~Tarife birincil boyutu?~~ Karar: Güzergâh tablosu, bulunamazsa km.
+- ~~Teklif e-imza MVP'de mi?~~ Karar: Hayır; kabul elle işlenir.

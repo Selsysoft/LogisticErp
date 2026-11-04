@@ -1,5 +1,7 @@
 package org.ece.blackrose.tenant.service;
 
+import java.time.DateTimeException;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.Set;
 import org.ece.blackrose.common.error.BusinessException;
@@ -43,6 +45,12 @@ public class TenantService {
     if (RESERVED_CODES.contains(request.code())) {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "TENANT_CODE_RESERVED", "Bu firma kodu kullanılamaz.");
+    }
+    try {
+      ZoneId.of(request.timeZone());
+    } catch (DateTimeException ex) {
+      throw new BusinessException(
+          HttpStatus.BAD_REQUEST, "TENANT_TIME_ZONE_INVALID", "Saat dilimi geçersiz.");
     }
     Optional<Tenant> existing = tenants.findByCode(request.code());
     if (existing.isPresent() && existing.get().getStatus() != TenantStatus.FAILED) {

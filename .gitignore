@@ -4,6 +4,7 @@ target/
 !**/src/test/**/target/
 .kotlin
 node_modules/
+backend/data/
 dist/
 .env
 

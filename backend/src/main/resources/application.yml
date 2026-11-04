@@ -13,6 +13,10 @@ spring:
     locations: classpath:db/migration/admin
     schemas: admin
     default-schema: admin
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 21MB
   data:
     web:
       pageable:
@@ -30,6 +34,8 @@ logging:
       console: logstash
 
 app:
+  files:
+    root: ${FILES_ROOT:./data/files}
   finance:
     tcmb:
       enabled: ${TCMB_ENABLED:true}

@@ -10,7 +10,8 @@ public final class FinanceTypes {
     CARRIER,
     SUPPLIER,
     EMPLOYEE,
-    BANK
+    BANK,
+    LEAD
   }
 
   /** Yön firmanın bakışıyla yazılır: pozitif bakiye "cari bize borçlu" demektir. */
