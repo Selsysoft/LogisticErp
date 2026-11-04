@@ -1,12 +1,12 @@
 # FAZ 3 — CRM + Fiyatlandırma / Teklif / Sözleşme
 
-> **Uygulama Notu (2026-11-05) — Durum: kabul kriterleri yerelde karşılandı, CI bekliyor**
+> **Uygulama Notu (2026-11-05) — Durum: kabul kriterleri karşılandı**
 >
 > **Yapılanlar:** Dosya yönetimi (X1), müşteri/aday, kişi, segment/etiket, fırsat hunisi, aktivite ve hatırlatma, vergi oranı,
 > tarife ve fiyat motoru, sürümlü teklif, PDF, sözleşme, CRM özeti ve bunların React ekranları.
 >
-> **Doğrulama:** `mvn verify` 14 birim + 73 entegrasyon testiyle geçti (yerelde Java 17). Java 21 ile yalnız derleme
-> doğrulandı. Frontend lint, 14 test ve build geçti. Tarayıcıda teklif oluşturma, tarifeden fiyat, gönderme, kabul, sözleşme
+> **Doğrulama:** GitHub Actions CI (`41936089815`) yeşil: Java 21 ile 14 birim + 73 entegrasyon testi, Spotless, container imajı;
+> frontend lint, format, 14 test ve build. Tarayıcıda teklif oluşturma, tarifeden fiyat, gönderme, kabul, sözleşme
 > ve özet ekranı denendi. Müşteri, kişi, aktivite, dosya yükleme, tarife formu ve fiyat hesaplama ekranları tarayıcıda
 > denenmedi; arka planları entegrasyon testlidir. PDF içeriği metin olarak doğrulandı, görünümüne elle bakılmadı.
 >
