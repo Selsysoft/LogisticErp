@@ -60,12 +60,12 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - ⬜ E10 Navlun faturası (taslak, kesme, KDV/tevkifat, iptal, PDF)
 
 ## EPİK F — Filo & Sürücü (Faz 5A: F1–F4, F6 / Faz 5B: F5) — P0
-- ⬜ F1 Araç/çekici/dorse + belge bitiş + hatırlatma
-- ⬜ F2 Bakım/onarım + lastik → gider
-- ⬜ F3 Yakıt log + tüketim + gider
-- ⬜ F4 Sürücü + belgeler + hatırlatma
-- ⬜ F5 Atama + müsaitlik + harcırah → finans
-- ⬜ F6 Filo/sürücü raporu
+- ✅ F1 Araç/çekici/dorse + belge bitiş + hatırlatma
+- ✅ F2 Bakım/onarım + lastik → gider
+- ✅ F3 Yakıt log + tüketim + gider
+- ✅ F4 Sürücü + belgeler + hatırlatma
+- 🟦 F5 Atama + müsaitlik + harcırah → finans
+- ✅ F6 Filo/sürücü raporu
 
 ## EPİK G — Depo/3PL (Faz 6) — P1
 - ⬜ G1 Depo/antrepo/raf-göz
@@ -112,7 +112,7 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 
 ## Çapraz kesen (tüm fazlar) — P0/P1
 - 🟦 X1 Belge/dosya yönetimi (yükleme, saklama, virüs tarama, erişim izni) — Faz 3 başlamadan; yerel disk ve izinler hazır, S3 ve virüs tarama açık
-- ⬜ X2 Bildirim altyapısı (e-posta/SMS/uygulama içi) + belge süresi hatırlatmaları — Faz 5A
+- 🟦 X2 Bildirim altyapısı (e-posta/SMS/uygulama içi) + belge süresi hatırlatmaları — Faz 5A; uygulama içi liste hazır, e-posta/SMS açık
 - ⬜ X3 i18n (TR birincil; EN altyapısı)
 - ⬜ X4 Audit/aktivite günlüğü standardı
 - ⬜ X5 Test kapsama hedefleri + sözleşme testleri

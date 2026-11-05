@@ -23,6 +23,13 @@ import { InvoicesPage } from "./pages/finance/InvoicesPage";
 import { PlansPage } from "./pages/finance/PlansPage";
 import { ReportsPage } from "./pages/finance/ReportsPage";
 import { SettlementsPage } from "./pages/finance/SettlementsPage";
+import { AvailabilityPage } from "./pages/fleet/AvailabilityPage";
+import { DriverDetailPage, DriversPage } from "./pages/fleet/DriversPage";
+import { ExpensesPage } from "./pages/fleet/ExpensesPage";
+import { FleetDashboardPage } from "./pages/fleet/FleetDashboardPage";
+import { FleetLayout } from "./pages/fleet/FleetLayout";
+import { FleetReportsPage } from "./pages/fleet/FleetReportsPage";
+import { VehicleDetailPage, VehiclesPage } from "./pages/fleet/VehiclesPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { HomePage } from "./pages/HomePage";
 import { AccountPage } from "./pages/identity/AccountPage";
@@ -89,8 +96,25 @@ export function App() {
             <Route path="tariffs/:id" element={<TariffDetailPage />} />
             <Route path="pricing" element={<PriceCalculatorPage />} />
           </Route>
+          <Route
+            path="/fleet"
+            element={
+              <RequirePermission permission="FLEET_VIEW">
+                <FleetLayout />
+              </RequirePermission>
+            }
+          >
+            <Route index element={<FleetDashboardPage />} />
+            <Route path="vehicles" element={<VehiclesPage />} />
+            <Route path="vehicles/:id" element={<VehicleDetailPage />} />
+            <Route path="drivers" element={<DriversPage />} />
+            <Route path="drivers/:id" element={<DriverDetailPage />} />
+            <Route path="expenses" element={<ExpensesPage />} />
+            <Route path="availability" element={<AvailabilityPage />} />
+            <Route path="reports" element={<FleetReportsPage />} />
+          </Route>
           {MODULE_ITEMS.filter(
-            (item) => item.permission && item.path !== "/finance" && item.path !== "/crm",
+            (item) => item.permission && !["/finance", "/crm", "/fleet"].includes(item.path),
           ).map((item) => (
             <Route
               key={item.path}

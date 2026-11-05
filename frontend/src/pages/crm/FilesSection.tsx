@@ -9,10 +9,18 @@ import { StoredFile } from "./types";
 
 const KILOBYTE = 1024;
 
-export function FilesSection({ ownerType, ownerId }: { ownerType: string; ownerId: string }) {
+export function FilesSection({
+  ownerType,
+  ownerId,
+  editPermission = "CRM_EDIT",
+}: {
+  ownerType: string;
+  ownerId: string;
+  editPermission?: string;
+}) {
   const { t } = useTranslation();
   const client = useQueryClient();
-  const canEdit = useCan("CRM_EDIT");
+  const canEdit = useCan(editPermission);
   const key = ["crm", "files", ownerType, ownerId];
 
   const files = useQuery({

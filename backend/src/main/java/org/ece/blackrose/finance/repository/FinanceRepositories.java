@@ -288,7 +288,10 @@ public final class FinanceRepositories {
 
   public interface ExpenseTypeRepository extends JpaRepository<ExpenseType, UUID> {}
 
-  public interface ExpenseItemRepository extends JpaRepository<ExpenseItem, UUID> {}
+  public interface ExpenseItemRepository extends JpaRepository<ExpenseItem, UUID> {
+
+    Optional<ExpenseItem> findByCode(String code);
+  }
 
   public interface InstrumentRepository extends JpaRepository<Instrument, UUID> {
 

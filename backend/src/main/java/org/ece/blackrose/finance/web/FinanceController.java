@@ -497,9 +497,9 @@ public class FinanceController {
 
   // Para birimi ve kur
 
-  /** Teklif ve tarife ekranları da para birimi seçer. */
+  /** Teklif, tarife ve araç gideri ekranları da para birimi seçer. */
   @GetMapping("/currencies")
-  @PreAuthorize("hasAnyAuthority('FINANCE_VIEW', 'CRM_VIEW')")
+  @PreAuthorize("hasAnyAuthority('FINANCE_VIEW', 'CRM_VIEW', 'FLEET_VIEW')")
   List<CurrencyResponse> listCurrencies() {
     return currencies.findAll().stream().map(mapper::toResponse).toList();
   }
