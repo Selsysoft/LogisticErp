@@ -129,4 +129,37 @@ describe("oturum yenileme", () => {
     expect(expired).toHaveBeenCalledOnce();
     expect(session.getRefreshToken()).toBeNull();
   });
+
+  it("bellekte token yoksa isteği göndermeden önce yeniler", async () => {
+    store.set("blackrose.refreshToken", "kayitli-yenileme");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(tokens))
+      .mockResolvedValueOnce(Response.json({ id: 1 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(apiGet("/driver/trips")).resolves.toEqual({ id: 1 });
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/auth/refresh");
+    expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe("Bearer yeni-erisim");
+  });
+
+  it.each([
+    ["ağ hatası", () => Promise.reject(new TypeError("Failed to fetch"))],
+    ["sunucu hatası", () => Promise.resolve(new Response(null, { status: 502 }))],
+  ])("%s oturumu silmez ve geçici hata verir", async (_name, respond) => {
+    store.set("blackrose.refreshToken", "kayitli-yenileme");
+    const expired = vi.fn();
+    onSessionExpired(expired);
+    const fetchMock = vi.fn().mockImplementation(respond);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const error = await apiGet("/driver/trips").catch((e: unknown) => e);
+
+    expect((error as ApiError).status).toBe(503);
+    expect(expired).not.toHaveBeenCalled();
+    expect(session.getRefreshToken()).toBe("kayitli-yenileme");
+    // Token'sız istek hiç gönderilmemiştir.
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
 });

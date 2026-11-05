@@ -20,6 +20,7 @@ import {
 import { Page } from "../finance/types";
 import { BlocksSection, DocumentsSection } from "./ResourceSections";
 import { Driver, FleetOptions } from "./types";
+import { DriverUserSection } from "./DriverUserSection";
 
 const STATUSES = ["ACTIVE", "ON_LEAVE", "LEFT"];
 
@@ -255,6 +256,7 @@ export function DriverDetailPage() {
           )}
         </SectionHeader>
       )}
+      {id && <DriverUserSection driverId={id} />}
       {advancing && <AdvanceDialog driverId={id} onClose={() => setAdvancing(false)} />}
       <DocumentsSection subject="DRIVER" id={id} />
       <BlocksSection subject="DRIVER" id={id} />

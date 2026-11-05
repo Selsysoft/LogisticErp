@@ -1,0 +1,11 @@
+{
+  "name": "Blackrose Sürücü",
+  "short_name": "Blackrose",
+  "lang": "tr",
+  "start_url": "/driver",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f7fc",
+  "theme_color": "#3a6ed1",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

@@ -56,6 +56,21 @@ public final class ShipmentRepositories {
 
     long countByStatus(ShipmentStatus status);
 
+    /** Sürücünün etabına atandığı etkin seferler ve yakın zamanda teslim edilenler. */
+    @Query(
+        """
+        select s from Shipment s
+        where exists (
+            select 1 from ShipmentLeg l where l.shipmentId = s.id and l.driverId = :driver)
+          and (s.status in :active or (s.status = :delivered and s.updatedAt >= :since))
+        order by s.plannedPickup
+        """)
+    List<Shipment> visibleToDriver(
+        @Param("driver") UUID driver,
+        @Param("active") Collection<ShipmentStatus> active,
+        @Param("delivered") ShipmentStatus delivered,
+        @Param("since") Instant since);
+
     @Query(value = "select nextval('shipment_number_seq')", nativeQuery = true)
     long nextNumber();
 
@@ -79,6 +94,8 @@ public final class ShipmentRepositories {
     List<ShipmentLeg> findByShipmentIdOrderBySequenceNo(UUID shipmentId);
 
     List<ShipmentLeg> findByShipmentIdIn(Collection<UUID> shipmentIds);
+
+    boolean existsByShipmentIdAndDriverId(UUID shipmentId, UUID driverId);
 
     /** Aynı anda başka etapta kullanılan kaynağı bulur. Teslim edilen sefer kaynağı bırakır. */
     @Query(

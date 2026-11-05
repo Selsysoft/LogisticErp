@@ -95,10 +95,10 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - 🟦 J4 Rol-bazlı dashboard + dışa aktarım — özelleştirilebilir widget ve e-posta özeti yok
 
 ## EPİK K — Mobil/POD (Faz 10) — P2
-- ⬜ K1 Sürücü PWA + sınırlı giriş
-- ⬜ K2 Durum güncelleme + konum
-- ⬜ K3 POD (imza/foto/offline senkron)
-- ⬜ K4 Masraf/harcırah mobil giriş
+- 🟦 K1 Sürücü PWA + sınırlı giriş — çalışıyor; gerçek telefonda denenmedi
+- 🟦 K2 Durum güncelleme + konum — konum yalnız uygulama açıkken; KVKK görüşü bekliyor
+- ✅ K3 POD (imza/foto/offline senkron)
+- ✅ K4 Masraf/harcırah mobil giriş
 
 ## EPİK L — SaaS Operasyon (Faz 11) — P1
 - 🟦 L1 Tenant yaşam döngüsü + onboarding + KVKK dışa aktar/sil — açma, deneme, askı, kapatma, dışa aktarım var; fiziksel silme hukuki görüş bekliyor

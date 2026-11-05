@@ -6,6 +6,7 @@ const TABS = [
   { path: "/operations", label: "operations.tabs.shipments" },
   { path: "/operations/board", label: "operations.tabs.board" },
   { path: "/operations/profit", label: "operations.tabs.profit" },
+  { path: "/operations/driver-expenses", label: "operations.tabs.driverExpenses" },
 ];
 
 export function OperationsLayout() {

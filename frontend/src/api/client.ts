@@ -25,13 +25,16 @@ export interface TokenResponse {
 
 type Method = "GET" | "POST" | "PUT" | "DELETE";
 
+/** Sunucuya ulaşılamaması oturumun bittiği anlamına gelmez; çevrimdışı sürücü sistemden düşmemeli. */
+export type RefreshResult = "ok" | "rejected" | "unreachable";
+
 const AUTH_PREFIX = "/auth/";
 const REFRESH_LOCK = "blackrose.token-refresh";
 /** Token gönderilmeyen uçlar. Ping firma bağlamı dışındadır; token ile çağrılırsa 401 döner. */
 const PUBLIC_PATHS = ["/ping", "/auth/login", "/auth/refresh", "/auth/password-reset/"];
 
 let sessionExpiredListener: () => void = () => {};
-let refreshInFlight: Promise<boolean> | null = null;
+let refreshInFlight: Promise<RefreshResult> | null = null;
 
 export function onSessionExpired(listener: () => void) {
   sessionExpiredListener = listener;
@@ -78,27 +81,53 @@ function withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
  * Aynı anda gelen 401'ler tek yenileme isteğini paylaşır; aksi halde token yeniden kullanılmış sayılır.
  * Token kilit alındıktan sonra okunur, böylece başka sekmenin yenilediği en güncel token kullanılır.
  */
-export function refreshSession(): Promise<boolean> {
-  refreshInFlight ??= withRefreshLock(async () => {
+export function refreshSession(): Promise<RefreshResult> {
+  refreshInFlight ??= withRefreshLock<RefreshResult>(async () => {
     const refreshToken = session.getRefreshToken();
     if (!refreshToken) {
-      return false;
+      return "rejected";
     }
     try {
       const response = await send("POST", "/auth/refresh", { refreshToken });
+      if (response.status >= 500) {
+        return "unreachable";
+      }
       if (!response.ok) {
-        return false;
+        return "rejected";
       }
       const tokens = (await response.json()) as TokenResponse;
       session.setTokens(tokens.accessToken, tokens.refreshToken);
-      return true;
+      return "ok";
     } catch {
-      return false;
+      return "unreachable";
     }
   }).finally(() => {
     refreshInFlight = null;
   });
   return refreshInFlight;
+}
+
+/** Yenileyemezse hata fırlatır: oturum bitti (401) veya sunucuya ulaşılamıyor (503). */
+async function renewSession() {
+  const refreshed = await refreshSession();
+  if (refreshed === "rejected") {
+    session.clear();
+    sessionExpiredListener();
+    throw new ApiError(401, {
+      code: "SESSION_EXPIRED",
+      message: "Oturumunuz sona erdi.",
+      details: [],
+      traceId: null,
+    });
+  }
+  if (refreshed === "unreachable") {
+    throw new ApiError(503, {
+      code: "SERVER_UNREACHABLE",
+      message: "Sunucuya ulaşılamıyor.",
+      details: [],
+      traceId: null,
+    });
+  }
 }
 
 async function authorizedFetch(
@@ -107,14 +136,14 @@ async function authorizedFetch(
   body?: unknown,
   headers?: Record<string, string>,
 ): Promise<Response> {
+  // Erişim token'ı bellektedir. Çevrimdışı açılışta yoktur; önce yenilenmeden istek gönderilmez.
+  if (!isPublic(path) && !session.getAccessToken() && session.getRefreshToken()) {
+    await renewSession();
+  }
   let response = await send(method, path, body, headers);
   if (response.status === 401 && !isPublic(path) && session.getRefreshToken()) {
-    if (await refreshSession()) {
-      response = await send(method, path, body, headers);
-    } else {
-      session.clear();
-      sessionExpiredListener();
-    }
+    await renewSession();
+    response = await send(method, path, body, headers);
   }
   if (!response.ok) {
     throw new ApiError(response.status, await readErrorBody(response));

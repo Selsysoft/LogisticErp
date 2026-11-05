@@ -11,7 +11,9 @@ Veri sorumlusu, sistemi kullanan firmadır. Blackrose bu verileri firma adına i
 | Sürücü | Ad, belge türü ve bitiş tarihleri, avans ve harcırah | Firma | Hukukçu belirleyecek |
 | Müşteri ve tedarikçi kişileri | Cari, CRM ve sefer kayıtlarındaki kişi ve iletişim bilgileri | Firma | Mali mevzuata göre belirlenecek |
 | Sevkiyat | Gönderici, alıcı, teslim alan kişi adı | Firma, sürücü | Mali mevzuata göre belirlenecek |
-| Konum | Araç konumu ve bölge olayları (sürücüyle ilişkilendirilebilir) | GPS kaydı | Belirlenmedi, otomatik silme yok |
+| Konum | Araç konumu, bölge olayları ve sürücü işlemlerindeki konum damgası. Sürücü uygulamasında varsayılan kapalıdır, sürücü açar | GPS kaydı, sürücü | Belirlenmedi, otomatik silme yok |
+| Teslim kanıtı | Teslim alanın adı, imzası ve teslim fotoğrafı | Sürücü | Mali mevzuata göre belirlenecek |
+| Sürücü masrafı | Tutar, açıklama, fiş fotoğrafı | Sürücü | Mali mevzuata göre belirlenecek |
 | Denetim günlüğü | Kullanıcı e-postası, IP adresi, işlem, zaman | Sistem | Belirlenmedi, otomatik silme yok |
 | Çevrimiçi durum | Kullanıcı kimliği ve son istek zamanı (yalnız bellekte, en çok 2 saat) | Sistem | 2 saat |
 

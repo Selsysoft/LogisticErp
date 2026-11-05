@@ -18,6 +18,7 @@ Uygulama: http://localhost:5173. `-Djava.version=17` yalnız JDK 21 kurulu deği
 | SaaS yöneticisi (konsol: http://localhost:5173/saas/login) | — | `admin@blackrose.local` | `Dev-Admin-12345` |
 | Patron/Yönetici | `acme` | `patron@acme.test` | `Demo-Acme-2026` |
 | Finans | `acme` | `finans@acme.test` | `Demo-Acme-2026` |
+| Sürücü (http://localhost:5173/driver) | `acme` | `surucu@acme.test` | `Demo-Acme-2026` |
 
 ## Yüklenen dosyalar
 `FILES_ROOT` klasöründe tutulur (varsayılan `./data/files`). Container'da kalıcı olması için `/app/data/files` yoluna birim bağlanmalıdır.

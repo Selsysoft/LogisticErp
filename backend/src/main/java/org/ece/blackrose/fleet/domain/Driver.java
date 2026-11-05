@@ -27,6 +27,7 @@ public class Driver extends AuditableEntity {
 
   private UUID accountId;
   private UUID branchId;
+  private UUID userId;
 
   protected Driver() {}
 
@@ -75,6 +76,14 @@ public class Driver extends AuditableEntity {
 
   public DriverStatus getStatus() {
     return status;
+  }
+
+  public void linkUser(UUID userId) {
+    this.userId = userId;
+  }
+
+  public UUID getUserId() {
+    return userId;
   }
 
   public UUID getAccountId() {

@@ -46,6 +46,8 @@ public final class FleetRepositories {
 
     Optional<Driver> findByCode(String code);
 
+    Optional<Driver> findByUserId(UUID userId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select d from Driver d where d.id = :id")
     Optional<Driver> findForUpdate(@Param("id") UUID id);

@@ -35,6 +35,8 @@ import { FleetDashboardPage } from "./pages/fleet/FleetDashboardPage";
 import { FleetLayout } from "./pages/fleet/FleetLayout";
 import { FleetReportsPage } from "./pages/fleet/FleetReportsPage";
 import { VehicleDetailPage, VehiclesPage } from "./pages/fleet/VehiclesPage";
+import { DriverExpensesPage, DriverLayout, DriverTripsPage } from "./pages/driver/DriverApp";
+import { DriverTripPage } from "./pages/driver/DriverTripPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { HomePage } from "./pages/HomePage";
 import { AccountPage } from "./pages/identity/AccountPage";
@@ -50,6 +52,7 @@ import { IntegrationsLayout } from "./pages/integrations/IntegrationsLayout";
 import { LoginPage } from "./pages/LoginPage";
 import { ModulePage } from "./pages/ModulePage";
 import { BoardPage } from "./pages/operations/BoardPage";
+import { DriverExpenseReviewPage } from "./pages/operations/DriverExpenseReviewPage";
 import { OperationsLayout } from "./pages/operations/OperationsLayout";
 import { ProfitPage } from "./pages/operations/ProfitPage";
 import { ShipmentDetailPage } from "./pages/operations/ShipmentDetailPage";
@@ -95,6 +98,18 @@ export function App() {
         <Route path="audit" element={<AuditConsolePage />} />
       </Route>
       <Route element={<RequireAuth />}>
+        <Route
+          path="/driver"
+          element={
+            <RequirePermission permission="DRIVER_APP">
+              <DriverLayout />
+            </RequirePermission>
+          }
+        >
+          <Route index element={<DriverTripsPage />} />
+          <Route path="trips/:id" element={<DriverTripPage />} />
+          <Route path="expenses" element={<DriverExpensesPage />} />
+        </Route>
         <Route element={<AppShell />}>
           <Route path="/" element={<LandingRedirect />} />
           <Route path="/dashboard" element={<HomePage />} />
@@ -166,6 +181,7 @@ export function App() {
             <Route path="shipments/:id" element={<ShipmentDetailPage />} />
             <Route path="board" element={<BoardPage />} />
             <Route path="profit" element={<ProfitPage />} />
+            <Route path="driver-expenses" element={<DriverExpenseReviewPage />} />
           </Route>
           <Route
             path="/warehouse"
@@ -237,6 +253,7 @@ export function App() {
                 "/customs",
                 "/integrations",
                 "/reports",
+                "/driver",
               ].includes(item.path),
           ).map((item) => (
             <Route

@@ -9,8 +9,6 @@ import { DashboardWidgets } from "./reports/DashboardWidgets";
 import { SubscriptionNotice } from "./saas/SubscriptionPage";
 import { BRAND } from "../theme";
 
-/** Henüz geliştirilmemiş modüller; kartları "yakında" ile işaretlenir. */
-const UPCOMING = ["/driver"];
 const DASHBOARD_PATH = "/dashboard";
 
 export function HomePage() {
@@ -79,9 +77,6 @@ export function HomePage() {
                     <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 700 }}>
                       {t(label)}
                     </Typography>
-                    {UPCOMING.includes(path) && (
-                      <Chip size="small" variant="outlined" label={t("home.upcoming")} />
-                    )}
                   </Stack>
                   <Typography variant="body2" color="text.secondary">
                     {t(`home.modules.${path.slice(1)}`)}
