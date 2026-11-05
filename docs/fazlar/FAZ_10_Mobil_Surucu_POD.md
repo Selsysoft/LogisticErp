@@ -1,6 +1,6 @@
 # FAZ 10 — Mobil Sürücü Uygulaması / POD
 
-> **Uygulama Notu (2026-11-05) — Durum: Sürücü PWA'sı yerelde hazır, commit ve CI bekliyor. Gerçek telefonda denenmedi; push bildirimi ve hukuki görüş açık.**
+> **Uygulama Notu (2026-11-05) — Durum: Sürücü PWA'sı `main` üzerinde, CI yeşil (run 42046956197; CI'da Java 21, yerelde Java 17). Gerçek telefonda denenmedi; push bildirimi ve hukuki görüş açık.**
 >
 > **Yapılanlar:** `/driver` sürücü ekranları; sürücü kaydını kullanıcıya bağlama; atanan seferler, durum bildirimi; imzalı ve fotoğraflı teslim tutanağı; fişli masraf girişi ve ofis onayı
 > (Operasyon > Sürücü masrafları); isteğe bağlı konum; çevrimdışı kuyruk ve tekrar gönderimde tekilleştirme; çevrimdışı açılan uygulama kabuğu.
