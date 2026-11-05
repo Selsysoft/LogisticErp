@@ -1,4 +1,16 @@
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import BadgeIcon from "@mui/icons-material/Badge";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
+import GroupIcon from "@mui/icons-material/Group";
+import HandshakeIcon from "@mui/icons-material/Handshake";
+import HistoryIcon from "@mui/icons-material/History";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
+import PublicIcon from "@mui/icons-material/Public";
+import WarehouseIcon from "@mui/icons-material/Warehouse";
 import {
   AppBar,
   Box,
@@ -8,9 +20,9 @@ import {
   IconButton,
   List,
   ListItemButton,
+  ListItemIcon,
   ListItemText,
   Toolbar,
-  Typography,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
@@ -18,24 +30,30 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
 import { hasPermission, useAuthStore } from "../auth/authStore";
+import { BrandLogo } from "./BrandLogo";
 
 const DRAWER_WIDTH = 240;
 
 export const MODULE_ITEMS = [
-  { path: "/dashboard", label: "nav.dashboard" },
-  { path: "/finance", label: "nav.finance", permission: "FINANCE_VIEW" },
-  { path: "/operations", label: "nav.operations", permission: "SHIPMENT_VIEW" },
-  { path: "/crm", label: "nav.crm", permission: "CRM_VIEW" },
-  { path: "/fleet", label: "nav.fleet", permission: "FLEET_VIEW" },
-  { path: "/warehouse", label: "nav.warehouse", permission: "WAREHOUSE_VIEW" },
-  { path: "/customs", label: "nav.customs", permission: "CUSTOMS_VIEW" },
-  { path: "/driver", label: "nav.driver", permission: "DRIVER_APP" },
+  { path: "/dashboard", label: "nav.dashboard", Icon: DashboardIcon },
+  { path: "/finance", label: "nav.finance", permission: "FINANCE_VIEW", Icon: AccountBalanceIcon },
+  {
+    path: "/operations",
+    label: "nav.operations",
+    permission: "SHIPMENT_VIEW",
+    Icon: LocalShippingIcon,
+  },
+  { path: "/crm", label: "nav.crm", permission: "CRM_VIEW", Icon: HandshakeIcon },
+  { path: "/fleet", label: "nav.fleet", permission: "FLEET_VIEW", Icon: DirectionsCarIcon },
+  { path: "/warehouse", label: "nav.warehouse", permission: "WAREHOUSE_VIEW", Icon: WarehouseIcon },
+  { path: "/customs", label: "nav.customs", permission: "CUSTOMS_VIEW", Icon: PublicIcon },
+  { path: "/driver", label: "nav.driver", permission: "DRIVER_APP", Icon: BadgeIcon },
 ];
 
 const ADMIN_ITEMS = [
-  { path: "/users", label: "nav.users", permission: "USER_VIEW" },
-  { path: "/roles", label: "nav.roles", permission: "ROLE_MANAGE" },
-  { path: "/audit", label: "nav.audit", permission: "AUDIT_VIEW" },
+  { path: "/users", label: "nav.users", permission: "USER_VIEW", Icon: GroupIcon },
+  { path: "/roles", label: "nav.roles", permission: "ROLE_MANAGE", Icon: AdminPanelSettingsIcon },
+  { path: "/audit", label: "nav.audit", permission: "AUDIT_VIEW", Icon: HistoryIcon },
 ];
 
 export function AppShell() {
@@ -47,7 +65,7 @@ export function AppShell() {
   const me = useAuthStore((state) => state.me);
   const logout = useAuthStore((state) => state.logout);
 
-  const renderItems = (items: typeof MODULE_ITEMS) =>
+  const renderItems = (items: typeof MODULE_ITEMS | typeof ADMIN_ITEMS) =>
     items
       .filter((item) => hasPermission(me, item.permission))
       .map((item) => (
@@ -60,6 +78,9 @@ export function AppShell() {
           }
           onClick={() => setOpen(false)}
         >
+          <ListItemIcon sx={{ minWidth: 36 }}>
+            <item.Icon fontSize="small" />
+          </ListItemIcon>
           <ListItemText primary={t(item.label)} />
         </ListItemButton>
       ));
@@ -89,9 +110,9 @@ export function AppShell() {
               <MenuIcon />
             </IconButton>
           )}
-          <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
-            {t("appName")}
-          </Typography>
+          <Box sx={{ flexGrow: 1, display: "flex" }}>
+            <BrandLogo onDark size={30} />
+          </Box>
           <Button color="inherit" component={RouterLink} to="/account" sx={{ minWidth: 0 }}>
             <Box
               component="span"
@@ -100,7 +121,7 @@ export function AppShell() {
               {isWide ? me?.fullName : t("nav.account")}
             </Box>
           </Button>
-          <Button color="inherit" onClick={() => void logout()}>
+          <Button color="inherit" startIcon={<LogoutIcon />} onClick={() => void logout()}>
             {t("nav.logout")}
           </Button>
         </Toolbar>

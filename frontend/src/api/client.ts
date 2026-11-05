@@ -26,7 +26,8 @@ export interface TokenResponse {
 type Method = "GET" | "POST" | "PUT" | "DELETE";
 
 const AUTH_PREFIX = "/auth/";
-const PUBLIC_AUTH_PATHS = ["/auth/login", "/auth/refresh", "/auth/password-reset/"];
+/** Token gönderilmeyen uçlar. Ping firma bağlamı dışındadır; token ile çağrılırsa 401 döner. */
+const PUBLIC_PATHS = ["/ping", "/auth/login", "/auth/refresh", "/auth/password-reset/"];
 
 let sessionExpiredListener: () => void = () => {};
 let refreshInFlight: Promise<boolean> | null = null;
@@ -36,7 +37,7 @@ export function onSessionExpired(listener: () => void) {
 }
 
 function isPublic(path: string) {
-  return PUBLIC_AUTH_PATHS.some((prefix) => path.startsWith(prefix));
+  return PUBLIC_PATHS.some((prefix) => path.startsWith(prefix));
 }
 
 async function send(
