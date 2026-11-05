@@ -1,13 +1,13 @@
 # FAZ 5 — Filo ve Sürücü Yönetimi
 
-> **Uygulama Notu (2026-11-05) — Durum: Faz 5A kriterleri yerelde karşılandı, CI bekliyor. Faz 5B açık.**
+> **Uygulama Notu (2026-11-05) — Durum: Faz 5A kriterleri karşılandı. Faz 5B açık.**
 >
 > **Yapılanlar (5A):** Araç ve dorse kütüğü, sürücü kütüğü ve personel carisi, belgeler, hatırlatmalar, takvim kapatmaları,
 > bakım/onarım/lastik/yakıt giderinin finansa yazılması, yakıt tüketimi ve anomali, araç maliyet raporu, uygun kaynak sorgusu,
 > filo ayarları ve bunların React ekranları.
 >
-> **Doğrulama:** `mvn verify` 14 birim + 87 entegrasyon testiyle geçti (yerelde Java 17). Java 21 ile yalnız derleme
-> doğrulandı. Frontend lint, 14 test ve build geçti. Tarayıcıda hatırlatmalar, uygunluk, yakıt gideri girişi ve tedarikçi
+> **Doğrulama:** GitHub Actions CI (`41986029132`) yeşil: Java 21 ile 14 birim + 87 entegrasyon testi, Spotless, container imajı;
+> frontend lint, format, 14 test ve build. Tarayıcıda hatırlatmalar, uygunluk, yakıt gideri girişi ve tedarikçi
 > carisine yansıması denendi. Araç/sürücü formları, belge ve kapatma ekleme, dosya yükleme, tüketim ve rapor ekranları
 > tarayıcıda denenmedi; arka planları entegrasyon testlidir.
 >
