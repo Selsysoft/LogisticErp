@@ -24,7 +24,8 @@ public enum Permission {
   WAREHOUSE_INVOICE("warehouse"),
   CUSTOMS_VIEW("customs"),
   CUSTOMS_EDIT("customs"),
-  DRIVER_APP("driver");
+  DRIVER_APP("driver"),
+  INTEGRATION_VIEW("integration");
 
   private final String module;
 

@@ -2,6 +2,7 @@ package org.ece.blackrose.tenant;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import org.ece.blackrose.tenant.repository.TenantRepository;
 import org.springframework.stereotype.Component;
@@ -27,6 +28,10 @@ public class TenantClock {
 
   public Instant startOf(LocalDate date) {
     return date.atStartOfDay(zone()).toInstant();
+  }
+
+  public Instant instantOf(LocalDateTime local) {
+    return local.atZone(zone()).toInstant();
   }
 
   private ZoneId zone() {

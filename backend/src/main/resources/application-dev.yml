@@ -4,6 +4,9 @@ spring:
 
 # Bu değerler yalnız yerel geliştirme içindir.
 app:
+  integration:
+    edocument:
+      provider: mock
   tenancy:
     base-domain: ${TENANCY_BASE_DOMAIN:localhost}
   security:

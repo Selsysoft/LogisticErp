@@ -1,4 +1,7 @@
 app:
+  integration:
+    edocument:
+      provider: mock
   files:
     root: ./target/test-files
   finance:

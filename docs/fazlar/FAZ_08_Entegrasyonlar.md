@@ -1,5 +1,34 @@
 # FAZ 8 — Entegrasyonlar (GİB, HGS/OGS, Yakıt Kartı, GPS, Banka, Harita)
 
+> **Uygulama Notu (2026-11-05) — Durum: Adaptör katmanı ve dosya akışları yerelde hazır, CI bekliyor. Gerçek sağlayıcılar seçilmedi; faz açık.**
+>
+> **Yapılanlar:** e-Fatura, e-Arşiv ve e-İrsaliye gönderim akışı ve UBL üretimi (deneme sağlayıcısıyla), HGS/OGS ve yakıt kartı CSV içe aktarımı
+> ve eşleme, banka ekstresi CSV içe aktarımı ve mutabakat, GPS konum alma, bölge olayları, güzergâh mesafe tablosu ve bunların React ekranları.
+>
+> **Doğrulama:** `mvn verify` 23 birim + 124 entegrasyon testiyle (yerelde Java 17); frontend lint, 20 test ve build. Tarayıcıda deneme
+> sağlayıcısı uyarısı, vergi numarası engeli, firma bilgisi girişi, e-Arşiv gönderimi, durum sorgusu, HGS satır durumları, GPS ve banka
+> ekranı denendi. Dosyalar API ile yüklendi; dosya seçme düğmeleri, sefer seçme, gidere yazma, banka eşleştirme formu, e-belge iptali,
+> yakıt kartı ve mesafe ekranı tarayıcıda denenmedi, arka planları entegrasyon testlidir.
+>
+> **Kabul kriterlerinde eksik kalanlar:**
+> - Gerçek e-belge gönderimi yok. Üretimde deneme sağlayıcısı oluşmaz, entegratör tanımlanana kadar gönderim reddedilir. "En az bir gerçek
+>   sağlayıcı sözleşme testi" kriteri entegratör seçilince karşılanacak.
+> - UBL, GİB şemasıyla ve şematronla doğrulanmadı. Fatura numarası GİB biçiminde değil, satır ve KDV kırılımı sadeleştirilmiştir. Gerçek
+>   gönderimden önce bunlar düzeltilmeli; belge türü ve tevkifat kodları mali müşavirle doğrulanmalı.
+> - GPS sağlayıcısı yok. Konum yetkili kullanıcı API'siyle alınır; cihaz kimlik doğrulaması, kuyruk, geçmiş rota ekranı, hız/rölanti raporu ve harita yok.
+> - Harita servisi yok. Mesafe ve süre firmanın tablosundan gelir; ETA sefere yazılmaz.
+> - Banka ve HGS/OGS için sağlayıcı API'si yok. Dosya biçimi bizim tanımladığımız CSV'dir; gerçek sağlayıcı dosyasına göre uyarlanacak.
+>
+> **Kararlar ve varsayımlar:**
+> - e-Fatura mı e-Arşiv mi olduğunu kullanıcı seçer; GİB mükellef sorgusu yok. e-Fatura için müşteri vergi numarası zorunludur.
+> - Gönderilmiş fatura, e-belgesi iptal edilmeden iptal edilemez. Reddedilen veya iptal edilen belge yeniden gönderilir. Depo faturası henüz e-belge olarak gönderilmez.
+> - Gönderim veritabanı işlemi içinde yapılır; gerçek entegratörde, belge gidip kayıt yazılamazsa uzlaştırma gerekecek.
+> - HGS eşlemesi plaka ve planlanan etap zamanına göredir; gecikmeli sefer eşleşmezse elle seçilir. Yakıt sefersiz de araç gideri olur; sefer bulunursa
+>   kârlılığa bağlanır. Tekrar yüklenen hareket referansla veya satır içeriğiyle atlanır; içe aktarım geri alınamaz, yanlış gider ayrıca düzeltilir.
+> - Banka ekstresi finans kaydı üretmez, yalnız karşılaştırılır. Otomatik eşleme aynı yön ve tutar, en çok 3 gün farkla yapılır; eşit adaylarda kullanıcıya bırakılır.
+> - Konum verisi kişisel veri sayılabilir; sürücü aydınlatması ve saklama süresi KVKK kapsamında belirlenmeli. Otomatik silme yok.
+> - Harici sağlayıcılar için tenant başına kimlik bilgisi saklama henüz yok.
+
 **Amaç:** Dış sistem entegrasyonları. Her entegrasyon ayrı adaptör (`integration` modülü), arayüz
 arkasına gizli, test için sahte (mock) sağlayıcı.
 

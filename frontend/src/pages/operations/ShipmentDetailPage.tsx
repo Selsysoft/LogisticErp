@@ -105,6 +105,39 @@ function InternationalSection({ shipment }: { shipment: Shipment }) {
   );
 }
 
+/** Seferin araçlarının GPS'ten gelen son konumu. */
+function LocationSection({ shipmentId }: { shipmentId: string }) {
+  const { t } = useTranslation();
+  const positions = useQuery({
+    queryKey: ["shipment", "positions", shipmentId],
+    queryFn: () =>
+      apiGet<
+        {
+          vehicleId: string;
+          plate: string;
+          recordedAt: string;
+          latitude: string;
+          longitude: string;
+          speedKmh: string | null;
+        }[]
+      >(`/integration/gps/shipments/${shipmentId}`),
+  });
+  if (!positions.data || positions.data.length === 0) {
+    return null;
+  }
+  return (
+    <Box>
+      <SectionHeader title={t("operations.sections.location")} />
+      {positions.data.map((row) => (
+        <Typography key={row.vehicleId} variant="body2">
+          {row.plate} · {formatDateTime(row.recordedAt)} · {row.latitude}, {row.longitude}
+          {row.speedKmh ? ` · ${row.speedKmh} km/s` : ""}
+        </Typography>
+      ))}
+    </Box>
+  );
+}
+
 function PodSection({ shipment }: { shipment: Shipment }) {
   const { t } = useTranslation();
   const client = useQueryClient();
@@ -398,6 +431,7 @@ export function ShipmentDetailPage() {
       </Box>
       <LegsSection shipment={data} />
       <InternationalSection shipment={data} />
+      <LocationSection shipmentId={data.id} />
       <PodSection shipment={data} />
       <DocumentsSection shipment={data} />
       <CostsSection shipment={data} />

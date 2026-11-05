@@ -124,6 +124,11 @@ public class Shipment extends AuditableEntity {
     return attachedDocuments;
   }
 
+  /** Mesafe girilmediyse güzergâh tablosundan gelen değer yazılır. */
+  public void fillDistance(BigDecimal km) {
+    distanceKm = km;
+  }
+
   public void moveTo(ShipmentStatus status) {
     this.status = status;
   }

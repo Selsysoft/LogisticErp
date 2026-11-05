@@ -41,6 +41,12 @@ import { AccountPage } from "./pages/identity/AccountPage";
 import { AuditLogPage } from "./pages/identity/AuditLogPage";
 import { RolesPage } from "./pages/identity/RolesPage";
 import { UsersPage } from "./pages/identity/UsersPage";
+import { BankPage } from "./pages/integrations/BankPage";
+import { DistancesPage } from "./pages/integrations/DistancesPage";
+import { EDocumentsPage } from "./pages/integrations/EDocumentsPage";
+import { GpsPage } from "./pages/integrations/GpsPage";
+import { ImportDetailPage, ImportsPage } from "./pages/integrations/ImportsPage";
+import { IntegrationsLayout } from "./pages/integrations/IntegrationsLayout";
 import { LoginPage } from "./pages/LoginPage";
 import { ModulePage } from "./pages/ModulePage";
 import { BoardPage } from "./pages/operations/BoardPage";
@@ -172,12 +178,33 @@ export function App() {
             <Route path="permits" element={<PermitsPage />} />
             <Route path="crossings" element={<CrossingsPage />} />
           </Route>
+          <Route
+            path="/integrations"
+            element={
+              <RequirePermission permission="INTEGRATION_VIEW">
+                <IntegrationsLayout />
+              </RequirePermission>
+            }
+          >
+            <Route index element={<EDocumentsPage />} />
+            <Route path="imports" element={<ImportsPage />} />
+            <Route path="imports/:id" element={<ImportDetailPage />} />
+            <Route path="bank" element={<BankPage />} />
+            <Route path="gps" element={<GpsPage />} />
+            <Route path="distances" element={<DistancesPage />} />
+          </Route>
           {MODULE_ITEMS.filter(
             (item) =>
               item.permission &&
-              !["/finance", "/crm", "/fleet", "/operations", "/warehouse", "/customs"].includes(
-                item.path,
-              ),
+              ![
+                "/finance",
+                "/crm",
+                "/fleet",
+                "/operations",
+                "/warehouse",
+                "/customs",
+                "/integrations",
+              ].includes(item.path),
           ).map((item) => (
             <Route
               key={item.path}

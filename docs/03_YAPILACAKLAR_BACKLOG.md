@@ -81,12 +81,12 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - ✅ H5 Uluslararası CMR (çok dilli)
 
 ## EPİK I — Entegrasyonlar (Faz 8) — P1
-- ⬜ I1 GİB e-Fatura/e-Arşiv/e-İrsaliye (entegratör adaptörü + mock)
-- ⬜ I2 HGS/OGS içe aktarım + eşleme
-- ⬜ I3 Yakıt kartı içe aktarım + eşleme
-- ⬜ I4 GPS/telematik canlı konum + geofence
-- ⬜ I5 Banka ekstre + mutabakat
-- ⬜ I6 Harita/mesafe + ETA
+- 🟦 I1 GİB e-Fatura/e-Arşiv/e-İrsaliye (entegratör adaptörü + mock) — adaptör ve mock hazır, gerçek entegratör bekliyor
+- 🟦 I2 HGS/OGS içe aktarım + eşleme
+- 🟦 I3 Yakıt kartı içe aktarım + eşleme
+- 🟦 I4 GPS/telematik canlı konum + geofence
+- 🟦 I5 Banka ekstre + mutabakat
+- 🟦 I6 Harita/mesafe + ETA
 
 ## EPİK J — Raporlama/BI (Faz 9) — P1
 - ⬜ J1 Sefer/araç/müşteri/güzergâh kârlılığı

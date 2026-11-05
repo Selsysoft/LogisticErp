@@ -13,6 +13,7 @@ import org.ece.blackrose.shipment.domain.ShipmentCargo;
 import org.ece.blackrose.shipment.domain.ShipmentDocument;
 import org.ece.blackrose.shipment.domain.ShipmentEvent;
 import org.ece.blackrose.shipment.domain.ShipmentLeg;
+import org.ece.blackrose.shipment.domain.ShipmentTypes.DocumentStatus;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.DocumentType;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.InvoiceStatus;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.ShipmentStatus;
@@ -90,6 +91,19 @@ public final class ShipmentRepositories {
         @Param("start") Instant start,
         @Param("end") Instant end);
 
+    /** Verilen anda aracın bulunduğu, gideri hâlâ yazılabilen sefer etabı. */
+    @Query(
+        """
+        select l from ShipmentLeg l, Shipment s
+        where s.id = l.shipmentId
+          and s.status not in (
+            org.ece.blackrose.shipment.domain.ShipmentTypes.ShipmentStatus.CANCELLED,
+            org.ece.blackrose.shipment.domain.ShipmentTypes.ShipmentStatus.CLOSED)
+          and (l.vehicleId = :vehicleId or l.trailerId = :vehicleId)
+          and l.plannedStart <= :at and l.plannedEnd >= :at
+        """)
+    List<ShipmentLeg> billableAt(@Param("vehicleId") UUID vehicleId, @Param("at") Instant at);
+
     @Query(
         "select l from ShipmentLeg l, Shipment s where s.id = l.shipmentId and s.status in "
             + ACTIVE
@@ -112,11 +126,15 @@ public final class ShipmentRepositories {
     List<ShipmentDocument> findByShipmentIdOrderByType(UUID shipmentId);
 
     Optional<ShipmentDocument> findByShipmentIdAndType(UUID shipmentId, DocumentType type);
+
+    List<ShipmentDocument> findByTypeAndStatus(DocumentType type, DocumentStatus status);
   }
 
   public interface FreightInvoiceRepository extends JpaRepository<FreightInvoice, UUID> {
 
     Optional<FreightInvoice> findByShipmentIdAndStatus(UUID shipmentId, InvoiceStatus status);
+
+    List<FreightInvoice> findByStatus(InvoiceStatus status);
 
     List<FreightInvoice> findByShipmentIdInAndStatus(
         Collection<UUID> shipmentIds, InvoiceStatus status);

@@ -70,6 +70,7 @@ public class ShipmentService {
   private final ShipmentViews views;
   private final TenantClock clock;
   private final AuditService audit;
+  private final DistanceProvider distances;
 
   public ShipmentService(
       ShipmentRepository shipments,
@@ -84,7 +85,9 @@ public class ShipmentService {
       BranchRepository branches,
       ShipmentViews views,
       TenantClock clock,
-      AuditService audit) {
+      AuditService audit,
+      DistanceProvider distances) {
+    this.distances = distances;
     this.audit = audit;
     this.shipments = shipments;
     this.cargo = cargo;
@@ -125,9 +128,18 @@ public class ShipmentService {
           "SHIPMENT_DATES_INVALID",
           "Teslim tarihi yüklemeden önce olamaz.");
     }
-    PriceBreakdown price = priceFor(request);
+    BigDecimal distance =
+        request.distanceKm() != null
+            ? request.distanceKm()
+            : distances
+                .find(request.origin(), request.destination())
+                .map(DistanceProvider.Route::distanceKm)
+                .orElse(null);
+    PriceBreakdown price = priceFor(request, distance);
     String number = "SV-%d-%06d".formatted(clock.today().getYear(), shipments.nextNumber());
-    Shipment shipment = shipments.save(new Shipment(number, request, price, views.write(price)));
+    Shipment created = new Shipment(number, request, price, views.write(price));
+    created.fillDistance(distance);
+    Shipment shipment = shipments.save(created);
     if (request.cargo() != null) {
       for (CargoRequest item : request.cargo()) {
         cargo.save(new ShipmentCargo(shipment.getId(), item));
@@ -209,7 +221,7 @@ public class ShipmentService {
     return !list.isEmpty() && list.stream().allMatch(ShipmentLeg::isAssigned);
   }
 
-  private PriceBreakdown priceFor(CreateShipmentRequest request) {
+  private PriceBreakdown priceFor(CreateShipmentRequest request, BigDecimal distance) {
     if (request.quoteLineId() != null) {
       return priceFromQuote(request);
     }
@@ -232,7 +244,7 @@ public class ShipmentService {
             request.vehicleType(),
             totalWeightTon(request.cargo()),
             request.pallets(),
-            request.distanceKm(),
+            distance,
             request.waitingHours(),
             request.extraStops(),
             request.adr(),

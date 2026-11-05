@@ -6,6 +6,7 @@ import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
 import GroupIcon from "@mui/icons-material/Group";
 import HandshakeIcon from "@mui/icons-material/Handshake";
 import HistoryIcon from "@mui/icons-material/History";
+import HubIcon from "@mui/icons-material/Hub";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -48,6 +49,12 @@ export const MODULE_ITEMS = [
   { path: "/warehouse", label: "nav.warehouse", permission: "WAREHOUSE_VIEW", Icon: WarehouseIcon },
   { path: "/customs", label: "nav.customs", permission: "CUSTOMS_VIEW", Icon: PublicIcon },
   { path: "/driver", label: "nav.driver", permission: "DRIVER_APP", Icon: BadgeIcon },
+  {
+    path: "/integrations",
+    label: "nav.integrations",
+    permission: "INTEGRATION_VIEW",
+    Icon: HubIcon,
+  },
 ];
 
 const ADMIN_ITEMS = [

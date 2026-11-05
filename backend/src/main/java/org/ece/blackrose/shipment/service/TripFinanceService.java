@@ -66,6 +66,7 @@ public class TripFinanceService {
   private final ShipmentViews views;
   private final TenantRepository tenants;
   private final TenantClock clock;
+  private final List<InvoiceCancelGuard> cancelGuards;
 
   public TripFinanceService(
       ShipmentRepository shipments,
@@ -78,7 +79,9 @@ public class TripFinanceService {
       ExchangeRateService rates,
       ShipmentViews views,
       TenantRepository tenants,
-      TenantClock clock) {
+      TenantClock clock,
+      List<InvoiceCancelGuard> cancelGuards) {
+    this.cancelGuards = cancelGuards;
     this.shipments = shipments;
     this.invoices = invoices;
     this.costs = costs;
@@ -139,6 +142,7 @@ public class TripFinanceService {
           "INVOICE_NOT_CANCELLABLE",
           "Kapanmış seferin faturası iptal edilemez.");
     }
+    cancelGuards.forEach(guard -> guard.ensureCancellable(invoiceId));
     ledger.reverseSource(SOURCE_INVOICE, invoiceId, date, "Fatura iptali " + invoice.getNumber());
     invoice.cancel();
     shipmentService.move(shipment, ShipmentStatus.DELIVERED, "İptal " + invoice.getNumber());
