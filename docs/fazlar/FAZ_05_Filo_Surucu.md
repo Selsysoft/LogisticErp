@@ -1,6 +1,6 @@
 # FAZ 5 — Filo ve Sürücü Yönetimi
 
-> **Uygulama Notu (2026-11-05) — Durum: Faz 5A kriterleri karşılandı. Faz 5B yerelde karşılandı, CI bekliyor.**
+> **Uygulama Notu (2026-11-05) — Durum: Faz 5A kriterleri karşılandı. Faz 5B kriterleri karşılandı (CI `41992672403`).**
 >
 > **Yapılanlar (5A):** Araç ve dorse kütüğü, sürücü kütüğü ve personel carisi, belgeler, hatırlatmalar, takvim kapatmaları,
 > bakım/onarım/lastik/yakıt giderinin finansa yazılması, yakıt tüketimi ve anomali, araç maliyet raporu, uygun kaynak sorgusu,

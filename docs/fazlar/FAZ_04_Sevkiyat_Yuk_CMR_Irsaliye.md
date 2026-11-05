@@ -1,12 +1,12 @@
 # FAZ 4 — Sevkiyat / Yük / Sefer + CMR + e-İrsaliye + POD (Operasyonun Kalbi)
 
-> **Uygulama Notu (2026-11-05) — Durum: Kriterler yerelde karşılandı, CI bekliyor.**
+> **Uygulama Notu (2026-11-05) — Durum: Kriterler karşılandı.**
 >
 > **Yapılanlar:** Taşıma emri ve durum makinesi, etap, öz filo ve taşeron ataması, çakışma ve belge kontrolü, uygun kaynak listesi,
 > sevkiyat panosu, CMR ve irsaliye (numara, durum, PDF), teslim kanıtı, navlun faturası, sefer gideri, kapanış, kârlılık raporu,
 > zaman çizelgesi, istisna kaydı ve bunların React ekranları.
 >
-> **Doğrulama:** `mvn verify` birim ve entegrasyon testleriyle (yerelde Java 17). Tarayıcıda şu akış denendi: sefer açma, belge
+> **Doğrulama:** GitHub Actions CI (`41992672403`) yeşil: Java 21 ile 14 birim + 101 entegrasyon testi, Spotless, container imajı; frontend lint, format, 16 test ve build. Tarayıcıda şu akış denendi: sefer açma, belge
 > engeli, belge uyarısı, araç ve sürücü atama, çakışan atama engeli, pano, CMR taslağı, teslim kanıtı olmadan teslim engeli, teslim,
 > gider, fatura, kapanış, kârlılık ve cari bakiyeler. Taşeron atama, çok etap, irsaliye, fatura iptali, araç gideri bağlama
 > ekranları tarayıcıda denenmedi, PDF indirme yalnız API testinde doğrulandı; arka planları entegrasyon testlidir.
