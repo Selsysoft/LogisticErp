@@ -24,6 +24,7 @@ public class ShipmentCargo extends AuditableEntity {
   private BigDecimal volumeM3;
 
   private String adrClass;
+  private String unNumber;
 
   protected ShipmentCargo() {}
 
@@ -36,6 +37,7 @@ public class ShipmentCargo extends AuditableEntity {
     this.weightKg = request.weightKg();
     this.volumeM3 = request.volumeM3();
     this.adrClass = request.adrClass();
+    this.unNumber = request.unNumber();
   }
 
   public UUID getId() {
@@ -64,6 +66,10 @@ public class ShipmentCargo extends AuditableEntity {
 
   public BigDecimal getVolumeM3() {
     return volumeM3;
+  }
+
+  public String getUnNumber() {
+    return unNumber;
   }
 
   public String getAdrClass() {

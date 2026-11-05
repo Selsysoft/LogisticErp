@@ -50,6 +50,7 @@ import org.ece.blackrose.shipment.web.ShipmentDtos.PodResponse;
 import org.ece.blackrose.shipment.web.ShipmentDtos.ProfitResponse;
 import org.ece.blackrose.shipment.web.ShipmentDtos.QuoteLineOption;
 import org.ece.blackrose.shipment.web.ShipmentDtos.SaveCostRequest;
+import org.ece.blackrose.shipment.web.ShipmentDtos.SaveInternationalRequest;
 import org.ece.blackrose.shipment.web.ShipmentDtos.SaveLegRequest;
 import org.ece.blackrose.shipment.web.ShipmentDtos.SavePodRequest;
 import org.ece.blackrose.shipment.web.ShipmentDtos.ShipmentOptionsResponse;
@@ -69,6 +70,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -155,6 +157,13 @@ public class ShipmentController {
   ShipmentResponse changeStatus(
       @PathVariable UUID id, @Valid @RequestBody ChangeStatusRequest request) {
     return views.detail(shipments.changeStatus(id, request.status(), request.message()));
+  }
+
+  @PutMapping("/shipments/{id}/international")
+  @PreAuthorize(DISPATCH)
+  ShipmentResponse saveInternational(
+      @PathVariable UUID id, @Valid @RequestBody SaveInternationalRequest request) {
+    return views.detail(shipments.updateInternational(id, request));
   }
 
   @GetMapping("/shipments/{id}/timeline")

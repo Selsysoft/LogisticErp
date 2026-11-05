@@ -6,6 +6,11 @@ import { LandingRedirect, RequireAuth, RequirePermission } from "./auth/guards";
 import { AppShell, MODULE_ITEMS } from "./components/AppShell";
 import { EmptyState } from "./components/EmptyState";
 import { ContractsPage } from "./pages/crm/ContractsPage";
+import { CrossingsPage } from "./pages/customs/CrossingsPage";
+import { CustomsLayout } from "./pages/customs/CustomsLayout";
+import { DeclarationDetailPage, DeclarationsPage } from "./pages/customs/DeclarationsPage";
+import { PermitsPage } from "./pages/customs/PermitsPage";
+import { TransitsPage } from "./pages/customs/TransitsPage";
 import { CrmDashboardPage } from "./pages/crm/CrmDashboardPage";
 import { CrmLayout } from "./pages/crm/CrmLayout";
 import { CustomerDetailPage, CustomersPage } from "./pages/crm/CustomersPage";
@@ -153,10 +158,26 @@ export function App() {
             <Route path="billing/:id" element={<ContractDetailPage />} />
             <Route path="definitions" element={<WarehouseDefinitionsPage />} />
           </Route>
+          <Route
+            path="/customs"
+            element={
+              <RequirePermission permission="CUSTOMS_VIEW">
+                <CustomsLayout />
+              </RequirePermission>
+            }
+          >
+            <Route index element={<DeclarationsPage />} />
+            <Route path="declarations/:id" element={<DeclarationDetailPage />} />
+            <Route path="transits" element={<TransitsPage />} />
+            <Route path="permits" element={<PermitsPage />} />
+            <Route path="crossings" element={<CrossingsPage />} />
+          </Route>
           {MODULE_ITEMS.filter(
             (item) =>
               item.permission &&
-              !["/finance", "/crm", "/fleet", "/operations", "/warehouse"].includes(item.path),
+              !["/finance", "/crm", "/fleet", "/operations", "/warehouse", "/customs"].includes(
+                item.path,
+              ),
           ).map((item) => (
             <Route
               key={item.path}

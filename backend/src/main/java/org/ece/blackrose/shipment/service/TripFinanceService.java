@@ -315,6 +315,7 @@ public class TripFinanceService {
       case TOLL -> "geçiş ücreti";
       case PER_DIEM -> "harcırah";
       case SUBCONTRACTOR -> "taşeron";
+      case BORDER_FEE -> "sınır geçiş ücreti";
       case OTHER -> "diğer gider";
     };
   }

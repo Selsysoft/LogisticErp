@@ -20,6 +20,7 @@ export interface Cargo {
   weightKg: string | null;
   volumeM3: string | null;
   adrClass: string | null;
+  unNumber: string | null;
 }
 
 export interface Leg {
@@ -67,6 +68,13 @@ export interface Shipment extends ShipmentSummary {
   notes: string | null;
   cargo: Cargo[];
   legs: Leg[];
+  international: boolean;
+  originCountry: string | null;
+  destinationCountry: string | null;
+  incoterm: string | null;
+  liabilityPolicy: string | null;
+  senderInstructions: string | null;
+  attachedDocuments: string | null;
 }
 
 export interface ShipmentEvent {

@@ -13,6 +13,7 @@ import org.ece.blackrose.common.money.Money;
 import org.ece.blackrose.crm.web.CrmDtos.PriceBreakdown;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.ShipmentStatus;
 import org.ece.blackrose.shipment.web.ShipmentDtos.CreateShipmentRequest;
+import org.ece.blackrose.shipment.web.ShipmentDtos.SaveInternationalRequest;
 import org.hibernate.annotations.SQLRestriction;
 
 /** Taşıma emri. Fiyat oluşturulduğu anda sabitlenir; tarife değişse sefer değişmez. */
@@ -47,6 +48,12 @@ public class Shipment extends AuditableEntity {
   private BigDecimal totalAmount;
   private String breakdown;
   private String notes;
+  private String originCountry;
+  private String destinationCountry;
+  private String incoterm;
+  private String liabilityPolicy;
+  private String senderInstructions;
+  private String attachedDocuments;
 
   protected Shipment() {}
 
@@ -75,6 +82,46 @@ public class Shipment extends AuditableEntity {
     this.totalAmount = price.total();
     this.breakdown = breakdownJson;
     this.notes = request.notes();
+  }
+
+  public void updateInternational(SaveInternationalRequest request) {
+    this.originCountry = request.originCountry();
+    this.destinationCountry = request.destinationCountry();
+    this.incoterm = request.incoterm();
+    this.liabilityPolicy = request.liabilityPolicy();
+    this.senderInstructions = request.senderInstructions();
+    this.attachedDocuments = request.attachedDocuments();
+  }
+
+  /** Çıkış ve varış ülkesi farklıysa uluslararası taşımadır. */
+  public boolean isInternational() {
+    return originCountry != null
+        && destinationCountry != null
+        && !originCountry.equals(destinationCountry);
+  }
+
+  public String getOriginCountry() {
+    return originCountry;
+  }
+
+  public String getDestinationCountry() {
+    return destinationCountry;
+  }
+
+  public String getIncoterm() {
+    return incoterm;
+  }
+
+  public String getLiabilityPolicy() {
+    return liabilityPolicy;
+  }
+
+  public String getSenderInstructions() {
+    return senderInstructions;
+  }
+
+  public String getAttachedDocuments() {
+    return attachedDocuments;
   }
 
   public void moveTo(ShipmentStatus status) {

@@ -500,7 +500,7 @@ public class FinanceController {
   /** Teklif, tarife ve araç gideri ekranları da para birimi seçer. */
   @GetMapping("/currencies")
   @PreAuthorize(
-      "hasAnyAuthority('FINANCE_VIEW', 'CRM_VIEW', 'FLEET_VIEW', 'SHIPMENT_VIEW', 'WAREHOUSE_VIEW')")
+      "hasAnyAuthority('FINANCE_VIEW', 'CRM_VIEW', 'FLEET_VIEW', 'SHIPMENT_VIEW', 'WAREHOUSE_VIEW', 'CUSTOMS_VIEW')")
   List<CurrencyResponse> listCurrencies() {
     return currencies.findAll().stream().map(mapper::toResponse).toList();
   }

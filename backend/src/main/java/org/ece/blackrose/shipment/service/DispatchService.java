@@ -16,6 +16,7 @@ import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
 import org.ece.blackrose.finance.service.ExchangeRateService;
 import org.ece.blackrose.fleet.domain.FleetTypes.Availability;
+import org.ece.blackrose.fleet.domain.FleetTypes.DocumentType;
 import org.ece.blackrose.fleet.domain.FleetTypes.SubjectType;
 import org.ece.blackrose.fleet.domain.FleetTypes.VehicleKind;
 import org.ece.blackrose.fleet.domain.Vehicle;
@@ -53,6 +54,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class DispatchService implements ResourceBusyProvider {
 
   private static final BigDecimal KG_PER_TON = new BigDecimal("1000");
+  private static final String CARRIER_ADR_WARNING =
+      "ADR'li yük: taşeronun ADR yetkisi ve belgeleri ayrıca kontrol edilmelidir.";
   private static final Set<ShipmentStatus> EDITABLE =
       Set.of(ShipmentStatus.QUOTED, ShipmentStatus.PLANNED);
 
@@ -193,6 +196,16 @@ public class DispatchService implements ResourceBusyProvider {
     if (request.trailerId() != null) {
       collectCompliance(SubjectType.VEHICLE, request.trailerId(), from, to, warnings);
     }
+    if (hasDangerousGoods(leg.getShipmentId())) {
+      requireAdr(
+          SubjectType.VEHICLE, request.vehicleId(), DocumentType.VEHICLE_ADR, from, to, warnings);
+      requireAdr(
+          SubjectType.DRIVER, request.driverId(), DocumentType.DRIVER_ADR, from, to, warnings);
+      if (request.trailerId() != null) {
+        requireAdr(
+            SubjectType.VEHICLE, request.trailerId(), DocumentType.VEHICLE_ADR, from, to, warnings);
+      }
+    }
     removeCarrierCost(leg.getId());
     leg.assignOwnFleet(request.vehicleId(), request.trailerId(), request.driverId());
     return warnings;
@@ -229,7 +242,54 @@ public class DispatchService implements ResourceBusyProvider {
             request.carrierCost(),
             conversion.tlAmount(),
             "Etap " + leg.getSequenceNo() + " taşeron"));
-    return List.of();
+    return hasDangerousGoods(leg.getShipmentId()) ? List.of(CARRIER_ADR_WARNING) : List.of();
+  }
+
+  private boolean hasDangerousGoods(UUID shipmentId) {
+    return cargo.findByShipmentIdOrderByCreatedAt(shipmentId).stream()
+        .anyMatch(item -> item.getAdrClass() != null && !item.getAdrClass().isBlank());
+  }
+
+  /** ADR belgesi de diğer belgeler gibi firma ayarına göre engeller veya uyarır. */
+  private void requireAdr(
+      SubjectType type,
+      UUID id,
+      DocumentType docType,
+      LocalDate from,
+      LocalDate to,
+      List<String> warnings) {
+    insights
+        .documentIssue(type, id, docType, to)
+        .ifPresent(
+            issue -> {
+              String name = insights.check(type, id, from, to).name();
+              if (insights.blocksOnExpired()) {
+                throw new BusinessException(
+                    HttpStatus.CONFLICT,
+                    "RESOURCE_BLOCKED",
+                    name + " atanamaz: " + describe(List.of(issue)));
+              }
+              warnings.add(name + " · " + issue);
+            });
+  }
+
+  /** ADR'li yükte adaylara eksik ADR belgesini de işler. */
+  private AvailabilityResponse withAdr(
+      AvailabilityResponse row, DocumentType docType, LocalDate to) {
+    return insights
+        .documentIssue(row.subjectType(), row.subjectId(), docType, to)
+        .map(
+            issue -> {
+              List<String> issues = new ArrayList<>(row.issues());
+              issues.add(issue);
+              Availability availability =
+                  insights.blocksOnExpired() || row.availability() == Availability.BLOCKED
+                      ? Availability.BLOCKED
+                      : Availability.WARNING;
+              return new AvailabilityResponse(
+                  row.subjectType(), row.subjectId(), row.name(), availability, issues);
+            })
+        .orElse(row);
   }
 
   /** Taşeron değişirse veya etap öz filoya alınırsa eski maliyet kalmamalıdır. */
@@ -290,6 +350,8 @@ public class DispatchService implements ResourceBusyProvider {
       case "TRAFFIC_INSURANCE" -> "trafik sigortası";
       case "LICENSE" -> "ehliyet";
       case "PSYCHOTECHNIC" -> "psikoteknik";
+      case "VEHICLE_ADR" -> "araç ADR";
+      case "DRIVER_ADR" -> "sürücü ADR";
       default -> code;
     };
   }
@@ -305,7 +367,9 @@ public class DispatchService implements ResourceBusyProvider {
 
     List<AvailabilityResponse> motorized = new ArrayList<>();
     List<AvailabilityResponse> trailers = new ArrayList<>();
-    for (AvailabilityResponse row : insights.availability(SubjectType.VEHICLE, from, to, null)) {
+    boolean dangerous = hasDangerousGoods(leg.getShipmentId());
+    for (AvailabilityResponse listed : insights.availability(SubjectType.VEHICLE, from, to, null)) {
+      AvailabilityResponse row = dangerous ? withAdr(listed, DocumentType.VEHICLE_ADR, to) : listed;
       Vehicle vehicle = all.get(row.subjectId());
       boolean fits =
           vehicle.getKind() == VehicleKind.TRACTOR
@@ -319,8 +383,10 @@ public class DispatchService implements ResourceBusyProvider {
         Comparator.comparing(AvailabilityResponse::availability);
     motorized.sort(usableFirst);
     trailers.sort(usableFirst);
-    List<AvailabilityResponse> people =
-        new ArrayList<>(insights.availability(SubjectType.DRIVER, from, to, null));
+    List<AvailabilityResponse> people = new ArrayList<>();
+    for (AvailabilityResponse listed : insights.availability(SubjectType.DRIVER, from, to, null)) {
+      people.add(dangerous ? withAdr(listed, DocumentType.DRIVER_ADR, to) : listed);
+    }
     people.sort(usableFirst);
     return new CandidatesResponse(motorized, trailers, people);
   }

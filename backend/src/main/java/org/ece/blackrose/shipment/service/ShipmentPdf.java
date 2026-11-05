@@ -34,10 +34,23 @@ final class ShipmentPdf {
   private static final int BODY_SIZE = 10;
   private static final float SPACING = 10f;
   private static final float[] GOODS_WIDTHS = {6, 2, 2, 2, 2};
+  private static final float[] INTERNATIONAL_GOODS_WIDTHS = {5, 2, 2, 2, 3};
+  private static final int SMALL_SIZE = 7;
+  private static final String CMR_CONVENTION_TR =
+      "Bu taşıma, aksine hükümlere bakılmaksızın Karayoluyla Uluslararası Eşya Taşıma Sözleşmesi"
+          + " Konvansiyonu'na (CMR) tabidir.";
+  private static final String CMR_CONVENTION_EN =
+      "This carriage is subject, notwithstanding any clause to the contrary, to the Convention on"
+          + " the Contract for the International Carriage of Goods by Road (CMR).";
+  private static final String CMR_CONVENTION_DE =
+      "Diese Beförderung unterliegt trotz einer gegenteiligen Abmachung dem Übereinkommen über den"
+          + " Beförderungsvertrag im internationalen Straßengüterverkehr (CMR).";
 
   private final Font body;
   private final Font strong;
   private final Font title;
+  private final Font small;
+  private final Font smallStrong;
 
   private ShipmentPdf() throws DocumentException, IOException {
     BaseFont regular = BaseFont.createFont(BaseFont.HELVETICA, ENCODING, BaseFont.NOT_EMBEDDED);
@@ -45,6 +58,8 @@ final class ShipmentPdf {
     body = new Font(regular, BODY_SIZE);
     strong = new Font(bold, BODY_SIZE);
     title = new Font(bold, TITLE_SIZE);
+    small = new Font(regular, SMALL_SIZE);
+    smallStrong = new Font(bold, SMALL_SIZE);
   }
 
   static byte[] document(ShipmentDocument document, DocumentContent content) {
@@ -65,6 +80,9 @@ final class ShipmentPdf {
 
   private byte[] renderDocument(ShipmentDocument document, DocumentContent content)
       throws DocumentException {
+    if (document.getType() == DocumentType.CMR && content.international()) {
+      return renderInternationalCmr(document, content);
+    }
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Document pdf = open(out);
     String heading =
@@ -97,6 +115,102 @@ final class ShipmentPdf {
     pdf.add(new Paragraph("Toplam ağırlık: " + number(content.totalWeightKg()) + " kg", strong));
     pdf.close();
     return out.toByteArray();
+  }
+
+  /** Üç dilli, kutu numaralı uluslararası CMR. Resmi matbu formun yerine geçmez. */
+  private byte[] renderInternationalCmr(ShipmentDocument document, DocumentContent content)
+      throws DocumentException {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    Document pdf = open(out);
+    pdf.add(
+        new Paragraph(
+            "CMR "
+                + document.getNumber()
+                + " · Uluslararası Hamule Senedi / International"
+                + " Consignment Note / Internationaler Frachtbrief",
+            strong));
+    pdf.add(new Paragraph(CMR_CONVENTION_TR, small));
+    pdf.add(new Paragraph(CMR_CONVENTION_EN, small));
+    pdf.add(new Paragraph(CMR_CONVENTION_DE, small));
+    PdfPTable boxes = new PdfPTable(2);
+    boxes.setWidthPercentage(100);
+    boxes.setSpacingBefore(SPACING);
+    box(boxes, "1 Gönderici / Sender / Absender", content.senderName(), content.senderAddress());
+    box(
+        boxes,
+        "2 Alıcı / Consignee / Empfänger",
+        content.consigneeName(),
+        content.consigneeAddress());
+    box(
+        boxes,
+        "3 Teslim yeri / Place of delivery / Auslieferungsort",
+        content.destination(),
+        content.destinationCountry());
+    box(
+        boxes,
+        "4 Yükleme yeri ve tarihi / Place and date of taking over / Übernahmeort und -datum",
+        content.origin() + " · " + content.originCountry(),
+        content.loadingDate().format(DATE));
+    box(
+        boxes,
+        "5 Ekli belgeler / Documents attached / Beigefügte Dokumente",
+        content.attachedDocuments(),
+        null);
+    box(
+        boxes,
+        "13 Gönderici talimatı / Sender's instructions / Anweisungen des Absenders",
+        content.senderInstructions(),
+        null);
+    box(boxes, "16 Taşıyıcı / Carrier / Frachtführer", content.carrierName(), content.plates());
+    box(boxes, "Sürücü / Driver / Fahrer", content.drivers(), null);
+    box(
+        boxes,
+        "Sorumluluk sigortası / Liability insurance / Haftpflichtversicherung",
+        content.liabilityPolicy(),
+        null);
+    box(boxes, "Teslim şekli / Incoterm / Lieferbedingung", content.incoterm(), null);
+    pdf.add(boxes);
+
+    PdfPTable goods = new PdfPTable(INTERNATIONAL_GOODS_WIDTHS);
+    goods.setWidthPercentage(100);
+    goods.setSpacingBefore(SPACING);
+    goods.setSpacingAfter(SPACING);
+    for (String header :
+        new String[] {
+          "9 Mal / Goods / Ware",
+          "7 Adet / Packages / Anzahl",
+          "8 Ambalaj / Packing / Verpackung",
+          "11 Brüt kg / Gross kg / Brutto kg",
+          "ADR / UN"
+        }) {
+      goods.addCell(new Phrase(header, smallStrong));
+    }
+    for (CargoResponse item : content.goods()) {
+      goods.addCell(new Phrase(item.description(), body));
+      goods.addCell(right(item.quantity()));
+      goods.addCell(new Phrase(text(item.packaging()), body));
+      goods.addCell(right(item.weightKg()));
+      goods.addCell(new Phrase(text(item.adrClass()) + " " + text(item.unNumber()), body));
+    }
+    pdf.add(goods);
+    pdf.add(
+        new Paragraph(
+            "Toplam / Total / Gesamt: " + number(content.totalWeightKg()) + " kg", strong));
+    pdf.add(
+        new Paragraph(
+            "22 Gönderici imza / Sender signature / Unterschrift Absender     "
+                + "23 Taşıyıcı imza / Carrier signature / Unterschrift Frachtführer     "
+                + "24 Teslim alan / Goods received / Gut empfangen",
+            small));
+    pdf.close();
+    return out.toByteArray();
+  }
+
+  private void box(PdfPTable table, String label, String value, String extra) {
+    PdfPCell cell = new PdfPCell();
+    cell.addElement(new Phrase(label, smallStrong));
+    cell.addElement(new Phrase(text(value) + (extra == null ? "" : " · " + extra), body));
+    table.addCell(cell);
   }
 
   private byte[] renderInvoice(FreightInvoice invoice, String companyName, String customerName)

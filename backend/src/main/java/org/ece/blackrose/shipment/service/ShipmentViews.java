@@ -81,7 +81,14 @@ public class ShipmentViews {
         cargo.findByShipmentIdOrderByCreatedAt(shipment.getId()).stream()
             .map(ShipmentViews::cargoResponse)
             .toList(),
-        legResponses(legs.findByShipmentIdOrderBySequenceNo(shipment.getId())));
+        legResponses(legs.findByShipmentIdOrderBySequenceNo(shipment.getId())),
+        shipment.isInternational(),
+        shipment.getOriginCountry(),
+        shipment.getDestinationCountry(),
+        shipment.getIncoterm(),
+        shipment.getLiabilityPolicy(),
+        shipment.getSenderInstructions(),
+        shipment.getAttachedDocuments());
   }
 
   public List<ShipmentSummary> summaries(List<Shipment> shipments) {
@@ -160,7 +167,8 @@ public class ShipmentViews {
         item.getPackaging(),
         item.getWeightKg(),
         item.getVolumeM3(),
-        item.getAdrClass());
+        item.getAdrClass(),
+        item.getUnNumber());
   }
 
   public String write(Object value) {

@@ -41,6 +41,7 @@ public final class ShipmentTypes {
     TOLL,
     PER_DIEM,
     SUBCONTRACTOR,
+    BORDER_FEE,
     OTHER
   }
 }

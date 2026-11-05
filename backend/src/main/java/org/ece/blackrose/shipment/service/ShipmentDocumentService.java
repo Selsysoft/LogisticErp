@@ -189,7 +189,14 @@ public class ShipmentDocumentService {
         shipment.getDestination(),
         clock.dateOf(shipment.getPlannedPickup()),
         goods,
-        weight);
+        weight,
+        shipment.isInternational(),
+        shipment.getOriginCountry(),
+        shipment.getDestinationCountry(),
+        shipment.getIncoterm(),
+        shipment.getLiabilityPolicy(),
+        shipment.getSenderInstructions(),
+        shipment.getAttachedDocuments());
   }
 
   private String nextNumber(DocumentType type) {

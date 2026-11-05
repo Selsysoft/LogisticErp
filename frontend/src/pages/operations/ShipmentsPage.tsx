@@ -83,6 +83,7 @@ function NewShipmentDialog({ onClose }: { onClose: () => void }) {
     { name: "quantity", label: field("quantity"), type: "amount" },
     { name: "packaging", label: field("packaging") },
     { name: "adrClass", label: field("adrClass") },
+    { name: "unNumber", label: field("unNumber") },
     { name: "vehicleType", label: field("vehicleType") },
     { name: "distanceKm", label: field("distanceKm"), type: "amount", helperText: field("kmHelp") },
     {
@@ -162,6 +163,7 @@ function NewShipmentDialog({ onClose }: { onClose: () => void }) {
                   quantity: orNull(values.quantity),
                   packaging: orNull(values.packaging),
                   adrClass: orNull(values.adrClass),
+                  unNumber: orNull(values.unNumber),
                 },
               ]
             : [],

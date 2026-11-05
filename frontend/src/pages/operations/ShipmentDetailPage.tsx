@@ -21,6 +21,90 @@ import { CostsSection, InvoiceSection } from "./FinanceSections";
 import { LegsSection } from "./LegsSection";
 import { Pod, Shipment, ShipmentDocument, ShipmentEvent } from "./types";
 
+/** Çıkış ve varış ülkesi farklıysa CMR üç dilli ve Konvansiyon maddeli üretilir. */
+function InternationalSection({ shipment }: { shipment: Shipment }) {
+  const { t } = useTranslation();
+  const client = useQueryClient();
+  const canDispatch = useCan("SHIPMENT_DISPATCH");
+  const [editing, setEditing] = useState(false);
+  const field = (name: string) => t(`operations.field.${name}`);
+  return (
+    <Box>
+      <SectionHeader title={t("operations.sections.international")}>
+        {canDispatch && (
+          <Button variant="outlined" onClick={() => setEditing(true)}>
+            {t("common.edit")}
+          </Button>
+        )}
+      </SectionHeader>
+      {shipment.international ? (
+        <Typography variant="body2">
+          {shipment.originCountry} → {shipment.destinationCountry}
+          {shipment.incoterm ? ` · ${shipment.incoterm}` : ""}
+          {shipment.liabilityPolicy
+            ? ` · ${field("liabilityPolicy")}: ${shipment.liabilityPolicy}`
+            : ""}
+        </Typography>
+      ) : (
+        <Typography variant="body2" color="text.secondary">
+          {t("operations.notice.domestic")}
+        </Typography>
+      )}
+      {editing && (
+        <FormDialog
+          title={t("operations.sections.international")}
+          fields={[
+            {
+              name: "originCountry",
+              label: field("originCountry"),
+              required: true,
+              defaultValue: shipment.originCountry ?? "TR",
+              helperText: field("countryHelp"),
+            },
+            {
+              name: "destinationCountry",
+              label: field("destinationCountry"),
+              required: true,
+              defaultValue: shipment.destinationCountry ?? "",
+            },
+            { name: "incoterm", label: field("incoterm"), defaultValue: shipment.incoterm ?? "" },
+            {
+              name: "liabilityPolicy",
+              label: field("liabilityPolicy"),
+              defaultValue: shipment.liabilityPolicy ?? "",
+            },
+            {
+              name: "senderInstructions",
+              label: field("senderInstructions"),
+              defaultValue: shipment.senderInstructions ?? "",
+            },
+            {
+              name: "attachedDocuments",
+              label: field("attachedDocuments"),
+              defaultValue: shipment.attachedDocuments ?? "",
+            },
+          ]}
+          onClose={() => setEditing(false)}
+          onSubmit={(values) =>
+            apiRequest("PUT", `/shipment/shipments/${shipment.id}/international`, {
+              originCountry: values.originCountry.toUpperCase(),
+              destinationCountry: values.destinationCountry.toUpperCase(),
+              incoterm: orNull(values.incoterm),
+              liabilityPolicy: orNull(values.liabilityPolicy),
+              senderInstructions: orNull(values.senderInstructions),
+              attachedDocuments: orNull(values.attachedDocuments),
+            })
+          }
+          onSaved={() => {
+            setEditing(false);
+            void client.invalidateQueries({ queryKey: ["shipment"] });
+          }}
+        />
+      )}
+    </Box>
+  );
+}
+
 function PodSection({ shipment }: { shipment: Shipment }) {
   const { t } = useTranslation();
   const client = useQueryClient();
@@ -304,6 +388,7 @@ export function ShipmentDetailPage() {
             { header: t("operations.field.packaging"), render: (r) => r.packaging },
             { header: t("operations.field.weightKg"), render: (r) => r.weightKg },
             { header: t("operations.field.adrClass"), render: (r) => r.adrClass },
+            { header: t("operations.field.unNumber"), render: (r) => r.unNumber },
           ]}
         />
       </Box>
@@ -312,6 +397,7 @@ export function ShipmentDetailPage() {
         <PriceBreakdownTable price={data.breakdown} />
       </Box>
       <LegsSection shipment={data} />
+      <InternationalSection shipment={data} />
       <PodSection shipment={data} />
       <DocumentsSection shipment={data} />
       <CostsSection shipment={data} />

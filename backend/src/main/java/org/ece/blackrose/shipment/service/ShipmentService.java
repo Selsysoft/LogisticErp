@@ -33,6 +33,7 @@ import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentLegRep
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentRepository;
 import org.ece.blackrose.shipment.web.ShipmentDtos.CargoRequest;
 import org.ece.blackrose.shipment.web.ShipmentDtos.CreateShipmentRequest;
+import org.ece.blackrose.shipment.web.ShipmentDtos.SaveInternationalRequest;
 import org.ece.blackrose.tenant.TenantClock;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -164,6 +165,14 @@ public class ShipmentService {
           HttpStatus.CONFLICT, "POD_REQUIRED", "Teslim için önce teslim kanıtı girilmelidir.");
     }
     move(shipment, target, message);
+    return shipment;
+  }
+
+  /** Yayımlanan CMR etkilenmez; taslak bir sonraki hazırlamada yeni bilgiyi alır. */
+  @Transactional
+  public Shipment updateInternational(UUID id, SaveInternationalRequest request) {
+    Shipment shipment = lock(id);
+    shipment.updateInternational(request);
     return shipment;
   }
 

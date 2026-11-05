@@ -31,7 +31,8 @@ public final class ShipmentDtos {
       @Size(max = 50) String packaging,
       @PositiveOrZero BigDecimal weightKg,
       @PositiveOrZero BigDecimal volumeM3,
-      @Size(max = 20) String adrClass) {}
+      @Size(max = 20) String adrClass,
+      @Size(max = 10) String unNumber) {}
 
   public record CargoResponse(
       UUID id,
@@ -40,7 +41,8 @@ public final class ShipmentDtos {
       String packaging,
       BigDecimal weightKg,
       BigDecimal volumeM3,
-      String adrClass) {}
+      String adrClass,
+      String unNumber) {}
 
   /**
    * Fiyat önceliği: onaylı teklif satırı, elle net tutar, tarife. Tarifede sözleşmeli müşterinin
@@ -125,7 +127,22 @@ public final class ShipmentDtos {
       PriceBreakdown breakdown,
       String notes,
       List<CargoResponse> cargo,
-      List<LegResponse> legs) {}
+      List<LegResponse> legs,
+      boolean international,
+      String originCountry,
+      String destinationCountry,
+      String incoterm,
+      String liabilityPolicy,
+      String senderInstructions,
+      String attachedDocuments) {}
+
+  public record SaveInternationalRequest(
+      @NotBlank @Size(min = 2, max = 2) String originCountry,
+      @NotBlank @Size(min = 2, max = 2) String destinationCountry,
+      @Size(max = 10) String incoterm,
+      @Size(max = 100) String liabilityPolicy,
+      @Size(max = 500) String senderInstructions,
+      @Size(max = 500) String attachedDocuments) {}
 
   public record ChangeStatusRequest(
       @NotNull ShipmentStatus status, @Size(max = 500) String message) {}
@@ -196,7 +213,14 @@ public final class ShipmentDtos {
       String destination,
       LocalDate loadingDate,
       List<CargoResponse> goods,
-      BigDecimal totalWeightKg) {}
+      BigDecimal totalWeightKg,
+      boolean international,
+      String originCountry,
+      String destinationCountry,
+      String incoterm,
+      String liabilityPolicy,
+      String senderInstructions,
+      String attachedDocuments) {}
 
   public record DocumentResponse(
       UUID id,

@@ -74,11 +74,11 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - ✅ G4 Sayım/envanter
 
 ## EPİK H — Uluslararası/Gümrük/ADR (Faz 7) — P1
-- ⬜ H1 Gümrük beyanı
-- ⬜ H2 Transit (T1/T2)/TIR + süre/teminat
-- ⬜ H3 ADR uygunluk kontrolü
-- ⬜ H4 Sınır/geçiş ücretleri + izin belgeleri
-- ⬜ H5 Uluslararası CMR (çok dilli)
+- ✅ H1 Gümrük beyanı
+- ✅ H2 Transit (T1/T2)/TIR + süre/teminat
+- ✅ H3 ADR uygunluk kontrolü
+- ✅ H4 Sınır/geçiş ücretleri + izin belgeleri
+- ✅ H5 Uluslararası CMR (çok dilli)
 
 ## EPİK I — Entegrasyonlar (Faz 8) — P1
 - ⬜ I1 GİB e-Fatura/e-Arşiv/e-İrsaliye (entegratör adaptörü + mock)

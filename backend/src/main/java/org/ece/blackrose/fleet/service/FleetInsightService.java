@@ -270,6 +270,27 @@ public class FleetInsightService {
         .toList();
   }
 
+  /** Zorunlu olmayan bir belgenin (örneğin ADR) dönem sonuna kadar geçerliliğine bakar. */
+  @Transactional(readOnly = true)
+  public Optional<String> documentIssue(
+      SubjectType type, UUID id, DocumentType docType, LocalDate validThrough) {
+    LocalDate latest =
+        documentsOf(type, List.of(id)).getOrDefault(id, List.of()).stream()
+            .filter(document -> document.getDocType() == docType)
+            .map(ComplianceDocument::getExpiresOn)
+            .max(Comparator.naturalOrder())
+            .orElse(null);
+    if (latest == null) {
+      return Optional.of("MISSING:" + docType);
+    }
+    return latest.isBefore(validThrough) ? Optional.of("EXPIRED:" + docType) : Optional.empty();
+  }
+
+  @Transactional(readOnly = true)
+  public boolean blocksOnExpired() {
+    return blockOnExpired();
+  }
+
   private static AvailabilityResponse evaluate(
       SubjectType type,
       UUID id,
