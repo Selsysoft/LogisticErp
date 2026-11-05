@@ -17,6 +17,8 @@ import org.ece.blackrose.identity.repository.IdentityRepositories.RoleRepository
 import org.ece.blackrose.identity.repository.IdentityRepositories.UserAccountRepository;
 import org.ece.blackrose.identity.web.IdentityDtos.InviteUserRequest;
 import org.ece.blackrose.identity.web.IdentityDtos.UpdateUserRequest;
+import org.ece.blackrose.saas.domain.SaasTypes.LimitedResource;
+import org.ece.blackrose.saas.service.PlanLimitService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -33,13 +35,16 @@ public class UserService {
   private final RefreshTokenRepository refreshTokens;
   private final AccountTokenService accountTokens;
   private final AuditService audit;
+  private final PlanLimitService planLimits;
 
   public UserService(
       UserAccountRepository users,
       RoleRepository roles,
       RefreshTokenRepository refreshTokens,
       AccountTokenService accountTokens,
-      AuditService audit) {
+      AuditService audit,
+      PlanLimitService planLimits) {
+    this.planLimits = planLimits;
     this.users = users;
     this.roles = roles;
     this.refreshTokens = refreshTokens;
@@ -64,6 +69,7 @@ public class UserService {
       throw new BusinessException(
           HttpStatus.CONFLICT, "USER_EMAIL_TAKEN", "Bu e-posta zaten kayıtlı.");
     }
+    planLimits.require(LimitedResource.USERS);
     List<Role> assigned = findRoles(request.roleIds());
     ensureActorHolds(permissionsOf(assigned));
     UserAccount user = users.save(new UserAccount(email, request.fullName(), assigned));
@@ -95,6 +101,7 @@ public class UserService {
 
     user.updateProfile(request.fullName(), assigned);
     if (request.enabled() && user.getStatus() == UserStatus.DISABLED) {
+      planLimits.require(LimitedResource.USERS);
       user.enable();
     } else if (!request.enabled() && user.getStatus() != UserStatus.DISABLED) {
       user.disable();

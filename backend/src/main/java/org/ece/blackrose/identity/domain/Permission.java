@@ -26,7 +26,8 @@ public enum Permission {
   CUSTOMS_EDIT("customs"),
   DRIVER_APP("driver"),
   INTEGRATION_VIEW("integration"),
-  REPORT_VIEW("report");
+  REPORT_VIEW("report"),
+  SUBSCRIPTION_VIEW("subscription");
 
   private final String module;
 

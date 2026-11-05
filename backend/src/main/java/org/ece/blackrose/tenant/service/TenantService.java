@@ -8,6 +8,7 @@ import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.identity.domain.AuditEvent;
 import org.ece.blackrose.identity.service.AuditService;
 import org.ece.blackrose.identity.service.UserService;
+import org.ece.blackrose.saas.service.SubscriptionService;
 import org.ece.blackrose.tenant.TenantContext;
 import org.ece.blackrose.tenant.domain.Tenant;
 import org.ece.blackrose.tenant.domain.TenantStatus;
@@ -32,9 +33,15 @@ public class TenantService {
   private final TenantMigrator migrator;
   private final UserService users;
   private final AuditService audit;
+  private final SubscriptionService subscriptions;
 
   public TenantService(
-      TenantRepository tenants, TenantMigrator migrator, UserService users, AuditService audit) {
+      TenantRepository tenants,
+      TenantMigrator migrator,
+      UserService users,
+      AuditService audit,
+      SubscriptionService subscriptions) {
+    this.subscriptions = subscriptions;
     this.tenants = tenants;
     this.migrator = migrator;
     this.users = users;
@@ -52,6 +59,7 @@ public class TenantService {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "TENANT_TIME_ZONE_INVALID", "Saat dilimi geçersiz.");
     }
+    subscriptions.ensurePlanSelectable(request.planCode());
     Optional<Tenant> existing = tenants.findByCode(request.code());
     if (existing.isPresent() && existing.get().getStatus() != TenantStatus.FAILED) {
       throw new BusinessException(
@@ -67,6 +75,8 @@ public class TenantService {
     try {
       migrator.migrate(tenant.getSchemaName());
       createOwner(tenant, request);
+      subscriptions.startTrial(
+          tenant, request.planCode(), request.trialDays(), request.ownerEmail());
     } catch (RuntimeException ex) {
       log.error("Tenant sağlama başarısız: {}", tenant.getCode(), ex);
       tenant.markFailed();

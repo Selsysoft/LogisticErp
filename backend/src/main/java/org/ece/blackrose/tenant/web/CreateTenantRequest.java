@@ -1,6 +1,8 @@
 package org.ece.blackrose.tenant.web;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -11,4 +13,6 @@ public record CreateTenantRequest(
     @NotBlank @Pattern(regexp = "^[A-Z]{3}$") String defaultCurrency,
     @NotBlank @Size(max = 64) String timeZone,
     @NotBlank @Email String ownerEmail,
-    @NotBlank @Size(max = 200) String ownerFullName) {}
+    @NotBlank @Size(max = 200) String ownerFullName,
+    String planCode,
+    @Min(0) @Max(90) Integer trialDays) {}

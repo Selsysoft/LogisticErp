@@ -9,7 +9,9 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
-/** Açılışta aktif tenantları günceller. Hata alan tenant kapanır, diğerleri etkilenmez. */
+/**
+ * Açılışta etkin ve askıdaki tenantları günceller. Hata alan tenant kapanır, diğerleri etkilenmez.
+ */
 @Component
 public class TenantMigrationRunner implements ApplicationRunner {
 
@@ -25,7 +27,13 @@ public class TenantMigrationRunner implements ApplicationRunner {
 
   @Override
   public void run(ApplicationArguments args) {
-    for (Tenant tenant : tenants.findByStatus(TenantStatus.ACTIVE)) {
+    migrate(TenantStatus.ACTIVE);
+    // Askıdaki firma açıldığında şeması güncel olmalıdır.
+    migrate(TenantStatus.SUSPENDED);
+  }
+
+  private void migrate(TenantStatus status) {
+    for (Tenant tenant : tenants.findByStatus(status)) {
       try {
         migrator.migrate(tenant.getSchemaName());
       } catch (RuntimeException ex) {

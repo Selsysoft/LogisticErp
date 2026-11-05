@@ -15,7 +15,7 @@ Uygulama: http://localhost:5173. `-Djava.version=17` yalnız JDK 21 kurulu deği
 
 | Kullanım | Firma kodu | E-posta | Şifre |
 |---|---|---|---|
-| SaaS yöneticisi (yalnız API) | — | `admin@blackrose.local` | `Dev-Admin-12345` |
+| SaaS yöneticisi (konsol: http://localhost:5173/saas/login) | — | `admin@blackrose.local` | `Dev-Admin-12345` |
 | Patron/Yönetici | `acme` | `patron@acme.test` | `Demo-Acme-2026` |
 | Finans | `acme` | `finans@acme.test` | `Demo-Acme-2026` |
 

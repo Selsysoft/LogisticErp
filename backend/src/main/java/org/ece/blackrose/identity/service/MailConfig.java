@@ -35,6 +35,11 @@ public class MailConfig {
         send(email, "Şifre sıfırlama", "Şifrenizi sıfırlamak için: " + link);
       }
 
+      @Override
+      public void sendNotice(String email, String subject, String text) {
+        send(email, subject, text);
+      }
+
       private void send(String email, String subject, String text) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(properties.mailFrom());
@@ -63,6 +68,11 @@ public class MailConfig {
       @Override
       public void sendPasswordReset(String email, String link) {
         log.info("[DEV] Şifre sıfırlama bağlantısı {}: {}", email, link);
+      }
+
+      @Override
+      public void sendNotice(String email, String subject, String text) {
+        log.info("[DEV] Bildirim {}: {} - {}", email, subject, text);
       }
     };
   }

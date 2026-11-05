@@ -6,6 +6,7 @@ import { apiGet } from "../api/client";
 import { hasPermission, useAuthStore } from "../auth/authStore";
 import { MODULE_ITEMS } from "../components/AppShell";
 import { DashboardWidgets } from "./reports/DashboardWidgets";
+import { SubscriptionNotice } from "./saas/SubscriptionPage";
 import { BRAND } from "../theme";
 
 /** Henüz geliştirilmemiş modüller; kartları "yakında" ile işaretlenir. */
@@ -46,6 +47,7 @@ export function HomePage() {
           }
         />
       </Box>
+      <SubscriptionNotice />
       <DashboardWidgets />
       <Box
         sx={{

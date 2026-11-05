@@ -51,6 +51,14 @@ public class Tenant extends AuditableEntity {
     status = TenantStatus.ACTIVE;
   }
 
+  public void suspend() {
+    status = TenantStatus.SUSPENDED;
+  }
+
+  public void close() {
+    status = TenantStatus.CLOSED;
+  }
+
   public void markFailed() {
     status = TenantStatus.FAILED;
   }

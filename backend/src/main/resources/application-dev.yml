@@ -4,6 +4,9 @@ spring:
 
 # Bu değerler yalnız yerel geliştirme içindir.
 app:
+  saas:
+    payment:
+      provider: mock
   integration:
     edocument:
       provider: mock

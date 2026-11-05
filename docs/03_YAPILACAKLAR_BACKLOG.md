@@ -101,12 +101,12 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - ⬜ K4 Masraf/harcırah mobil giriş
 
 ## EPİK L — SaaS Operasyon (Faz 11) — P1
-- ⬜ L1 Tenant yaşam döngüsü + onboarding + KVKK dışa aktar/sil
-- ⬜ L2 Plan/abonelik + limit
-- ⬜ L3 SaaS faturalama + ödeme sağlayıcı
-- ⬜ L4 Kullanım ölçümü
-- ⬜ L5 Sağlık & izleme konsolu + çevrimiçi kullanım
-- ⬜ L6 Çapraz-tenant denetimli erişim + log
+- 🟦 L1 Tenant yaşam döngüsü + onboarding + KVKK dışa aktar/sil — açma, deneme, askı, kapatma, dışa aktarım var; fiziksel silme hukuki görüş bekliyor
+- ✅ L2 Plan/abonelik + limit
+- 🟦 L3 SaaS faturalama + ödeme sağlayıcı — borç kaydı, deneme sağlayıcısı ve gecikme akışı var; gerçek sağlayıcı ve resmi fatura bekliyor
+- ✅ L4 Kullanım ölçümü
+- 🟦 L5 Sağlık & izleme konsolu + çevrimiçi kullanım — tek sunucu, bellek içi; firma bazlı hata ve alarm yok
+- ✅ L6 Çapraz-tenant denetimli erişim + log
 
 ---
 

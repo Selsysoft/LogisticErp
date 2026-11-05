@@ -42,6 +42,7 @@ public class FleetRegistryService {
   private final ResourceBlockRepository blocks;
   private final FleetSettingsRepository settings;
   private final AccountRepository accounts;
+  private final org.ece.blackrose.saas.service.PlanLimitService planLimits;
 
   public FleetRegistryService(
       VehicleRepository vehicles,
@@ -49,7 +50,9 @@ public class FleetRegistryService {
       ComplianceDocumentRepository documents,
       ResourceBlockRepository blocks,
       FleetSettingsRepository settings,
-      AccountRepository accounts) {
+      AccountRepository accounts,
+      org.ece.blackrose.saas.service.PlanLimitService planLimits) {
+    this.planLimits = planLimits;
     this.vehicles = vehicles;
     this.drivers = drivers;
     this.documents = documents;
@@ -70,6 +73,7 @@ public class FleetRegistryService {
 
   @Transactional
   public Vehicle createVehicle(SaveVehicleRequest request) {
+    planLimits.require(org.ece.blackrose.saas.domain.SaasTypes.LimitedResource.VEHICLES);
     String plate = normalizePlate(request.plate());
     if (vehicles.findByPlate(plate).isPresent()) {
       throw new BusinessException(HttpStatus.CONFLICT, "PLATE_TAKEN", "Bu plaka zaten kayıtlı.");

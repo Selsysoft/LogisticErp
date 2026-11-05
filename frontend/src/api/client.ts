@@ -154,7 +154,7 @@ export async function apiDownload(path: string, fallbackName: string) {
   URL.revokeObjectURL(url);
 }
 
-async function readErrorBody(response: Response): Promise<ApiErrorBody> {
+export async function readErrorBody(response: Response): Promise<ApiErrorBody> {
   try {
     return (await response.json()) as ApiErrorBody;
   } catch {

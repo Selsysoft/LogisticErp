@@ -72,6 +72,8 @@ public class ShipmentService {
   private final AuditService audit;
   private final DistanceProvider distances;
 
+  private final org.ece.blackrose.saas.service.PlanLimitService planLimits;
+
   public ShipmentService(
       ShipmentRepository shipments,
       ShipmentCargoRepository cargo,
@@ -86,7 +88,9 @@ public class ShipmentService {
       ShipmentViews views,
       TenantClock clock,
       AuditService audit,
-      DistanceProvider distances) {
+      DistanceProvider distances,
+      org.ece.blackrose.saas.service.PlanLimitService planLimits) {
+    this.planLimits = planLimits;
     this.distances = distances;
     this.audit = audit;
     this.shipments = shipments;
@@ -116,6 +120,7 @@ public class ShipmentService {
 
   @Transactional
   public Shipment create(CreateShipmentRequest request) {
+    planLimits.require(org.ece.blackrose.saas.domain.SaasTypes.LimitedResource.SHIPMENTS_MONTH);
     if (!accounts.existsById(request.accountId())) {
       throw new BusinessException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Cari bulunamadı.");
     }

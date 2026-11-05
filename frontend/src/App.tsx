@@ -59,6 +59,12 @@ import { FleetReportPage } from "./pages/reports/FleetReportPage";
 import { OperationsReportPage } from "./pages/reports/OperationsReportPage";
 import { ProfitabilityReportPage } from "./pages/reports/ProfitabilityReportPage";
 import { ReportsLayout } from "./pages/reports/ReportsLayout";
+import { AuditConsolePage, HealthConsolePage } from "./pages/saas/HealthConsolePage";
+import { InvoicesConsolePage } from "./pages/saas/InvoicesConsolePage";
+import { PlansConsolePage } from "./pages/saas/PlansConsolePage";
+import { SaasLayout, SaasLoginPage } from "./pages/saas/SaasConsole";
+import { SubscriptionPage } from "./pages/saas/SubscriptionPage";
+import { TenantsConsolePage } from "./pages/saas/TenantsConsolePage";
 import { SetPasswordPage } from "./pages/SetPasswordPage";
 import { BillingPage, ContractDetailPage } from "./pages/warehouse/BillingPage";
 import { CountDetailPage, CountsPage } from "./pages/warehouse/CountsPage";
@@ -80,6 +86,14 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/set-password" element={<SetPasswordPage />} />
+      <Route path="/saas/login" element={<SaasLoginPage />} />
+      <Route path="/saas" element={<SaasLayout />}>
+        <Route index element={<TenantsConsolePage />} />
+        <Route path="plans" element={<PlansConsolePage />} />
+        <Route path="invoices" element={<InvoicesConsolePage />} />
+        <Route path="health" element={<HealthConsolePage />} />
+        <Route path="audit" element={<AuditConsolePage />} />
+      </Route>
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
           <Route path="/" element={<LandingRedirect />} />
@@ -256,6 +270,14 @@ export function App() {
             element={
               <RequirePermission permission="AUDIT_VIEW">
                 <AuditLogPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/subscription"
+            element={
+              <RequirePermission permission="SUBSCRIPTION_VIEW">
+                <SubscriptionPage />
               </RequirePermission>
             }
           />

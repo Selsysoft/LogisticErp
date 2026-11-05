@@ -1,4 +1,7 @@
 app:
+  saas:
+    payment:
+      provider: mock
   integration:
     edocument:
       provider: mock

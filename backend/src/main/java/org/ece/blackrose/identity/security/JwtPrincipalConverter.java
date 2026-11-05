@@ -8,6 +8,7 @@ import org.ece.blackrose.identity.domain.UserStatus;
 import org.ece.blackrose.identity.repository.IdentityRepositories.RevokedAccessTokenRepository;
 import org.ece.blackrose.identity.repository.IdentityRepositories.SaasAdminRepository;
 import org.ece.blackrose.identity.repository.IdentityRepositories.UserAccountRepository;
+import org.ece.blackrose.saas.service.PresenceTracker;
 import org.ece.blackrose.tenant.TenantContext;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -29,11 +30,14 @@ public class JwtPrincipalConverter implements Converter<Jwt, AbstractAuthenticat
   private final UserAccountRepository users;
   private final SaasAdminRepository admins;
   private final RevokedAccessTokenRepository revokedTokens;
+  private final PresenceTracker presence;
 
   public JwtPrincipalConverter(
       UserAccountRepository users,
       SaasAdminRepository admins,
-      RevokedAccessTokenRepository revokedTokens) {
+      RevokedAccessTokenRepository revokedTokens,
+      PresenceTracker presence) {
+    this.presence = presence;
     this.users = users;
     this.admins = admins;
     this.revokedTokens = revokedTokens;
@@ -81,6 +85,7 @@ public class JwtPrincipalConverter implements Converter<Jwt, AbstractAuthenticat
             .filter(candidate -> candidate.getStatus() == UserStatus.ACTIVE)
             .filter(candidate -> candidate.getTokenVersion() == tokenVersion(jwt))
             .orElseThrow(JwtPrincipalConverter::invalid);
+    presence.touch(claimedTenant, user.getId());
     List<String> authorities = user.getEffectivePermissions().stream().map(Enum::name).toList();
     return authentication(
         new AuthenticatedUser(user.getId(), user.getEmail(), jti, jwt.getExpiresAt()), authorities);

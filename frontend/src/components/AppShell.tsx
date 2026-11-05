@@ -2,6 +2,7 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import BadgeIcon from "@mui/icons-material/Badge";
+import CardMembershipIcon from "@mui/icons-material/CardMembership";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
 import GroupIcon from "@mui/icons-material/Group";
@@ -63,6 +64,12 @@ const ADMIN_ITEMS = [
   { path: "/users", label: "nav.users", permission: "USER_VIEW", Icon: GroupIcon },
   { path: "/roles", label: "nav.roles", permission: "ROLE_MANAGE", Icon: AdminPanelSettingsIcon },
   { path: "/audit", label: "nav.audit", permission: "AUDIT_VIEW", Icon: HistoryIcon },
+  {
+    path: "/subscription",
+    label: "nav.subscription",
+    permission: "SUBSCRIPTION_VIEW",
+    Icon: CardMembershipIcon,
+  },
 ];
 
 export function AppShell() {
