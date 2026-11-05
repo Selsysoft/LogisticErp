@@ -1,11 +1,11 @@
 # FAZ 6 — Depo / 3PL / Antrepo
 
-> **Uygulama Notu (2026-11-05) — Durum: Kriterler yerelde karşılandı, CI bekliyor.**
+> **Uygulama Notu (2026-11-05) — Durum: Kriterler karşılandı.**
 >
 > **Yapılanlar:** Depo ve antrepo, raf-göz, müşteriye ait ürün, lot ve son kullanma takibi, mal kabul, çıkış, ters kayıt, gümrük
 > durumu, sayım ve fark düzeltmesi, 3PL sözleşmesi, elleçleme, dönemsel fatura, iptal, PDF ve bunların React ekranları.
 >
-> **Doğrulama:** `mvn verify` birim ve entegrasyon testleriyle (yerelde Java 17). Tarayıcıda depo tanımı, çıkış, stok yetersiz engeli,
+> **Doğrulama:** GitHub Actions CI (`41998479489`) yeşil: Java 21 ile 18 birim + 109 entegrasyon testi, Spotless, container imajı; frontend lint, format, 18 test ve build. Tarayıcıda depo tanımı, çıkış, stok yetersiz engeli,
 > fatura önizleme, fatura kesme ve iptal, sayım açma, fark girme ve kapatma, hareket listesi denendi; cari kayıtları veritabanından
 > doğrulandı. Mal kabul, gümrük işlemi, ters kayıt, elleçleme girişi, sayıma satır ekleme ve PDF indirme ekranları tarayıcıda
 > denenmedi; arka planları entegrasyon testlidir.
