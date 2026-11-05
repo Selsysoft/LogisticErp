@@ -1,12 +1,12 @@
 # FAZ 9 — Raporlama / BI / Dashboard
 
-> **Uygulama Notu (2026-11-05) — Durum: Uygulama içi raporlar ve rol bazlı ana sayfa yerelde hazır, commit ve CI bekliyor.**
+> **Uygulama Notu (2026-11-05) — Durum: Uygulama içi raporlar ve rol bazlı ana sayfa `main` üzerinde, CI yeşil (run 42016597239). Performans ölçümü ve opsiyonlar açık.**
 >
 > **Yapılanlar:** Sefer, müşteri, güzergâh, araç ve öz filo/taşeron kârlılığı; operasyon göstergeleri; döviz pozisyonu, 12 haftalık nakit
 > öngörüsü, tahsilat ve ödeme toplamları; sürücü performansı; yetkiye göre dolan ana sayfa bölümleri; Excel ve PDF dışa aktarım; `REPORT_VIEW` izni.
 > Yaşlandırma, yakıt ve bakım maliyeti ile belge uyumu için mevcut finans ve filo ekranları kullanılır.
 >
-> **Doğrulama:** Yerelde Java 17 ile `mvn verify` 27 birim + 131 entegrasyon testi; frontend lint, 23 test ve build. Kârlılığın cari bakiyelerle
+> **Doğrulama:** `mvn verify` 27 birim + 131 entegrasyon testi (CI'da Java 21, yerelde Java 17); frontend lint, 23 test ve build. Kârlılığın cari bakiyelerle
 > tutarlılığı, bütün kırılımlarda aynı toplam, iptal edilen gider, yetki ayrımı, Excel ve PDF içeriği entegrasyon testlidir. Tarayıcıda patron
 > hesabıyla ana sayfa ve dört sekme demo verisiyle görüldü, konsolda hata yoktu. Kırılım, tarih ve şube filtreleri ile sayfalama tarayıcıda değiştirilmedi.
 > Excel ve PDF API üzerinden indirildi, ekrandaki düğmelere basılmadı. Sefer yetkisi olmayan kullanıcının başka sekmeye yönlendirilmesi tarayıcıda denenmedi.
