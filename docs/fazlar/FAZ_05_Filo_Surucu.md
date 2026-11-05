@@ -1,6 +1,6 @@
 # FAZ 5 — Filo ve Sürücü Yönetimi
 
-> **Uygulama Notu (2026-11-05) — Durum: Faz 5A kriterleri karşılandı. Faz 5B açık.**
+> **Uygulama Notu (2026-11-05) — Durum: Faz 5A kriterleri karşılandı. Faz 5B yerelde karşılandı, CI bekliyor.**
 >
 > **Yapılanlar (5A):** Araç ve dorse kütüğü, sürücü kütüğü ve personel carisi, belgeler, hatırlatmalar, takvim kapatmaları,
 > bakım/onarım/lastik/yakıt giderinin finansa yazılması, yakıt tüketimi ve anomali, araç maliyet raporu, uygun kaynak sorgusu,
@@ -23,7 +23,11 @@
 > - Gider ya tedarikçi carisine ya banka/kasaya yazılır. Maliyet raporu kayıtta sabitlenen TL karşılığını toplar.
 > - Kişisel veri olarak T.C. kimlik no tutulmaz. Sürücü verisinin saklama süresi ve aydınlatma metni KVKK kapsamında belirlenmeli.
 >
-> **Faz 5B ile gelecek:** Sefer ataması, çakışma kontrolü, harcırah/avans ve dispatch entegrasyonu.
+> **Faz 5B:** Atama sefer etabında tutulur (`ShipmentLeg`); ayrı `DriverAssignment` tablosu açılmadı. Aynı zaman aralığında aynı araç,
+> dorse veya sürücü atanamaz; teslim edilen veya iptal edilen sefer kaynağı bırakır. Uygunluk ekranı dolu kaynağı gösterir. Sürücü
+> avansı banka/kasadan ödenir ve sürücü carisine BORÇ yazar; harcırah sefer gideri olarak girilir, kapanışta ALACAK yazar ve ödeme
+> planına düşer. Harcırah tutarı elle girilir, otomatik hesap ve onay akışı yoktur. Tarayıcıda atama denendi; avans ekranı denenmedi,
+> arka planı entegrasyon testlidir.
 
 **Amaç:** Araç/çekici/dorse envanteri, bakım-muayene-sigorta-lastik-yakıt takibi; sürücü ve
 belgeleri; atama ve harcırah. Giderler finansa, müsaitlik/belge dispatch'e beslenir.
@@ -57,10 +61,10 @@ operasyona hazır müsaitlik/belge verisi.
 
 ## Kabul Kriterleri
 - [x] Araç/dorse/sürücü CRUD + belge bitiş tarihleri ve hatırlatma listesi çalışır.
-- [ ] (5B) Belgesi geçersiz kaynak dispatch'te uyarı/engel üretir (Faz 4 ile entegre).
+- [x] (5B) Belgesi geçersiz kaynak dispatch'te uyarı/engel üretir (Faz 4 ile entegre).
 - [x] Bakım/lastik/yakıt kaydı ilgili gideri finansa (araç maliyetine) yazar.
 - [x] Yakıt tüketimi (L/100km) ve araç başına maliyet raporlanır.
-- [ ] (5B) Sürücü ataması çakışma kontrollü; harcırah sürücü carisine ALACAK olarak düşer.
+- [x] (5B) Sürücü ataması çakışma kontrollü; harcırah sürücü carisine ALACAK olarak düşer.
 
 ## ERP Referansı
 Araç/tedarikçi/şoför kütükleri: `SupplierTruckController`, `SupplierChauffeurController`,

@@ -12,6 +12,7 @@ import org.ece.blackrose.finance.repository.FinanceRepositories.FundAccountRepos
 import org.ece.blackrose.fleet.domain.FleetSettings;
 import org.ece.blackrose.fleet.domain.FleetTypes.ExpenseKind;
 import org.ece.blackrose.fleet.domain.FleetTypes.SubjectType;
+import org.ece.blackrose.fleet.service.DriverAdvanceService;
 import org.ece.blackrose.fleet.service.FleetInsightService;
 import org.ece.blackrose.fleet.service.FleetRegistryService;
 import org.ece.blackrose.fleet.service.VehicleExpenseService;
@@ -19,6 +20,8 @@ import org.ece.blackrose.fleet.web.FleetDtos.AvailabilityResponse;
 import org.ece.blackrose.fleet.web.FleetDtos.BlockResponse;
 import org.ece.blackrose.fleet.web.FleetDtos.CreateDriverRequest;
 import org.ece.blackrose.fleet.web.FleetDtos.DocumentResponse;
+import org.ece.blackrose.fleet.web.FleetDtos.DriverAdvanceRequest;
+import org.ece.blackrose.fleet.web.FleetDtos.DriverAdvanceResponse;
 import org.ece.blackrose.fleet.web.FleetDtos.DriverResponse;
 import org.ece.blackrose.fleet.web.FleetDtos.FleetOptionsResponse;
 import org.ece.blackrose.fleet.web.FleetDtos.FleetSettingsResponse;
@@ -47,6 +50,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -66,6 +70,7 @@ public class FleetController {
   private final FundAccountRepository funds;
   private final TenantClock clock;
   private final FleetMapper mapper;
+  private final DriverAdvanceService advances;
 
   public FleetController(
       FleetRegistryService registry,
@@ -74,7 +79,9 @@ public class FleetController {
       AccountRepository accounts,
       FundAccountRepository funds,
       TenantClock clock,
-      FleetMapper mapper) {
+      FleetMapper mapper,
+      DriverAdvanceService advances) {
+    this.advances = advances;
     this.registry = registry;
     this.expenses = expenses;
     this.insights = insights;
@@ -140,6 +147,16 @@ public class FleetController {
   DriverResponse updateDriver(
       @PathVariable UUID id, @Valid @RequestBody UpdateDriverRequest request) {
     return mapper.toResponse(registry.updateDriver(id, request));
+  }
+
+  @PostMapping("/drivers/{id}/advances")
+  @ResponseStatus(HttpStatus.CREATED)
+  @PreAuthorize(EDIT)
+  DriverAdvanceResponse giveAdvance(
+      @PathVariable UUID id,
+      @Valid @RequestBody DriverAdvanceRequest request,
+      @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey) {
+    return new DriverAdvanceResponse(advances.giveAdvance(id, request, idempotencyKey).getId());
   }
 
   // Belge ve takvim (subject: VEHICLE veya DRIVER)

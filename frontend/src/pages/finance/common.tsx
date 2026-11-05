@@ -110,7 +110,7 @@ export interface Option {
 export interface FieldDef {
   name: string;
   label: string;
-  type?: "text" | "amount" | "date" | "select" | "checkbox" | "integer";
+  type?: "text" | "amount" | "date" | "datetime" | "select" | "checkbox" | "integer";
   options?: Option[];
   required?: boolean;
   helperText?: string;
@@ -216,7 +216,13 @@ export function FormDialog({
                     <TextField
                       label={field.label}
                       select={field.type === "select"}
-                      type={field.type === "date" ? "date" : "text"}
+                      type={
+                        field.type === "date"
+                          ? "date"
+                          : field.type === "datetime"
+                            ? "datetime-local"
+                            : "text"
+                      }
                       required={field.required}
                       value={input.value}
                       onChange={input.onChange}
@@ -225,7 +231,10 @@ export function FormDialog({
                         errors[field.name] ? String(errors[field.name]?.message) : field.helperText
                       }
                       slotProps={{
-                        inputLabel: field.type === "date" ? { shrink: true } : undefined,
+                        inputLabel:
+                          field.type === "date" || field.type === "datetime"
+                            ? { shrink: true }
+                            : undefined,
                         htmlInput: field.type === "amount" ? { inputMode: "decimal" } : undefined,
                       }}
                     >

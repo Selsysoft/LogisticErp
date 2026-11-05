@@ -12,13 +12,14 @@ import {
   FormDialog,
   QueryState,
   SectionHeader,
+  today,
   useBranches,
   useCan,
   usePaging,
 } from "../finance/common";
 import { Page } from "../finance/types";
 import { BlocksSection, DocumentsSection } from "./ResourceSections";
-import { Driver } from "./types";
+import { Driver, FleetOptions } from "./types";
 
 const STATUSES = ["ACTIVE", "ON_LEAVE", "LEFT"];
 
@@ -154,6 +155,73 @@ export function DriversPage() {
   );
 }
 
+function AdvanceDialog({ driverId, onClose }: { driverId: string; onClose: () => void }) {
+  const { t } = useTranslation();
+  const client = useQueryClient();
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const branches = useBranches();
+  const options = useQuery({
+    queryKey: ["fleet", "options"],
+    queryFn: () => apiGet<FleetOptions>("/fleet/options"),
+  });
+  if (!branches.data || !options.data) {
+    return null;
+  }
+  const funds = options.data.funds;
+  return (
+    <FormDialog
+      title={t("fleet.action.giveAdvance")}
+      fields={[
+        {
+          name: "branchId",
+          label: t("finance.field.branch"),
+          type: "select",
+          required: true,
+          options: branches.data.map((branch) => ({ value: branch.id, label: branch.name })),
+        },
+        {
+          name: "fundAccountId",
+          label: t("fleet.field.fund"),
+          type: "select",
+          required: true,
+          options: funds.map((fund) => ({ value: fund.id, label: fund.label })),
+        },
+        { name: "amount", label: t("finance.field.amount"), type: "amount", required: true },
+        {
+          name: "date",
+          label: t("finance.field.date"),
+          type: "date",
+          required: true,
+          defaultValue: today(),
+        },
+        { name: "description", label: t("finance.field.description") },
+      ]}
+      onClose={onClose}
+      onSubmit={(values) =>
+        apiRequest(
+          "POST",
+          `/fleet/drivers/${driverId}/advances`,
+          {
+            branchId: values.branchId,
+            fundAccountId: values.fundAccountId,
+            money: {
+              amount: values.amount,
+              currency: funds.find((fund) => fund.id === values.fundAccountId)?.currency,
+            },
+            date: values.date,
+            description: values.description || null,
+          },
+          { "Idempotency-Key": idempotencyKey },
+        )
+      }
+      onSaved={() => {
+        onClose();
+        void client.invalidateQueries({ queryKey: ["finance"] });
+      }}
+    />
+  );
+}
+
 export function DriverDetailPage() {
   const { t } = useTranslation();
   const { id = "" } = useParams();
@@ -166,6 +234,7 @@ export function DriverDetailPage() {
     queryFn: () => apiGet<Driver>(`/fleet/drivers/${id}`),
   });
   const fields = useDriverFields(driver.data);
+  const [advancing, setAdvancing] = useState(false);
 
   return (
     <Stack spacing={4}>
@@ -175,12 +244,18 @@ export function DriverDetailPage() {
           title={`${driver.data.code} · ${driver.data.fullName} · ${t(`fleet.driverStatus.${driver.data.status}`)}`}
         >
           {canEdit && (
+            <Button variant="outlined" onClick={() => setAdvancing(true)}>
+              {t("fleet.action.giveAdvance")}
+            </Button>
+          )}
+          {canEdit && (
             <Button variant="outlined" onClick={() => setEditing(true)}>
               {t("common.edit")}
             </Button>
           )}
         </SectionHeader>
       )}
+      {advancing && <AdvanceDialog driverId={id} onClose={() => setAdvancing(false)} />}
       <DocumentsSection subject="DRIVER" id={id} />
       <BlocksSection subject="DRIVER" id={id} />
       {id && <FilesSection ownerType="DRIVER" ownerId={id} editPermission="FLEET_EDIT" />}

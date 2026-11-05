@@ -16,6 +16,7 @@ public enum Permission {
   CRM_EDIT("crm"),
   SHIPMENT_VIEW("shipment"),
   SHIPMENT_DISPATCH("shipment"),
+  SHIPMENT_INVOICE("shipment"),
   FLEET_VIEW("fleet"),
   FLEET_EDIT("fleet"),
   WAREHOUSE_VIEW("warehouse"),

@@ -145,6 +145,16 @@ public final class FleetDtos {
 
   public record ReverseExpenseRequest(@NotNull LocalDate date) {}
 
+  public record DriverAdvanceRequest(
+      @NotNull UUID branchId,
+      @NotNull UUID fundAccountId,
+      @NotNull @Valid Money money,
+      @NotNull LocalDate date,
+      @Size(max = 500) String description,
+      @Positive BigDecimal exchangeRate) {}
+
+  public record DriverAdvanceResponse(UUID settlementId) {}
+
   public record FuelConsumptionRow(
       UUID expenseId,
       LocalDate date,

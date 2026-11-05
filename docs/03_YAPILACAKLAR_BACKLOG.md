@@ -48,23 +48,23 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - ✅ D6 CRM dashboard
 
 ## EPİK E — Sevkiyat/Sefer + CMR + İrsaliye + POD (Faz 4) — P0
-- ⬜ E1 Taşıma emri + durum makinesi
-- ⬜ E2 Bacak/etap + taşeron atama
-- ⬜ E3 Dispatch (atama, çakışma, müsaitlik, belge kontrolü, board)
-- ⬜ E4 CMR üretimi (PDF, uluslararası alanlar)
-- ⬜ E5 e-İrsaliye taslak + numara + durum (gönderim Faz 8)
-- ⬜ E6 POD (web yükleme)
-- ⬜ E7 **Fatura → gelir, sefer kapanışı → gider finans akışı (idempotent)**
-- ⬜ E8 Sefer takip zaman çizelgesi + istisna yönetimi
-- ⬜ E9 **Uçtan uca operasyon→finans senaryo testi**
-- ⬜ E10 Navlun faturası (taslak, kesme, KDV/tevkifat, iptal, PDF)
+- ✅ E1 Taşıma emri + durum makinesi
+- ✅ E2 Bacak/etap + taşeron atama
+- ✅ E3 Dispatch (atama, çakışma, müsaitlik, belge kontrolü, board)
+- ✅ E4 CMR üretimi (PDF, uluslararası alanlar)
+- ✅ E5 e-İrsaliye taslak + numara + durum (gönderim Faz 8)
+- ✅ E6 POD (web yükleme)
+- ✅ E7 **Fatura → gelir, sefer kapanışı → gider finans akışı (idempotent)**
+- ✅ E8 Sefer takip zaman çizelgesi + istisna yönetimi
+- ✅ E9 **Uçtan uca operasyon→finans senaryo testi**
+- ✅ E10 Navlun faturası (taslak, kesme, KDV/tevkifat, iptal, PDF)
 
 ## EPİK F — Filo & Sürücü (Faz 5A: F1–F4, F6 / Faz 5B: F5) — P0
 - ✅ F1 Araç/çekici/dorse + belge bitiş + hatırlatma
 - ✅ F2 Bakım/onarım + lastik → gider
 - ✅ F3 Yakıt log + tüketim + gider
 - ✅ F4 Sürücü + belgeler + hatırlatma
-- 🟦 F5 Atama + müsaitlik + harcırah → finans
+- ✅ F5 Atama + müsaitlik + harcırah → finans
 - ✅ F6 Filo/sürücü raporu
 
 ## EPİK G — Depo/3PL (Faz 6) — P1

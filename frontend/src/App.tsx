@@ -38,6 +38,11 @@ import { RolesPage } from "./pages/identity/RolesPage";
 import { UsersPage } from "./pages/identity/UsersPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ModulePage } from "./pages/ModulePage";
+import { BoardPage } from "./pages/operations/BoardPage";
+import { OperationsLayout } from "./pages/operations/OperationsLayout";
+import { ProfitPage } from "./pages/operations/ProfitPage";
+import { ShipmentDetailPage } from "./pages/operations/ShipmentDetailPage";
+import { ShipmentsPage } from "./pages/operations/ShipmentsPage";
 import { SetPasswordPage } from "./pages/SetPasswordPage";
 
 export function App() {
@@ -113,8 +118,22 @@ export function App() {
             <Route path="availability" element={<AvailabilityPage />} />
             <Route path="reports" element={<FleetReportsPage />} />
           </Route>
+          <Route
+            path="/operations"
+            element={
+              <RequirePermission permission="SHIPMENT_VIEW">
+                <OperationsLayout />
+              </RequirePermission>
+            }
+          >
+            <Route index element={<ShipmentsPage />} />
+            <Route path="shipments/:id" element={<ShipmentDetailPage />} />
+            <Route path="board" element={<BoardPage />} />
+            <Route path="profit" element={<ProfitPage />} />
+          </Route>
           {MODULE_ITEMS.filter(
-            (item) => item.permission && !["/finance", "/crm", "/fleet"].includes(item.path),
+            (item) =>
+              item.permission && !["/finance", "/crm", "/fleet", "/operations"].includes(item.path),
           ).map((item) => (
             <Route
               key={item.path}

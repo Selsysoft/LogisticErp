@@ -46,6 +46,10 @@ public final class FleetRepositories {
 
     Optional<Driver> findByCode(String code);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select d from Driver d where d.id = :id")
+    Optional<Driver> findForUpdate(@Param("id") UUID id);
+
     @Query(
         """
         select d from Driver d
@@ -92,6 +96,9 @@ public final class FleetRepositories {
         @Param("vehicleId") UUID vehicleId, @Param("kind") ExpenseKind kind, Pageable pageable);
 
     List<VehicleExpense> findByExpenseDateBetween(LocalDate from, LocalDate to);
+
+    List<VehicleExpense> findByVehicleIdInAndExpenseDateBetween(
+        Collection<UUID> vehicleIds, LocalDate from, LocalDate to);
 
     List<VehicleExpense> findByVehicleIdAndKindOrderByOdometerKmAscExpenseDateAsc(
         UUID vehicleId, ExpenseKind kind);

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,6 +40,7 @@ import org.ece.blackrose.fleet.web.FleetDtos.FuelConsumptionResponse;
 import org.ece.blackrose.fleet.web.FleetDtos.FuelConsumptionRow;
 import org.ece.blackrose.fleet.web.FleetDtos.ReminderResponse;
 import org.ece.blackrose.fleet.web.FleetDtos.VehicleCostRow;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,6 +60,7 @@ public class FleetInsightService {
   private final ResourceBlockRepository blocks;
   private final VehicleExpenseRepository expenses;
   private final FleetSettingsRepository settings;
+  private final List<ResourceBusyProvider> busyProviders;
 
   public FleetInsightService(
       VehicleRepository vehicles,
@@ -65,7 +68,9 @@ public class FleetInsightService {
       ComplianceDocumentRepository documents,
       ResourceBlockRepository blocks,
       VehicleExpenseRepository expenses,
-      FleetSettingsRepository settings) {
+      FleetSettingsRepository settings,
+      @Lazy List<ResourceBusyProvider> busyProviders) {
+    this.busyProviders = busyProviders;
     this.vehicles = vehicles;
     this.drivers = drivers;
     this.documents = documents;
@@ -161,15 +166,30 @@ public class FleetInsightService {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "PERIOD_INVALID", "Bitiş tarihi başlangıçtan önce olamaz.");
     }
-    return type == SubjectType.VEHICLE
-        ? vehicleAvailability(from, to, minTon)
-        : driverAvailability(from, to);
+    return availability(type, from, to, minTon, busyIds(type, from, to));
   }
 
-  /** Atama yapılacak tek kaynak için aynı kuralı uygular. */
+  private List<AvailabilityResponse> availability(
+      SubjectType type, LocalDate from, LocalDate to, BigDecimal minTon, Set<UUID> busy) {
+    return type == SubjectType.VEHICLE
+        ? vehicleAvailability(from, to, minTon, busy)
+        : driverAvailability(from, to, busy);
+  }
+
+  private Set<UUID> busyIds(SubjectType type, LocalDate from, LocalDate to) {
+    Set<UUID> busy = new HashSet<>();
+    busyProviders.forEach(provider -> busy.addAll(provider.busyBetween(type, from, to)));
+    return busy;
+  }
+
+  /**
+   * Atama yapılacak tek kaynak için aynı kuralı uygular. Gün içi çakışmayı atama saatleriyle
+   * sevkiyat denetlediği için doluluk burada sayılmaz; gün bazlı sayılsa aynı gün iki kısa sefer
+   * engellenirdi.
+   */
   @Transactional(readOnly = true)
   public AvailabilityResponse check(SubjectType type, UUID id, LocalDate from, LocalDate to) {
-    return availability(type, from, to, null).stream()
+    return availability(type, from, to, null, Set.of()).stream()
         .filter(row -> row.subjectId().equals(id))
         .findFirst()
         .orElseThrow(
@@ -179,7 +199,7 @@ public class FleetInsightService {
   }
 
   private List<AvailabilityResponse> vehicleAvailability(
-      LocalDate from, LocalDate to, BigDecimal minTon) {
+      LocalDate from, LocalDate to, BigDecimal minTon, Set<UUID> busy) {
     List<Vehicle> all =
         vehicles.findAll().stream()
             .filter(
@@ -200,6 +220,9 @@ public class FleetInsightService {
               if (vehicle.getStatus() != VehicleStatus.ACTIVE) {
                 hard.add("STATUS:" + vehicle.getStatus());
               }
+              if (busy.contains(vehicle.getId())) {
+                hard.add("BUSY");
+              }
               return evaluate(
                   SubjectType.VEHICLE,
                   vehicle.getId(),
@@ -213,7 +236,8 @@ public class FleetInsightService {
         .toList();
   }
 
-  private List<AvailabilityResponse> driverAvailability(LocalDate from, LocalDate to) {
+  private List<AvailabilityResponse> driverAvailability(
+      LocalDate from, LocalDate to, Set<UUID> busy) {
     List<Driver> all =
         drivers.findAll().stream()
             .filter(driver -> driver.getStatus() != DriverStatus.LEFT)
@@ -229,6 +253,9 @@ public class FleetInsightService {
               List<String> hard = new ArrayList<>();
               if (driver.getStatus() != DriverStatus.ACTIVE) {
                 hard.add("STATUS:" + driver.getStatus());
+              }
+              if (busy.contains(driver.getId())) {
+                hard.add("BUSY");
               }
               return evaluate(
                   SubjectType.DRIVER,
