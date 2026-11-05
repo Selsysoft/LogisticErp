@@ -1,11 +1,11 @@
 # FAZ 8 — Entegrasyonlar (GİB, HGS/OGS, Yakıt Kartı, GPS, Banka, Harita)
 
-> **Uygulama Notu (2026-11-05) — Durum: Adaptör katmanı ve dosya akışları yerelde hazır, CI bekliyor. Gerçek sağlayıcılar seçilmedi; faz açık.**
+> **Uygulama Notu (2026-11-05) — Durum: Adaptör katmanı ve dosya akışları `main` üzerinde, CI yeşil (run 42011323557). Gerçek sağlayıcılar seçilmedi; faz açık.**
 >
 > **Yapılanlar:** e-Fatura, e-Arşiv ve e-İrsaliye gönderim akışı ve UBL üretimi (deneme sağlayıcısıyla), HGS/OGS ve yakıt kartı CSV içe aktarımı
 > ve eşleme, banka ekstresi CSV içe aktarımı ve mutabakat, GPS konum alma, bölge olayları, güzergâh mesafe tablosu ve bunların React ekranları.
 >
-> **Doğrulama:** `mvn verify` 23 birim + 124 entegrasyon testiyle (yerelde Java 17); frontend lint, 20 test ve build. Tarayıcıda deneme
+> **Doğrulama:** `mvn verify` 23 birim + 124 entegrasyon testiyle (CI'da Java 21, yerelde Java 17); frontend lint, 20 test ve build. Tarayıcıda deneme
 > sağlayıcısı uyarısı, vergi numarası engeli, firma bilgisi girişi, e-Arşiv gönderimi, durum sorgusu, HGS satır durumları, GPS ve banka
 > ekranı denendi. Dosyalar API ile yüklendi; dosya seçme düğmeleri, sefer seçme, gidere yazma, banka eşleştirme formu, e-belge iptali,
 > yakıt kartı ve mesafe ekranı tarayıcıda denenmedi, arka planları entegrasyon testlidir.
