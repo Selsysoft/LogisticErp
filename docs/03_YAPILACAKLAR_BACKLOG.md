@@ -68,10 +68,10 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - ✅ F6 Filo/sürücü raporu
 
 ## EPİK G — Depo/3PL (Faz 6) — P1
-- ⬜ G1 Depo/antrepo/raf-göz
-- ⬜ G2 Stok (müşteri sahipli, lot/seri) + giriş/çıkış
-- ⬜ G3 Elleçleme + 3PL faturalama
-- ⬜ G4 Sayım/envanter
+- ✅ G1 Depo/antrepo/raf-göz
+- ✅ G2 Stok (müşteri sahipli, lot/seri) + giriş/çıkış
+- ✅ G3 Elleçleme + 3PL faturalama
+- ✅ G4 Sayım/envanter
 
 ## EPİK H — Uluslararası/Gümrük/ADR (Faz 7) — P1
 - ⬜ H1 Gümrük beyanı

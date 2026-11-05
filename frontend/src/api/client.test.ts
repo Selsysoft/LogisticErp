@@ -90,6 +90,31 @@ describe("oturum yenileme", () => {
     expect(refreshCalls).toHaveLength(1);
   });
 
+  it("kilidi bekleyen sekme, başka sekmenin yenilediği güncel token'ı kullanır", async () => {
+    session.setTokens("eski-erisim", "eski-yenileme");
+    vi.stubGlobal("navigator", {
+      locks: {
+        request: async (_name: string, task: () => Promise<unknown>) => {
+          // Kilidi önce başka sekme aldı ve token'ı döndürdü.
+          store.set("blackrose.refreshToken", "diger-sekmenin-tokeni");
+          return task();
+        },
+      },
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(Response.json(tokens))
+      .mockResolvedValueOnce(Response.json({ id: 1 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await apiGet("/identity/users");
+
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body as string)).toEqual({
+      refreshToken: "diger-sekmenin-tokeni",
+    });
+  });
+
   it("yenileme başarısızsa oturumu temizler ve haber verir", async () => {
     session.setTokens("eski-erisim", "eski-yenileme");
     const expired = vi.fn();

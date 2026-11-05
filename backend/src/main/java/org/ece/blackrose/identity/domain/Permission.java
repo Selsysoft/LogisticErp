@@ -21,6 +21,7 @@ public enum Permission {
   FLEET_EDIT("fleet"),
   WAREHOUSE_VIEW("warehouse"),
   WAREHOUSE_EDIT("warehouse"),
+  WAREHOUSE_INVOICE("warehouse"),
   CUSTOMS_VIEW("customs"),
   CUSTOMS_EDIT("customs"),
   DRIVER_APP("driver");

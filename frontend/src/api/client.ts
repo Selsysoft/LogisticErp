@@ -26,6 +26,7 @@ export interface TokenResponse {
 type Method = "GET" | "POST" | "PUT" | "DELETE";
 
 const AUTH_PREFIX = "/auth/";
+const REFRESH_LOCK = "blackrose.token-refresh";
 /** Token gönderilmeyen uçlar. Ping firma bağlamı dışındadır; token ile çağrılırsa 401 döner. */
 const PUBLIC_PATHS = ["/ping", "/auth/login", "/auth/refresh", "/auth/password-reset/"];
 
@@ -66,9 +67,19 @@ async function send(
   });
 }
 
-/** Aynı anda gelen 401'ler tek yenileme isteğini paylaşır; aksi halde token yeniden kullanılmış sayılır. */
+/** Sekmeler yenileme token'ını paylaşır; kilit olmazsa iki sekme aynı token'ı kullanıp oturumu kapatır. */
+function withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
+  // Kilit yalnız HTTPS ve localhost'ta vardır; yoksa sekme içi tekilleştirme ile devam edilir.
+  const locks = globalThis.navigator?.locks;
+  return locks ? locks.request(REFRESH_LOCK, task) : task();
+}
+
+/**
+ * Aynı anda gelen 401'ler tek yenileme isteğini paylaşır; aksi halde token yeniden kullanılmış sayılır.
+ * Token kilit alındıktan sonra okunur, böylece başka sekmenin yenilediği en güncel token kullanılır.
+ */
 export function refreshSession(): Promise<boolean> {
-  refreshInFlight ??= (async () => {
+  refreshInFlight ??= withRefreshLock(async () => {
     const refreshToken = session.getRefreshToken();
     if (!refreshToken) {
       return false;
@@ -84,7 +95,7 @@ export function refreshSession(): Promise<boolean> {
     } catch {
       return false;
     }
-  })().finally(() => {
+  }).finally(() => {
     refreshInFlight = null;
   });
   return refreshInFlight;

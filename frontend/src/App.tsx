@@ -44,6 +44,12 @@ import { ProfitPage } from "./pages/operations/ProfitPage";
 import { ShipmentDetailPage } from "./pages/operations/ShipmentDetailPage";
 import { ShipmentsPage } from "./pages/operations/ShipmentsPage";
 import { SetPasswordPage } from "./pages/SetPasswordPage";
+import { BillingPage, ContractDetailPage } from "./pages/warehouse/BillingPage";
+import { CountDetailPage, CountsPage } from "./pages/warehouse/CountsPage";
+import { DefinitionsPage as WarehouseDefinitionsPage } from "./pages/warehouse/DefinitionsPage";
+import { MovementsPage } from "./pages/warehouse/MovementsPage";
+import { StockPage } from "./pages/warehouse/StockPage";
+import { WarehouseLayout } from "./pages/warehouse/WarehouseLayout";
 
 export function App() {
   const { t } = useTranslation();
@@ -131,9 +137,26 @@ export function App() {
             <Route path="board" element={<BoardPage />} />
             <Route path="profit" element={<ProfitPage />} />
           </Route>
+          <Route
+            path="/warehouse"
+            element={
+              <RequirePermission permission="WAREHOUSE_VIEW">
+                <WarehouseLayout />
+              </RequirePermission>
+            }
+          >
+            <Route index element={<StockPage />} />
+            <Route path="movements" element={<MovementsPage />} />
+            <Route path="counts" element={<CountsPage />} />
+            <Route path="counts/:id" element={<CountDetailPage />} />
+            <Route path="billing" element={<BillingPage />} />
+            <Route path="billing/:id" element={<ContractDetailPage />} />
+            <Route path="definitions" element={<WarehouseDefinitionsPage />} />
+          </Route>
           {MODULE_ITEMS.filter(
             (item) =>
-              item.permission && !["/finance", "/crm", "/fleet", "/operations"].includes(item.path),
+              item.permission &&
+              !["/finance", "/crm", "/fleet", "/operations", "/warehouse"].includes(item.path),
           ).map((item) => (
             <Route
               key={item.path}

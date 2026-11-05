@@ -8,7 +8,7 @@ import { MODULE_ITEMS } from "../components/AppShell";
 import { BRAND } from "../theme";
 
 /** Henüz geliştirilmemiş modüller; kartları "yakında" ile işaretlenir. */
-const UPCOMING = ["/warehouse", "/customs", "/driver"];
+const UPCOMING = ["/customs", "/driver"];
 const DASHBOARD_PATH = "/dashboard";
 
 export function HomePage() {
