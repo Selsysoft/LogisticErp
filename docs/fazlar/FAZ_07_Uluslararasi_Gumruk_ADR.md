@@ -1,11 +1,11 @@
 # FAZ 7 — Uluslararası Taşıma: Gümrük / Transit / ADR
 
-> **Uygulama Notu (2026-11-05) — Durum: Kriterler yerelde karşılandı, CI bekliyor.**
+> **Uygulama Notu (2026-11-05) — Durum: Kriterler karşılandı.**
 >
 > **Yapılanlar:** Gümrük beyanı ve satırları, T1/T2/TIR takibi, ADR belge kontrolü, UN numarası, geçiş izinleri ve kotası, sınır geçişleri,
 > üç dilli CMR ve bunların React ekranları.
 >
-> **Doğrulama:** `mvn verify` 18 birim + 116 entegrasyon testiyle (yerelde Java 17); frontend lint, 19 test ve build. Tarayıcıda
+> **Doğrulama:** GitHub Actions CI (`42001950924`) yeşil: Java 21 ile 18 birim + 116 entegrasyon testi, Spotless, container imajı; frontend lint, format, 19 test ve build. Tarayıcıda
 > ADR uyarısının atama listesinde görünmesi, uluslararası bilgi özeti, beyan açma, satır ekleme, tescil, süresi geçmiş transit,
 > izin kotası ve sınır geçişi listeleri denendi. Transit, izin ve geçiş kayıtları API ile girildi; bunların formları, uluslararası
 > bilgi formu, taşeron uyarısı ve CMR PDF indirme tarayıcıda denenmedi. CMR PDF içeriği entegrasyon testinde doğrulandı.
