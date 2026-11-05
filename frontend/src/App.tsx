@@ -54,6 +54,11 @@ import { OperationsLayout } from "./pages/operations/OperationsLayout";
 import { ProfitPage } from "./pages/operations/ProfitPage";
 import { ShipmentDetailPage } from "./pages/operations/ShipmentDetailPage";
 import { ShipmentsPage } from "./pages/operations/ShipmentsPage";
+import { FinanceReportPage } from "./pages/reports/FinanceReportPage";
+import { FleetReportPage } from "./pages/reports/FleetReportPage";
+import { OperationsReportPage } from "./pages/reports/OperationsReportPage";
+import { ProfitabilityReportPage } from "./pages/reports/ProfitabilityReportPage";
+import { ReportsLayout } from "./pages/reports/ReportsLayout";
 import { SetPasswordPage } from "./pages/SetPasswordPage";
 import { BillingPage, ContractDetailPage } from "./pages/warehouse/BillingPage";
 import { CountDetailPage, CountsPage } from "./pages/warehouse/CountsPage";
@@ -193,6 +198,19 @@ export function App() {
             <Route path="gps" element={<GpsPage />} />
             <Route path="distances" element={<DistancesPage />} />
           </Route>
+          <Route
+            path="/reports"
+            element={
+              <RequirePermission permission="REPORT_VIEW">
+                <ReportsLayout />
+              </RequirePermission>
+            }
+          >
+            <Route index element={<ProfitabilityReportPage />} />
+            <Route path="operations" element={<OperationsReportPage />} />
+            <Route path="finance" element={<FinanceReportPage />} />
+            <Route path="fleet" element={<FleetReportPage />} />
+          </Route>
           {MODULE_ITEMS.filter(
             (item) =>
               item.permission &&
@@ -204,6 +222,7 @@ export function App() {
                 "/warehouse",
                 "/customs",
                 "/integrations",
+                "/reports",
               ].includes(item.path),
           ).map((item) => (
             <Route

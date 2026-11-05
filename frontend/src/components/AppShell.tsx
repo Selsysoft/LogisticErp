@@ -1,5 +1,6 @@
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import AssessmentIcon from "@mui/icons-material/Assessment";
 import BadgeIcon from "@mui/icons-material/Badge";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
@@ -55,6 +56,7 @@ export const MODULE_ITEMS = [
     permission: "INTEGRATION_VIEW",
     Icon: HubIcon,
   },
+  { path: "/reports", label: "nav.reports", permission: "REPORT_VIEW", Icon: AssessmentIcon },
 ];
 
 const ADMIN_ITEMS = [

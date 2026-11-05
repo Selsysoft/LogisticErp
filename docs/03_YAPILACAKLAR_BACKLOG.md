@@ -89,10 +89,10 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - 🟦 I6 Harita/mesafe + ETA
 
 ## EPİK J — Raporlama/BI (Faz 9) — P1
-- ⬜ J1 Sefer/araç/müşteri/güzergâh kârlılığı
-- ⬜ J2 Operasyon KPI (OTIF, boş km, doluluk)
-- ⬜ J3 Finans analitik (nakit akış, yaşlandırma, döviz pozisyonu)
-- ⬜ J4 Rol-bazlı dashboard + dışa aktarım
+- ✅ J1 Sefer/araç/müşteri/güzergâh kârlılığı
+- 🟦 J2 Operasyon KPI (OTIF, boş km, doluluk) — zamanında teslim ve doluluk var; eksiksiz teslim, boş km ve bekleme için veri yok
+- ✅ J3 Finans analitik (nakit akış, yaşlandırma, döviz pozisyonu)
+- 🟦 J4 Rol-bazlı dashboard + dışa aktarım — özelleştirilebilir widget ve e-posta özeti yok
 
 ## EPİK K — Mobil/POD (Faz 10) — P2
 - ⬜ K1 Sürücü PWA + sınırlı giriş

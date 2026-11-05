@@ -54,6 +54,8 @@ public final class ShipmentRepositories {
 
     List<Shipment> findByPlannedPickupBetweenOrderByPlannedPickup(Instant from, Instant to);
 
+    long countByStatus(ShipmentStatus status);
+
     @Query(value = "select nextval('shipment_number_seq')", nativeQuery = true)
     long nextNumber();
 
