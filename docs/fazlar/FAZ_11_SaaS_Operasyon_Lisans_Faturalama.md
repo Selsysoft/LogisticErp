@@ -1,12 +1,12 @@
 # FAZ 11 — SaaS Operasyon: Admin, Tenant, Abonelik/Faturalama, İzleme
 
-> **Uygulama Notu (2026-11-05) — Durum: Yönetici konsolu, abonelik ve deneme ödeme akışı yerelde hazır, commit ve CI bekliyor. Ödeme sağlayıcısı seçilmedi; faz açık.**
+> **Uygulama Notu (2026-11-05) — Durum: Yönetici konsolu, abonelik ve deneme ödeme akışı `main` üzerinde, CI yeşil (run 42023850069). Ödeme sağlayıcısı seçilmedi; faz açık.**
 >
 > **Yapılanlar:** `/saas` yönetici konsolu; firma açma, deneme süresi, askıya alma, yeniden açma ve kapatma; plan ve abonelik, plan sınırları ve uyarıları; aylık abonelik
 > borcu, ödeme denemesi, hatırlatma ve askıya alma akışı; günlük kullanım kaydı; firma verisini ZIP olarak dışa aktarma; sistem sağlığı ve çevrimiçi kullanım;
 > her yönetici çağrısının denetim günlüğü; firmaların kendi abonelik ekranı. Veri işleme kaydı taslağı: `docs/KVKK_VERI_ISLEME_KAYDI.md`.
 >
-> **Doğrulama:** Yerelde Java 17 ile `mvn verify` 29 birim + 140 entegrasyon testi; frontend lint, 28 test ve build. Deneme bitişi, sınır aşımı, yükseltme ve düşürme,
+> **Doğrulama:** `mvn verify` 29 birim + 140 entegrasyon testi (CI'da Java 21, yerelde Java 17); frontend lint, 28 test ve build. Deneme bitişi, sınır aşımı, yükseltme ve düşürme,
 > mükerrer fatura, ödeme hatası, hatırlatma, askıya alma, ödemeyle açılma, kapatma, dışa aktarımda gizli alan olmaması ve yetki sınırı entegrasyon testlidir. Tarayıcıda
 > yönetici girişi, firma açma, askıya alma, sağlık, denetim, plan ve fatura sekmeleri ile firmanın abonelik ekranı denendi, konsolda hata yoktu. Plan formu, plan değiştirme,
 > deneme uzatma, kapatma, yeniden açma, ödeme işaretleme, günlük iş düğmesi ve ZIP düğmesi tarayıcıda denenmedi; arka planları (günlük iş düğmesi hariç) entegrasyon testlidir.
