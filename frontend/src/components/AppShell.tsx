@@ -31,7 +31,8 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
+import { Link as RouterLink, useLocation } from "react-router-dom";
+import { SuspenseOutlet } from "./lazyPage";
 import { hasPermission, useAuthStore } from "../auth/authStore";
 import { BrandLogo } from "./BrandLogo";
 
@@ -156,7 +157,7 @@ export function AppShell() {
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 } }}>
         <Toolbar />
-        <Outlet />
+        <SuspenseOutlet />
       </Box>
     </Box>
   );

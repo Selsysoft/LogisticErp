@@ -16,6 +16,7 @@ Bu belge, uygulamanın üretim profilinde çalışması için gerekenleri anlat�
 | `FILE_STORAGE=s3`, `S3_BUCKET`, `S3_REGION` | Bucket yoksa uygulama açılmaz. `S3_ACCESS_KEY` boşsa AWS varsayılan kimlik zinciri kullanılır. Uyumlu sağlayıcıda `S3_ENDPOINT` verilir. |
 | `CLAMAV_HOST`, `CLAMAV_PORT` | `prod`/`stage` varsayılanı `FILE_SCAN_MODE=clamav`'dır. Tarayıcıya ulaşılamazsa dosya yüklemeleri 503 döner, dosya kabul edilmez. |
 | `FORWARD_HEADERS_STRATEGY=native` | **Ters vekil arkasında zorunludur.** Yapılmazsa bütün kullanıcılar vekilin IP'sinden gelmiş sayılır ve IP sınırı herkesi birlikte kilitler; denetim günlüğündeki IP de yanlış olur. |
+| `METRICS_TOKEN` | İsteğe bağlı, en az 32 bayt. Prometheus `/actuator/prometheus` ucunu `Authorization: Bearer <token>` ile okur (`authorization.credentials`). Boşsa uç kapalıdır. Uç web sunucusu imajından geçmez; Prometheus backend'e iç ağdan bağlanır. |
 | HTTPS ve aynı alan adı | Yenileme token'ı `HttpOnly`, `Secure`, `SameSite=Strict` çerezle verilir (`/api/v1/auth` yolu). Frontend ve API aynı alan adından (ters vekil üzerinden) sunulmalı, site HTTPS olmalıdır. `REFRESH_COOKIE_SECURE=false` yalnız HTTPS'siz yerel denemede kullanılır. |
 
 ## Web sunucusu (frontend)
@@ -32,6 +33,7 @@ docker run -d -p 8080:8080 -e BACKEND_URL=http://<backend>:8080 blackrose-web
 - **Güvenlik başlıkları** `frontend/nginx/security-headers.conf` içindedir: `Content-Security-Policy` (betikler yalnız kendi alan adından, satır içi betik ve `eval` yok, çerçeve içine alınamaz, istekler yalnız kendi alan adına), `Strict-Transport-Security` (1 yıl, alt alan adları dahil), `Referrer-Policy: same-origin`, `Permissions-Policy` (yalnız kamera ve konum, sürücü ekranı için). Stiller için `'unsafe-inline'` gereklidir: MUI stilleri çalışma anında ekler.
 - **Yazı tipleri** pakete gömülüdür; Google Fonts'a istek gitmez (kullanıcı IP'si üçüncü tarafa aktarılmaz).
 - **Önbellek:** `/assets/` altındaki dosyaların adı içeriğe göre değişir, 1 yıl önbelleklenir; sayfa ve `sw.js` her açılışta doğrulanır.
+- **Sayfa dosyaları** ilk açıldıklarında ayrı yüklenir (ilk yükleme gzip ile 294 KB'tan 241 KB'a indi). Yeni sürüm yayımlandıktan sonra açık kalan sekme eski bir sayfa dosyasını bulamazsa sayfa bir kez kendiliğinden yenilenir; yine bulamazsa menü yerinde kalır ve "Sayfayı yenile" uyarısı gösterilir. Bu yüzden yayında eski `/assets/` dosyalarını bir süre tutmak (ör. bucket/CDN'de) zorunlu değildir ama kullanıcıya daha az kesinti yaşatır.
 - **Zaman aşımı** API için 300 sn (firma veri dışa aktarımı); yükleme sınırı 21 MB. Öndeki vekilde de en az bu değerler olmalıdır.
 - Yeni bir dış kaynak (harita, analitik, ödeme sayfası) eklenirse CSP'ye ayrıca eklenmelidir; yoksa tarayıcı engeller.
 

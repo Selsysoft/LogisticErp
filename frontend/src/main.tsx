@@ -18,6 +18,25 @@ import { theme } from "./theme";
 
 const queryClient = new QueryClient();
 
+// Yeni sürüm yayımlanınca eski sayfa dosyaları sunucudan kalkar; açık sekme bir sayfayı ilk kez
+// açarken yükleme başarısız olursa sayfa yeni sürümle yeniden yüklenir. Döngüye girmemesi için
+// bir dakikada en çok bir kez.
+window.addEventListener("vite:preloadError", (event) => {
+  const key = "blackrose.reloadedAt";
+  let last = 0;
+  try {
+    last = Number(sessionStorage.getItem(key) ?? 0);
+    if (Date.now() - last < 60_000) {
+      return;
+    }
+    sessionStorage.setItem(key, String(Date.now()));
+  } catch {
+    // Depolama kapalıysa da bir kez yenilenir.
+  }
+  event.preventDefault();
+  window.location.reload();
+});
+
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
 }

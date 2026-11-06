@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
 @ExtendWith(OutputCaptureExtension.class)
@@ -79,6 +80,31 @@ class PlatformBehaviorIT extends AbstractIntegrationTest {
   @Test
   void metricsRequireSaasAdmin() throws Exception {
     mvc.perform(get("/actuator/metrics")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void prometheusOpensOnlyWithMetricsToken() throws Exception {
+    mvc.perform(get("/actuator/prometheus")).andExpect(status().isUnauthorized());
+    mvc.perform(
+            get("/actuator/prometheus")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer yanlis-token-yanlis-token-yanlis-token"))
+        .andExpect(status().isUnauthorized());
+    // SaaS yöneticisi token'ı bu uçta geçmez; izleme için ayrı token gerekir.
+    mvc.perform(get("/actuator/prometheus").with(bearer(saasToken())))
+        .andExpect(status().isUnauthorized());
+
+    // Spring testlerde metrik dışa aktarımını kapattığı için uç 404 döner; burada yalnız
+    // güvenlik katmanının token'ı kabul ettiği denetlenir.
+    int status =
+        mvc.perform(
+                get("/actuator/prometheus")
+                    .header(
+                        HttpHeaders.AUTHORIZATION,
+                        "Bearer test-only-metrics-token-with-at-least-32-bytes"))
+            .andReturn()
+            .getResponse()
+            .getStatus();
+    assertThat(status).isNotIn(401, 403);
   }
 
   @Test

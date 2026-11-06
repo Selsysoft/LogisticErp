@@ -13,7 +13,8 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link as RouterLink, Outlet, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { SuspenseOutlet } from "../../components/lazyPage";
 import { apiGet, apiRequest } from "../../api/client";
 import { useAuthStore } from "../../auth/authStore";
 import { ErrorState } from "../../components/ErrorState";
@@ -202,7 +203,7 @@ export function DriverLayout() {
             {op.label}: {op.failure}
           </Alert>
         ))}
-        <Outlet />
+        <SuspenseOutlet />
         <Card variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
           <FormControlLabel
             label={t("driver.location.toggle")}

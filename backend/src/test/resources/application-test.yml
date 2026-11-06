@@ -17,6 +17,7 @@ app:
   security:
     jwt-secret: test-only-jwt-secret-with-at-least-32-bytes
     totp-key: test-only-totp-key-with-at-least-32-bytes
+    metrics-token: test-only-metrics-token-with-at-least-32-bytes
     bootstrap-admin-email: saas@blackrose.test
     bootstrap-admin-password: Test-Admin-12345
     saas-two-factor-required: false

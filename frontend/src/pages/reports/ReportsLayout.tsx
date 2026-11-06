@@ -1,6 +1,7 @@
 import { Tab, Tabs, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { Link as RouterLink, Navigate, Outlet, useLocation } from "react-router-dom";
+import { Link as RouterLink, Navigate, useLocation } from "react-router-dom";
+import { SuspenseOutlet } from "../../components/lazyPage";
 import { hasPermission, useAuthStore } from "../../auth/authStore";
 import { EmptyState } from "../../components/EmptyState";
 
@@ -48,7 +49,7 @@ export function ReportsLayout() {
           />
         ))}
       </Tabs>
-      <Outlet />
+      <SuspenseOutlet />
     </>
   );
 }

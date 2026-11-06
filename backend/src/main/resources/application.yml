@@ -81,6 +81,8 @@ app:
     refresh-token-ttl: 30d
     refresh-cookie-secure: ${REFRESH_COOKIE_SECURE:true}
     saas-token-ttl: 1h
+    # Prometheus'un "Authorization: Bearer" ile gönderdiği sabit token; boşsa uç kapalıdır.
+    metrics-token: ${METRICS_TOKEN:}
     frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
     mail-from: ${MAIL_FROM:noreply@blackrose.local}
     bootstrap-admin-email: ${ADMIN_BOOTSTRAP_EMAIL:}

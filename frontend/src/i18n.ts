@@ -1342,7 +1342,12 @@ void i18n.use(initReactI18next).init({
           description: "Bu ekranı görüntülemek için gerekli izne sahip değilsiniz.",
         },
         notFound: { title: "Sayfa bulunamadı", description: "Aradığınız sayfa mevcut değil." },
-        error: { title: "Bir sorun oluştu", traceId: "Hata kodu: {{traceId}}" },
+        error: {
+          title: "Bir sorun oluştu",
+          traceId: "Hata kodu: {{traceId}}",
+          pageLoad: "Sayfa yüklenemedi. Bağlantınızı kontrol edip sayfayı yenileyin.",
+          reload: "Sayfayı yenile",
+        },
       },
     },
   },

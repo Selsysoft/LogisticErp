@@ -2,7 +2,8 @@ import { Alert, Box, Button, Link, Stack, Tab, Tabs, TextField, Typography } fro
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link as RouterLink, Navigate, Outlet, useLocation } from "react-router-dom";
+import { Link as RouterLink, Navigate, useLocation } from "react-router-dom";
+import { SuspenseOutlet } from "../../components/lazyPage";
 import { ApiError } from "../../api/client";
 import { CenteredCard } from "../../components/CenteredCard";
 import { ErrorState } from "../../components/ErrorState";
@@ -188,7 +189,7 @@ export function SaasLayout() {
             />
           ))}
         </Tabs>
-        <Outlet />
+        <SuspenseOutlet />
       </Box>
     </Box>
   );

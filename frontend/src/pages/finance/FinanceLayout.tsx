@@ -1,6 +1,7 @@
 import { Box, Tab, Tabs, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
+import { Link as RouterLink, useLocation } from "react-router-dom";
+import { SuspenseOutlet } from "../../components/lazyPage";
 
 const TABS = [
   { path: "/finance", label: "finance.tabs.dashboard" },
@@ -43,7 +44,7 @@ export function FinanceLayout() {
         ))}
       </Tabs>
       <Box>
-        <Outlet />
+        <SuspenseOutlet />
       </Box>
     </>
   );

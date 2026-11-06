@@ -3,8 +3,10 @@ package org.ece.blackrose.identity.security;
 import org.ece.blackrose.common.web.ApiErrorWriter;
 import org.ece.blackrose.identity.domain.AuditEvent;
 import org.ece.blackrose.identity.service.AuditService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -14,12 +16,34 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
+  /**
+   * Prometheus ucu yalnız izleme token'ıyla açılır (`METRICS_TOKEN`). SaaS yöneticisi token'ı bir
+   * saatte dolduğu için izleme sistemine uygun değildir.
+   */
   @Bean
+  @Order(1)
+  SecurityFilterChain metricsFilterChain(
+      HttpSecurity http,
+      @Value("${app.security.metrics-token:}") String metricsToken,
+      AuthenticationEntryPoint entryPoint)
+      throws Exception {
+    return http.securityMatcher("/actuator/prometheus")
+        .csrf(AbstractHttpConfigurer::disable)
+        .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .addFilterBefore(new MetricsTokenFilter(metricsToken), AnonymousAuthenticationFilter.class)
+        .authorizeHttpRequests(auth -> auth.anyRequest().hasAuthority(MetricsTokenFilter.AUTHORITY))
+        .exceptionHandling(errors -> errors.authenticationEntryPoint(entryPoint))
+        .build();
+  }
+
+  @Bean
+  @Order(2)
   SecurityFilterChain securityFilterChain(
       HttpSecurity http,
       JwtPrincipalConverter converter,

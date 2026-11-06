@@ -14,7 +14,7 @@ Kod okuması ve mevcut testlerle yapıldı. Sızma testi, otomatik tarayıcı (D
 | Hata yanıtları | Beklenmeyen hatada iç ayrıntı dönmez, yalnız iz kimliği döner. |
 | Günlükler | Bağlantı ve şifre günlüğe yazılmaz; yalnız `dev`/`test` profilindeki sahte e-posta göndericisi bağlantıyı yazar. |
 | Yanıt başlıkları | API: `nosniff`, `X-Frame-Options: DENY`, `no-store`. |
-| Üretim ayarları | Swagger kapalı, actuator yalnız `health` ve `prometheus`. |
+| Üretim ayarları | Swagger kapalı, actuator yalnız `health` ve `prometheus` (izleme token'ıyla). |
 
 ## Bu turda düzeltilenler
 
@@ -28,7 +28,7 @@ Kod okuması ve mevcut testlerle yapıldı. Sızma testi, otomatik tarayıcı (D
 3. ~~Backend bağımlılık taraması~~ — 2026-11-06'da eklendi, aşağıya bakın.
 4. ~~Frontend sunumu ve CSP~~ — 2026-11-06'da `frontend/Dockerfile` (nginx) eklendi: CSP, HSTS, `Referrer-Policy`, `Permissions-Policy`, `/api` yönlendirmesi. Google Fonts kaldırıldı, yazı tipleri pakette. İmaj CI'da Trivy ile taranır. Ayrıntı: `docs/URETIM_KURULUM.md`, "Web sunucusu". Stiller için `'unsafe-inline'` kalıyor (MUI); betiklerde yok.
 5. **Şube bazlı veri kısıtı yok.** Yetkili kullanıcı firmadaki bütün şubelerin verisini görür. İş kuralı olarak istenirse ayrı geliştirme gerekir.
-6. **Prometheus ucu** SaaS yöneticisi token'ı ister; izleme sistemi için ayrı kimlik veya iç ağ erişimi düşünülmeli.
+6. ~~Prometheus ucu~~ — 2026-11-06'da `/actuator/prometheus` yalnız `METRICS_TOKEN` ile (`Authorization: Bearer`) açılır hale getirildi; token tanımlı değilse uç kapalıdır, SaaS yöneticisi token'ı bu uçta geçmez. Web sunucusu imajı yalnız `/api/` yolunu iletir, actuator dışarıya açılmaz.
 
 ## Bağımlılık taraması (2026-11-06)
 

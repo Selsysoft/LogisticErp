@@ -1,6 +1,7 @@
 import { Tab, Tabs, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
+import { Link as RouterLink, useLocation } from "react-router-dom";
+import { SuspenseOutlet } from "../../components/lazyPage";
 
 const TABS = [
   { path: "/crm", label: "crm.tabs.dashboard" },
@@ -40,7 +41,7 @@ export function CrmLayout() {
           />
         ))}
       </Tabs>
-      <Outlet />
+      <SuspenseOutlet />
     </>
   );
 }
