@@ -1283,6 +1283,10 @@ void i18n.use(initReactI18next).init({
             blockLabel: "Süresi dolmuş veya eksik belgede atamayı engelle",
             reminderDays: "Hatırlatma süresi (gün)",
             reminderInfo: "Belgeler bitişinden {{days}} gün önce hatırlatılır.",
+            emailLabel: "Hatırlatmaları her sabah e-postayla gönder",
+            emailOn:
+              "Hatırlatmalar her sabah 07:00'den sonra filo düzenleme yetkisi olan kullanıcılara e-postayla gider.",
+            emailOff: "Hatırlatma e-postası kapalı; liste yalnız uygulamada görünür.",
           },
           status: {
             overdue: "Süresi geçti",

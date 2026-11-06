@@ -103,6 +103,11 @@ export function FleetDashboardPage() {
                 : t("fleet.settings.blockOff")}
             </div>
             <div>{t("fleet.settings.reminderInfo", { days: settings.data.reminderDays })}</div>
+            <div>
+              {settings.data.reminderEmail
+                ? t("fleet.settings.emailOn")
+                : t("fleet.settings.emailOff")}
+            </div>
           </Stack>
         )}
       </Box>
@@ -122,12 +127,19 @@ export function FleetDashboardPage() {
               required: true,
               defaultValue: String(settings.data.reminderDays),
             },
+            {
+              name: "reminderEmail",
+              label: t("fleet.settings.emailLabel"),
+              type: "checkbox",
+              defaultValue: settings.data.reminderEmail,
+            },
           ]}
           onClose={() => setEditing(false)}
           onSubmit={(values, flags) =>
             apiRequest("PUT", "/fleet/settings", {
               blockOnExpired: flags.blockOnExpired,
               reminderDays: values.reminderDays,
+              reminderEmail: flags.reminderEmail,
             })
           }
           onSaved={() => {

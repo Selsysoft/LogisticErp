@@ -6,8 +6,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.ece.blackrose.identity.service.AccountMailer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -39,6 +41,11 @@ public abstract class AbstractIntegrationTest {
   /** E-posta adresine giden son bağlantının token'ı. */
   protected static final Map<String, String> SENT_TOKENS = new ConcurrentHashMap<>();
 
+  protected record Notice(String email, String subject, String text) {}
+
+  /** Gönderilen bildirim e-postaları. */
+  protected static final List<Notice> SENT_NOTICES = new CopyOnWriteArrayList<>();
+
   private static final Map<String, String> OWNER_TOKENS = new ConcurrentHashMap<>();
 
   static {
@@ -62,6 +69,11 @@ public abstract class AbstractIntegrationTest {
         @Override
         public void sendPasswordReset(String email, String link) {
           record(email, link);
+        }
+
+        @Override
+        public void sendNotice(String email, String subject, String text) {
+          SENT_NOTICES.add(new Notice(email, subject, text));
         }
 
         private void record(String email, String link) {

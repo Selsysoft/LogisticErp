@@ -12,7 +12,9 @@
 > tarayıcıda denenmedi; arka planları entegrasyon testlidir.
 >
 > **Kararlar:** Tahograf ve sürüş-dinlenme mevzuat denetimi bu fazda yok. Belgesi dolmuş kaynak varsayılan olarak engellenir,
-> firma ayarıyla uyarıya çevrilir. Hatırlatmalar şimdilik uygulama içi listedir; e-posta/SMS sağlayıcı seçilince eklenecek.
+> firma ayarıyla uyarıya çevrilir. Hatırlatmalar uygulama içi listededir; ayrıca (2026-11-06) her sabah firmanın saatiyle
+> 07:00'den sonra filo düzenleme yetkili etkin kullanıcılara tek e-postada gider. Firma ayarıyla kapatılır; aynı gün ikinci kez
+> gönderilmez, gönderim başarısız olursa o gün tekrar denenmez. Kullanıcı bazlı tercih ve SMS yok.
 >
 > **Sapmalar ve varsayımlar:**
 > - Çekici, kamyon, kamyonet ve dorse tek tabloda (`Vehicle`); bakım, onarım, lastik ve yakıt tek tabloda (`VehicleExpense`).

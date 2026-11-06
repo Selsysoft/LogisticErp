@@ -15,12 +15,18 @@ public class FleetSettings extends AuditableEntity {
   @Id private Integer id;
   private boolean blockOnExpired;
   private int reminderDays;
+  private boolean reminderEmail;
 
   protected FleetSettings() {}
 
-  public void update(boolean blockOnExpired, int reminderDays) {
+  public void update(boolean blockOnExpired, int reminderDays, boolean reminderEmail) {
     this.blockOnExpired = blockOnExpired;
     this.reminderDays = reminderDays;
+    this.reminderEmail = reminderEmail;
+  }
+
+  public boolean isReminderEmail() {
+    return reminderEmail;
   }
 
   public boolean isBlockOnExpired() {

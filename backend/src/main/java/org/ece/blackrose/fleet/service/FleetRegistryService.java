@@ -206,9 +206,13 @@ public class FleetRegistryService {
   }
 
   @Transactional
-  public FleetSettings updateSettings(boolean blockOnExpired, int reminderDays) {
+  public FleetSettings updateSettings(
+      boolean blockOnExpired, int reminderDays, Boolean reminderEmail) {
     FleetSettings current = settings();
-    current.update(blockOnExpired, reminderDays);
+    current.update(
+        blockOnExpired,
+        reminderDays,
+        reminderEmail != null ? reminderEmail : current.isReminderEmail());
     return current;
   }
 

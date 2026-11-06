@@ -114,4 +114,5 @@ export interface FleetOptions {
 export interface FleetSettings {
   blockOnExpired: boolean;
   reminderDays: number;
+  reminderEmail: boolean;
 }

@@ -22,6 +22,10 @@ public class TenantClock {
     return dateAt(Instant.now(), tenants.findByCode(code).orElseThrow().getTimeZone());
   }
 
+  public LocalDateTime localNow() {
+    return LocalDateTime.ofInstant(Instant.now(), zone());
+  }
+
   public LocalDate dateOf(Instant instant) {
     return LocalDate.ofInstant(instant, zone());
   }

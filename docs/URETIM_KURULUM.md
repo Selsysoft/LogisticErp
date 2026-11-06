@@ -17,6 +17,10 @@ Bu belge, uygulamanın üretim profilinde çalışması için gerekenleri anlat�
 | `CLAMAV_HOST`, `CLAMAV_PORT` | `prod`/`stage` varsayılanı `FILE_SCAN_MODE=clamav`'dır. Tarayıcıya ulaşılamazsa dosya yüklemeleri 503 döner, dosya kabul edilmez. |
 | `FORWARD_HEADERS_STRATEGY=native` | **Ters vekil arkasında zorunludur.** Yapılmazsa bütün kullanıcılar vekilin IP'sinden gelmiş sayılır ve IP sınırı herkesi birlikte kilitler; denetim günlüğündeki IP de yanlış olur. |
 
+## E-posta
+
+SMTP şu e-postalar için kullanılır: kullanıcı daveti, şifre sıfırlama, SaaS faturası ve günlük filo hatırlatması. Filo hatırlatması saatlik iş ile firmanın saat dilimine göre 07:00'den sonra gönderilir; firma filo ayarlarından kapatabilir. Gönderim hatası günlüğe yazılır, aynı gün tekrar denenmez.
+
 ## SaaS yöneticisi 2FA
 
 `prod` ve `stage`'de zorunludur (`SAAS_2FA_REQUIRED`). İlk girişte konsol anahtarı gösterir; yönetici doğrulayıcı uygulamaya ekleyip ürettiği kodla kurulumu tamamlar.

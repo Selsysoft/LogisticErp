@@ -13,7 +13,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.ece.blackrose.AbstractIntegrationTest;
+import org.ece.blackrose.fleet.service.FleetReminderMailer;
+import org.ece.blackrose.tenant.TenantContext;
+import org.ece.blackrose.tenant.repository.TenantRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -23,6 +27,9 @@ class FleetIT extends AbstractIntegrationTest {
 
   private static final LocalDate TODAY = LocalDate.now();
   private static final String DATE = "2026-10-15";
+
+  @Autowired FleetReminderMailer reminderMailer;
+  @Autowired TenantRepository tenants;
 
   @Test
   void vehicleAndTrailerCrudNormalizesPlateAndRejectsDuplicate() throws Exception {
@@ -85,6 +92,51 @@ class FleetIT extends AbstractIntegrationTest {
 
     assertThat(body(send(t, get("/api/v1/fleet/reminders").param("days", "365"))).size())
         .isEqualTo(4);
+  }
+
+  @Test
+  void reminderMailGoesOncePerDayToFleetEditorsAndCanBeDisabled() throws Exception {
+    String t = tenantCode("mail");
+    String truck = vehicle(t, "06MA01", "TRUCK", "ACTIVE");
+    document(t, "VEHICLE", truck, "INSPECTION", TODAY.minusDays(2));
+    document(t, "VEHICLE", truck, "KASKO", TODAY.plusDays(10));
+    String schema = tenants.findByCode(t).orElseThrow().getSchemaName();
+
+    assertThat(sendReminderMail(t, schema, TODAY)).isEqualTo(1);
+    List<Notice> sent = SENT_NOTICES.stream().filter(n -> n.email().equals(ownerEmail(t))).toList();
+    assertThat(sent).hasSize(1);
+    assertThat(sent.get(0).subject()).contains("2 kayıt", "1 tanesinin süresi geçti");
+    assertThat(sent.get(0).text())
+        .contains("06MA01 — Muayene, bitiş", "(SÜRESİ GEÇTİ)", "Kasko", "/fleet");
+
+    assertThat(sendReminderMail(t, schema, TODAY)).isZero();
+
+    send(
+            t,
+            MockMvcRequestBuilders.put("/api/v1/fleet/settings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"blockOnExpired\":true,\"reminderDays\":30,\"reminderEmail\":false}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.reminderEmail").value(false));
+    assertThat(sendReminderMail(t, schema, TODAY.plusDays(1))).isZero();
+
+    // Alan gönderilmezse ayar korunur.
+    send(
+            t,
+            MockMvcRequestBuilders.put("/api/v1/fleet/settings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"blockOnExpired\":true,\"reminderDays\":30}"))
+        .andExpect(jsonPath("$.reminderEmail").value(false));
+    assertThat(SENT_NOTICES.stream().filter(n -> n.email().equals(ownerEmail(t)))).hasSize(1);
+  }
+
+  private int sendReminderMail(String t, String schema, LocalDate day) {
+    TenantContext.set(t, schema);
+    try {
+      return reminderMailer.sendForCurrentTenant(day);
+    } finally {
+      TenantContext.clear();
+    }
   }
 
   @Test

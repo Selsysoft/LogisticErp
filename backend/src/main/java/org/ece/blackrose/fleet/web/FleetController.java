@@ -295,10 +295,13 @@ public class FleetController {
   @PutMapping("/settings")
   @PreAuthorize(EDIT)
   FleetSettingsResponse saveSettings(@Valid @RequestBody SaveFleetSettingsRequest request) {
-    return toResponse(registry.updateSettings(request.blockOnExpired(), request.reminderDays()));
+    return toResponse(
+        registry.updateSettings(
+            request.blockOnExpired(), request.reminderDays(), request.reminderEmail()));
   }
 
   private static FleetSettingsResponse toResponse(FleetSettings settings) {
-    return new FleetSettingsResponse(settings.isBlockOnExpired(), settings.getReminderDays());
+    return new FleetSettingsResponse(
+        settings.isBlockOnExpired(), settings.getReminderDays(), settings.isReminderEmail());
   }
 }

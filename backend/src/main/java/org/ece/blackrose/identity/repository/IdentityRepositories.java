@@ -2,6 +2,7 @@ package org.ece.blackrose.identity.repository;
 
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.ece.blackrose.identity.domain.AuditLog;
@@ -10,6 +11,7 @@ import org.ece.blackrose.identity.domain.RevokedAccessToken;
 import org.ece.blackrose.identity.domain.Role;
 import org.ece.blackrose.identity.domain.SaasAdmin;
 import org.ece.blackrose.identity.domain.UserAccount;
+import org.ece.blackrose.identity.domain.UserStatus;
 import org.ece.blackrose.identity.domain.UserToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -25,6 +27,8 @@ public final class IdentityRepositories {
   public interface UserAccountRepository extends JpaRepository<UserAccount, UUID> {
 
     Optional<UserAccount> findByEmail(String email);
+
+    List<UserAccount> findByStatus(UserStatus status);
 
     @Query(
         """

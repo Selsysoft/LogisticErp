@@ -198,10 +198,14 @@ public final class FleetDtos {
       Availability availability,
       List<String> issues) {}
 
-  public record FleetSettingsResponse(boolean blockOnExpired, int reminderDays) {}
+  public record FleetSettingsResponse(
+      boolean blockOnExpired, int reminderDays, boolean reminderEmail) {}
 
   public record SaveFleetSettingsRequest(
-      @NotNull Boolean blockOnExpired, @NotNull @Min(1) Integer reminderDays) {}
+      @NotNull Boolean blockOnExpired,
+      @NotNull @Min(1) Integer reminderDays,
+      /** Boşsa mevcut değer korunur. */
+      Boolean reminderEmail) {}
 
   public record Option(UUID id, String label) {}
 
