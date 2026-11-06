@@ -417,7 +417,7 @@ public class DriverAppService {
       }
       String name =
           "%s-%s.%s".formatted(prefix, UUID.randomUUID().toString().substring(0, 8), extension);
-      return files.storeGenerated(SHIPMENT_OWNER, shipmentId, name, type, content).getId();
+      return files.storeSubmitted(SHIPMENT_OWNER, shipmentId, name, type, content).getId();
     } catch (IOException ex) {
       throw new UncheckedIOException(ex);
     }

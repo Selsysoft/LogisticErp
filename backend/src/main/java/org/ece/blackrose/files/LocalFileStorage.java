@@ -5,23 +5,20 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 /**
  * Yerel disk. Anahtar yalnız sunucunun ürettiği değerlerden oluşur; yine de kök dışına çıkılamaz.
  */
-@Component
 public class LocalFileStorage implements FileStorage {
 
   private final Path root;
 
-  public LocalFileStorage(@Value("${app.files.root}") String root) {
+  public LocalFileStorage(String root) {
     this.root = Path.of(root).toAbsolutePath().normalize();
   }
 
   @Override
-  public void write(String key, InputStream content) throws IOException {
+  public void write(String key, InputStream content, long size) throws IOException {
     Path target = resolve(key);
     Files.createDirectories(target.getParent());
     Files.copy(content, target, StandardCopyOption.REPLACE_EXISTING);

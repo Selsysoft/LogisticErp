@@ -15,4 +15,5 @@ COPY --from=build /src/target/*.jar /app/app.jar
 VOLUME /app/data/files
 ENV FILES_ROOT=/app/data/files
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+# Bellek biterse süreç kapanır ve yeniden başlatılır; yarı çalışır durumda kalmaz.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=70", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/app.jar"]

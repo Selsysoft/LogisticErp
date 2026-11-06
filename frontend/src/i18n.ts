@@ -766,6 +766,13 @@ void i18n.use(initReactI18next).init({
             email: "E-posta",
             password: "Şifre",
             submit: "Giriş yap",
+            code: "Doğrulama kodu",
+            codeHint: "Doğrulayıcı uygulamanızdaki 6 haneli kodu girin.",
+            setupTitle: "İki adımlı doğrulamayı kurun",
+            setupHint:
+              "Bu anahtarı doğrulayıcı uygulamanıza ekleyin, ardından uygulamanın ürettiği kodu girin. Anahtar bir daha gösterilmez.",
+            setupLink: "Bu cihazdaki doğrulayıcıda aç",
+            setupSubmit: "Doğrula ve giriş yap",
           },
           tabs: {
             tenants: "Firmalar",

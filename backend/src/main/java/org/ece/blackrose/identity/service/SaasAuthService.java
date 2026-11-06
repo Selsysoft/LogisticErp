@@ -1,7 +1,10 @@
 package org.ece.blackrose.identity.service;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.OptionalLong;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.identity.domain.AuditEvent;
 import org.ece.blackrose.identity.domain.SaasAdmin;
@@ -9,11 +12,13 @@ import org.ece.blackrose.identity.repository.IdentityRepositories.SaasAdminRepos
 import org.ece.blackrose.identity.security.SecurityProperties;
 import org.ece.blackrose.identity.security.TokenService;
 import org.ece.blackrose.identity.web.IdentityDtos.TokenResponse;
+import org.ece.blackrose.identity.web.IdentityDtos.TwoFactorSetupResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -31,13 +36,16 @@ public class SaasAuthService implements ApplicationRunner {
   private final TokenService tokens;
   private final SecurityProperties properties;
   private final AuditService audit;
+  private final TextEncryptor totpEncryptor;
 
   public SaasAuthService(
       SaasAdminRepository admins,
       PasswordEncoder passwordEncoder,
       TokenService tokens,
       SecurityProperties properties,
-      AuditService audit) {
+      AuditService audit,
+      TextEncryptor totpEncryptor) {
+    this.totpEncryptor = totpEncryptor;
     this.admins = admins;
     this.passwordEncoder = passwordEncoder;
     this.tokens = tokens;
@@ -45,9 +53,56 @@ public class SaasAuthService implements ApplicationRunner {
     this.audit = audit;
   }
 
-  public TokenResponse login(String rawEmail, String password) {
-    String email = AuthService.normalize(rawEmail);
+  public TokenResponse login(String rawEmail, String password, String totpCode) {
     Instant now = Instant.now();
+    SaasAdmin admin = authenticate(rawEmail, password, now);
+    if (admin.isTotpEnabled()) {
+      verifySecondFactor(admin, totpCode, now);
+    } else if (properties.saasTwoFactorRequired()) {
+      throw new BusinessException(
+          HttpStatus.FORBIDDEN,
+          "TWO_FACTOR_SETUP_REQUIRED",
+          "Giriş için iki adımlı doğrulamayı kurmanız gerekiyor.");
+    }
+    return completeLogin(admin);
+  }
+
+  /** Parola doğruysa yeni gizli anahtar üretir. Doğrulanana kadar 2FA açılmaz. */
+  public TwoFactorSetupResponse startTwoFactorSetup(String rawEmail, String password) {
+    SaasAdmin admin = authenticate(rawEmail, password, Instant.now());
+    if (admin.isTotpEnabled()) {
+      throw new BusinessException(
+          HttpStatus.CONFLICT, "TWO_FACTOR_ALREADY_ENABLED", "İki adımlı doğrulama zaten açık.");
+    }
+    String secret = Totp.newSecret();
+    admin.startTotpSetup(totpEncryptor.encrypt(secret));
+    admins.save(admin);
+    String label = URLEncoder.encode(admin.getEmail(), StandardCharsets.UTF_8);
+    return new TwoFactorSetupResponse(
+        secret,
+        "otpauth://totp/Blackrose%%20SaaS:%s?secret=%s&issuer=Blackrose%%20SaaS"
+            .formatted(label, secret));
+  }
+
+  /** Aynı kod ikinci kez kullanılamadığı için kurulum oturumu da başlatır. */
+  public TokenResponse enableTwoFactor(String rawEmail, String password, String code) {
+    Instant now = Instant.now();
+    SaasAdmin admin = authenticate(rawEmail, password, now);
+    if (admin.isTotpEnabled()) {
+      throw new BusinessException(
+          HttpStatus.CONFLICT, "TWO_FACTOR_ALREADY_ENABLED", "İki adımlı doğrulama zaten açık.");
+    }
+    if (admin.getTotpSecret() == null) {
+      throw invalidCode();
+    }
+    verifySecondFactor(admin, code, now);
+    admin.enableTotp();
+    audit.record(AuditEvent.TWO_FACTOR_ENABLED, admin.getId(), admin.getEmail(), null, "SAAS");
+    return completeLogin(admin);
+  }
+
+  private SaasAdmin authenticate(String rawEmail, String password, Instant now) {
+    String email = AuthService.normalize(rawEmail);
     Optional<SaasAdmin> found = admins.findByEmail(email);
     if (found.isEmpty()) {
       passwordEncoder.matches(password, DUMMY_HASH);
@@ -61,10 +116,38 @@ public class SaasAuthService implements ApplicationRunner {
       admins.save(admin);
       throw failed(admin, email);
     }
+    return admin;
+  }
+
+  private TokenResponse completeLogin(SaasAdmin admin) {
     admin.getLoginLock().reset();
     admins.save(admin);
-    audit.record(AuditEvent.SAAS_LOGIN_SUCCESS, admin.getId(), email, null, null);
+    audit.record(AuditEvent.SAAS_LOGIN_SUCCESS, admin.getId(), admin.getEmail(), null, null);
     return new TokenResponse(tokens.issueSaasToken(admin), null, tokens.saasTokenTtlSeconds());
+  }
+
+  private void verifySecondFactor(SaasAdmin admin, String code, Instant now) {
+    if (code == null || code.isBlank()) {
+      throw new BusinessException(
+          HttpStatus.UNAUTHORIZED, "TOTP_REQUIRED", "Doğrulama kodu gerekli.");
+    }
+    OptionalLong step =
+        Totp.matchingStep(
+            totpEncryptor.decrypt(admin.getTotpSecret()),
+            code.trim(),
+            now.getEpochSecond(),
+            admin.getTotpLastStep());
+    if (step.isEmpty()) {
+      admin.getLoginLock().recordFailure(now);
+      admins.save(admin);
+      audit.record(AuditEvent.SAAS_LOGIN_FAILED, admin.getId(), admin.getEmail(), null, "TOTP");
+      throw invalidCode();
+    }
+    admin.consumeTotpStep(step.getAsLong());
+  }
+
+  private static BusinessException invalidCode() {
+    return new BusinessException(HttpStatus.UNAUTHORIZED, "TOTP_INVALID", "Doğrulama kodu hatalı.");
   }
 
   @Override

@@ -14,7 +14,8 @@ public record SecurityProperties(
     String frontendBaseUrl,
     String mailFrom,
     String bootstrapAdminEmail,
-    String bootstrapAdminPassword) {
+    String bootstrapAdminPassword,
+    boolean saasTwoFactorRequired) {
 
   private static final int MIN_SECRET_BYTES = 32;
 

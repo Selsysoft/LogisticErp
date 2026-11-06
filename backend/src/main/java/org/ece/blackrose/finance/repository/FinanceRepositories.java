@@ -111,11 +111,13 @@ public final class FinanceRepositories {
 
     String getCurrency();
 
-    LocalDate getTransactionDate();
+    BigDecimal getCurrent();
 
-    String getDirection();
+    BigDecimal getDays31To60();
 
-    BigDecimal getAmount();
+    BigDecimal getDays61To90();
+
+    BigDecimal getOver90();
   }
 
   public interface AccountTransactionRepository extends JpaRepository<AccountTransaction, UUID> {
@@ -180,20 +182,44 @@ public final class FinanceRepositories {
         @Param("to") LocalDate to,
         Pageable pageable);
 
+    /**
+     * Vadesiz eskitme. Karşı yöndeki hareketler en eski kalemleri kapattığı için kapanan tutar,
+     * tarih sırasındaki kalemlerin başından düşülür; açık kalan her zaman en yeni kalemlerdir.
+     */
     @Query(
         value =
             """
-            select t.account_id as "accountId", a.name as "accountName", t.currency as "currency",
-                   t.transaction_date as "transactionDate", t.direction as "direction",
-                   t.amount as "amount"
-            from account_transaction t
-            join account a on a.id = t.account_id
-            where t.transaction_date <= :asOf and a.deleted = false and a.type in (:types)
-            order by a.name, t.account_id, t.currency, t.transaction_date, t.created_at
+            with moves as (
+              select t.account_id, t.currency, t.transaction_date, t.direction, t.amount,
+                     sum(case when t.direction = :open then t.amount else 0 end) over (
+                       partition by t.account_id, t.currency
+                       order by t.transaction_date, t.created_at, t.id) as opened,
+                     sum(case when t.direction <> :open then t.amount else 0 end) over (
+                       partition by t.account_id, t.currency) as closed
+              from account_transaction t
+              join account a on a.id = t.account_id
+              where t.transaction_date <= :asOf and t.deleted = false
+                and a.deleted = false and a.type in (:types)
+            ),
+            open_items as (
+              select account_id, currency, cast(:asOf as date) - transaction_date as age,
+                     least(amount, opened - closed) as remaining
+              from moves where direction = :open and opened > closed
+            )
+            select i.account_id as "accountId", a.name as "accountName", i.currency as "currency",
+                   coalesce(sum(i.remaining) filter (where i.age <= 30), 0) as "current",
+                   coalesce(sum(i.remaining) filter (where i.age > 30 and i.age <= 60), 0) as "days31To60",
+                   coalesce(sum(i.remaining) filter (where i.age > 60 and i.age <= 90), 0) as "days61To90",
+                   coalesce(sum(i.remaining) filter (where i.age > 90), 0) as "over90"
+            from open_items i join account a on a.id = i.account_id
+            group by i.account_id, a.name, i.currency
+            order by a.name, i.account_id, i.currency
             """,
         nativeQuery = true)
     List<AgingRow> agingRows(
-        @Param("asOf") LocalDate asOf, @Param("types") Collection<String> types);
+        @Param("asOf") LocalDate asOf,
+        @Param("open") String openDirection,
+        @Param("types") Collection<String> types);
   }
 
   public interface FundBalanceRow {

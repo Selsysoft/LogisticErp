@@ -11,7 +11,11 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.ece.blackrose.common.error.BusinessException;
+import org.ece.blackrose.identity.domain.AuditEvent;
+import org.ece.blackrose.identity.service.AuditService;
 import org.ece.blackrose.tenant.TenantContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -21,8 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Yüklenen dosyaları saklar. İçerik türü istemciye değil uzantıya göre belirlenir. Virüs taraması
- * henüz yoktur; bu yüzden izinli türler dardır ve dosyalar yalnız indirme olarak sunulur.
+ * Yüklenen dosyaları saklar. İçerik türü istemciye değil uzantıya göre belirlenir; izinli türler
+ * dardır ve dosyalar yalnız indirme olarak sunulur. Kullanıcıdan gelen içerik saklanmadan taranır;
+ * tarayıcıya ulaşılamazsa dosya kabul edilmez.
  */
 @Service
 public class FileService {
@@ -37,17 +42,26 @@ public class FileService {
           "docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
           "txt", "text/plain");
   private static final int MAX_NAME_LENGTH = 200;
+  private static final Logger log = LoggerFactory.getLogger(FileService.class);
 
   public record Download(StoredFile file, InputStream content) {}
 
   private final StoredFileRepository files;
   private final FileStorage storage;
   private final Map<String, FileOwnerPolicy> policies;
+  private final FileScanner scanner;
+  private final AuditService audit;
 
   public FileService(
-      StoredFileRepository files, FileStorage storage, List<FileOwnerPolicy> policies) {
+      StoredFileRepository files,
+      FileStorage storage,
+      List<FileOwnerPolicy> policies,
+      FileScanner scanner,
+      AuditService audit) {
     this.files = files;
     this.storage = storage;
+    this.scanner = scanner;
+    this.audit = audit;
     this.policies =
         policies.stream()
             .collect(Collectors.toMap(FileOwnerPolicy::ownerType, Function.identity()));
@@ -66,11 +80,28 @@ public class FileService {
     }
     String name = sanitize(upload.getOriginalFilename());
     String type = typeOf(name);
+    try (InputStream scanned = upload.getInputStream()) {
+      requireClean(name, scanned);
+    } catch (IOException ex) {
+      throw scanUnavailable(ex);
+    }
     try (InputStream content = upload.getInputStream()) {
       return save(ownerType, ownerId, name, type, upload.getSize(), content);
     } catch (IOException ex) {
       throw new UncheckedIOException(ex);
     }
+  }
+
+  /** Sürücünün gönderdiği içerik; izin ve tür kontrolünü çağıran iş kuralı yapar. */
+  @Transactional
+  public StoredFile storeSubmitted(
+      String ownerType, UUID ownerId, String name, String contentType, byte[] content) {
+    try {
+      requireClean(name, new ByteArrayInputStream(content));
+    } catch (IOException ex) {
+      throw scanUnavailable(ex);
+    }
+    return storeGenerated(ownerType, ownerId, name, contentType, content);
   }
 
   /** Sistemin kendi ürettiği belge; izin kontrolünü çağıran iş kuralı yapar. */
@@ -107,6 +138,25 @@ public class FileService {
     file.markDeleted();
   }
 
+  private void requireClean(String name, InputStream content) throws IOException {
+    String threat = scanner.findThreat(content);
+    if (threat != null) {
+      audit.record(AuditEvent.FILE_REJECTED, name, threat);
+      throw new BusinessException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          "FILE_INFECTED",
+          "Dosyada zararlı içerik bulundu, yüklenmedi.");
+    }
+  }
+
+  private static BusinessException scanUnavailable(IOException cause) {
+    log.error("Dosya taranamadı", cause);
+    return new BusinessException(
+        HttpStatus.SERVICE_UNAVAILABLE,
+        "FILE_SCAN_UNAVAILABLE",
+        "Dosya şu anda taranamıyor. Lütfen biraz sonra tekrar deneyin.");
+  }
+
   private Download open(StoredFile file) {
     try {
       return new Download(file, storage.read(file.getStorageKey()));
@@ -120,7 +170,7 @@ public class FileService {
     UUID id = UUID.randomUUID();
     String key = TenantContext.currentSchema().orElseThrow() + "/" + id;
     try {
-      storage.write(key, content);
+      storage.write(key, content, size);
     } catch (IOException ex) {
       throw new UncheckedIOException(ex);
     }

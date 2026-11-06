@@ -147,6 +147,7 @@ describe("oturum yenileme", () => {
   it.each([
     ["ağ hatası", () => Promise.reject(new TypeError("Failed to fetch"))],
     ["sunucu hatası", () => Promise.resolve(new Response(null, { status: 502 }))],
+    ["istek sınırı", () => Promise.resolve(new Response(null, { status: 429 }))],
   ])("%s oturumu silmez ve geçici hata verir", async (_name, respond) => {
     store.set("blackrose.refreshToken", "kayitli-yenileme");
     const expired = vi.fn();

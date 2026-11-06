@@ -10,6 +10,8 @@ app:
   finance:
     tcmb:
       enabled: false
+  reporting:
+    dashboard-cache-ttl: 0s
   tenancy:
     base-domain: blackrose.test
   security:
@@ -17,3 +19,8 @@ app:
     totp-key: test-only-totp-key-with-at-least-32-bytes
     bootstrap-admin-email: saas@blackrose.test
     bootstrap-admin-password: Test-Admin-12345
+    saas-two-factor-required: false
+    rate-limit:
+      login-per-minute: 100000
+      password-reset-per-minute: 100000
+      refresh-per-minute: 100000

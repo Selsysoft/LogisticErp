@@ -89,7 +89,8 @@ export function refreshSession(): Promise<RefreshResult> {
     }
     try {
       const response = await send("POST", "/auth/refresh", { refreshToken });
-      if (response.status >= 500) {
+      // 429 geçicidir; oturum geçersiz sayılırsa kullanıcı sebepsiz yere sistemden düşer.
+      if (response.status >= 500 || response.status === 429) {
         return "unreachable";
       }
       if (!response.ok) {

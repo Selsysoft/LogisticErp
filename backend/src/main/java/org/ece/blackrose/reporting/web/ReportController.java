@@ -3,6 +3,7 @@ package org.ece.blackrose.reporting.web;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -12,6 +13,7 @@ import org.ece.blackrose.customs.domain.CustomsTypes.TransitStatus;
 import org.ece.blackrose.customs.repository.CustomsRepositories.TransitDocumentRepository;
 import org.ece.blackrose.finance.service.PaymentPlanService;
 import org.ece.blackrose.fleet.service.FleetInsightService;
+import org.ece.blackrose.reporting.service.DashboardCache;
 import org.ece.blackrose.reporting.service.ReportService;
 import org.ece.blackrose.reporting.service.TableExporter;
 import org.ece.blackrose.reporting.service.TableExporter.Table;
@@ -32,6 +34,7 @@ import org.ece.blackrose.reporting.web.ReportDtos.SettlementPerformanceRow;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.ShipmentStatus;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentRepository;
 import org.ece.blackrose.tenant.TenantClock;
+import org.ece.blackrose.tenant.TenantContext;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -70,13 +73,20 @@ public class ReportController {
   private final ShipmentRepository shipments;
   private final TenantClock clock;
 
+  private static final Set<String> DASHBOARD_PERMISSIONS =
+      Set.of("SHIPMENT_VIEW", "FINANCE_VIEW", "FLEET_VIEW", "CUSTOMS_VIEW");
+
+  private final DashboardCache dashboardCache;
+
   public ReportController(
+      DashboardCache dashboardCache,
       ReportService reports,
       PaymentPlanService plans,
       FleetInsightService fleet,
       TransitDocumentRepository transits,
       ShipmentRepository shipments,
       TenantClock clock) {
+    this.dashboardCache = dashboardCache;
     this.reports = reports;
     this.plans = plans;
     this.fleet = fleet;
@@ -140,7 +150,13 @@ public class ReportController {
   @GetMapping("/dashboard")
   @Transactional(readOnly = true)
   public DashboardResponse dashboard() {
-    Set<String> authorities = authorities();
+    Set<String> widgets = new HashSet<>(authorities());
+    widgets.retainAll(DASHBOARD_PERMISSIONS);
+    return dashboardCache.get(
+        TenantContext.currentCode().orElseThrow(), widgets, () -> buildDashboard(widgets));
+  }
+
+  private DashboardResponse buildDashboard(Set<String> authorities) {
     LocalDate today = clock.today();
     OperationsWidget operations = null;
     if (authorities.contains("SHIPMENT_VIEW")) {

@@ -11,5 +11,29 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  # Üretim bağımlılıklarını yerelde denemek için: docker compose --profile uretim up -d
+  mailpit:
+    profiles: [uretim]
+    image: axllent/mailpit:v1.27
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+
+  # S3 taklidi: kimlik bilgisi denetlemez, yalnız yerel deneme içindir.
+  s3mock:
+    profiles: [uretim]
+    image: adobe/s3mock:4.7.0
+    environment:
+      initialBuckets: blackrose
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  # İlk açılışta imza veritabanını indirir; en az 2 GB bellek ister.
+  clamav:
+    profiles: [uretim]
+    image: clamav/clamav:1.4
+    ports:
+      - "127.0.0.1:3310:3310"
+
 volumes:
   postgres-data:

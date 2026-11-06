@@ -43,7 +43,8 @@ public class SecurityConfig {
                         "/api/v1/auth/login",
                         "/api/v1/auth/refresh",
                         "/api/v1/auth/password-reset/**",
-                        "/api/v1/admin/auth/login")
+                        "/api/v1/admin/auth/login",
+                        "/api/v1/admin/auth/2fa/**")
                     .permitAll()
                     .requestMatchers("/actuator/**", "/api/v1/admin/**")
                     .hasAuthority(JwtPrincipalConverter.SAAS_ADMIN_AUTHORITY)

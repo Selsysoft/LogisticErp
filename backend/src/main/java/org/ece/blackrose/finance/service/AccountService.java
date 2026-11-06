@@ -2,11 +2,7 @@ package org.ece.blackrose.finance.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -21,7 +17,6 @@ import org.ece.blackrose.finance.domain.FinanceTypes.AgingType;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountStatementRow;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountTransactionRepository;
-import org.ece.blackrose.finance.repository.FinanceRepositories.AgingRow;
 import org.ece.blackrose.finance.repository.FinanceRepositories.BalanceRow;
 import org.ece.blackrose.finance.service.LedgerService.Posting;
 import org.ece.blackrose.finance.web.FinanceDtos.AccountResponse;
@@ -181,71 +176,22 @@ public class AccountService {
             ? List.of(AccountType.CUSTOMER.name())
             : List.of(AccountType.SUPPLIER.name(), AccountType.CARRIER.name());
 
-    List<AgingResponse> result = new ArrayList<>();
-    List<AgingRow> rows = transactions.agingRows(asOf, types);
-    int start = 0;
-    while (start < rows.size()) {
-      AgingRow first = rows.get(start);
-      int end = start;
-      while (end < rows.size()
-          && rows.get(end).getAccountId().equals(first.getAccountId())
-          && rows.get(end).getCurrency().equals(first.getCurrency())) {
-        end++;
-      }
-      AgingResponse aged = ageGroup(rows.subList(start, end), openDirection, asOf);
-      if (aged.total().signum() > 0) {
-        result.add(aged);
-      }
-      start = end;
-    }
-    return result;
-  }
-
-  private static AgingResponse ageGroup(List<AgingRow> rows, String openDirection, LocalDate asOf) {
-    record OpenItem(LocalDate date, BigDecimal[] remaining) {}
-    Deque<OpenItem> open = new ArrayDeque<>();
-    BigDecimal unapplied = BigDecimal.ZERO;
-    for (AgingRow row : rows) {
-      if (openDirection.equals(row.getDirection())) {
-        BigDecimal amount = row.getAmount();
-        if (unapplied.signum() > 0) {
-          BigDecimal used = unapplied.min(amount);
-          amount = amount.subtract(used);
-          unapplied = unapplied.subtract(used);
-        }
-        if (amount.signum() > 0) {
-          open.addLast(new OpenItem(row.getTransactionDate(), new BigDecimal[] {amount}));
-        }
-      } else {
-        BigDecimal left = row.getAmount();
-        while (left.signum() > 0 && !open.isEmpty()) {
-          OpenItem oldest = open.peekFirst();
-          BigDecimal used = left.min(oldest.remaining()[0]);
-          oldest.remaining()[0] = oldest.remaining()[0].subtract(used);
-          left = left.subtract(used);
-          if (oldest.remaining()[0].signum() == 0) {
-            open.removeFirst();
-          }
-        }
-        unapplied = unapplied.add(left);
-      }
-    }
-    BigDecimal[] buckets = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
-    for (OpenItem item : open) {
-      long days = ChronoUnit.DAYS.between(item.date(), asOf);
-      int bucket = days <= 30 ? 0 : days <= 60 ? 1 : days <= 90 ? 2 : 3;
-      buckets[bucket] = buckets[bucket].add(item.remaining()[0]);
-    }
-    AgingRow first = rows.get(0);
-    return new AgingResponse(
-        first.getAccountId(),
-        first.getAccountName(),
-        first.getCurrency(),
-        buckets[0],
-        buckets[1],
-        buckets[2],
-        buckets[3],
-        buckets[0].add(buckets[1]).add(buckets[2]).add(buckets[3]));
+    return transactions.agingRows(asOf, openDirection, types).stream()
+        .map(
+            row ->
+                new AgingResponse(
+                    row.getAccountId(),
+                    row.getAccountName(),
+                    row.getCurrency(),
+                    row.getCurrent(),
+                    row.getDays31To60(),
+                    row.getDays61To90(),
+                    row.getOver90(),
+                    row.getCurrent()
+                        .add(row.getDays31To60())
+                        .add(row.getDays61To90())
+                        .add(row.getOver90())))
+        .toList();
   }
 
   private Map<UUID, List<BalanceResponse>> balancesOf(Collection<UUID> ids) {

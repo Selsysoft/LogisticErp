@@ -1,10 +1,25 @@
+server:
+  # Ters vekil arkasında "native" yapılmalı; yoksa bütün istekler vekilin IP'sinden gelmiş sayılır.
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
+
 spring:
   application:
     name: blackrose
+  mail:
+    properties:
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
+      mail.smtp.auth: ${MAIL_AUTH:true}
+      mail.smtp.starttls.enable: ${MAIL_STARTTLS:true}
+      mail.smtp.starttls.required: ${MAIL_STARTTLS:true}
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/blackrose}
     username: ${DB_USERNAME:blackrose}
     password: ${DB_PASSWORD:}
+    hikari:
+      # JIT bu rapor sorgularına saniyelerce derleme süresi ekliyor; ölçüm docs/URETIM_KURULUM.md'de.
+      connection-init-sql: SET jit = off
   jpa:
     open-in-view: false
     hibernate:
@@ -23,6 +38,10 @@ spring:
         max-page-size: 200
 
 management:
+  health:
+    # SMTP kesintisi uygulamayı sağlıksız göstermemeli; aksi halde örnek yeniden başlatılır.
+    mail:
+      enabled: false
   endpoints:
     web:
       exposure:
@@ -36,10 +55,23 @@ logging:
 app:
   files:
     root: ${FILES_ROOT:./data/files}
+    storage: ${FILE_STORAGE:local}
+    s3:
+      bucket: ${S3_BUCKET:}
+      region: ${S3_REGION:eu-central-1}
+      endpoint: ${S3_ENDPOINT:}
+      access-key: ${S3_ACCESS_KEY:}
+      secret-key: ${S3_SECRET_KEY:}
+    scan:
+      mode: ${FILE_SCAN_MODE:none}
+      host: ${CLAMAV_HOST:localhost}
+      port: ${CLAMAV_PORT:3310}
   finance:
     tcmb:
       enabled: ${TCMB_ENABLED:true}
       url: ${TCMB_URL:https://www.tcmb.gov.tr/kurlar/today.xml}
+  reporting:
+    dashboard-cache-ttl: ${DASHBOARD_CACHE_TTL:30s}
   tenancy:
     base-domain: ${TENANCY_BASE_DOMAIN:blackrose.local}
   security:
@@ -52,3 +84,8 @@ app:
     mail-from: ${MAIL_FROM:noreply@blackrose.local}
     bootstrap-admin-email: ${ADMIN_BOOTSTRAP_EMAIL:}
     bootstrap-admin-password: ${ADMIN_BOOTSTRAP_PASSWORD:}
+    saas-two-factor-required: ${SAAS_2FA_REQUIRED:true}
+    rate-limit:
+      login-per-minute: ${RATE_LIMIT_LOGIN:30}
+      password-reset-per-minute: ${RATE_LIMIT_PASSWORD_RESET:10}
+      refresh-per-minute: ${RATE_LIMIT_REFRESH:300}

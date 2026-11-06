@@ -17,6 +17,9 @@ public class SaasAdmin extends AuditableEntity {
   private String passwordHash;
   private boolean active;
   @Embedded private LoginLock loginLock = new LoginLock();
+  private String totpSecret;
+  private boolean totpEnabled;
+  private Long totpLastStep;
 
   protected SaasAdmin() {}
 
@@ -45,5 +48,31 @@ public class SaasAdmin extends AuditableEntity {
 
   public LoginLock getLoginLock() {
     return loginLock;
+  }
+
+  public void startTotpSetup(String encryptedSecret) {
+    totpSecret = encryptedSecret;
+    totpEnabled = false;
+    totpLastStep = null;
+  }
+
+  public void enableTotp() {
+    totpEnabled = true;
+  }
+
+  public void consumeTotpStep(long step) {
+    totpLastStep = step;
+  }
+
+  public String getTotpSecret() {
+    return totpSecret;
+  }
+
+  public boolean isTotpEnabled() {
+    return totpEnabled;
+  }
+
+  public Long getTotpLastStep() {
+    return totpLastStep;
   }
 }

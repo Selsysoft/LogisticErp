@@ -35,6 +35,12 @@ public final class IdentityDtos {
 
   public record TwoFactorSetupResponse(String secret, String otpauthUri) {}
 
+  public record SaasTwoFactorSetupRequest(
+      @NotBlank @Email String email, @NotBlank String password) {}
+
+  public record SaasTwoFactorEnableRequest(
+      @NotBlank @Email String email, @NotBlank String password, @NotBlank String code) {}
+
   public record TwoFactorCodeRequest(@NotBlank String code) {}
 
   public record MeResponse(

@@ -1,3 +1,8 @@
+app:
+  files:
+    scan:
+      mode: ${FILE_SCAN_MODE:clamav}
+
 springdoc:
   swagger-ui:
     enabled: true

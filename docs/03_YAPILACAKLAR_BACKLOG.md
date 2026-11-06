@@ -111,9 +111,10 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 ---
 
 ## Çapraz kesen (tüm fazlar) — P0/P1
-- 🟦 X1 Belge/dosya yönetimi (yükleme, saklama, virüs tarama, erişim izni) — Faz 3 başlamadan; yerel disk ve izinler hazır, S3 ve virüs tarama açık
-- 🟦 X2 Bildirim altyapısı (e-posta/SMS/uygulama içi) + belge süresi hatırlatmaları — Faz 5A; uygulama içi liste hazır, e-posta/SMS açık
+- 🟦 X1 Belge/dosya yönetimi (yükleme, saklama, virüs tarama, erişim izni) — Faz 3 başlamadan; yerel disk/S3 ve ClamAV taraması hazır (S3 taklidiyle denendi), gerçek AWS ve mevcut dosyaların geriye dönük taranması açık
+- 🟦 X2 Bildirim altyapısı (e-posta/SMS/uygulama içi) + belge süresi hatırlatmaları — Faz 5A; uygulama içi liste hazır; SMTP yalnız davet, şifre sıfırlama ve SaaS faturası için kullanılıyor, bildirim e-postası/SMS açık
 - ⬜ X3 i18n (TR birincil; EN altyapısı)
 - ⬜ X4 Audit/aktivite günlüğü standardı
 - ⬜ X5 Test kapsama hedefleri + sözleşme testleri
-- ⬜ X6 Güvenlik gözden geçirme (OWASP, yetki, kiracı sızıntısı)
+- ⬜ X6 Güvenlik gözden geçirme (OWASP, yetki, kiracı sızıntısı) — kısmi: SaaS yöneticisi 2FA ve oturumsuz uçlarda IP sınırı eklendi; kapsamlı gözden geçirme yapılmadı
+- 🟦 X7 Üretim hazırlığı — SMTP, S3, ClamAV, IP sınırı, SaaS 2FA, büyük veri ölçümü ve düzeltmeleri (`docs/URETIM_KURULUM.md`); gerçek sağlayıcılar, ters vekil ve üretim benzeri ortamda ölçüm açık

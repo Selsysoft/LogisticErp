@@ -18,7 +18,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.ece.blackrose.AbstractIntegrationTest;
+import org.ece.blackrose.files.FakeFileScannerConfig;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.ResultActions;
@@ -26,6 +28,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
+@Import(FakeFileScannerConfig.class)
 class DriverAppIT extends AbstractIntegrationTest {
 
   private static final String BASE = "/api/v1/driver";
@@ -399,6 +402,59 @@ class DriverAppIT extends AbstractIntegrationTest {
     body.put("latitude", "41.01");
     body.put("longitude", "28.97");
     return json(post(BASE + "/trips/" + trip + "/events"), body);
+  }
+
+  @Test
+  void zararliVeyaTaranamayanDosyaKabulEdilmezVeSeferDegismez() throws Exception {
+    Fixture f = fixture("drv-scan");
+    String trip = plannedTrip(f, f.driverId(), "34DS90");
+    driver(f, event(trip, "LOADED")).andExpect(status().isOk());
+    driver(f, event(trip, "IN_TRANSIT")).andExpect(status().isOk());
+    byte[] infected = withMarker(FakeFileScannerConfig.THREAT_MARKER);
+    byte[] outage = withMarker(FakeFileScannerConfig.OUTAGE_MARKER);
+
+    driver(f, pod(trip, UUID.randomUUID(), PNG, infected))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.code").value("FILE_INFECTED"));
+    driver(f, pod(trip, UUID.randomUUID(), PNG, outage))
+        .andExpect(status().isServiceUnavailable())
+        .andExpect(jsonPath("$.code").value("FILE_SCAN_UNAVAILABLE"));
+    assertThat(shipmentStatus(f, trip)).isEqualTo("IN_TRANSIT");
+    assertThat(filesOf(f, trip)).isEmpty();
+
+    mvc.perform(
+            multipart("/api/v1/files")
+                .file(new MockMultipartFile("file", "belge.txt", "text/plain", infected))
+                .param("ownerType", "SHIPMENT")
+                .param("ownerId", trip)
+                .with(asOwner(f.tenant())))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.code").value("FILE_INFECTED"));
+    mvc.perform(
+            multipart("/api/v1/files")
+                .file(
+                    new MockMultipartFile("file", "belge.txt", "text/plain", new byte[] {'o', 'k'}))
+                .param("ownerType", "SHIPMENT")
+                .param("ownerId", trip)
+                .with(asOwner(f.tenant())))
+        .andExpect(status().isCreated());
+    assertThat(filesOf(f, trip)).hasSize(1);
+  }
+
+  private static byte[] withMarker(String marker) {
+    byte[] text = marker.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
+    byte[] content = java.util.Arrays.copyOf(JPEG, JPEG.length + text.length);
+    System.arraycopy(text, 0, content, JPEG.length, text.length);
+    return content;
+  }
+
+  private JsonNode filesOf(Fixture f, String trip) throws Exception {
+    return body(
+        mvc.perform(
+            get("/api/v1/files")
+                .param("ownerType", "SHIPMENT")
+                .param("ownerId", trip)
+                .with(asOwner(f.tenant()))));
   }
 
   private MockMultipartHttpServletRequestBuilder pod(

@@ -17,3 +17,4 @@ app:
     totp-key: ${TOTP_ENCRYPTION_KEY:dev-only-totp-key-do-not-use-in-production}
     bootstrap-admin-email: ${ADMIN_BOOTSTRAP_EMAIL:admin@blackrose.local}
     bootstrap-admin-password: ${ADMIN_BOOTSTRAP_PASSWORD:Dev-Admin-12345}
+    saas-two-factor-required: ${SAAS_2FA_REQUIRED:false}
