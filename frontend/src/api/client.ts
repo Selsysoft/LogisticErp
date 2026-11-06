@@ -19,7 +19,8 @@ export class ApiError extends Error {
 
 export interface TokenResponse {
   accessToken: string;
-  refreshToken: string;
+  /** Tarayıcıya gövdede verilmez; HttpOnly çerezdedir. */
+  refreshToken: string | null;
   expiresInSeconds: number;
 }
 
@@ -70,7 +71,7 @@ async function send(
   });
 }
 
-/** Sekmeler yenileme token'ını paylaşır; kilit olmazsa iki sekme aynı token'ı kullanıp oturumu kapatır. */
+/** Sekmeler yenileme çerezini paylaşır; kilit olmazsa iki sekme aynı token'ı kullanıp oturumu kapatır. */
 function withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
   // Kilit yalnız HTTPS ve localhost'ta vardır; yoksa sekme içi tekilleştirme ile devam edilir.
   const locks = globalThis.navigator?.locks;
@@ -79,16 +80,15 @@ function withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
 
 /**
  * Aynı anda gelen 401'ler tek yenileme isteğini paylaşır; aksi halde token yeniden kullanılmış sayılır.
- * Token kilit alındıktan sonra okunur, böylece başka sekmenin yenilediği en güncel token kullanılır.
+ * Çerez kilit alındıktan sonra gönderilir, böylece başka sekmenin yenilediği en güncel token kullanılır.
  */
 export function refreshSession(): Promise<RefreshResult> {
   refreshInFlight ??= withRefreshLock<RefreshResult>(async () => {
-    const refreshToken = session.getRefreshToken();
-    if (!refreshToken) {
+    if (!session.hasSession()) {
       return "rejected";
     }
     try {
-      const response = await send("POST", "/auth/refresh", { refreshToken });
+      const response = await send("POST", "/auth/refresh");
       // 429 geçicidir; oturum geçersiz sayılırsa kullanıcı sebepsiz yere sistemden düşer.
       if (response.status >= 500 || response.status === 429) {
         return "unreachable";
@@ -97,7 +97,7 @@ export function refreshSession(): Promise<RefreshResult> {
         return "rejected";
       }
       const tokens = (await response.json()) as TokenResponse;
-      session.setTokens(tokens.accessToken, tokens.refreshToken);
+      session.setAccessToken(tokens.accessToken);
       return "ok";
     } catch {
       return "unreachable";
@@ -138,11 +138,11 @@ async function authorizedFetch(
   headers?: Record<string, string>,
 ): Promise<Response> {
   // Erişim token'ı bellektedir. Çevrimdışı açılışta yoktur; önce yenilenmeden istek gönderilmez.
-  if (!isPublic(path) && !session.getAccessToken() && session.getRefreshToken()) {
+  if (!isPublic(path) && !session.getAccessToken() && session.hasSession()) {
     await renewSession();
   }
   let response = await send(method, path, body, headers);
-  if (response.status === 401 && !isPublic(path) && session.getRefreshToken()) {
+  if (response.status === 401 && !isPublic(path) && session.hasSession()) {
     await renewSession();
     response = await send(method, path, body, headers);
   }

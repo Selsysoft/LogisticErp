@@ -23,7 +23,7 @@ Kod okuması ve mevcut testlerle yapıldı. Sızma testi, otomatik tarayıcı (D
 
 ## Açık kalanlar (önem sırasıyla)
 
-1. **Yenileme token'ı `localStorage`'da.** Sayfada bir XSS açığı olursa token çalınabilir ve 30 gün kullanılabilir. Kodda `dangerouslySetInnerHTML`/`eval` yok, React içeriği kaçışlar. Öneri: üretimde sıkı CSP; orta vadede yenileme token'ını `HttpOnly` çereze taşımak (CSRF koruması ile birlikte).
+1. ~~Yenileme token'ı `localStorage`'da~~ — 2026-11-06'da `HttpOnly`, `Secure`, `SameSite=Strict` çereze taşındı; yanıt gövdesinde artık yer almaz, yalnız `/api/v1/auth` uçlarına gider. Çıkış çerezi siler ve oturumu iptal eder. Eski sürümün yerel depoda bıraktığı token açılışta silinir; kullanıcılar bir kez yeniden giriş yapar. Erişim token'ı (15 dk) bellekte kaldığı için XSS açığı olursa sayfa açıkken yine kötüye kullanılabilir; sıkı CSP gereklidir (madde 4).
 2. ~~Frontend bağımlılıkları~~ — 2026-11-06'da React Router 7.18 ve Zod 4.6'ya yükseltildi; tarayıcıya giden paketlerde `npm audit` temiz. Geliştirme araçlarında (vitest, esbuild) uyarılar sürüyor; bunlar tarayıcıya gitmez, Vite/Vitest ana sürüm yükseltmesiyle giderilecek.
 3. ~~Backend bağımlılık taraması~~ — 2026-11-06'da eklendi, aşağıya bakın.
 4. **Frontend sunumu ve CSP.** Depoda üretim web sunucusu yapılandırması yok. Ters vekilde `Content-Security-Policy`, `Strict-Transport-Security`, `Referrer-Policy` ve `Permissions-Policy` tanımlanmalı.

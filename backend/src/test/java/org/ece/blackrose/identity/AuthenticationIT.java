@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.servlet.http.Cookie;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -14,9 +15,12 @@ import org.ece.blackrose.AbstractIntegrationTest;
 import org.ece.blackrose.identity.security.CryptoConfig;
 import org.ece.blackrose.identity.security.TokenService;
 import org.ece.blackrose.identity.service.Totp;
+import org.ece.blackrose.identity.web.AuthController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -30,7 +34,16 @@ class AuthenticationIT extends AbstractIntegrationTest {
   @Test
   void expiredAccessTokenIsRejectedAndRefreshIssuesNewOne() throws Exception {
     createTenant("auth-a");
-    JsonNode session = login("auth-a", ownerEmail("auth-a"), PASSWORD, null);
+    MockHttpServletResponse loginResponse =
+        postLogin("auth-a", ownerEmail("auth-a"), PASSWORD, null)
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse();
+    JsonNode session = json.readTree(loginResponse.getContentAsString());
+    // Yenileme token'ı gövdede değil, JavaScript'in okuyamadığı çerezdedir.
+    assertThat(session.get("refreshToken").isNull()).isTrue();
+    assertThat(loginResponse.getHeader(HttpHeaders.SET_COOKIE))
+        .contains("HttpOnly", "SameSite=Strict", "Path=/api/v1/auth", "Secure");
     String userId =
         body(mvc.perform(
                 get("/api/v1/auth/me")
@@ -42,7 +55,8 @@ class AuthenticationIT extends AbstractIntegrationTest {
     mvc.perform(get("/api/v1/auth/me").with(tenant("auth-a")).with(bearer(expiredToken(userId))))
         .andExpect(status().isUnauthorized());
 
-    JsonNode refreshed = refresh("auth-a", session.get("refreshToken").asText());
+    JsonNode refreshed = refresh("auth-a", refreshCookie(loginResponse));
+    assertThat(refreshed.get("refreshToken").isNull()).isTrue();
     mvc.perform(
             get("/api/v1/auth/me")
                 .with(tenant("auth-a"))
@@ -53,17 +67,21 @@ class AuthenticationIT extends AbstractIntegrationTest {
   @Test
   void logoutInvalidatesAccessAndRefreshTokens() throws Exception {
     createTenant("auth-b");
-    JsonNode session = login("auth-b", ownerEmail("auth-b"), PASSWORD, null);
-    String access = session.get("accessToken").asText();
-    String refresh = session.get("refreshToken").asText();
+    MockHttpServletResponse loginResponse =
+        postLogin("auth-b", ownerEmail("auth-b"), PASSWORD, null).andReturn().getResponse();
+    String access = json.readTree(loginResponse.getContentAsString()).get("accessToken").asText();
+    String refresh = refreshCookie(loginResponse);
 
-    mvc.perform(
-            post("/api/v1/auth/logout")
-                .with(tenant("auth-b"))
-                .with(bearer(access))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.writeValueAsString(Map.of("refreshToken", refresh))))
-        .andExpect(status().isNoContent());
+    MockHttpServletResponse logout =
+        mvc.perform(
+                post("/api/v1/auth/logout")
+                    .with(tenant("auth-b"))
+                    .with(bearer(access))
+                    .cookie(new Cookie(AuthController.REFRESH_COOKIE, refresh)))
+            .andExpect(status().isNoContent())
+            .andReturn()
+            .getResponse();
+    assertThat(logout.getHeader(HttpHeaders.SET_COOKIE)).contains("Max-Age=0");
 
     mvc.perform(get("/api/v1/auth/me").with(tenant("auth-b")).with(bearer(access)))
         .andExpect(status().isUnauthorized());
@@ -76,8 +94,11 @@ class AuthenticationIT extends AbstractIntegrationTest {
   void reusedRefreshTokenRevokesWholeSession() throws Exception {
     createTenant("auth-c");
     String first =
-        login("auth-c", ownerEmail("auth-c"), PASSWORD, null).get("refreshToken").asText();
-    String second = refresh("auth-c", first).get("refreshToken").asText();
+        refreshCookie(
+            postLogin("auth-c", ownerEmail("auth-c"), PASSWORD, null).andReturn().getResponse());
+    String second =
+        refreshCookie(
+            postRefresh("auth-c", first).andExpect(status().isOk()).andReturn().getResponse());
 
     postRefresh("auth-c", first).andExpect(status().isUnauthorized());
     postRefresh("auth-c", second).andExpect(status().isUnauthorized());
@@ -242,8 +263,30 @@ class AuthenticationIT extends AbstractIntegrationTest {
     return mvc.perform(
         post("/api/v1/auth/refresh")
             .with(tenant(code))
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(json.writeValueAsString(Map.of("refreshToken", refreshToken))));
+            .cookie(new Cookie(AuthController.REFRESH_COOKIE, refreshToken)));
+  }
+
+  private static String refreshCookie(MockHttpServletResponse response) {
+    Cookie cookie = response.getCookie(AuthController.REFRESH_COOKIE);
+    assertThat(cookie).isNotNull();
+    return cookie.getValue();
+  }
+
+  @Test
+  void refreshWithoutCookieOrBodyIsRejectedAndBodyStillWorksForApiClients() throws Exception {
+    createTenant("auth-n");
+    mvc.perform(post("/api/v1/auth/refresh").with(tenant("auth-n")))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_INVALID"));
+    String token =
+        refreshCookie(
+            postLogin("auth-n", ownerEmail("auth-n"), PASSWORD, null).andReturn().getResponse());
+    mvc.perform(
+            post("/api/v1/auth/refresh")
+                .with(tenant("auth-n"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("refreshToken", token))))
+        .andExpect(status().isOk());
   }
 
   private String expiredToken(String userId) {

@@ -18,7 +18,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const tokens = { accessToken: "yeni-erisim", refreshToken: "yeni-yenileme", expiresInSeconds: 900 };
+// Yenileme token'ı gövdede gelmez; tarayıcı HttpOnly çerezi kendisi saklar ve gönderir.
+const tokens = { accessToken: "yeni-erisim", refreshToken: null, expiresInSeconds: 900 };
 
 describe("apiGet", () => {
   it("başarılı yanıtın gövdesini döner", async () => {
@@ -56,7 +57,7 @@ describe("apiGet", () => {
 
 describe("oturum yenileme", () => {
   it("401 sonrası token yeniler ve isteği yeni token ile tekrarlar", async () => {
-    session.setTokens("eski-erisim", "eski-yenileme");
+    session.setAccessToken("eski-erisim");
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
@@ -68,11 +69,11 @@ describe("oturum yenileme", () => {
 
     expect(fetchMock.mock.calls[1][0]).toBe("/api/v1/auth/refresh");
     expect(fetchMock.mock.calls[2][1].headers.Authorization).toBe("Bearer yeni-erisim");
-    expect(session.getRefreshToken()).toBe("yeni-yenileme");
+    expect(session.hasSession()).toBe(true);
   });
 
   it("aynı anda gelen 401'ler tek yenileme isteği yapar", async () => {
-    session.setTokens("eski-erisim", "eski-yenileme");
+    session.setAccessToken("eski-erisim");
     const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
       if (url.endsWith("/auth/refresh")) {
         return Response.json(tokens);
@@ -90,17 +91,10 @@ describe("oturum yenileme", () => {
     expect(refreshCalls).toHaveLength(1);
   });
 
-  it("kilidi bekleyen sekme, başka sekmenin yenilediği güncel token'ı kullanır", async () => {
-    session.setTokens("eski-erisim", "eski-yenileme");
-    vi.stubGlobal("navigator", {
-      locks: {
-        request: async (_name: string, task: () => Promise<unknown>) => {
-          // Kilidi önce başka sekme aldı ve token'ı döndürdü.
-          store.set("blackrose.refreshToken", "diger-sekmenin-tokeni");
-          return task();
-        },
-      },
-    });
+  it("yenileme kilit içinde, gövdesiz ve erişim token'ı olmadan gönderilir", async () => {
+    session.setAccessToken("eski-erisim");
+    const locked = vi.fn(async (_name: string, task: () => Promise<unknown>) => task());
+    vi.stubGlobal("navigator", { locks: { request: locked } });
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
@@ -110,13 +104,13 @@ describe("oturum yenileme", () => {
 
     await apiGet("/identity/users");
 
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body as string)).toEqual({
-      refreshToken: "diger-sekmenin-tokeni",
-    });
+    expect(locked).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[1][1].body).toBeUndefined();
+    expect(fetchMock.mock.calls[1][1].headers.Authorization).toBeUndefined();
   });
 
   it("yenileme başarısızsa oturumu temizler ve haber verir", async () => {
-    session.setTokens("eski-erisim", "eski-yenileme");
+    session.setAccessToken("eski-erisim");
     const expired = vi.fn();
     onSessionExpired(expired);
     vi.stubGlobal(
@@ -127,11 +121,11 @@ describe("oturum yenileme", () => {
     await expect(apiGet("/identity/users")).rejects.toBeInstanceOf(ApiError);
 
     expect(expired).toHaveBeenCalledOnce();
-    expect(session.getRefreshToken()).toBeNull();
+    expect(session.hasSession()).toBe(false);
   });
 
   it("bellekte token yoksa isteği göndermeden önce yeniler", async () => {
-    store.set("blackrose.refreshToken", "kayitli-yenileme");
+    store.set("blackrose.session", "1");
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(Response.json(tokens))
@@ -149,7 +143,7 @@ describe("oturum yenileme", () => {
     ["sunucu hatası", () => Promise.resolve(new Response(null, { status: 502 }))],
     ["istek sınırı", () => Promise.resolve(new Response(null, { status: 429 }))],
   ])("%s oturumu silmez ve geçici hata verir", async (_name, respond) => {
-    store.set("blackrose.refreshToken", "kayitli-yenileme");
+    store.set("blackrose.session", "1");
     const expired = vi.fn();
     onSessionExpired(expired);
     const fetchMock = vi.fn().mockImplementation(respond);
@@ -159,7 +153,7 @@ describe("oturum yenileme", () => {
 
     expect((error as ApiError).status).toBe(503);
     expect(expired).not.toHaveBeenCalled();
-    expect(session.getRefreshToken()).toBe("kayitli-yenileme");
+    expect(session.hasSession()).toBe(true);
     // Token'sız istek hiç gönderilmemiştir.
     expect(fetchMock).toHaveBeenCalledOnce();
   });

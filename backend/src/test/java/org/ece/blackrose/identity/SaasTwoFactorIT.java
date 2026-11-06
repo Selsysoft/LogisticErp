@@ -89,16 +89,22 @@ class SaasTwoFactorIT extends AbstractIntegrationTest {
   void kurulumdanSonraKodZorunluVeAyniKodTekrarKullanilamaz() throws Exception {
     String email = newAdmin();
     String secret = setup(email);
-    enable(email, secret);
+    // Adım bir kez sabitlenir: kodlar ayrı ayrı üretilirse 30 sn sınırında "aynı kod" yeni kod
+    // olur.
+    long step = Totp.stepAt(Instant.now().getEpochSecond());
+    String setupCode = Totp.codeAt(secret, step - 1);
+    String loginCode = Totp.codeAt(secret, step);
+    adminPost("/2fa/enable", Map.of("email", email, "password", ADMIN_PASSWORD, "code", setupCode))
+        .andExpect(status().isOk());
 
     adminLogin(email, ADMIN_PASSWORD, null)
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.code").value("TOTP_REQUIRED"));
-    adminLogin(email, ADMIN_PASSWORD, code(secret, -1))
+    adminLogin(email, ADMIN_PASSWORD, setupCode)
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.code").value("TOTP_INVALID"));
-    adminLogin(email, ADMIN_PASSWORD, code(secret, 0)).andExpect(status().isOk());
-    adminLogin(email, ADMIN_PASSWORD, code(secret, 0))
+    adminLogin(email, ADMIN_PASSWORD, loginCode).andExpect(status().isOk());
+    adminLogin(email, ADMIN_PASSWORD, loginCode)
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.code").value("TOTP_INVALID"));
   }

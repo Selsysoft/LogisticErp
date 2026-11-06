@@ -16,6 +16,7 @@ Bu belge, uygulamanın üretim profilinde çalışması için gerekenleri anlat�
 | `FILE_STORAGE=s3`, `S3_BUCKET`, `S3_REGION` | Bucket yoksa uygulama açılmaz. `S3_ACCESS_KEY` boşsa AWS varsayılan kimlik zinciri kullanılır. Uyumlu sağlayıcıda `S3_ENDPOINT` verilir. |
 | `CLAMAV_HOST`, `CLAMAV_PORT` | `prod`/`stage` varsayılanı `FILE_SCAN_MODE=clamav`'dır. Tarayıcıya ulaşılamazsa dosya yüklemeleri 503 döner, dosya kabul edilmez. |
 | `FORWARD_HEADERS_STRATEGY=native` | **Ters vekil arkasında zorunludur.** Yapılmazsa bütün kullanıcılar vekilin IP'sinden gelmiş sayılır ve IP sınırı herkesi birlikte kilitler; denetim günlüğündeki IP de yanlış olur. |
+| HTTPS ve aynı alan adı | Yenileme token'ı `HttpOnly`, `Secure`, `SameSite=Strict` çerezle verilir (`/api/v1/auth` yolu). Frontend ve API aynı alan adından (ters vekil üzerinden) sunulmalı, site HTTPS olmalıdır. `REFRESH_COOKIE_SECURE=false` yalnız HTTPS'siz yerel denemede kullanılır. |
 
 ## E-posta
 

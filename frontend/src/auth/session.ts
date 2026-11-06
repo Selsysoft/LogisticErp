@@ -1,9 +1,12 @@
 /**
- * Erişim token'ı yalnız bellekte tutulur. Yenileme token'ı ve firma kodu, sayfa yenilemesinde oturum
- * korunsun diye localStorage'dadır; depolama kullanılamıyorsa oturum sayfa ömrüyle sınırlı kalır.
+ * Erişim token'ı yalnız bellekte tutulur. Yenileme token'ı sunucunun koyduğu HttpOnly çerezdedir;
+ * JavaScript okuyamaz, bu yüzden XSS ile çalınamaz. localStorage'da yalnız "oturum var" işareti ve
+ * firma kodu durur; işaret, sayfa yenilemesinde yenileme denenip denenmeyeceğini belirler.
  */
-const REFRESH_KEY = "blackrose.refreshToken";
+const SESSION_KEY = "blackrose.session";
 const TENANT_KEY = "blackrose.tenantCode";
+/** Eski sürümlerin yerel depoya yazdığı yenileme token'ı; görülürse silinir. */
+const LEGACY_REFRESH_KEY = "blackrose.refreshToken";
 
 let accessToken: string | null = null;
 
@@ -27,18 +30,23 @@ function write(key: string, value: string | null) {
   }
 }
 
+/** Eski sürümden kalan token çerezle değiştirilemez; kullanıcı bir kez yeniden giriş yapar. */
+if (read(LEGACY_REFRESH_KEY) !== null) {
+  write(LEGACY_REFRESH_KEY, null);
+}
+
 export const session = {
   getAccessToken: () => accessToken,
-  getRefreshToken: () => read(REFRESH_KEY),
+  hasSession: () => read(SESSION_KEY) !== null,
   getTenantCode: () => read(TENANT_KEY),
   setTenantCode: (code: string | null) => write(TENANT_KEY, code),
-  setTokens(access: string, refresh: string) {
+  setAccessToken(access: string) {
     accessToken = access;
-    write(REFRESH_KEY, refresh);
+    write(SESSION_KEY, "1");
   },
   clear() {
     accessToken = null;
-    write(REFRESH_KEY, null);
+    write(SESSION_KEY, null);
   },
 };
 

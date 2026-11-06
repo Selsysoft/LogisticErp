@@ -20,7 +20,7 @@ public final class IdentityDtos {
   public record LoginRequest(
       @NotBlank @Email String email, @NotBlank String password, String totpCode) {}
 
-  public record RefreshRequest(@NotBlank String refreshToken) {}
+  public record RefreshRequest(String refreshToken) {}
 
   public record LogoutRequest(String refreshToken) {}
 

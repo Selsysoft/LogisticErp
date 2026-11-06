@@ -57,7 +57,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   me: null,
 
   async bootstrap() {
-    const refreshed = session.getRefreshToken() ? await refreshSession() : "rejected";
+    const refreshed = session.hasSession() ? await refreshSession() : "rejected";
     if (refreshed === "rejected") {
       session.clear();
       rememberMe(null);
@@ -86,14 +86,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       password,
       totpCode: totpCode || undefined,
     });
-    session.setTokens(tokens.accessToken, tokens.refreshToken);
+    session.setAccessToken(tokens.accessToken);
     await get().reloadMe();
   },
 
   async logout() {
-    const refreshToken = session.getRefreshToken();
     try {
-      await apiRequest("POST", "/auth/logout", { refreshToken });
+      // Yenileme token'ı çerezle gider; sunucu iptal edip çerezi siler.
+      await apiRequest("POST", "/auth/logout");
     } finally {
       session.clear();
       rememberMe(null);
