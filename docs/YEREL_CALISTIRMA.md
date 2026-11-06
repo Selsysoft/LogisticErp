@@ -32,3 +32,14 @@ Uygulama: http://localhost:5173. `-Djava.version=17` yalnız JDK 21 kurulu deği
 {"code":"acme","name":"Acme Lojistik","defaultCurrency":"TRY","timeZone":"Europe/Istanbul",
  "ownerEmail":"patron@acme.test","ownerFullName":"Firma Sahibi"}
 ```
+
+## Uçtan uca testler
+Üretim web sunucusu imajı (nginx, CSP), backend, boş bir PostgreSQL ve e-postaları yakalayan Mailpit ile tam yığın açılır; testler Playwright ile gerçek tarayıcıda çalışır.
+```
+docker compose -f docker-compose.e2e.yml up -d --build
+cd frontend
+npx playwright install chromium   # ilk seferde
+npm run e2e
+docker compose -f docker-compose.e2e.yml down
+```
+Uygulama http://localhost:8090, Mailpit http://localhost:8026. Kurulum adımı SaaS yöneticisiyle yeni bir firma açar ve sahibinin şifresini davet e-postasındaki bağlantıyla belirler; diğer testler bu firmayı kullanır. Testler giriş/çıkış ve çerezle oturum, güvenlik başlıkları, bütün modüllerin menüden açılması, cari ekleme ve şifre sıfırlamayı kapsar. Herhangi bir testte CSP ihlali veya tarayıcı hatası olursa test düşer. CI'da `e2e` işi olarak her çalıştırmada koşar; hata olursa ekran görüntüsü ve iz dosyası rapor olarak yüklenir.

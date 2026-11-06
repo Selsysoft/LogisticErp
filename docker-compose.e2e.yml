@@ -1,0 +1,47 @@
+# Uçtan uca testler için tam yığın: üretim web sunucusu imajı (nginx, CSP), backend, PostgreSQL
+# ve e-postaları yakalayan Mailpit. Veri kalıcı değildir.
+#   docker compose -f docker-compose.e2e.yml up -d --build
+#   cd frontend && npm run e2e
+#   docker compose -f docker-compose.e2e.yml down
+name: blackrose-e2e
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: blackrose
+      POSTGRES_USER: blackrose
+      POSTGRES_PASSWORD: blackrose
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "127.0.0.1:8026:8025"
+
+  backend:
+    build: ./backend
+    depends_on: [postgres, mailpit]
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://postgres:5432/blackrose
+      DB_PASSWORD: blackrose
+      FRONTEND_BASE_URL: http://localhost:8090
+      TENANCY_BASE_DOMAIN: localhost
+      FORWARD_HEADERS_STRATEGY: native
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: "1025"
+      MAIL_AUTH: "false"
+      MAIL_STARTTLS: "false"
+      TCMB_ENABLED: "false"
+      RATE_LIMIT_LOGIN: "1000"
+      RATE_LIMIT_PASSWORD_RESET: "1000"
+
+  web:
+    build: ./frontend
+    depends_on: [backend]
+    environment:
+      BACKEND_URL: http://backend:8080
+    ports:
+      - "127.0.0.1:8090:8080"
