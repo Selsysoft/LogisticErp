@@ -177,13 +177,15 @@ function AddRoleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
     priority: z.coerce.number().int(),
     landingPath: z.string().min(1, t("common.required")),
   });
-  type FormValues = z.infer<typeof schema>;
+  // priority girdide metindir, doğrulamadan sonra sayıdır.
+  type FormInput = z.input<typeof schema>;
+  type FormValues = z.output<typeof schema>;
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormValues>({
+  } = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { code: "", name: "", priority: 5, landingPath: "/dashboard" },
   });

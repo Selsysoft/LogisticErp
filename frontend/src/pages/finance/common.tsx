@@ -23,7 +23,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { ReactNode, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { z, ZodTypeAny } from "zod";
+import { z } from "zod";
 import { apiGet } from "../../api/client";
 import { hasPermission, useAuthStore } from "../../auth/authStore";
 import { EmptyState } from "../../components/EmptyState";
@@ -119,14 +119,18 @@ export interface FieldDef {
 
 type FormValues = Record<string, string | boolean>;
 
-function schemaFor(fields: FieldDef[], requiredMessage: string, amountMessage: string) {
-  const shape: Record<string, ZodTypeAny> = {};
+function schemaFor(
+  fields: FieldDef[],
+  requiredMessage: string,
+  amountMessage: string,
+): z.ZodType<FormValues, FormValues> {
+  const shape: Record<string, z.ZodType<string | boolean, string | boolean>> = {};
   for (const field of fields) {
     if (field.type === "checkbox") {
       shape[field.name] = z.boolean();
       continue;
     }
-    let value: ZodTypeAny = z.string();
+    let value: z.ZodType<string, string> = z.string();
     if (field.type === "amount") {
       const pattern = z.string().regex(AMOUNT_PATTERN, amountMessage);
       value = field.required ? pattern : pattern.or(z.literal(""));

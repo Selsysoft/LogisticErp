@@ -1,0 +1,9 @@
+# Trivy'nin CI'da yok saydığı açıklar. Her satır gerekçesiyle eklenir ve sürüm yükseltmesinde gözden geçirilir.
+
+# spring-webmvc 6.2.x: XsltView ile uzaktan kod çalıştırma. Düzeltme yalnız Spring 7.0.9'da.
+# Uygulama XSLT görünümü kullanmıyor (2026-11-06).
+CVE-2026-47884
+
+# spring-webmvc 6.2.x: görünümle Server-Sent Events akışında bozulma. Düzeltme yalnız Spring 7.0.9'da.
+# Uygulama SSE kullanmıyor (2026-11-06).
+CVE-2026-47890

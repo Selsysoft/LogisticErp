@@ -5,7 +5,11 @@ COPY src ./src
 RUN mvn -q -DskipTests package
 
 FROM eclipse-temurin:21-jre
-RUN useradd --system --no-create-home app \
+# Temel imaj yayımlandıktan sonra çıkan işletim sistemi yamaları.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --no-create-home app \
     && mkdir -p /app/data/files \
     && chown -R app /app
 WORKDIR /app

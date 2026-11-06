@@ -18,7 +18,17 @@ jobs:
       - name: Derleme, migration ve testler
         run: mvn -B -f backend/pom.xml verify
       - name: Container imajı
-        run: docker build -t blackrose-backend backend
+        run: docker build --pull -t blackrose-backend backend
+      # İmajdaki bütün JAR'lar ve işletim sistemi paketleri; düzeltmesi olan yüksek/kritik açıkta CI durur.
+      - name: Bağımlılık taraması (Trivy)
+        run: >
+          docker run --rm
+          -v /var/run/docker.sock:/var/run/docker.sock
+          -v "$GITHUB_WORKSPACE/.trivyignore:/work/.trivyignore:ro"
+          aquasec/trivy:0.67.2 image
+          --ignorefile /work/.trivyignore
+          --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+          blackrose-backend
 
   frontend:
     runs-on: ubuntu-latest
@@ -33,6 +43,9 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      # Tarayıcıya giden paketlerde yüksek/kritik açıkta CI durur.
+      - name: Bağımlılık denetimi
+        run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run format:check
       - run: npm test
