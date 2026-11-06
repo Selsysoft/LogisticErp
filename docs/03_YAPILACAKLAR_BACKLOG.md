@@ -116,5 +116,5 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - ⬜ X3 i18n (TR birincil; EN altyapısı)
 - ⬜ X4 Audit/aktivite günlüğü standardı
 - ⬜ X5 Test kapsama hedefleri + sözleşme testleri
-- ⬜ X6 Güvenlik gözden geçirme (OWASP, yetki, kiracı sızıntısı) — kısmi: SaaS yöneticisi 2FA ve oturumsuz uçlarda IP sınırı eklendi; kapsamlı gözden geçirme yapılmadı
+- 🟦 X6 Güvenlik gözden geçirme (OWASP, yetki, kiracı sızıntısı) — kod gözden geçirmesi yapıldı (`docs/GUVENLIK_GOZDEN_GECIRME.md`), iki bulgu düzeltildi; sızma testi, backend bağımlılık taraması, CSP ve frontend ana sürüm yükseltmeleri açık
 - 🟦 X7 Üretim hazırlığı — SMTP, S3, ClamAV, IP sınırı, SaaS 2FA, büyük veri ölçümü ve düzeltmeleri (`docs/URETIM_KURULUM.md`); gerçek sağlayıcılar, ters vekil ve üretim benzeri ortamda ölçüm açık

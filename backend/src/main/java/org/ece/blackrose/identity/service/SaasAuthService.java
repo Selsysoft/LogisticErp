@@ -8,7 +8,10 @@ import java.util.OptionalLong;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.identity.domain.AuditEvent;
 import org.ece.blackrose.identity.domain.SaasAdmin;
+import org.ece.blackrose.identity.domain.SaasRevokedToken;
 import org.ece.blackrose.identity.repository.IdentityRepositories.SaasAdminRepository;
+import org.ece.blackrose.identity.repository.IdentityRepositories.SaasRevokedTokenRepository;
+import org.ece.blackrose.identity.security.AuthenticatedUser;
 import org.ece.blackrose.identity.security.SecurityProperties;
 import org.ece.blackrose.identity.security.TokenService;
 import org.ece.blackrose.identity.web.IdentityDtos.TokenResponse;
@@ -37,6 +40,7 @@ public class SaasAuthService implements ApplicationRunner {
   private final SecurityProperties properties;
   private final AuditService audit;
   private final TextEncryptor totpEncryptor;
+  private final SaasRevokedTokenRepository revokedTokens;
 
   public SaasAuthService(
       SaasAdminRepository admins,
@@ -44,13 +48,22 @@ public class SaasAuthService implements ApplicationRunner {
       TokenService tokens,
       SecurityProperties properties,
       AuditService audit,
-      TextEncryptor totpEncryptor) {
+      TextEncryptor totpEncryptor,
+      SaasRevokedTokenRepository revokedTokens) {
     this.totpEncryptor = totpEncryptor;
+    this.revokedTokens = revokedTokens;
     this.admins = admins;
     this.passwordEncoder = passwordEncoder;
     this.tokens = tokens;
     this.properties = properties;
     this.audit = audit;
+  }
+
+  /** Erişim token'ını süresi dolmadan geçersiz kılar. */
+  public void logout() {
+    AuthenticatedUser actor = AuthenticatedUser.require();
+    revokedTokens.save(new SaasRevokedToken(actor.jti(), actor.tokenExpiresAt()));
+    audit.record(AuditEvent.SAAS_LOGOUT, actor.id(), actor.email(), null, null);
   }
 
   public TokenResponse login(String rawEmail, String password, String totpCode) {

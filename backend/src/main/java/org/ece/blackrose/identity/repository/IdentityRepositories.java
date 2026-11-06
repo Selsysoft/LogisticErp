@@ -10,6 +10,7 @@ import org.ece.blackrose.identity.domain.RefreshToken;
 import org.ece.blackrose.identity.domain.RevokedAccessToken;
 import org.ece.blackrose.identity.domain.Role;
 import org.ece.blackrose.identity.domain.SaasAdmin;
+import org.ece.blackrose.identity.domain.SaasRevokedToken;
 import org.ece.blackrose.identity.domain.UserAccount;
 import org.ece.blackrose.identity.domain.UserStatus;
 import org.ece.blackrose.identity.domain.UserToken;
@@ -82,6 +83,14 @@ public final class IdentityRepositories {
     @Modifying
     @Transactional
     @Query("delete from RevokedAccessToken t where t.expiresAt < :now")
+    void deleteExpired(@Param("now") Instant now);
+  }
+
+  public interface SaasRevokedTokenRepository extends JpaRepository<SaasRevokedToken, UUID> {
+
+    @Modifying
+    @Transactional
+    @Query("delete from SaasRevokedToken t where t.expiresAt < :now")
     void deleteExpired(@Param("now") Instant now);
   }
 

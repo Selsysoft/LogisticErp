@@ -7,8 +7,10 @@ import org.ece.blackrose.identity.web.IdentityDtos.SaasTwoFactorEnableRequest;
 import org.ece.blackrose.identity.web.IdentityDtos.SaasTwoFactorSetupRequest;
 import org.ece.blackrose.identity.web.IdentityDtos.TokenResponse;
 import org.ece.blackrose.identity.web.IdentityDtos.TwoFactorSetupResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -18,6 +20,13 @@ public class SaasAuthController {
 
   public SaasAuthController(SaasAuthService auth) {
     this.auth = auth;
+  }
+
+  /** /api/v1/admin/** kuralı gereği yalnız geçerli SaaS token'ıyla çağrılabilir. */
+  @PostMapping("/api/v1/admin/auth/logout")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  void logout() {
+    auth.logout();
   }
 
   @PostMapping("/api/v1/admin/auth/login")

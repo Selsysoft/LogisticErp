@@ -84,7 +84,8 @@ public final class IdentityDtos {
       @NotBlank @Pattern(regexp = "^[A-Z][A-Z0-9_]{1,48}$") String code,
       @NotBlank @Size(max = 100) String name,
       int priority,
-      @NotBlank @Pattern(regexp = "^/[a-z0-9/-]*$") String landingPath,
+      // "//" ile başlayan yol tarayıcıda başka siteye gider; uygulama içi yol olmalıdır.
+      @NotBlank @Pattern(regexp = "^/(?!/)[a-z0-9/-]*$") String landingPath,
       @NotNull Set<Permission> permissions) {}
 
   public record PermissionResponse(Permission code, String module) {}

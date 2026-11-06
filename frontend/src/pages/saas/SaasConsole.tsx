@@ -156,7 +156,15 @@ export function SaasLayout() {
         <Typography variant="h6" component="h1">
           {t("saas.title")}
         </Typography>
-        <Button color="inherit" onClick={() => setToken(null)}>
+        <Button
+          color="inherit"
+          onClick={() => {
+            // Token sunucuda geçersiz kılınır; sunucuya ulaşılamasa da yerel oturum kapanır.
+            void adminRequest("POST", "/auth/logout")
+              .catch(() => undefined)
+              .finally(() => setToken(null));
+          }}
+        >
           {t("nav.logout")}
         </Button>
       </Stack>

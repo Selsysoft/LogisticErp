@@ -7,6 +7,7 @@ import org.ece.blackrose.identity.domain.UserAccount;
 import org.ece.blackrose.identity.domain.UserStatus;
 import org.ece.blackrose.identity.repository.IdentityRepositories.RevokedAccessTokenRepository;
 import org.ece.blackrose.identity.repository.IdentityRepositories.SaasAdminRepository;
+import org.ece.blackrose.identity.repository.IdentityRepositories.SaasRevokedTokenRepository;
 import org.ece.blackrose.identity.repository.IdentityRepositories.UserAccountRepository;
 import org.ece.blackrose.saas.service.PresenceTracker;
 import org.ece.blackrose.tenant.TenantContext;
@@ -30,13 +31,16 @@ public class JwtPrincipalConverter implements Converter<Jwt, AbstractAuthenticat
   private final UserAccountRepository users;
   private final SaasAdminRepository admins;
   private final RevokedAccessTokenRepository revokedTokens;
+  private final SaasRevokedTokenRepository saasRevokedTokens;
   private final PresenceTracker presence;
 
   public JwtPrincipalConverter(
       UserAccountRepository users,
       SaasAdminRepository admins,
       RevokedAccessTokenRepository revokedTokens,
+      SaasRevokedTokenRepository saasRevokedTokens,
       PresenceTracker presence) {
+    this.saasRevokedTokens = saasRevokedTokens;
     this.presence = presence;
     this.users = users;
     this.admins = admins;
@@ -56,7 +60,8 @@ public class JwtPrincipalConverter implements Converter<Jwt, AbstractAuthenticat
   }
 
   private AbstractAuthenticationToken saasAuthentication(Jwt jwt) {
-    if (TenantContext.currentSchema().isPresent()) {
+    if (TenantContext.currentSchema().isPresent()
+        || saasRevokedTokens.existsById(UUID.fromString(jwt.getId()))) {
       throw invalid();
     }
     SaasAdmin admin =

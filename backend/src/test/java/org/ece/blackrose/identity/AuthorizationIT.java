@@ -21,6 +21,50 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 class AuthorizationIT extends AbstractIntegrationTest {
 
   @Test
+  void saasLogoutRevokesAccessTokenImmediately() throws Exception {
+    String token = saasToken();
+    mvc.perform(get("/api/v1/admin/plans").with(bearer(token))).andExpect(status().isOk());
+
+    mvc.perform(post("/api/v1/admin/auth/logout").with(bearer(token)))
+        .andExpect(status().isNoContent());
+
+    mvc.perform(get("/api/v1/admin/plans").with(bearer(token)))
+        .andExpect(status().isUnauthorized());
+    mvc.perform(post("/api/v1/admin/auth/logout")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void roleLandingPathMustStayInsideApp() throws Exception {
+    createTenant("rbac-lp");
+    for (String path : List.of("//evil.example", "https://evil.example", "/ok//x")) {
+      String body =
+          json.writeValueAsString(
+              Map.of(
+                  "code",
+                  "LP_ROLE",
+                  "name",
+                  "LP",
+                  "priority",
+                  5,
+                  "landingPath",
+                  path,
+                  "permissions",
+                  List.of()));
+      ResultActions result =
+          mvc.perform(
+              post("/api/v1/identity/roles")
+                  .with(asOwner("rbac-lp"))
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+      if (path.startsWith("/ok")) {
+        result.andExpect(status().isCreated());
+      } else {
+        result.andExpect(status().isBadRequest());
+      }
+    }
+  }
+
+  @Test
   void userWithoutPermissionGets403AndWithPermissionGets200() throws Exception {
     createTenant("rbac-a");
     String finance = createUser("rbac-a", "finans@rbac-a.test", "FINANCE");
