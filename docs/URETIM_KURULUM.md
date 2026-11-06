@@ -18,6 +18,25 @@ Bu belge, uygulamanın üretim profilinde çalışması için gerekenleri anlat�
 | `FORWARD_HEADERS_STRATEGY=native` | **Ters vekil arkasında zorunludur.** Yapılmazsa bütün kullanıcılar vekilin IP'sinden gelmiş sayılır ve IP sınırı herkesi birlikte kilitler; denetim günlüğündeki IP de yanlış olur. |
 | HTTPS ve aynı alan adı | Yenileme token'ı `HttpOnly`, `Secure`, `SameSite=Strict` çerezle verilir (`/api/v1/auth` yolu). Frontend ve API aynı alan adından (ters vekil üzerinden) sunulmalı, site HTTPS olmalıdır. `REFRESH_COOKIE_SECURE=false` yalnız HTTPS'siz yerel denemede kullanılır. |
 
+## Web sunucusu (frontend)
+
+`frontend/Dockerfile` uygulamayı derler ve nginx ile sunar (port 8080, root olmayan kullanıcı). `/api/` istekleri `BACKEND_URL` adresine (varsayılan `http://backend:8080`) iletilir; böylece frontend ile API aynı alan adındadır.
+
+```
+docker build -t blackrose-web frontend
+docker run -d -p 8080:8080 -e BACKEND_URL=http://<backend>:8080 blackrose-web
+```
+
+- **TLS** bu imajın önünde (yük dengeleyici, CDN) sonlandırılır. Öndeki vekilin gönderdiği `X-Forwarded-Proto` backend'e aktarılır; backend'de `FORWARD_HEADERS_STRATEGY=native` olmalıdır.
+- **Alan adları:** Firma alt alan adları (`<kod>.<TENANCY_BASE_DOMAIN>`) aynı imaja yönlendirilir; sertifika joker (`*.alan.adi`) olmalıdır.
+- **Güvenlik başlıkları** `frontend/nginx/security-headers.conf` içindedir: `Content-Security-Policy` (betikler yalnız kendi alan adından, satır içi betik ve `eval` yok, çerçeve içine alınamaz, istekler yalnız kendi alan adına), `Strict-Transport-Security` (1 yıl, alt alan adları dahil), `Referrer-Policy: same-origin`, `Permissions-Policy` (yalnız kamera ve konum, sürücü ekranı için). Stiller için `'unsafe-inline'` gereklidir: MUI stilleri çalışma anında ekler.
+- **Yazı tipleri** pakete gömülüdür; Google Fonts'a istek gitmez (kullanıcı IP'si üçüncü tarafa aktarılmaz).
+- **Önbellek:** `/assets/` altındaki dosyaların adı içeriğe göre değişir, 1 yıl önbelleklenir; sayfa ve `sw.js` her açılışta doğrulanır.
+- **Zaman aşımı** API için 300 sn (firma veri dışa aktarımı); yükleme sınırı 21 MB. Öndeki vekilde de en az bu değerler olmalıdır.
+- Yeni bir dış kaynak (harita, analitik, ödeme sayfası) eklenirse CSP'ye ayrıca eklenmelidir; yoksa tarayıcı engeller.
+
+2026-11-06'da yerelde denendi: başlıklar, `/api` yönlendirmesi, giriş, sayfa yenilemede çerezle oturumun sürmesi, rapor/filo/hesap ekranlarında CSP ihlali olmaması. Gerçek TLS ve yük dengeleyici arkasında denenmedi.
+
 ## E-posta
 
 SMTP şu e-postalar için kullanılır: kullanıcı daveti, şifre sıfırlama, SaaS faturası ve günlük özet. Günlük özet saatlik iş ile firmanın saat dilimine göre 07:00'den sonra, her etkin kullanıcıya yetkili olduğu konulardan tek e-posta olarak gider: filo hatırlatmaları (`FLEET_EDIT`), onay bekleyen sürücü masrafları (`SHIPMENT_DISPATCH`), onay bekleyen ödeme planları (`FINANCE_APPROVE`), 3 gün içinde vadesi gelen veya geciken onaylı ödemeler (`FINANCE_PAYMENT_CREATE`). Kullanıcı konuları Hesabım ekranından kapatır; firma filo hatırlatmalarını filo ayarlarından kapatabilir. Gün veritabanında üstlenilir, birden çok örnekte bir kez gönderilir. Gönderim hatası günlüğe yazılır, aynı gün tekrar denenmez. Her bölümde en çok 20 satır gösterilir.
