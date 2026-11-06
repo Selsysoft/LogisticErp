@@ -112,7 +112,7 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 
 ## Çapraz kesen (tüm fazlar) — P0/P1
 - 🟦 X1 Belge/dosya yönetimi (yükleme, saklama, virüs tarama, erişim izni) — Faz 3 başlamadan; yerel disk/S3 ve ClamAV taraması hazır (S3 taklidiyle denendi), gerçek AWS ve mevcut dosyaların geriye dönük taranması açık
-- 🟦 X2 Bildirim altyapısı (e-posta/SMS/uygulama içi) + belge süresi hatırlatmaları — Faz 5A; uygulama içi liste ve günlük filo hatırlatma e-postası hazır (firma ayarıyla kapatılır); diğer modüllerin bildirim e-postası, kullanıcı bazlı tercih ve SMS açık
+- 🟦 X2 Bildirim altyapısı (e-posta/SMS/uygulama içi) + belge süresi hatırlatmaları — Faz 5A; uygulama içi liste ve günlük özet e-postası hazır (filo hatırlatmaları, onay bekleyen sürücü masrafı ve ödeme planı, vadesi gelen ödeme; kullanıcı bazlı tercih, filo için firma ayarı); anlık e-posta, SMS ve push açık
 - ⬜ X3 i18n (TR birincil; EN altyapısı)
 - ⬜ X4 Audit/aktivite günlüğü standardı
 - ⬜ X5 Test kapsama hedefleri + sözleşme testleri

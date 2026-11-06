@@ -1,11 +1,22 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Alert, Box, Button, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
-import { useMutation } from "@tanstack/react-query";
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  FormControlLabel,
+  Stack,
+  Switch,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import { apiRequest } from "../../api/client";
+import { apiGet, apiRequest } from "../../api/client";
 import { useAuthStore } from "../../auth/authStore";
 import { session } from "../../auth/session";
 import { ErrorState } from "../../components/ErrorState";
@@ -19,6 +30,7 @@ export function AccountPage() {
       </Typography>
       <ChangePasswordCard />
       <TwoFactorCard />
+      <NotificationCard />
     </Stack>
   );
 }
@@ -170,6 +182,63 @@ function TwoFactorCard() {
               </Button>
             )}
           </Box>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface Preference {
+  topic: string;
+  email: boolean;
+}
+
+const PREFERENCES = "/notifications/preferences";
+
+/** Günlük özet e-postasının konuları; yalnız kullanıcının yetkili olduğu konular gelir. */
+function NotificationCard() {
+  const { t } = useTranslation();
+  const client = useQueryClient();
+  const prefs = useQuery({
+    queryKey: ["notification-preferences"],
+    queryFn: () => apiGet<Preference[]>(PREFERENCES),
+  });
+  const save = useMutation({
+    mutationFn: (item: Preference) =>
+      apiRequest<Preference[]>("PUT", PREFERENCES, { items: [item] }),
+    onSuccess: (data) => client.setQueryData(["notification-preferences"], data),
+  });
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" component="h2" gutterBottom>
+          {t("account.notifications")}
+        </Typography>
+        <Stack spacing={1}>
+          <Typography variant="body2" color="text.secondary">
+            {t("account.notificationsHint")}
+          </Typography>
+          {prefs.error && <ErrorState error={prefs.error} />}
+          {save.isError && <ErrorState error={save.error} />}
+          {prefs.data?.length === 0 && (
+            <Typography variant="body2">{t("account.notificationsNone")}</Typography>
+          )}
+          {prefs.data?.map((item) => (
+            <FormControlLabel
+              key={item.topic}
+              control={
+                <Switch
+                  checked={item.email}
+                  disabled={save.isPending}
+                  onChange={(event) =>
+                    save.mutate({ topic: item.topic, email: event.target.checked })
+                  }
+                />
+              }
+              label={t(`account.topics.${item.topic}`)}
+            />
+          ))}
         </Stack>
       </CardContent>
     </Card>

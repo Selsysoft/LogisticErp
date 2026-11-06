@@ -19,7 +19,11 @@ import java.util.Map;
 import java.util.UUID;
 import org.ece.blackrose.AbstractIntegrationTest;
 import org.ece.blackrose.files.FakeFileScannerConfig;
+import org.ece.blackrose.notification.DailyDigestMailer;
+import org.ece.blackrose.tenant.TenantContext;
+import org.ece.blackrose.tenant.repository.TenantRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -37,6 +41,9 @@ class DriverAppIT extends AbstractIntegrationTest {
   private static final LocalDate FAR = LocalDate.now().plusDays(400);
   private static final LocalDate TODAY = LocalDate.now().minusDays(1);
   private static final Instant START = Instant.now().plus(1, ChronoUnit.DAYS);
+
+  @Autowired DailyDigestMailer digest;
+  @Autowired TenantRepository tenants;
 
   private record Fixture(
       String tenant,
@@ -181,6 +188,21 @@ class DriverAppIT extends AbstractIntegrationTest {
                 .andExpect(status().isOk()));
     assertThat(pending.get("content")).hasSize(2);
     assertThat(pending.toString()).contains("Sürücü S1");
+
+    // Onay bekleyenler günlük özete girer; sürücü bu konuyu almaz.
+    TenantContext.set(f.tenant(), tenants.findByCode(f.tenant()).orElseThrow().getSchemaName());
+    try {
+      digest.sendForCurrentTenant(LocalDate.now());
+    } finally {
+      TenantContext.clear();
+    }
+    Notice digestMail =
+        SENT_NOTICES.stream()
+            .filter(n -> n.email().equals(ownerEmail(f.tenant())))
+            .reduce((a, b) -> b)
+            .orElseThrow();
+    assertThat(digestMail.subject()).isEqualTo("Onay bekleyen sürücü masrafı: 2");
+    assertThat(digestMail.text()).contains("Sürücü S1 — 250 TRY", "/operations/driver-expenses");
 
     driver(f, post("/api/v1/shipment/driver-expenses/" + saved.get("id").asText() + "/approve"))
         .andExpect(status().isForbidden());

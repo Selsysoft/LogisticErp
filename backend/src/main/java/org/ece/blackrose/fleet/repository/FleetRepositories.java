@@ -18,10 +18,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
 public final class FleetRepositories {
 
@@ -135,20 +133,5 @@ public final class FleetRepositories {
         @Param("end") LocalDate end);
   }
 
-  public interface FleetSettingsRepository extends JpaRepository<FleetSettings, Integer> {
-
-    /**
-     * Günün hatırlatma e-postasını üstlenir. Birden çok örnek veya yeniden başlatma aynı gün ikinci
-     * kez göndermez; yalnız 1 dönen çağrı gönderir.
-     */
-    @Modifying
-    @Transactional
-    @Query(
-        value =
-            "update fleet_settings set reminder_mail_sent_on = :today where id = 1"
-                + " and reminder_email"
-                + " and (reminder_mail_sent_on is null or reminder_mail_sent_on < :today)",
-        nativeQuery = true)
-    int claimReminderMail(@Param("today") LocalDate today);
-  }
+  public interface FleetSettingsRepository extends JpaRepository<FleetSettings, Integer> {}
 }

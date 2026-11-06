@@ -190,6 +190,16 @@ void i18n.use(initReactI18next).init({
           secret: "Bu anahtarı doğrulayıcı uygulamanıza ekleyin:",
           confirm: "Onayla",
           code: "Doğrulama kodu",
+          notifications: "E-posta bildirimleri",
+          notificationsHint:
+            "Seçtiğiniz konular her sabah tek bir özet e-postasında gelir. Bilgiler uygulamada her zaman görünür.",
+          notificationsNone: "Yetkinize uygun e-posta bildirimi yok.",
+          topics: {
+            FLEET_REMINDERS: "Filo hatırlatmaları (belge bitişi, bakım)",
+            DRIVER_EXPENSE_APPROVAL: "Onay bekleyen sürücü masrafları",
+            PAYMENT_APPROVAL: "Onay bekleyen ödeme planları",
+            PAYMENT_DUE: "Vadesi yaklaşan ve geciken ödemeler",
+          },
         },
         finance: {
           tabs: {
@@ -1285,7 +1295,7 @@ void i18n.use(initReactI18next).init({
             reminderInfo: "Belgeler bitişinden {{days}} gün önce hatırlatılır.",
             emailLabel: "Hatırlatmaları her sabah e-postayla gönder",
             emailOn:
-              "Hatırlatmalar her sabah 07:00'den sonra filo düzenleme yetkisi olan kullanıcılara e-postayla gider.",
+              "Hatırlatmalar her sabah 07:00'den sonra filo düzenleme yetkisi olan kullanıcılara günlük özet e-postasında gider; kullanıcı Hesabım ekranından kapatabilir.",
             emailOff: "Hatırlatma e-postası kapalı; liste yalnız uygulamada görünür.",
           },
           status: {

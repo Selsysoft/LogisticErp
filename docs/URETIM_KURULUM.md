@@ -19,7 +19,7 @@ Bu belge, uygulamanın üretim profilinde çalışması için gerekenleri anlat�
 
 ## E-posta
 
-SMTP şu e-postalar için kullanılır: kullanıcı daveti, şifre sıfırlama, SaaS faturası ve günlük filo hatırlatması. Filo hatırlatması saatlik iş ile firmanın saat dilimine göre 07:00'den sonra gönderilir; firma filo ayarlarından kapatabilir. Gönderim hatası günlüğe yazılır, aynı gün tekrar denenmez.
+SMTP şu e-postalar için kullanılır: kullanıcı daveti, şifre sıfırlama, SaaS faturası ve günlük özet. Günlük özet saatlik iş ile firmanın saat dilimine göre 07:00'den sonra, her etkin kullanıcıya yetkili olduğu konulardan tek e-posta olarak gider: filo hatırlatmaları (`FLEET_EDIT`), onay bekleyen sürücü masrafları (`SHIPMENT_DISPATCH`), onay bekleyen ödeme planları (`FINANCE_APPROVE`), 3 gün içinde vadesi gelen veya geciken onaylı ödemeler (`FINANCE_PAYMENT_CREATE`). Kullanıcı konuları Hesabım ekranından kapatır; firma filo hatırlatmalarını filo ayarlarından kapatabilir. Gün veritabanında üstlenilir, birden çok örnekte bir kez gönderilir. Gönderim hatası günlüğe yazılır, aynı gün tekrar denenmez. Her bölümde en çok 20 satır gösterilir.
 
 ## SaaS yöneticisi 2FA
 
