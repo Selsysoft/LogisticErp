@@ -30,10 +30,10 @@ class ReportIT extends AbstractIntegrationTest {
   private static final Instant START =
       Instant.now().minus(5, ChronoUnit.DAYS).truncatedTo(ChronoUnit.MINUTES);
   private static final Instant END = START.plus(2, ChronoUnit.DAYS);
-  private static final LocalDate TODAY = LocalDate.now().minusDays(1);
-  private static final LocalDate FROM = LocalDate.now().minusDays(30);
-  private static final LocalDate TO = LocalDate.now().plusDays(1);
-  private static final LocalDate FAR = LocalDate.now().plusDays(400);
+  private static final LocalDate TODAY = tenantToday().minusDays(1);
+  private static final LocalDate FROM = tenantToday().minusDays(30);
+  private static final LocalDate TO = tenantToday().plusDays(1);
+  private static final LocalDate FAR = tenantToday().plusDays(400);
 
   private record Setup(String tenant, String branch, String customer, String supplier) {}
 
@@ -442,7 +442,7 @@ class ReportIT extends AbstractIntegrationTest {
     post(
             s.tenant(),
             "/api/v1/shipment/shipments/" + id + "/close",
-            Map.of("date", TODAY.toString(), "dueDate", LocalDate.now().plusDays(20).toString()))
+            Map.of("date", TODAY.toString(), "dueDate", tenantToday().plusDays(20).toString()))
         .andExpect(status().isOk());
   }
 
@@ -467,7 +467,7 @@ class ReportIT extends AbstractIntegrationTest {
             "/api/v1/shipment/shipments/" + id + "/invoice",
             Map.of(
                 "invoiceDate", TODAY.toString(),
-                "dueDate", LocalDate.now().plusDays(20).toString()))
+                "dueDate", tenantToday().plusDays(20).toString()))
         .andExpect(status().isCreated());
   }
 

@@ -28,9 +28,9 @@ class ShipmentIT extends AbstractIntegrationTest {
   private static final Instant START =
       Instant.now().plus(1, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
   private static final Instant END = START.plus(2, ChronoUnit.DAYS);
-  private static final String DATE = LocalDate.now().toString();
-  private static final String DUE = LocalDate.now().plusDays(30).toString();
-  private static final LocalDate FAR = LocalDate.now().plusDays(400);
+  private static final String DATE = tenantToday().toString();
+  private static final String DUE = tenantToday().plusDays(30).toString();
+  private static final LocalDate FAR = tenantToday().plusDays(400);
 
   private record Setup(String tenant, String branch, String customer, String supplier) {}
 
@@ -191,7 +191,7 @@ class ShipmentIT extends AbstractIntegrationTest {
   void invalidDocumentsBlockOrWarnByPolicyAndTrailerRulesApply() throws Exception {
     Setup s = setup("doc");
     String expired = vehicle(s.tenant(), "34DC01", "TRUCK");
-    document(s.tenant(), "VEHICLE", expired, "INSPECTION", LocalDate.now().minusDays(1));
+    document(s.tenant(), "VEHICLE", expired, "INSPECTION", tenantToday().minusDays(1));
     document(s.tenant(), "VEHICLE", expired, "TRAFFIC_INSURANCE", FAR);
     String driver = compliantDriver(s.tenant(), "S1");
     String trailer = compliantVehicle(s.tenant(), "34DC02", "TRAILER");
@@ -486,7 +486,7 @@ class ShipmentIT extends AbstractIntegrationTest {
                     "code", "T1",
                     "name", "T1",
                     "currency", "TRY",
-                    "validFrom", LocalDate.now().minusDays(1).toString(),
+                    "validFrom", tenantToday().minusDays(1).toString(),
                     "active", true)));
     post(
             s.tenant(),
@@ -525,7 +525,7 @@ class ShipmentIT extends AbstractIntegrationTest {
             s.tenant(),
             "/api/v1/crm/quotes/" + quoteId + "/accept",
             Map.of(
-                "startDate", LocalDate.now().minusDays(1).toString(),
+                "startDate", tenantToday().minusDays(1).toString(),
                 "endDate", FAR.toString(),
                 "tariffId", tariff))
         .andExpect(status().isOk());

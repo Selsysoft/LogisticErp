@@ -28,8 +28,8 @@ class CustomsIT extends AbstractIntegrationTest {
   private static final Instant START =
       Instant.now().plus(1, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
   private static final Instant END = START.plus(2, ChronoUnit.DAYS);
-  private static final LocalDate TODAY = LocalDate.now().minusDays(1);
-  private static final LocalDate FAR = LocalDate.now().plusDays(400);
+  private static final LocalDate TODAY = tenantToday().minusDays(1);
+  private static final LocalDate FAR = tenantToday().plusDays(400);
 
   private record Setup(String tenant, String branch, String customer, String supplier) {}
 
@@ -152,7 +152,7 @@ class CustomsIT extends AbstractIntegrationTest {
     document(s.tenant(), "VEHICLE", truck, "VEHICLE_ADR", FAR);
     assign(s.tenant(), leg, Map.of("vehicleId", truck, "driverId", driver))
         .andExpect(status().isConflict());
-    document(s.tenant(), "DRIVER", driver, "DRIVER_ADR", LocalDate.now().minusDays(1));
+    document(s.tenant(), "DRIVER", driver, "DRIVER_ADR", tenantToday().minusDays(1));
     assign(s.tenant(), leg, Map.of("vehicleId", truck, "driverId", driver))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("RESOURCE_BLOCKED"));

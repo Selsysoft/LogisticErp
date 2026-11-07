@@ -22,7 +22,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 class WarehouseIT extends AbstractIntegrationTest {
 
-  private static final LocalDate TODAY = LocalDate.now().minusDays(1);
+  private static final LocalDate TODAY = tenantToday().minusDays(1);
   private static final String BASE = "/api/v1/warehouse";
 
   private record Setup(

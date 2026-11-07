@@ -33,8 +33,8 @@ class IntegrationIT extends AbstractIntegrationTest {
   private static final Instant START =
       Instant.now().minus(2, ChronoUnit.DAYS).truncatedTo(ChronoUnit.MINUTES);
   private static final Instant END = START.plus(4, ChronoUnit.DAYS);
-  private static final LocalDate TODAY = LocalDate.now().minusDays(1);
-  private static final LocalDate FAR = LocalDate.now().plusDays(400);
+  private static final LocalDate TODAY = tenantToday().minusDays(1);
+  private static final LocalDate FAR = tenantToday().plusDays(400);
   private static final DateTimeFormatter LOCAL =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.of("Europe/Istanbul"));
 

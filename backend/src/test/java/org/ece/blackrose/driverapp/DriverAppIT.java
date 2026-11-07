@@ -38,8 +38,8 @@ class DriverAppIT extends AbstractIntegrationTest {
   private static final String BASE = "/api/v1/driver";
   private static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 1, 2, 3};
   private static final byte[] JPEG = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 1, 2, 3};
-  private static final LocalDate FAR = LocalDate.now().plusDays(400);
-  private static final LocalDate TODAY = LocalDate.now().minusDays(1);
+  private static final LocalDate FAR = tenantToday().plusDays(400);
+  private static final LocalDate TODAY = tenantToday().minusDays(1);
   private static final Instant START = Instant.now().plus(1, ChronoUnit.DAYS);
 
   @Autowired DailyDigestMailer digest;
@@ -192,7 +192,7 @@ class DriverAppIT extends AbstractIntegrationTest {
     // Onay bekleyenler günlük özete girer; sürücü bu konuyu almaz.
     TenantContext.set(f.tenant(), tenants.findByCode(f.tenant()).orElseThrow().getSchemaName());
     try {
-      digest.sendForCurrentTenant(LocalDate.now());
+      digest.sendForCurrentTenant(tenantToday());
     } finally {
       TenantContext.clear();
     }
@@ -236,15 +236,12 @@ class DriverAppIT extends AbstractIntegrationTest {
             f,
             post("/api/v1/shipment/shipments/" + trip + "/invoice"),
             Map.of(
-                "invoiceDate",
-                TODAY.toString(),
-                "dueDate",
-                LocalDate.now().plusDays(20).toString()))
+                "invoiceDate", TODAY.toString(), "dueDate", tenantToday().plusDays(20).toString()))
         .andExpect(status().isCreated());
     owner(
             f,
             post("/api/v1/shipment/shipments/" + trip + "/close"),
-            Map.of("date", TODAY.toString(), "dueDate", LocalDate.now().plusDays(20).toString()))
+            Map.of("date", TODAY.toString(), "dueDate", tenantToday().plusDays(20).toString()))
         .andExpect(status().isOk());
     assertThat(balance(f, f.accountId())).isEqualByComparingTo("-250");
   }
