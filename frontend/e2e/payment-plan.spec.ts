@@ -1,0 +1,59 @@
+import { Owner, unique } from "./fixtures";
+import { expect, login, tenantState, test } from "./support";
+
+test("finans ödeme planı girer, patron onaylar, finans bankadan öder", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(90_000);
+  const state = tenantState();
+  const owner = await Owner.login(state);
+  const branch = await owner.branch();
+  const supplierName = `Tedarikçi ${unique("")}`;
+  await owner.account("SUPPLIER", supplierName);
+  const bankName = `Plan Bankası ${unique("")}`;
+  const bank = await owner.bank(branch, bankName, "50000");
+  const finance = await owner.user(
+    "FINANCE",
+    `${unique("finans").toLowerCase()}@${state.code}.test`,
+  );
+  const description = `Yakıt ödemesi ${unique("")}`;
+
+  await login(page, finance);
+  await page.goto("/finance/plans");
+  await page.getByRole("button", { name: "Plan ekle" }).click();
+  const create = page.getByRole("dialog");
+  await create.getByRole("combobox", { name: /^Cari/ }).click();
+  await page.getByRole("option", { name: new RegExp(supplierName) }).click();
+  await create.getByRole("combobox", { name: /^Şube/ }).click();
+  await page.getByRole("option").first().click();
+  await create.getByLabel(/^Tutar/).fill("12500");
+  await create.getByLabel(/^Açıklama/).fill(description);
+  await create.getByRole("button", { name: "Kaydet" }).click();
+  await expect(create).toBeHidden();
+
+  const row = page.getByRole("row").filter({ hasText: description });
+  await expect(row.getByText("Taslak")).toBeVisible();
+  await row.getByRole("button", { name: "Onaya gönder" }).click();
+  await expect(row.getByText("Onay bekliyor")).toBeVisible();
+  // Finans rolünün onay yetkisi yoktur.
+  await expect(row.getByRole("button", { name: "Onayla" })).toHaveCount(0);
+
+  const patron = await browser.newPage();
+  await login(patron, state);
+  await patron.goto("/finance/plans");
+  const pending = patron.getByRole("row").filter({ hasText: description });
+  await pending.getByRole("button", { name: "Onayla" }).click();
+  await expect(pending.getByText("Onaylandı")).toBeVisible();
+  await patron.close();
+
+  await page.reload();
+  await row.getByRole("button", { name: "Öde" }).click();
+  const pay = page.getByRole("dialog");
+  await pay.getByRole("combobox", { name: /^Banka\/kasa hesabı/ }).click();
+  await page.getByRole("option", { name: new RegExp(bankName) }).click();
+  await pay.getByRole("button", { name: "Öde" }).click();
+  await expect(pay).toBeHidden();
+  await expect(row.getByText("Ödendi")).toBeVisible();
+  await expect.poll(() => owner.fundBalance(bank)).toBe(37500);
+});

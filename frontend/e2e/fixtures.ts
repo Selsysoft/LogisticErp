@@ -80,6 +80,30 @@ export class Owner {
     return { code: this.state.code, email, password } satisfies TenantState;
   }
 
+  /** Verilen bakiyeyle açılmış TRY banka hesabı; eksi bakiyeye izin vermez. */
+  async bank(branchId: string, name: string, balance: string) {
+    const id = await this.create("/finance/funds", {
+      code: unique("B"),
+      name,
+      kind: "BANK",
+      currency: "TRY",
+      branchId,
+      allowNegative: false,
+    });
+    await this.create(`/finance/funds/${id}/transactions`, {
+      direction: "IN",
+      money: { amount: balance, currency: "TRY" },
+      date: new Date().toISOString().slice(0, 10),
+      description: "Açılış",
+    });
+    return id;
+  }
+
+  async fundBalance(fundId: string) {
+    const funds = await this.request<{ id: string; balance: number }[]>("GET", "/finance/funds");
+    return Number(funds.find((fund) => fund.id === fundId)?.balance);
+  }
+
   linkDriverUser(driverId: string, email: string) {
     return this.request("PUT", `/fleet/drivers/${driverId}/user`, { email });
   }
@@ -124,9 +148,10 @@ const DAY = 24 * 60 * 60 * 1000;
 const FAR = new Date(Date.now() + 365 * DAY).toISOString().slice(0, 10);
 
 let counter = 0;
+/** Paralel worker'lar aynı milisaniyede çalışabilir; süreç numarası çakışmayı önler. */
 export function unique(prefix: string) {
   counter += 1;
-  return `${prefix}${Date.now().toString(36).toUpperCase()}${counter}`;
+  return `${prefix}${Date.now().toString(36).toUpperCase()}${process.pid.toString(36).toUpperCase()}${counter}`;
 }
 
 /** Türk plakası biçiminde benzersiz plaka. */

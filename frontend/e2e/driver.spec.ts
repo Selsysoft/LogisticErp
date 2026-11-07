@@ -27,7 +27,7 @@ test("sürücü atanan seferi yükler, yola çıkar, imzayla teslim eder; masraf
   const vehicle = await owner.vehicle(plate());
   const driverName = `Veli Sürücü ${unique("")}`;
   const driver = await owner.driver(driverName);
-  const email = `surucu-${Date.now().toString(36)}@${state.code}.test`;
+  const email = `${unique("surucu").toLowerCase()}@${state.code}.test`;
   const driverLogin = await owner.user("DRIVER", email);
   await owner.linkDriverUser(driver, email);
   const shipment = await owner.shipment(customer, branch);
