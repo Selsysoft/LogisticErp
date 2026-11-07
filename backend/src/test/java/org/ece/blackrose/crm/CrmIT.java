@@ -27,7 +27,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 class CrmIT extends AbstractIntegrationTest {
 
-  private static final LocalDate TODAY = LocalDate.now();
+  private static final LocalDate TODAY = tenantToday();
   private static final String DATE = TODAY.toString();
   private static final String FUTURE = TODAY.plusDays(30).toString();
 

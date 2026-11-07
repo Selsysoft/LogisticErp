@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -109,6 +111,17 @@ public abstract class AbstractIntegrationTest {
 
   protected static String ownerEmail(String code) {
     return "owner@" + code + ".test";
+  }
+
+  /** Test firmalarının saat dilimi; uygulama "bugün"ü firmanın saatine göre hesaplar. */
+  protected static final ZoneId TENANT_ZONE = ZoneId.of("Europe/Istanbul");
+
+  /**
+   * Firmanın bugünü. JVM saat dilimiyle (CI'da UTC) alınan tarih, İstanbul'da gece yarısından sonra
+   * bir gün geride kalır.
+   */
+  protected static LocalDate tenantToday() {
+    return LocalDate.now(TENANT_ZONE);
   }
 
   protected static String tenantJson(String code) {

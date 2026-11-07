@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.ResultActions;
 class SaasIT extends AbstractIntegrationTest {
 
   private static final String ADMIN = "/api/v1/admin";
-  private static final LocalDate TODAY = LocalDate.now();
+  private static final LocalDate TODAY = tenantToday();
 
   @Autowired private BillingService billing;
   @Autowired private JdbcTemplate jdbc;

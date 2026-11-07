@@ -22,7 +22,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 class NotificationIT extends AbstractIntegrationTest {
 
-  private static final LocalDate TODAY = LocalDate.now();
+  private static final LocalDate TODAY = tenantToday();
 
   @Autowired DailyDigestMailer digest;
   @Autowired TenantRepository tenants;

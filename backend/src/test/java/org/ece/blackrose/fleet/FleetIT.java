@@ -21,7 +21,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 class FleetIT extends AbstractIntegrationTest {
 
-  private static final LocalDate TODAY = LocalDate.now();
+  private static final LocalDate TODAY = tenantToday();
   private static final String DATE = "2026-10-15";
 
   @Test
