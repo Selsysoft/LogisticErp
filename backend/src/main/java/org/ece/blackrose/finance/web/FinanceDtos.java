@@ -274,7 +274,8 @@ public final class FinanceDtos {
       LocalDate dueDate,
       PlanStatus status,
       UUID purchaseInvoiceId,
-      String description) {}
+      String description,
+      String rejectNote) {}
 
   public record PlanNoteRequest(@Size(max = 500) String note) {}
 

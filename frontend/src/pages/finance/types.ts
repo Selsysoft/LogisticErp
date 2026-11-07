@@ -140,6 +140,7 @@ export interface Plan {
   status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "PAID" | "CANCELLED";
   purchaseInvoiceId: string | null;
   description: string | null;
+  rejectNote: string | null;
 }
 
 export interface PlanEvent {

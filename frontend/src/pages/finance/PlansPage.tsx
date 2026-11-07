@@ -1,6 +1,8 @@
 import {
+  Alert,
   Box,
   Button,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
@@ -14,7 +16,7 @@ import {
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { apiGet, apiRequest } from "../../api/client";
+import { apiGet, apiRequest, ApiError } from "../../api/client";
 import { ErrorState } from "../../components/ErrorState";
 import { formatDateTime } from "../operations/common";
 import {
@@ -62,6 +64,7 @@ export function PlansPage() {
   const [paying, setPaying] = useState<Plan | null>(null);
   const [rejecting, setRejecting] = useState<Plan | null>(null);
   const [viewing, setViewing] = useState<Plan | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
 
   const list = useQuery({
     queryKey: ["finance", "plans", status, paging.page, paging.size],
@@ -81,6 +84,31 @@ export function PlansPage() {
       ),
     onSuccess: refresh,
   });
+  /** Planlar tek tek onaylanır; biri onaylanamazsa (ör. kendi planı) diğerleri etkilenmez. */
+  const bulkApprove = useMutation({
+    mutationFn: async (plans: Plan[]) => {
+      const failed: string[] = [];
+      for (const plan of plans) {
+        try {
+          await apiRequest("POST", `/finance/payment-plans/${plan.id}/approve`, {});
+        } catch (error) {
+          const reason = error instanceof ApiError ? error.message : String(error);
+          failed.push(`${plan.description ?? formatMoney(plan.money)}: ${reason}`);
+        }
+      }
+      return { approved: plans.length - failed.length, failed };
+    },
+    onSuccess: () => {
+      setSelected([]);
+      void refresh();
+    },
+  });
+  const pendingRows = list.data?.content.filter((plan) => plan.status === "PENDING") ?? [];
+  const chosen = pendingRows.filter((plan) => selected.includes(plan.id));
+  const toggle = (id: string) =>
+    setSelected((current) =>
+      current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
+    );
   const accountName = (id: string) => accounts.data?.find((a) => a.id === id)?.name ?? "—";
 
   const actionButton = (plan: Plan, name: string, label: string, color?: "error") => (
@@ -117,12 +145,34 @@ export function PlansPage() {
             </MenuItem>
           ))}
         </TextField>
+        {canApprove && chosen.length > 0 && (
+          <Button
+            variant="contained"
+            color="success"
+            disabled={bulkApprove.isPending}
+            onClick={() => bulkApprove.mutate(chosen)}
+          >
+            {t("finance.plans.approveSelected", { count: chosen.length })}
+          </Button>
+        )}
         {canPost && (
           <Button variant="contained" onClick={() => setAdding(true)}>
             {t("finance.action.newPlan")}
           </Button>
         )}
       </SectionHeader>
+      {bulkApprove.data && (
+        <Alert
+          severity={bulkApprove.data.failed.length > 0 ? "warning" : "success"}
+          onClose={() => bulkApprove.reset()}
+          sx={{ mb: 2 }}
+        >
+          {t("finance.plans.approvedCount", { count: bulkApprove.data.approved })}
+          {bulkApprove.data.failed.map((line) => (
+            <div key={line}>{line}</div>
+          ))}
+        </Alert>
+      )}
       {action.isError && <ErrorState error={action.error} />}
       <QueryState isPending={list.isPending} error={list.error} />
       {list.data && (
@@ -130,12 +180,41 @@ export function PlansPage() {
           rows={list.data.content}
           rowKey={(row) => row.id}
           columns={[
+            ...(canApprove && pendingRows.length > 0
+              ? [
+                  {
+                    header: t("finance.plans.select"),
+                    render: (r: Plan) =>
+                      r.status === "PENDING" && (
+                        <Checkbox
+                          size="small"
+                          checked={selected.includes(r.id)}
+                          onChange={() => toggle(r.id)}
+                          slotProps={{
+                            input: {
+                              "aria-label": `${t("finance.plans.select")}: ${r.description ?? formatMoney(r.money)}`,
+                            },
+                          }}
+                        />
+                      ),
+                  },
+                ]
+              : []),
             { header: t("finance.field.dueDate"), render: (r) => formatDate(r.dueDate) },
             { header: t("finance.field.account"), render: (r) => accountName(r.accountId) },
             { header: t("finance.field.description"), render: (r) => r.description },
             {
               header: t("finance.field.status"),
-              render: (r) => t(`finance.planStatus.${r.status}`),
+              render: (r) => (
+                <>
+                  {t(`finance.planStatus.${r.status}`)}
+                  {r.status === "REJECTED" && r.rejectNote && (
+                    <Typography variant="caption" color="error" sx={{ display: "block" }}>
+                      {t("finance.plans.lastReject", { note: r.rejectNote })}
+                    </Typography>
+                  )}
+                </>
+              ),
             },
             {
               header: t("finance.field.amount"),

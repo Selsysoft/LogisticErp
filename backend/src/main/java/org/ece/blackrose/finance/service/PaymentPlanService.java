@@ -132,7 +132,9 @@ public class PaymentPlanService {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "REJECT_REASON_REQUIRED", "Ret gerekçesi yazılmalıdır.");
     }
-    return move(id, Set.of(PlanStatus.PENDING), PlanStatus.REJECTED, "REJECTED", note);
+    PaymentPlan plan = move(id, Set.of(PlanStatus.PENDING), PlanStatus.REJECTED, "REJECTED", note);
+    plan.reject(note.strip());
+    return plan;
   }
 
   @Transactional

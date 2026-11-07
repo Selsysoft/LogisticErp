@@ -312,6 +312,9 @@ void i18n.use(initReactI18next).init({
             rejectHint: "Planı düzeltecek kişi bu notu görür.",
             history: "Plan geçmişi",
             lastReject: "Ret gerekçesi: {{note}}",
+            select: "Seç",
+            approveSelected: "Seçilenleri onayla ({{count}})",
+            approvedCount: "{{count}} plan onaylandı.",
           },
           planEvent: {
             CREATED: "Oluşturuldu",

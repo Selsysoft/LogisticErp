@@ -409,11 +409,14 @@ class FinanceIT extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.code").value("REJECT_REASON_REQUIRED"));
     post(t, "/api/v1/finance/payment-plans/" + plan + "/reject", Map.of("note", "eksik belge"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status").value("REJECTED"));
+        .andExpect(jsonPath("$.status").value("REJECTED"))
+        .andExpect(jsonPath("$.rejectNote").value("eksik belge"));
     pay(t, plan, bank).andExpect(status().isConflict());
     assertThat(fundBalance(t, bank)).isEqualByComparingTo("1000");
 
-    post(t, "/api/v1/finance/payment-plans/" + plan + "/submit", null).andExpect(status().isOk());
+    post(t, "/api/v1/finance/payment-plans/" + plan + "/submit", null)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.rejectNote").isEmpty());
     post(t, "/api/v1/finance/payment-plans/" + plan + "/approve", Map.of())
         .andExpect(status().isOk());
     pay(t, plan, bank).andExpect(status().isOk());

@@ -85,6 +85,54 @@ test.describe("dört göz ilkesi", () => {
     );
     await expect(row.getByText("Onay bekliyor")).toBeVisible();
   });
+
+  test("patron seçtiği planları topluca onaylar; kendi planı onaylanmaz ve nedeni yazılır", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const state = tenantState();
+    const owner = await Owner.login(state);
+    const branch = await owner.branch();
+    const supplier = await owner.account("SUPPLIER", `Tedarikçi ${unique("")}`);
+    const finance = await Owner.login(
+      await owner.user("FINANCE", `${unique("finans").toLowerCase()}@${state.code}.test`),
+    );
+    const pendingPlan = async (by: Owner, description: string) => {
+      const plan = await by.request<{ id: string }>("POST", "/finance/payment-plans", {
+        accountId: supplier,
+        branchId: branch,
+        money: { amount: "1000", currency: "TRY" },
+        dueDate: new Date().toISOString().slice(0, 10),
+        description,
+      });
+      await by.request("POST", `/finance/payment-plans/${plan.id}/submit`);
+    };
+    const first = `Toplu A ${unique("")}`;
+    const second = `Toplu B ${unique("")}`;
+    const own = `Toplu kendi ${unique("")}`;
+    await pendingPlan(finance, first);
+    await pendingPlan(finance, second);
+    await pendingPlan(owner, own);
+
+    await login(page, state);
+    await page.goto("/finance/plans");
+    for (const description of [first, second, own]) {
+      await page.getByRole("checkbox", { name: `Seç: ${description}` }).check();
+    }
+    await page.getByRole("button", { name: "Seçilenleri onayla (3)" }).click();
+
+    const summary = page.getByRole("alert").filter({ hasText: "2 plan onaylandı." });
+    await expect(summary).toContainText(`${own}: Kendi oluşturduğunuz planı`);
+    for (const description of [first, second]) {
+      await expect(
+        page.getByRole("row").filter({ hasText: description }).getByText("Onaylandı"),
+      ).toBeVisible();
+    }
+    await expect(
+      page.getByRole("row").filter({ hasText: own }).getByText("Onay bekliyor"),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /Seçilenleri onayla/ })).toHaveCount(0);
+  });
 });
 
 test("patron gerekçeyle reddeder; finans gerekçeyi geçmişte görür, planı yeniden onaya gönderir", async ({
@@ -130,6 +178,7 @@ test("patron gerekçeyle reddeder; finans gerekçeyi geçmişte görür, planı 
   await page.goto("/finance/plans");
   const row = page.getByRole("row").filter({ hasText: description });
   await expect(row.getByText("Reddedildi")).toBeVisible();
+  await expect(row.getByText("Ret gerekçesi: Fatura eki eksik")).toBeVisible();
   await row.getByRole("button", { name: "Geçmiş" }).click();
   const history = page.getByRole("dialog");
   const rejected = history.getByRole("row").filter({ hasText: "Reddedildi" });
@@ -140,6 +189,7 @@ test("patron gerekçeyle reddeder; finans gerekçeyi geçmişte görür, planı 
 
   await row.getByRole("button", { name: "Onaya gönder" }).click();
   await expect(row.getByText("Onay bekliyor")).toBeVisible();
+  await expect(row.getByText(/Ret gerekçesi/)).toHaveCount(0);
   await expect
     .poll(async () =>
       (

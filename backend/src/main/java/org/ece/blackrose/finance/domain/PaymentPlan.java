@@ -30,6 +30,7 @@ public class PaymentPlan extends AuditableEntity {
 
   private UUID purchaseInvoiceId;
   private String description;
+  private String rejectNote;
 
   protected PaymentPlan() {}
 
@@ -51,8 +52,17 @@ public class PaymentPlan extends AuditableEntity {
     this.description = description;
   }
 
+  /** Ret gerekçesi yalnız plan reddedilmiş dururken anlamlıdır. */
   public void moveTo(PlanStatus status) {
     this.status = status;
+    if (status != PlanStatus.REJECTED) {
+      this.rejectNote = null;
+    }
+  }
+
+  public void reject(String note) {
+    this.status = PlanStatus.REJECTED;
+    this.rejectNote = note;
   }
 
   public void postponeTo(LocalDate dueDate) {
@@ -89,5 +99,9 @@ public class PaymentPlan extends AuditableEntity {
 
   public String getDescription() {
     return description;
+  }
+
+  public String getRejectNote() {
+    return rejectNote;
   }
 }
