@@ -287,7 +287,8 @@ public class PaymentPlanService {
       throw new BusinessException(
           HttpStatus.FORBIDDEN,
           "PLAN_SELF_APPROVAL",
-          "Kendi oluşturduğunuz planı onaylayamazsınız.");
+          "Kendi oluşturduğunuz planı başka bir yetkili onaylamalıdır. Tek kişi çalışıyorsanız"
+              + " Finans > Tanımlar'dan kendi planını onaylamaya izin verebilirsiniz.");
     }
   }
 

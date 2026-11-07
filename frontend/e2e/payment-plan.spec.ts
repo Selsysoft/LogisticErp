@@ -57,3 +57,32 @@ test("finans ödeme planı girer, patron onaylar, finans bankadan öder", async 
   await expect(row.getByText("Ödendi")).toBeVisible();
   await expect.poll(() => owner.fundBalance(bank)).toBe(37500);
 });
+
+test.describe("dört göz ilkesi", () => {
+  // Kendi planını onaylama denemesi sunucudan bilerek 403 alır.
+  test.use({ allowedStatuses: [403] });
+
+  test("planı oluşturan onaylayamaz; ekran nedenini ve çözüm yolunu söyler", async ({ page }) => {
+    const owner = await Owner.login(tenantState());
+    const branch = await owner.branch();
+    const supplier = await owner.account("SUPPLIER", `Tedarikçi ${unique("")}`);
+    const description = `Kendi planı ${unique("")}`;
+    const plan = await owner.request<{ id: string }>("POST", "/finance/payment-plans", {
+      accountId: supplier,
+      branchId: branch,
+      money: { amount: "300", currency: "TRY" },
+      dueDate: new Date().toISOString().slice(0, 10),
+      description,
+    });
+    await owner.request("POST", `/finance/payment-plans/${plan.id}/submit`);
+
+    await login(page, tenantState());
+    await page.goto("/finance/plans");
+    const row = page.getByRole("row").filter({ hasText: description });
+    await row.getByRole("button", { name: "Onayla" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: /başka bir yetkili/ })).toContainText(
+      "Finans > Tanımlar",
+    );
+    await expect(row.getByText("Onay bekliyor")).toBeVisible();
+  });
+});

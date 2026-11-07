@@ -15,6 +15,22 @@ import {
 test("SaaS yöneticisi firma açar, sahibi davet bağlantısıyla şifresini belirler", async ({
   page,
 }) => {
+  // "compose up" konteyner başlar başlamaz döner; backend'in açılması yarım dakika sürebilir.
+  test.setTimeout(180_000);
+  await expect
+    .poll(
+      () =>
+        api("GET", "/ping").then(
+          () => true,
+          () => false,
+        ),
+      {
+        timeout: 120_000,
+        intervals: [2_000],
+      },
+    )
+    .toBe(true);
+
   const { accessToken } = await api<{ accessToken: string }>("POST", "/admin/auth/login", {
     body: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
   });

@@ -19,7 +19,7 @@
 > - Transfer yalnız aynı para birimli hesaplar arasındadır.
 > - Çekli ödeme/tahsilat ve plana bağlı ödeme ters çevrilemez. Çek, kendi durumuyla (ör. karşılıksız) yönetilir.
 > - Plan dışı doğrudan ödeme mümkündür; onay zorunluluğu yalnız plan üzerinden ödemeler içindir.
-> - Kullanıcının kendi planını onaylaması firma ayarıdır (Tanımlar sekmesi); varsayılan açık, çünkü küçük firmada tek yönetici olabilir.
+> - Kullanıcının kendi planını onaylaması firma ayarıdır (Tanımlar sekmesi); varsayılan kapalıdır (dört göz ilkesi: planı oluşturan onaylayamaz). Tek yöneticili küçük firma ayarı açar; hata mesajı bu yolu gösterir. İlk sürümde varsayılan açıktı; V16 migration'ı ayarı hiç değiştirmemiş firmaları da kapalıya çevirir.
 > - Karşılıksız çekin cari hareketi, karşılıksız gününün kuruyla yazılır.
 > - Yaşlandırma işlem tarihine göredir ve en eski açık kalemden kapatır; hareketler bellekte işlendiği için büyük veride Faz 9'da iyileştirilmeli.
 > - 3B çek koçanı görünümü (opsiyonel) yapılmadı.

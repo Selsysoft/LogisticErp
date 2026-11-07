@@ -392,6 +392,7 @@ class FinanceIT extends AbstractIntegrationTest {
   @Test
   void unapprovedPlanCannotBePaid() throws Exception {
     String t = tenantCode("pln");
+    allowSelfApproval(t);
     String branch = branch(t);
     String supplier = account(t, "T1", "SUPPLIER");
     String bank = fund(t, "B1", "BANK", "TRY", branch);
@@ -564,6 +565,7 @@ class FinanceIT extends AbstractIntegrationTest {
   @Test
   void invoiceCancelReversesDebtButPaidInvoiceCannotBeCancelled() throws Exception {
     String t = tenantCode("inv");
+    allowSelfApproval(t);
     String branch = branch(t);
     String supplier = account(t, "T1", "SUPPLIER");
     String bank = fund(t, "B1", "BANK", "TRY", branch);
@@ -605,21 +607,11 @@ class FinanceIT extends AbstractIntegrationTest {
   }
 
   @Test
-  void selfApprovalIsAllowedByDefaultAndBlockedWhenTurnedOff() throws Exception {
+  void selfApprovalIsBlockedByDefaultAndAllowedWhenTurnedOn() throws Exception {
     String t = tenantCode("self");
     String branch = branch(t);
     String supplier = account(t, "T1", "SUPPLIER");
-    String allowed = plan(t, supplier, branch, "100", "TRY", "2026-11-10");
-    post(t, "/api/v1/finance/payment-plans/" + allowed + "/submit", null)
-        .andExpect(status().isOk());
-    post(t, "/api/v1/finance/payment-plans/" + allowed + "/approve", Map.of())
-        .andExpect(status().isOk());
-
-    send(
-            t,
-            put("/api/v1/finance/settings")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"allowSelfApproval\":false}"))
+    send(t, get("/api/v1/finance/settings"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.allowSelfApproval").value(false));
 
@@ -639,12 +631,31 @@ class FinanceIT extends AbstractIntegrationTest {
                 .content("{}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("APPROVED"));
+
+    allowSelfApproval(t);
+    String allowed = plan(t, supplier, branch, "100", "TRY", "2026-11-10");
+    post(t, "/api/v1/finance/payment-plans/" + allowed + "/submit", null)
+        .andExpect(status().isOk());
+    post(t, "/api/v1/finance/payment-plans/" + allowed + "/approve", Map.of())
+        .andExpect(status().isOk());
+  }
+
+  /** Tek kişilik firma gibi: planı oluşturan kendisi onaylar. */
+  private void allowSelfApproval(String t) throws Exception {
+    send(
+            t,
+            put("/api/v1/finance/settings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"allowSelfApproval\":true}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.allowSelfApproval").value(true));
   }
 
   /** Faz 2 uçtan uca kabul senaryosu. */
   @Test
   void supplierInvoiceToBankPaymentClosesAccount() throws Exception {
     String t = tenantCode("e2e");
+    allowSelfApproval(t);
     String branch = branch(t);
     String supplier = account(t, "T1", "SUPPLIER");
     String bank = fund(t, "B1", "BANK", "TRY", branch);

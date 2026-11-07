@@ -74,13 +74,16 @@ export async function login(page: Page, state: TenantState, password = state.pas
  * Her testte CSP ihlali, yakalanmamış hata ve konsol hatası testi düşürür; böylece üretim
  * başlıklarıyla bozulan bir ekran fark edilir.
  */
-export const test = base.extend<{ pageErrors: string[] }>({
+export const test = base.extend<{ pageErrors: string[]; allowedStatuses: number[] }>({
+  /** Testin bilerek tetiklediği, varsayılanların dışındaki hata kodları (ör. yetki için 403). */
+  allowedStatuses: [[], { option: true }],
   pageErrors: [
-    async ({ page }, use) => {
+    async ({ page, allowedStatuses }, use) => {
+      const statuses = [...DEFAULT_STATUSES, ...allowedStatuses];
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
       page.on("console", (message) => {
-        if (message.type() === "error" && !expectedConsoleError(message.text())) {
+        if (message.type() === "error" && !expectedConsoleError(message.text(), statuses)) {
           errors.push(`console: ${message.text()}`);
         }
       });
@@ -91,11 +94,13 @@ export const test = base.extend<{ pageErrors: string[] }>({
   ],
 });
 
-/** Tarayıcının başarısız istekler için yazdığı satırlar; testler bu durumları kendisi denetler. */
-function expectedConsoleError(text: string) {
-  return /Failed to load resource: the server responded with a status of (400|401|404|409)/.test(
-    text,
-  );
+/** Doğrulama, oturum, bulunamadı ve çakışma yanıtlarını testler kendisi denetler. */
+const DEFAULT_STATUSES = [400, 401, 404, 409];
+
+/** Tarayıcının başarısız istekler için yazdığı satırlar. */
+function expectedConsoleError(text: string, statuses: number[]) {
+  const match = /Failed to load resource: the server responded with a status of (\d{3})/.exec(text);
+  return match !== null && statuses.includes(Number(match[1]));
 }
 
 export { expect };

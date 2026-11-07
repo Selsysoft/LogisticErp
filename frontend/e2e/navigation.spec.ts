@@ -24,3 +24,10 @@ test("bütün modüller menüden açılır", async ({ page }) => {
     await expect(page.getByText("Bir sorun oluştu")).toHaveCount(0);
   }
 });
+
+test("sefer detay adresinin sonu silinince sefer listesi açılır", async ({ page }) => {
+  await login(page, tenantState());
+  await page.goto("/operations/shipments");
+  await expect(page).toHaveURL(/\/operations$/);
+  await expect(page.getByRole("button", { name: "Yeni sefer" })).toBeVisible();
+});

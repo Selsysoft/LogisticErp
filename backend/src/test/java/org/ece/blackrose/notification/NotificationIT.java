@@ -53,6 +53,8 @@ class NotificationIT extends AbstractIntegrationTest {
     String pending = plan(t, supplier, branch, "150", TODAY.plusDays(10));
     owner(t, post("/api/v1/finance/payment-plans/" + pending + "/submit"), null)
         .andExpect(status().isOk());
+    owner(t, put("/api/v1/finance/settings"), Map.of("allowSelfApproval", true))
+        .andExpect(status().isOk());
     String due = plan(t, supplier, branch, "250", TODAY.plusDays(1));
     owner(t, post("/api/v1/finance/payment-plans/" + due + "/submit"), null)
         .andExpect(status().isOk());

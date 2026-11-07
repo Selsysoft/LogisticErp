@@ -1,6 +1,6 @@
 import { Suspense, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuthStore } from "./auth/authStore";
 import { LandingRedirect, RequireAuth, RequirePermission } from "./auth/guards";
 import { AppShell, MODULE_ITEMS } from "./components/AppShell";
@@ -283,6 +283,8 @@ export function App() {
               }
             >
               <Route index element={<ShipmentsPage />} />
+              {/* Detay adresinin sonu silinince liste açılsın. */}
+              <Route path="shipments" element={<Navigate to="/operations" replace />} />
               <Route path="shipments/:id" element={<ShipmentDetailPage />} />
               <Route path="board" element={<BoardPage />} />
               <Route path="profit" element={<ProfitPage />} />
