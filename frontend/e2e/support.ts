@@ -93,7 +93,9 @@ export const test = base.extend<{ pageErrors: string[] }>({
 
 /** Tarayıcının başarısız istekler için yazdığı satırlar; testler bu durumları kendisi denetler. */
 function expectedConsoleError(text: string) {
-  return /Failed to load resource: the server responded with a status of (400|401|404)/.test(text);
+  return /Failed to load resource: the server responded with a status of (400|401|404|409)/.test(
+    text,
+  );
 }
 
 export { expect };

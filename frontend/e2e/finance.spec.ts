@@ -14,6 +14,8 @@ test("cari eklenir, listede ve detayda görünür", async ({ page }) => {
   await dialog.getByRole("button", { name: "Kaydet" }).click();
   await expect(dialog).toBeHidden();
 
+  // Liste sayfalıdır; önceki çalıştırmaların carileri arasında aranarak bulunur.
+  await page.getByLabel("Ara").fill(code);
   await page.getByRole("link", { name }).click();
   await expect(page).toHaveURL(/\/finance\/accounts\/[0-9a-f-]+$/);
   await expect(page.getByText(name).first()).toBeVisible();
