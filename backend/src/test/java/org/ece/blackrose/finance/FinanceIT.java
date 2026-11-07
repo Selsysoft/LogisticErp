@@ -404,6 +404,9 @@ class FinanceIT extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.code").value("PLAN_NOT_APPROVED"));
     post(t, "/api/v1/finance/payment-plans/" + plan + "/submit", null).andExpect(status().isOk());
     pay(t, plan, bank).andExpect(status().isConflict());
+    post(t, "/api/v1/finance/payment-plans/" + plan + "/reject", Map.of("note", " "))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("REJECT_REASON_REQUIRED"));
     post(t, "/api/v1/finance/payment-plans/" + plan + "/reject", Map.of("note", "eksik belge"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("REJECTED"));
@@ -420,6 +423,10 @@ class FinanceIT extends AbstractIntegrationTest {
 
     JsonNode events = body(send(t, get("/api/v1/finance/payment-plans/" + plan + "/events")));
     assertThat(events.size()).isEqualTo(6);
+    JsonNode rejected = events.get(2);
+    assertThat(rejected.get("eventType").asText()).isEqualTo("REJECTED");
+    assertThat(rejected.get("note").asText()).isEqualTo("eksik belge");
+    assertThat(rejected.get("createdAt").asText()).isNotBlank();
   }
 
   @Test

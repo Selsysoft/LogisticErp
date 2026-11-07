@@ -142,6 +142,14 @@ export interface Plan {
   description: string | null;
 }
 
+export interface PlanEvent {
+  id: string;
+  eventType: string;
+  note: string | null;
+  createdBy: string;
+  createdAt: string;
+}
+
 export interface HeatmapCell {
   period: string;
   currency: string;

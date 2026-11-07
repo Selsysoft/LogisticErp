@@ -127,6 +127,11 @@ public class PaymentPlanService {
 
   @Transactional
   public PaymentPlan reject(UUID id, String note) {
+    // Planı düzeltecek kişi neyin eksik olduğunu bilmeli.
+    if (note == null || note.isBlank()) {
+      throw new BusinessException(
+          HttpStatus.BAD_REQUEST, "REJECT_REASON_REQUIRED", "Ret gerekçesi yazılmalıdır.");
+    }
     return move(id, Set.of(PlanStatus.PENDING), PlanStatus.REJECTED, "REJECTED", note);
   }
 

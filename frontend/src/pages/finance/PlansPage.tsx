@@ -1,6 +1,10 @@
 import {
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   MenuItem,
   TextField,
   ToggleButton,
@@ -12,6 +16,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiGet, apiRequest } from "../../api/client";
 import { ErrorState } from "../../components/ErrorState";
+import { formatDateTime } from "../operations/common";
 import {
   DataTable,
   FormDialog,
@@ -29,7 +34,7 @@ import {
   useFunds,
   usePaging,
 } from "./common";
-import { HeatmapCell, Page, Plan } from "./types";
+import { HeatmapCell, Page, Plan, PlanEvent } from "./types";
 
 const STATUSES = ["DRAFT", "PENDING", "APPROVED", "REJECTED", "PAID", "CANCELLED"];
 
@@ -55,6 +60,8 @@ export function PlansPage() {
   const [adding, setAdding] = useState(false);
   const [postponing, setPostponing] = useState<Plan | null>(null);
   const [paying, setPaying] = useState<Plan | null>(null);
+  const [rejecting, setRejecting] = useState<Plan | null>(null);
+  const [viewing, setViewing] = useState<Plan | null>(null);
 
   const list = useQuery({
     queryKey: ["finance", "plans", status, paging.page, paging.size],
@@ -146,9 +153,11 @@ export function PlansPage() {
                   {canApprove &&
                     r.status === "PENDING" &&
                     actionButton(r, "approve", "finance.action.approve")}
-                  {canApprove &&
-                    r.status === "PENDING" &&
-                    actionButton(r, "reject", "finance.action.reject", "error")}
+                  {canApprove && r.status === "PENDING" && (
+                    <Button size="small" color="error" onClick={() => setRejecting(r)}>
+                      {t("finance.action.reject")}
+                    </Button>
+                  )}
                   {canPost && r.status === "APPROVED" && (
                     <Button size="small" variant="contained" onClick={() => setPaying(r)}>
                       {t("finance.action.pay")}
@@ -162,6 +171,9 @@ export function PlansPage() {
                   {canPost &&
                     !["PAID", "CANCELLED"].includes(r.status) &&
                     actionButton(r, "cancel", "finance.action.cancel", "error")}
+                  <Button size="small" onClick={() => setViewing(r)}>
+                    {t("finance.action.history")}
+                  </Button>
                 </Box>
               ),
             },
@@ -256,6 +268,31 @@ export function PlansPage() {
           }}
         />
       )}
+      {rejecting && (
+        <FormDialog
+          title={`${t("finance.action.reject")} · ${formatMoney(rejecting.money)}`}
+          fields={[
+            {
+              name: "note",
+              label: t("finance.plans.rejectReason"),
+              required: true,
+              helperText: t("finance.plans.rejectHint"),
+            },
+          ]}
+          submitLabel={t("finance.action.reject")}
+          onClose={() => setRejecting(null)}
+          onSubmit={(values) =>
+            apiRequest("POST", `/finance/payment-plans/${rejecting.id}/reject`, {
+              note: values.note,
+            })
+          }
+          onSaved={() => {
+            setRejecting(null);
+            void refresh();
+          }}
+        />
+      )}
+      {viewing && <PlanHistory plan={viewing} onClose={() => setViewing(null)} />}
       {paying && (
         <FormDialog
           title={`${t("finance.action.pay")} · ${formatMoney(paying.money)}`}
@@ -304,6 +341,43 @@ export function PlansPage() {
         />
       )}
     </>
+  );
+}
+
+function PlanHistory({ plan, onClose }: { plan: Plan; onClose: () => void }) {
+  const { t } = useTranslation();
+  const events = useQuery({
+    queryKey: ["finance", "plans", "events", plan.id],
+    queryFn: () => apiGet<PlanEvent[]>(`/finance/payment-plans/${plan.id}/events`),
+  });
+
+  return (
+    <Dialog open fullWidth maxWidth="sm" onClose={onClose}>
+      <DialogTitle>
+        {t("finance.plans.history")} · {plan.description ?? formatMoney(plan.money)}
+      </DialogTitle>
+      <DialogContent>
+        <QueryState isPending={events.isPending} error={events.error} />
+        {events.data && (
+          <DataTable
+            rows={events.data}
+            rowKey={(row) => row.id}
+            columns={[
+              { header: t("finance.field.date"), render: (r) => formatDateTime(r.createdAt) },
+              {
+                header: t("finance.field.status"),
+                render: (r) => t(`finance.planEvent.${r.eventType}`, r.eventType),
+              },
+              { header: t("finance.field.user"), render: (r) => r.createdBy },
+              { header: t("finance.field.note"), render: (r) => r.note ?? "" },
+            ]}
+          />
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t("finance.action.close")}</Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 

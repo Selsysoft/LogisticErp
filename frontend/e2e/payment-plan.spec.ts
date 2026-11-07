@@ -86,3 +86,68 @@ test.describe("dört göz ilkesi", () => {
     await expect(row.getByText("Onay bekliyor")).toBeVisible();
   });
 });
+
+test("patron gerekçeyle reddeder; finans gerekçeyi geçmişte görür, planı yeniden onaya gönderir", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(90_000);
+  const state = tenantState();
+  const owner = await Owner.login(state);
+  const branch = await owner.branch();
+  const supplier = await owner.account("SUPPLIER", `Tedarikçi ${unique("")}`);
+  const financeLogin = await owner.user(
+    "FINANCE",
+    `${unique("finans").toLowerCase()}@${state.code}.test`,
+  );
+  const finance = await Owner.login(financeLogin);
+  const description = `Lastik ödemesi ${unique("")}`;
+  const plan = await finance.request<{ id: string }>("POST", "/finance/payment-plans", {
+    accountId: supplier,
+    branchId: branch,
+    money: { amount: "4200", currency: "TRY" },
+    dueDate: new Date().toISOString().slice(0, 10),
+    description,
+  });
+  await finance.request("POST", `/finance/payment-plans/${plan.id}/submit`);
+
+  const patron = await browser.newPage();
+  await login(patron, state);
+  await patron.goto("/finance/plans");
+  const pending = patron.getByRole("row").filter({ hasText: description });
+  await pending.getByRole("button", { name: "Reddet" }).click();
+  const reject = patron.getByRole("dialog");
+  // Gerekçesiz ret gönderilmez.
+  await reject.getByRole("button", { name: "Reddet" }).click();
+  await expect(reject.getByText("Bu alan zorunlu.")).toBeVisible();
+  await reject.getByLabel(/^Ret gerekçesi/).fill("Fatura eki eksik");
+  await reject.getByRole("button", { name: "Reddet" }).click();
+  await expect(reject).toBeHidden();
+  await expect(pending.getByText("Reddedildi")).toBeVisible();
+  await patron.close();
+
+  await login(page, financeLogin);
+  await page.goto("/finance/plans");
+  const row = page.getByRole("row").filter({ hasText: description });
+  await expect(row.getByText("Reddedildi")).toBeVisible();
+  await row.getByRole("button", { name: "Geçmiş" }).click();
+  const history = page.getByRole("dialog");
+  const rejected = history.getByRole("row").filter({ hasText: "Reddedildi" });
+  await expect(rejected).toContainText("Fatura eki eksik");
+  await expect(rejected).toContainText(state.email);
+  await history.getByRole("button", { name: "Kapat" }).click();
+  await expect(history).toBeHidden();
+
+  await row.getByRole("button", { name: "Onaya gönder" }).click();
+  await expect(row.getByText("Onay bekliyor")).toBeVisible();
+  await expect
+    .poll(async () =>
+      (
+        await finance.request<{ eventType: string }[]>(
+          "GET",
+          `/finance/payment-plans/${plan.id}/events`,
+        )
+      ).map((event) => event.eventType),
+    )
+    .toEqual(["CREATED", "SUBMITTED", "REJECTED", "SUBMITTED"]);
+});

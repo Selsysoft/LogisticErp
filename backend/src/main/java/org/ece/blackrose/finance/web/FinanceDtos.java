@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -285,7 +286,8 @@ public final class FinanceDtos {
       @NotNull LocalDate date,
       @Positive BigDecimal exchangeRate) {}
 
-  public record PlanEventResponse(UUID id, String eventType, String note, String createdBy) {}
+  public record PlanEventResponse(
+      UUID id, String eventType, String note, String createdBy, Instant createdAt) {}
 
   public record SaveFinanceSettingsRequest(@NotNull Boolean allowSelfApproval) {}
 
