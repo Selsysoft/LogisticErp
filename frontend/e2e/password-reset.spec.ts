@@ -28,6 +28,8 @@ test("şifremi unuttum bağlantısıyla yeni şifre belirlenir ve giriş yapıl�
 
   await page.goto("/login");
   await page.getByRole("link", { name: "Şifremi unuttum" }).click();
+  // Giriş sayfasında da "Firma kodu" alanı var; geçiş bitmeden doldurulursa yeni sayfa boş açılır.
+  await expect(page.getByRole("heading", { name: "Şifre sıfırlama" })).toBeVisible();
   await page.getByLabel("Firma kodu").fill(state.code);
   await page.getByLabel("E-posta").fill(email);
   await page.getByRole("button", { name: "Bağlantı gönder" }).click();

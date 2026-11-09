@@ -1,5 +1,5 @@
 import { Owner, unique } from "./fixtures";
-import { expect, login, tenantState, test } from "./support";
+import { expect, login, mailMessage, tenantState, test } from "./support";
 
 test("finans ödeme planı girer, patron onaylar, finans bankadan öder", async ({
   page,
@@ -173,6 +173,12 @@ test("patron gerekçeyle reddeder; finans gerekçeyi geçmişte görür, planı 
   await expect(reject).toBeHidden();
   await expect(pending.getByText("Reddedildi")).toBeVisible();
   await patron.close();
+
+  // Planı girene gerekçeli ret e-postası gerçek SMTP'den (Mailpit) gelir.
+  const mail = await mailMessage(financeLogin.email, "Ödeme planı reddedildi");
+  expect(mail.Text).toContain("Ret gerekçesi: Fatura eki eksik");
+  expect(mail.Text).toContain("4.200,00 TRY");
+  expect(mail.Text).toContain(`Reddeden: ${state.email}`);
 
   await login(page, financeLogin);
   await page.goto("/finance/plans");

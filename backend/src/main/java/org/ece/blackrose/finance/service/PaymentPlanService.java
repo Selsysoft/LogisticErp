@@ -37,6 +37,7 @@ import org.ece.blackrose.finance.web.FinanceMapper;
 import org.ece.blackrose.identity.domain.AuditEvent;
 import org.ece.blackrose.identity.security.AuthenticatedUser;
 import org.ece.blackrose.identity.service.AuditService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -61,6 +62,7 @@ public class PaymentPlanService {
   private final FinanceMapper mapper;
   private final FinanceSettingsRepository settingsRepository;
   private final AuditService audit;
+  private final ApplicationEventPublisher publisher;
 
   public PaymentPlanService(
       PaymentPlanRepository plans,
@@ -70,7 +72,9 @@ public class PaymentPlanService {
       SettlementService settlements,
       FinanceMapper mapper,
       FinanceSettingsRepository settingsRepository,
-      AuditService audit) {
+      AuditService audit,
+      ApplicationEventPublisher publisher) {
+    this.publisher = publisher;
     this.settingsRepository = settingsRepository;
     this.audit = audit;
     this.plans = plans;
@@ -115,14 +119,23 @@ public class PaymentPlanService {
 
   @Transactional
   public PaymentPlan submit(UUID id) {
-    return move(
-        id, Set.of(PlanStatus.DRAFT, PlanStatus.REJECTED), PlanStatus.PENDING, "SUBMITTED", null);
+    PaymentPlan plan =
+        move(
+            id,
+            Set.of(PlanStatus.DRAFT, PlanStatus.REJECTED),
+            PlanStatus.PENDING,
+            "SUBMITTED",
+            null);
+    publish(plan, null);
+    return plan;
   }
 
   @Transactional
   public PaymentPlan approve(UUID id, String note) {
     ensureApproverAllowed(lock(id));
-    return move(id, Set.of(PlanStatus.PENDING), PlanStatus.APPROVED, "APPROVED", note);
+    PaymentPlan plan = move(id, Set.of(PlanStatus.PENDING), PlanStatus.APPROVED, "APPROVED", note);
+    publish(plan, note);
+    return plan;
   }
 
   @Transactional
@@ -134,7 +147,17 @@ public class PaymentPlanService {
     }
     PaymentPlan plan = move(id, Set.of(PlanStatus.PENDING), PlanStatus.REJECTED, "REJECTED", note);
     plan.reject(note.strip());
+    publish(plan, note.strip());
     return plan;
+  }
+
+  private void publish(PaymentPlan plan, String note) {
+    publisher.publishEvent(
+        new PlanDecisionEvent(
+            plan,
+            plan.getStatus(),
+            AuthenticatedUser.current().map(AuthenticatedUser::email).orElse(null),
+            note));
   }
 
   @Transactional

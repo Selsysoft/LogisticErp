@@ -90,7 +90,8 @@ class NotificationIT extends AbstractIntegrationTest {
                 get("/api/v1/notifications/preferences")
                     .with(tenant(t))
                     .with(bearer(financeToken))));
-    assertThat(financePrefs.findValuesAsText("topic")).containsExactly("PAYMENT_DUE");
+    assertThat(financePrefs.findValuesAsText("topic"))
+        .containsExactly("PAYMENT_DUE", "PLAN_DECISION");
     mvc.perform(
             put("/api/v1/notifications/preferences")
                 .with(tenant(t))
