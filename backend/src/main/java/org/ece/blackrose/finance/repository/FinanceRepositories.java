@@ -22,6 +22,7 @@ import org.ece.blackrose.finance.domain.FundAccount;
 import org.ece.blackrose.finance.domain.FundTransaction;
 import org.ece.blackrose.finance.domain.Instrument;
 import org.ece.blackrose.finance.domain.InstrumentMovement;
+import org.ece.blackrose.finance.domain.OpeningInvoice;
 import org.ece.blackrose.finance.domain.PaymentPlan;
 import org.ece.blackrose.finance.domain.PaymentPlanEvent;
 import org.ece.blackrose.finance.domain.PurchaseInvoice;
@@ -118,6 +119,16 @@ public final class FinanceRepositories {
     BigDecimal getDays61To90();
 
     BigDecimal getOver90();
+  }
+
+  public interface OpeningInvoiceRepository extends JpaRepository<OpeningInvoice, UUID> {
+
+    boolean existsByAccountIdAndNumberAndStatus(
+        UUID accountId, String number, OpeningInvoice.Status status);
+
+    /** Açık faturası olan cariye ayrıca açılış bakiyesi yüklenmez (bakiye iki kez sayılır). */
+    boolean existsByAccountIdAndCurrencyAndStatus(
+        UUID accountId, String currency, OpeningInvoice.Status status);
   }
 
   public interface AccountTransactionRepository extends JpaRepository<AccountTransaction, UUID> {

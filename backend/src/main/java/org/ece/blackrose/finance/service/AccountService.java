@@ -38,9 +38,14 @@ public class AccountService {
   private final AccountRepository accounts;
   private final AccountTransactionRepository transactions;
   private final LedgerService ledger;
+  private final OpeningInvoiceImportService openingInvoices;
 
   public AccountService(
-      AccountRepository accounts, AccountTransactionRepository transactions, LedgerService ledger) {
+      AccountRepository accounts,
+      AccountTransactionRepository transactions,
+      LedgerService ledger,
+      OpeningInvoiceImportService openingInvoices) {
+    this.openingInvoices = openingInvoices;
     this.accounts = accounts;
     this.transactions = transactions;
     this.ledger = ledger;
@@ -123,6 +128,10 @@ public class AccountService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "TRANSACTION_NOT_FOUND", "Hareket bulunamadı."));
+    // Açılış faturası geri alınınca bağlı ödeme planı da iptal olur.
+    if (OpeningInvoiceImportService.SOURCE.equals(original.getSourceType())) {
+      return openingInvoices.reverse(original, date, description);
+    }
     // Açılış bakiyesinin belgesi yoktur; yanlış yüklenen açılış ekstreden düzeltilir.
     if (!LedgerService.SOURCE_MANUAL.equals(original.getSourceType())
         && !OpeningBalanceImportService.SOURCE_OPENING.equals(original.getSourceType())) {

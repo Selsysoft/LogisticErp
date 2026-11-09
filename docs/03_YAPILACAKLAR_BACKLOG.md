@@ -36,6 +36,7 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - ✅ C10 Finans raporları (ekstre, yaşlandırma, günlük)
 - ✅ C11 **Uçtan uca finans senaryo testi**
 - ✅ C12 (P1) ERP'den açılış bakiyesi import aracı — Finans > Cari'de CSV ile önizleme ve ya-hep-ya-hiç içe aktarma; yeni cari açar, mevcut cariyle kodla eşleşir, dövizli satırda kur, mükerrer açılışı engeller, belirsiz tutarı (1.500) reddeder; açılış hareketi ekstreden ters çevrilir
+- ✅ C12b Önceki sistemden açık faturaları içe aktarma — müşteri faturası nakit öngörüsüne vadesiyle, tedarikçi/taşeron faturası taslak ödeme planına girer; cariye belge tarihiyle yazılır (yaşlandırma doğru); kendi numaralandırmamıza ve gelir raporlarına girmez; aynı caride açılış bakiyesiyle birlikte yüklenemez; ekstreden geri alınır (ödenmiş plan hariç). Varsayım: muhasebe görüşüyle doğrulanmalı
 - ✅ C13 PurchaseInvoice (tedarikçi/taşeron faturası) → cari + ödeme planı
 - ⬜ C14 (P2) Kredi/finansman modülü (faz ataması bekliyor)
 

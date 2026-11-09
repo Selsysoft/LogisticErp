@@ -323,6 +323,19 @@ void i18n.use(initReactI18next).init({
           empty: "Kayıt yok.",
           noBranch: "İşlem yapmak için önce Tanımlar sekmesinden şube ekleyin.",
           openingBalance: "Dönem başı bakiye",
+          openingInvoice: {
+            open: "Açık faturaları içe aktar",
+            title: "Açık faturaları içe aktar",
+            intro:
+              "Önceki sistemdeki ödenmemiş faturaları CSV dosyasıyla yükleyin. Sütunlar: Cari kodu, Belge no, Belge tarihi, Vade, Tutar (faturanın açık kalan tutarı); isteğe bağlı Para birimi ve Kur. Müşteri faturası nakit öngörüsüne vadesiyle girer; tedarikçi ve taşeron faturası taslak ödeme planı olur. Her fatura cariye belge tarihiyle yazılır. Kendi fatura numaralarınıza ve gelir raporlarına girmez. Aynı cariye ayrıca açılış bakiyesi yüklenemez. Tek hatalı satır varsa hiçbir şey yazılmaz.",
+            ready: "Hazır: {{count}} fatura.",
+            applied: "İçe aktarıldı: {{count}} fatura.",
+            number: "Belge no",
+            invoiceDate: "Belge tarihi",
+            kindHeader: "Tür",
+            kind: { RECEIVABLE: "Alacak", PAYABLE: "Borç" },
+            status: { READY: "Hazır", ERROR: "Hatalı" },
+          },
           opening: {
             open: "Açılış bakiyesi içe aktar",
             title: "Açılış bakiyesi içe aktar",
@@ -434,6 +447,7 @@ void i18n.use(initReactI18next).init({
           source: {
             MANUAL: "Elle",
             OPENING: "Açılış bakiyesi",
+            OPENING_INVOICE: "Açılış faturası",
             REVERSAL: "Ters kayıt",
             SETTLEMENT: "Ödeme/Tahsilat",
             TRANSFER: "Transfer",

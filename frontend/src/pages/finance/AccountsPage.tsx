@@ -30,10 +30,11 @@ import {
   usePaging,
 } from "./common";
 import { OpeningBalanceDialog } from "./OpeningBalanceDialog";
+import { OpeningInvoiceDialog } from "./OpeningInvoiceDialog";
 import { Account, Page, Statement, StatementLine } from "./types";
 
 const ACCOUNT_TYPES = ["CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK"];
-const REVERSIBLE = ["MANUAL", "OPENING"];
+const REVERSIBLE = ["MANUAL", "OPENING", "OPENING_INVOICE"];
 
 export function AccountsPage() {
   const { t } = useTranslation();
@@ -43,6 +44,7 @@ export function AccountsPage() {
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [importingInvoices, setImportingInvoices] = useState(false);
 
   const accounts = useQuery({
     queryKey: ["finance", "accounts", search, paging.page, paging.size],
@@ -71,11 +73,22 @@ export function AccountsPage() {
           </Button>
         )}
         {canManage && (
+          <Button variant="outlined" onClick={() => setImportingInvoices(true)}>
+            {t("finance.openingInvoice.open")}
+          </Button>
+        )}
+        {canManage && (
           <Button variant="contained" onClick={() => setAdding(true)}>
             {t("finance.action.newAccount")}
           </Button>
         )}
       </SectionHeader>
+      {importingInvoices && (
+        <OpeningInvoiceDialog
+          onClose={() => setImportingInvoices(false)}
+          onImported={() => void client.invalidateQueries({ queryKey: ["finance"] })}
+        />
+      )}
       {importing && (
         <OpeningBalanceDialog
           onClose={() => setImporting(false)}

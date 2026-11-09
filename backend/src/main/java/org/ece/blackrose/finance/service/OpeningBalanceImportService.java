@@ -15,9 +15,11 @@ import org.ece.blackrose.common.money.Money;
 import org.ece.blackrose.finance.domain.Account;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.Direction;
+import org.ece.blackrose.finance.domain.OpeningInvoice;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountTransactionRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.CurrencyRepository;
+import org.ece.blackrose.finance.repository.FinanceRepositories.OpeningInvoiceRepository;
 import org.ece.blackrose.finance.service.LedgerService.Posting;
 import org.ece.blackrose.identity.domain.AuditEvent;
 import org.ece.blackrose.identity.service.AuditService;
@@ -91,6 +93,7 @@ public class OpeningBalanceImportService {
   private final AccountRepository accounts;
   private final AccountTransactionRepository transactions;
   private final CurrencyRepository currencies;
+  private final OpeningInvoiceRepository openingInvoices;
   private final BranchRepository branches;
   private final ExchangeRateService rates;
   private final LedgerService ledger;
@@ -101,6 +104,7 @@ public class OpeningBalanceImportService {
       AccountRepository accounts,
       AccountTransactionRepository transactions,
       CurrencyRepository currencies,
+      OpeningInvoiceRepository openingInvoices,
       BranchRepository branches,
       ExchangeRateService rates,
       LedgerService ledger,
@@ -109,6 +113,7 @@ public class OpeningBalanceImportService {
     this.accounts = accounts;
     this.transactions = transactions;
     this.currencies = currencies;
+    this.openingInvoices = openingInvoices;
     this.branches = branches;
     this.rates = rates;
     this.ledger = ledger;
@@ -326,6 +331,16 @@ public class OpeningBalanceImportService {
             "Mevcut cari " + code + " türü farklı (" + existing.getType() + ").");
       }
       name = existing.getName();
+      if (balance.signum() != 0
+          && openingInvoices.existsByAccountIdAndCurrencyAndStatus(
+              existing.getId(), currency, OpeningInvoice.Status.OPEN)) {
+        throw new RowException(
+            code
+                + " için "
+                + currency
+                + " açık fatura yüklenmiş; bakiyeyi faturalar oluşturur, ikisi birlikte"
+                + " yüklenemez.");
+      }
       if (balance.signum() != 0 && transactions.hasActiveOpening(existing.getId(), currency)) {
         throw new RowException(
             code

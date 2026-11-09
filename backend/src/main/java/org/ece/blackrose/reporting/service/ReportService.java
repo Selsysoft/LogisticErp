@@ -301,6 +301,10 @@ public class ReportService {
                 union all
                 select cast(account_id as varchar), currency, total_amount, due_date
                 from warehouse_invoice where status = 'ISSUED' and deleted = false
+                union all
+                select cast(account_id as varchar), currency, total_amount, due_date
+                from opening_invoice
+                where kind = 'RECEIVABLE' and status = 'OPEN' and deleted = false
                 """)
             .getResultList()) {
       Object[] cells = (Object[]) row;
