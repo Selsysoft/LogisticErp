@@ -32,7 +32,7 @@ public class ShipmentTrackingController {
   @GetMapping
   @PreAuthorize("hasAuthority('SHIPMENT_VIEW')")
   LinkStatus status(@PathVariable UUID id) {
-    return tracking.status(id).orElse(new LinkStatus(false, null, null, null, 0, null));
+    return tracking.status(id).orElse(new LinkStatus(false, 0, null, null, null, 0, null));
   }
 
   @PostMapping

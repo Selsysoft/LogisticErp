@@ -142,23 +142,56 @@ public class CrmController {
   ContactResponse createContact(
       @PathVariable UUID id, @Valid @RequestBody SaveContactRequest request) {
     customers.find(id);
+    requireEmailForNotice(request);
     return mapper.toResponse(
         contacts.save(
             new Contact(
-                id, request.fullName(), request.title(), request.email(), request.phone())));
+                id,
+                request.fullName(),
+                request.title(),
+                request.email(),
+                request.phone(),
+                request.notifyDeliveries())));
+  }
+
+  @PutMapping("/contacts/{id}")
+  @PreAuthorize(EDIT)
+  ContactResponse updateContact(
+      @PathVariable UUID id, @Valid @RequestBody SaveContactRequest request) {
+    requireEmailForNotice(request);
+    Contact contact = contact(id);
+    contact.update(
+        request.fullName(),
+        request.title(),
+        request.email(),
+        request.phone(),
+        request.notifyDeliveries());
+    return mapper.toResponse(contacts.save(contact));
+  }
+
+  private static void requireEmailForNotice(SaveContactRequest request) {
+    if (request.notifyDeliveries() && (request.email() == null || request.email().isBlank())) {
+      throw new BusinessException(
+          HttpStatus.BAD_REQUEST,
+          "CONTACT_EMAIL_REQUIRED",
+          "Teslim bildirimi için kişinin e-postası girilmelidir.");
+    }
+  }
+
+  private Contact contact(UUID id) {
+    return contacts
+        .findById(id)
+        .orElseThrow(
+            () ->
+                new BusinessException(
+                    HttpStatus.NOT_FOUND, "CONTACT_NOT_FOUND", "Kişi bulunamadı."));
   }
 
   @DeleteMapping("/contacts/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @PreAuthorize(EDIT)
   void deleteContact(@PathVariable UUID id) {
-    Contact contact =
-        contacts
-            .findById(id)
-            .orElseThrow(
-                () ->
-                    new BusinessException(
-                        HttpStatus.NOT_FOUND, "CONTACT_NOT_FOUND", "Kişi bulunamadı."));
+    Contact contact = contact(id);
     contact.markDeleted();
     contacts.save(contact);
   }

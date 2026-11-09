@@ -3,6 +3,7 @@ package org.ece.blackrose.shipment.service;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -31,7 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Müşteriye giriş gerektirmeyen takip bağlantısı. Bağlantı yalnız sefer durumunu, şehirleri,
  * planlanan tarihleri ve teslim bilgisini gösterir; fiyat, sürücü, araç, konum ve iç notlar
- * gösterilmez. Seferde tek geçerli bağlantı olur; yenisi eskisini iptal eder.
+ * gösterilmez. Ofisin oluşturduğu bağlantı seferdeki bütün eski bağlantıları iptal eder; teslim
+ * bildirimi için oluşturulan bağlantı ise ofisin müşteriye verdiğini bozmamak için yanına eklenir.
  */
 @Service
 public class ShipmentTrackingService {
@@ -42,6 +44,7 @@ public class ShipmentTrackingService {
 
   public record LinkStatus(
       boolean active,
+      int activeCount,
       Instant createdAt,
       String createdBy,
       Instant expiresAt,
@@ -100,18 +103,33 @@ public class ShipmentTrackingService {
 
   @Transactional
   public CreatedLink create(UUID shipmentId) {
-    Shipment shipment = shipment(shipmentId);
+    return issue(shipment(shipmentId), true);
+  }
+
+  /** Teslim e-postası için; ofisin verdiği bağlantı geçerli kalır. */
+  @Transactional
+  public CreatedLink createForNotice(Shipment shipment) {
+    return issue(shipment, false);
+  }
+
+  private CreatedLink issue(Shipment shipment, boolean replaceOthers) {
+    UUID shipmentId = shipment.getId();
     if (shipment.getStatus() == ShipmentStatus.CANCELLED) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "SHIPMENT_CANCELLED", "İptal edilen sefer için bağlantı verilmez.");
     }
     Instant now = clock.instant();
-    links.findByShipmentIdAndRevokedAtIsNull(shipmentId).forEach(link -> link.revoke(now));
+    if (replaceOthers) {
+      links.findByShipmentIdAndRevokedAtIsNull(shipmentId).forEach(link -> link.revoke(now));
+    }
     String token = SecureTokens.generate();
     ShipmentTrackingLink link =
         links.save(
             new ShipmentTrackingLink(shipmentId, SecureTokens.hash(token), now.plus(VALIDITY)));
-    audit.record(AuditEvent.TRACKING_LINK_CREATED, shipment.getNumber(), null);
+    audit.record(
+        AuditEvent.TRACKING_LINK_CREATED,
+        shipment.getNumber(),
+        replaceOthers ? null : "Teslim bildirimi");
     return new CreatedLink(token, link.getExpiresAt());
   }
 
@@ -126,22 +144,33 @@ public class ShipmentTrackingService {
     }
   }
 
+  /** Birden çok geçerli bağlantı olabilir (ofis ve teslim e-postası); özet birlikte verilir. */
   @Transactional(readOnly = true)
   public Optional<LinkStatus> status(UUID shipmentId) {
     shipment(shipmentId);
     Instant now = clock.instant();
-    return links.findByShipmentIdAndRevokedAtIsNull(shipmentId).stream()
-        .filter(link -> link.isUsableAt(now))
-        .findFirst()
-        .map(
-            link ->
-                new LinkStatus(
-                    true,
-                    link.getCreatedAt(),
-                    link.getCreatedBy(),
-                    link.getExpiresAt(),
-                    link.getViewCount(),
-                    link.getLastViewedAt()));
+    List<ShipmentTrackingLink> usable =
+        links.findByShipmentIdAndRevokedAtIsNull(shipmentId).stream()
+            .filter(link -> link.isUsableAt(now))
+            .sorted(Comparator.comparing(ShipmentTrackingLink::getCreatedAt).reversed())
+            .toList();
+    if (usable.isEmpty()) {
+      return Optional.empty();
+    }
+    ShipmentTrackingLink latest = usable.get(0);
+    return Optional.of(
+        new LinkStatus(
+            true,
+            usable.size(),
+            latest.getCreatedAt(),
+            latest.getCreatedBy(),
+            usable.stream().map(ShipmentTrackingLink::getExpiresAt).max(Instant::compareTo).get(),
+            usable.stream().mapToInt(ShipmentTrackingLink::getViewCount).sum(),
+            usable.stream()
+                .map(ShipmentTrackingLink::getLastViewedAt)
+                .filter(java.util.Objects::nonNull)
+                .max(Instant::compareTo)
+                .orElse(null)));
   }
 
   /**

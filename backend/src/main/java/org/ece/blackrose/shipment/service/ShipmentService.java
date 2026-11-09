@@ -73,6 +73,7 @@ public class ShipmentService {
   private final DistanceProvider distances;
 
   private final org.ece.blackrose.saas.service.PlanLimitService planLimits;
+  private final DeliveryNotifier deliveryNotifier;
 
   public ShipmentService(
       ShipmentRepository shipments,
@@ -89,7 +90,9 @@ public class ShipmentService {
       TenantClock clock,
       AuditService audit,
       DistanceProvider distances,
-      org.ece.blackrose.saas.service.PlanLimitService planLimits) {
+      org.ece.blackrose.saas.service.PlanLimitService planLimits,
+      DeliveryNotifier deliveryNotifier) {
+    this.deliveryNotifier = deliveryNotifier;
     this.planLimits = planLimits;
     this.distances = distances;
     this.audit = audit;
@@ -182,6 +185,10 @@ public class ShipmentService {
           HttpStatus.CONFLICT, "POD_REQUIRED", "Teslim için önce teslim kanıtı girilmelidir.");
     }
     move(shipment, target, message);
+    // Fatura iptalinde teslim durumuna dönüş move() ile yapılır; müşteriye tekrar e-posta gitmez.
+    if (target == ShipmentStatus.DELIVERED) {
+      deliveryNotifier.prepare(shipment);
+    }
     return shipment;
   }
 

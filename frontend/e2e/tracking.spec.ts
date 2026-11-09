@@ -1,5 +1,5 @@
-import { Owner } from "./fixtures";
-import { expect, login, tenantState, test } from "./support";
+import { Owner, unique } from "./fixtures";
+import { expect, linkFromMail, login, tenantState, test } from "./support";
 
 test("ofis takip bağlantısı verir; müşteri giriş yapmadan izler; iptalden sonra açılmaz", async ({
   page,
@@ -52,4 +52,40 @@ test("ofis takip bağlantısı verir; müşteri giriş yapmadan izler; iptalden 
   await expect(customerPage.getByText(/geçersiz veya süresi dolmuş/)).toBeVisible();
   expect(problems).toEqual([]);
   await customerContext.close();
+});
+
+test("teslim bildirimi işaretli kişiye e-postayla takip bağlantısı gider", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(90_000);
+  const owner = await Owner.login(tenantState());
+  const branch = await owner.branch();
+  const customer = await owner.account("CUSTOMER", "Bildirim Müşterisi");
+  const email = `${unique("lojistik").toLowerCase()}@musteri.test`;
+
+  await login(page, tenantState());
+  await page.goto(`/crm/customers/${customer}`);
+  await page.getByRole("button", { name: "Kişi ekle" }).click();
+  const contact = page.getByRole("dialog");
+  await contact.getByLabel(/^Ad soyad/).fill("Ayşe Lojistik");
+  await contact.getByLabel(/^E-posta/).fill(email);
+  await contact.getByLabel("Sefer teslim edilince takip bağlantılı e-posta alsın").check();
+  await contact.getByRole("button", { name: "Kaydet" }).click();
+  await expect(contact).toBeHidden();
+  await expect(page.getByRole("row").filter({ hasText: email })).toContainText("Evet");
+
+  const shipment = await owner.shipment(customer, branch);
+  await owner.deliver(shipment.id, shipment.legs[0].id, "Ayşe Kabul");
+
+  const link = new URL(await linkFromMail(email, `Gönderiniz teslim edildi: ${shipment.number}`));
+  const customerContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const customerPage = await customerContext.newPage();
+  await customerPage.goto(link.pathname);
+  await expect(customerPage.getByText(shipment.number)).toBeVisible();
+  await expect(customerPage.getByText(/tarihinde teslim edildi/)).toBeVisible();
+  await customerContext.close();
+
+  await page.goto(`/operations/shipments/${shipment.id}`);
+  await expect(page.getByText(`Teslim bildirimi gönderildi: ${email}`)).toBeVisible();
 });

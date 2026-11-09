@@ -18,20 +18,29 @@ public class Contact extends AuditableEntity {
   private String title;
   private String email;
   private String phone;
+  private boolean notifyDeliveries;
 
   protected Contact() {}
 
-  public Contact(UUID accountId, String fullName, String title, String email, String phone) {
+  public Contact(
+      UUID accountId,
+      String fullName,
+      String title,
+      String email,
+      String phone,
+      boolean notifyDeliveries) {
     this.id = UUID.randomUUID();
     this.accountId = accountId;
-    update(fullName, title, email, phone);
+    update(fullName, title, email, phone, notifyDeliveries);
   }
 
-  public final void update(String fullName, String title, String email, String phone) {
+  public final void update(
+      String fullName, String title, String email, String phone, boolean notifyDeliveries) {
     this.fullName = fullName;
     this.title = title;
     this.email = email;
     this.phone = phone;
+    this.notifyDeliveries = notifyDeliveries;
   }
 
   public UUID getId() {
@@ -56,5 +65,10 @@ public class Contact extends AuditableEntity {
 
   public String getPhone() {
     return phone;
+  }
+
+  /** Sefer teslim edilince takip bağlantılı e-posta alır. */
+  public boolean isNotifyDeliveries() {
+    return notifyDeliveries;
   }
 }

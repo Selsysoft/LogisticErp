@@ -149,6 +149,7 @@ export function CustomerDetailPage() {
   const client = useQueryClient();
   const canEdit = useCan("CRM_EDIT");
   const [dialog, setDialog] = useState<"contact" | "activity" | null>(null);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const refresh = () => client.invalidateQueries({ queryKey: ["crm"] });
 
   const customer = useQuery({
@@ -186,7 +187,13 @@ export function CustomerDetailPage() {
       <Box>
         <SectionHeader title={t("crm.sections.contacts")}>
           {canEdit && (
-            <Button variant="outlined" onClick={() => setDialog("contact")}>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setEditingContact(null);
+                setDialog("contact");
+              }}
+            >
               {t("crm.action.newContact")}
             </Button>
           )}
@@ -202,13 +209,28 @@ export function CustomerDetailPage() {
               { header: t("crm.field.email"), render: (r) => r.email },
               { header: t("crm.field.phone"), render: (r) => r.phone },
               {
+                header: t("crm.field.deliveryNotice"),
+                render: (r) => (r.notifyDeliveries ? t("crm.field.yes") : ""),
+              },
+              {
                 header: t("common.actions"),
                 align: "right",
                 render: (r) =>
                   canEdit && (
-                    <Button size="small" color="error" onClick={() => removeContact.mutate(r.id)}>
-                      {t("common.delete")}
-                    </Button>
+                    <>
+                      <Button
+                        size="small"
+                        onClick={() => {
+                          setEditingContact(r);
+                          setDialog("contact");
+                        }}
+                      >
+                        {t("crm.action.editContact")}
+                      </Button>
+                      <Button size="small" color="error" onClick={() => removeContact.mutate(r.id)}>
+                        {t("common.delete")}
+                      </Button>
+                    </>
                   ),
               },
             ]}
@@ -257,21 +279,51 @@ export function CustomerDetailPage() {
       {id && <FilesSection ownerType="ACCOUNT" ownerId={id} />}
       {dialog === "contact" && (
         <FormDialog
-          title={t("crm.action.newContact")}
+          title={editingContact ? t("crm.action.editContact") : t("crm.action.newContact")}
           fields={[
-            { name: "fullName", label: t("crm.field.fullName"), required: true },
-            { name: "title", label: t("crm.field.title") },
-            { name: "email", label: t("crm.field.email") },
-            { name: "phone", label: t("crm.field.phone") },
+            {
+              name: "fullName",
+              label: t("crm.field.fullName"),
+              required: true,
+              defaultValue: editingContact?.fullName,
+            },
+            {
+              name: "title",
+              label: t("crm.field.title"),
+              defaultValue: editingContact?.title ?? "",
+            },
+            {
+              name: "email",
+              label: t("crm.field.email"),
+              defaultValue: editingContact?.email ?? "",
+            },
+            {
+              name: "phone",
+              label: t("crm.field.phone"),
+              defaultValue: editingContact?.phone ?? "",
+            },
+            {
+              name: "notifyDeliveries",
+              label: t("crm.field.notifyDeliveries"),
+              type: "checkbox",
+              defaultValue: editingContact?.notifyDeliveries ?? false,
+            },
           ]}
           onClose={() => setDialog(null)}
-          onSubmit={(values) =>
-            apiRequest("POST", `/crm/customers/${id}/contacts`, {
-              fullName: values.fullName,
-              title: orNull(values.title),
-              email: orNull(values.email),
-              phone: orNull(values.phone),
-            })
+          onSubmit={(values, flags) =>
+            apiRequest(
+              editingContact ? "PUT" : "POST",
+              editingContact
+                ? `/crm/contacts/${editingContact.id}`
+                : `/crm/customers/${id}/contacts`,
+              {
+                fullName: values.fullName,
+                title: orNull(values.title),
+                email: orNull(values.email),
+                phone: orNull(values.phone),
+                notifyDeliveries: flags.notifyDeliveries,
+              },
+            )
           }
           onSaved={() => {
             setDialog(null);

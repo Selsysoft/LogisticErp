@@ -729,7 +729,77 @@ class ShipmentIT extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.code").value("SHIPMENT_CANCELLED"));
   }
 
+  @Test
+  void deliveryEmailsMarkedContactsATrackingLinkOnce() throws Exception {
+    Setup s = setup("dlv");
+    String contacts = "/api/v1/crm/customers/" + s.customer() + "/contacts";
+    String notified = "lojistik@musteri-" + s.tenant() + ".test";
+    String silent = "muhasebe@musteri-" + s.tenant() + ".test";
+    post(s.tenant(), contacts, contact("Ayşe Lojistik", notified, true))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.notifyDeliveries").value(true));
+    post(s.tenant(), contacts, contact("Ali Muhasebe", silent, false))
+        .andExpect(status().isCreated());
+    post(s.tenant(), contacts, contact("E-postasız", null, true))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CONTACT_EMAIL_REQUIRED"));
+
+    String id = deliveredShipment(s, "1000", "34DL01", "S1");
+
+    Notice notice = awaitNotice(notified);
+    String number =
+        body(send(s.tenant(), get("/api/v1/shipment/shipments/" + id))).get("number").asText();
+    assertThat(notice.subject()).isEqualTo("Gönderiniz teslim edildi: " + number);
+    assertThat(notice.text()).contains(s.tenant() + " Lojistik").doesNotContain("1.000");
+    String url =
+        notice.text().lines().filter(line -> line.contains("/track/")).findFirst().orElseThrow();
+    assertThat(url).contains("/track/" + s.tenant() + "/");
+    String token = url.substring(url.lastIndexOf('/') + 1).strip();
+    mvc.perform(get(publicTracking(s.tenant(), token)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("DELIVERED"));
+    assertThat(SENT_NOTICES).noneMatch(sent -> sent.email().equals(silent));
+
+    // Geçmişte kime gittiği görünür; ofisin yeni bağlantısı e-postadakini de geçersiz kılar.
+    List<String> notes = new ArrayList<>();
+    body(send(s.tenant(), get("/api/v1/shipment/shipments/" + id + "/timeline")))
+        .forEach(event -> notes.add(event.path("message").asText()));
+    assertThat(notes).contains("Teslim bildirimi gönderildi: " + notified);
+    String link = "/api/v1/shipment/shipments/" + id + "/tracking-link";
+    send(s.tenant(), get(link)).andExpect(jsonPath("$.activeCount").value(1));
+    post(s.tenant(), link, null).andExpect(status().isCreated());
+    mvc.perform(get(publicTracking(s.tenant(), token))).andExpect(status().isNotFound());
+
+    // Fatura iptaliyle teslim durumuna dönüş yeniden e-posta göndermez.
+    String invoice = issueInvoice(s.tenant(), id).get("id").asText();
+    post(s.tenant(), "/api/v1/shipment/invoices/" + invoice + "/cancel", Map.of("date", DATE))
+        .andExpect(status().isOk());
+    Thread.sleep(500);
+    assertThat(SENT_NOTICES.stream().filter(sent -> sent.email().equals(notified))).hasSize(1);
+  }
+
   // Yardımcılar
+
+  private static Map<String, Object> contact(String name, String email, boolean notify) {
+    Map<String, Object> body = new HashMap<>();
+    body.put("fullName", name);
+    body.put("email", email);
+    body.put("notifyDeliveries", notify);
+    return body;
+  }
+
+  /** E-posta işlem kaydedildikten sonra arka planda gider. */
+  private static Notice awaitNotice(String email) throws InterruptedException {
+    for (int i = 0; i < 100; i++) {
+      for (Notice notice : SENT_NOTICES) {
+        if (notice.email().equals(email)) {
+          return notice;
+        }
+      }
+      Thread.sleep(50);
+    }
+    throw new AssertionError("E-posta gitmedi: " + email);
+  }
 
   private static String publicTracking(String tenant, String token) {
     return "/api/v1/public/tracking/" + tenant + "/" + token;

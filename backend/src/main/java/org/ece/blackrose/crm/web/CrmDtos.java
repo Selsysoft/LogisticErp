@@ -49,10 +49,17 @@ public final class CrmDtos {
       @NotBlank @Size(max = 200) String fullName,
       @Size(max = 100) String title,
       @Email @Size(max = 254) String email,
-      @Size(max = 30) String phone) {}
+      @Size(max = 30) String phone,
+      boolean notifyDeliveries) {}
 
   public record ContactResponse(
-      UUID id, UUID accountId, String fullName, String title, String email, String phone) {}
+      UUID id,
+      UUID accountId,
+      String fullName,
+      String title,
+      String email,
+      String phone,
+      boolean notifyDeliveries) {}
 
   public record SaveOpportunityRequest(
       @NotNull UUID accountId,

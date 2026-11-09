@@ -115,7 +115,8 @@ void i18n.use(initReactI18next).init({
             lastViewed: "Son açılış: {{at}}.",
             none: "Etkin bağlantı yok.",
             replaceHint:
-              "Yeni bağlantı oluşturulursa müşteriye verilen eski bağlantı çalışmaz olur.",
+              "Yeni bağlantı oluşturulur veya iptal edilirse müşteriye verilen ve teslim e-postasıyla gönderilen eski bağlantılar çalışmaz olur.",
+            count: "Etkin bağlantı sayısı: {{count}} (teslim e-postasıyla gidenler dahil).",
             create: "Bağlantı oluştur",
             replace: "Yeni bağlantı oluştur",
             revoke: "Bağlantıyı iptal et",
@@ -436,6 +437,9 @@ void i18n.use(initReactI18next).init({
             title: "Unvan",
             email: "E-posta",
             phone: "Telefon",
+            deliveryNotice: "Teslim bildirimi",
+            notifyDeliveries: "Sefer teslim edilince takip bağlantılı e-posta alsın",
+            yes: "Evet",
             subject: "Konu",
             activityType: "Aktivite türü",
             opportunity: "Fırsat",
@@ -496,6 +500,7 @@ void i18n.use(initReactI18next).init({
           action: {
             newCustomer: "Müşteri ekle",
             newContact: "Kişi ekle",
+            editContact: "Düzenle",
             newActivity: "Aktivite ekle",
             complete: "Tamamla",
             newOpportunity: "Fırsat ekle",

@@ -17,6 +17,7 @@ export interface Contact {
   title: string | null;
   email: string | null;
   phone: string | null;
+  notifyDeliveries: boolean;
 }
 
 export interface Opportunity {

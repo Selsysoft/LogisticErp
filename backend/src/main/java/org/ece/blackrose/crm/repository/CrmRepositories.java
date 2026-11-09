@@ -36,6 +36,8 @@ public final class CrmRepositories {
   public interface ContactRepository extends JpaRepository<Contact, UUID> {
 
     List<Contact> findByAccountIdOrderByFullName(UUID accountId);
+
+    List<Contact> findByAccountIdAndNotifyDeliveriesTrue(UUID accountId);
   }
 
   public interface FunnelRow {

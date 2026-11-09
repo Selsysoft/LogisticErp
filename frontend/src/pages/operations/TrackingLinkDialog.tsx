@@ -19,6 +19,7 @@ import { formatDateTime } from "./common";
 
 interface LinkStatus {
   active: boolean;
+  activeCount: number;
   createdAt: string | null;
   createdBy: string | null;
   expiresAt: string | null;
@@ -110,6 +111,7 @@ export function TrackingLinkDialog({
               {link.active &&
                 link.lastViewedAt &&
                 ` ${t("tracking.link.lastViewed", { at: formatDateTime(link.lastViewedAt) })}`}
+              {link.activeCount > 1 && ` ${t("tracking.link.count", { count: link.activeCount })}`}
             </Alert>
           )}
           {canEdit && link?.active && !url && (
