@@ -75,6 +75,49 @@ public final class CsvRows {
     return rows;
   }
 
+  /** Excel'in "1.500" gibi yalnız binlik ayırıcılı yazımı 1,5 mi 1500 mü belirsizdir. */
+  private static final java.util.regex.Pattern AMBIGUOUS_THOUSANDS =
+      java.util.regex.Pattern.compile("-?\\d{1,3}(\\.\\d{3})+");
+
+  /** Açılış verisinde belirsiz sayı sessizce yanlış okunmasın diye reddedilir. */
+  public static boolean ambiguousThousands(String value) {
+    return AMBIGUOUS_THOUSANDS.matcher(value.replace(" ", "")).matches();
+  }
+
+  /** Başlık ve tür adlarını karşılaştırmak için: "Müşteri kodu" → "MUSTERI_KODU". */
+  public static String normalize(String value) {
+    return value
+        .strip()
+        .toUpperCase(new java.util.Locale("tr"))
+        .replace('Ü', 'U')
+        .replace('Ş', 'S')
+        .replace('İ', 'I')
+        .replace('Ğ', 'G')
+        .replace('Ç', 'C')
+        .replace('Ö', 'O')
+        .replace(' ', '_');
+  }
+
+  /** Sütun adı → sıra; aynı ad iki kez varsa ilki geçerlidir. */
+  public static java.util.Map<String, Integer> headerIndex(List<String> header) {
+    java.util.Map<String, Integer> index = new java.util.HashMap<>();
+    for (int i = 0; i < header.size(); i++) {
+      index.putIfAbsent(normalize(header.get(i)), i);
+    }
+    return index;
+  }
+
+  /** Verilen adlardan ilk bulunan sütunun sırası; yoksa -1. */
+  public static int column(java.util.Map<String, Integer> index, String... names) {
+    for (String name : names) {
+      Integer i = index.get(name);
+      if (i != null) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   /** Başlık satırının hücreleri; sütunları adla eşlemek için. */
   public static List<String> header(byte[] content) {
     String text = new String(content, StandardCharsets.UTF_8);

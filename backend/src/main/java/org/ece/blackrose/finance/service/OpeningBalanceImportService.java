@@ -10,7 +10,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Pattern;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.common.money.Money;
 import org.ece.blackrose.finance.domain.Account;
@@ -73,9 +72,6 @@ public class OpeningBalanceImportService {
       int postings,
       List<Total> totals,
       List<Row> rows) {}
-
-  /** Excel'in "1.500" gibi yalnız binlik ayırıcılı yazımı 1,5 mi 1500 mü belirsizdir. */
-  private static final Pattern AMBIGUOUS_THOUSANDS = Pattern.compile("-?\\d{1,3}(\\.\\d{3})+");
 
   private static final Map<String, AccountType> TYPES = new HashMap<>();
 
@@ -307,7 +303,7 @@ public class OpeningBalanceImportService {
       throw new RowException("Para birimi tanımlı değil: " + currency);
     }
     String amountText = line.required(columns.balance(), "Bakiye");
-    if (AMBIGUOUS_THOUSANDS.matcher(amountText.replace(" ", "")).matches()) {
+    if (CsvRows.ambiguousThousands(amountText)) {
       throw new RowException(
           "Bakiye belirsiz: "
               + amountText
@@ -355,18 +351,8 @@ public class OpeningBalanceImportService {
         line.number(), code, name, type, taxNumber, currency, balance, rate, existing);
   }
 
-  /** Türkçe harfleri sadeleştirir: "Müşteri" → "MUSTERI". */
   static String normalize(String value) {
-    return value
-        .strip()
-        .toUpperCase(new Locale("tr"))
-        .replace('Ü', 'U')
-        .replace('Ş', 'S')
-        .replace('İ', 'I')
-        .replace('Ğ', 'G')
-        .replace('Ç', 'C')
-        .replace('Ö', 'O')
-        .replace(' ', '_');
+    return CsvRows.normalize(value);
   }
 
   /** Sütunlar başlık adıyla bulunur; sıra serbesttir. */
@@ -374,10 +360,7 @@ public class OpeningBalanceImportService {
       int code, int name, int type, int currency, int balance, int taxNumber, int rate) {
 
     static Columns of(List<String> header) {
-      Map<String, Integer> index = new HashMap<>();
-      for (int i = 0; i < header.size(); i++) {
-        index.putIfAbsent(normalize(header.get(i)), i);
-      }
+      Map<String, Integer> index = CsvRows.headerIndex(header);
       int code = find(index, "KOD", "CARI_KOD", "CARI_KODU");
       int name = find(index, "AD", "UNVAN", "CARI_ADI");
       int type = find(index, "TUR", "TIP", "CARI_TURU");
@@ -412,13 +395,7 @@ public class OpeningBalanceImportService {
     }
 
     private static int find(Map<String, Integer> index, String... names) {
-      for (String name : names) {
-        Integer i = index.get(name);
-        if (i != null) {
-          return i;
-        }
-      }
-      return -1;
+      return CsvRows.column(index, names);
     }
   }
 }

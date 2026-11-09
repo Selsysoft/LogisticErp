@@ -48,6 +48,8 @@ public final class WarehouseRepositories {
     boolean existsByWarehouseIdAndCode(UUID warehouseId, String code);
 
     List<WarehouseBin> findByWarehouseIdOrderByCode(UUID warehouseId);
+
+    Optional<WarehouseBin> findByWarehouseIdAndCode(UUID warehouseId, String code);
   }
 
   public interface StockItemRepository extends JpaRepository<StockItem, UUID> {
@@ -55,6 +57,8 @@ public final class WarehouseRepositories {
     boolean existsByAccountIdAndSku(UUID accountId, String sku);
 
     List<StockItem> findAllByOrderBySku();
+
+    Optional<StockItem> findByAccountIdAndSku(UUID accountId, String sku);
   }
 
   public interface StockBalanceRepository extends JpaRepository<StockBalance, UUID> {
@@ -67,6 +71,10 @@ public final class WarehouseRepositories {
         UUID warehouseId, BigDecimal quantity);
 
     Optional<StockBalance> findFirstByItemIdAndLotNo(UUID itemId, String lotNo);
+
+    /** Kilitsiz; salt okunur önizlemede kullanılır. */
+    boolean existsByBinIdAndItemIdAndLotNoAndQuantityGreaterThan(
+        UUID binId, UUID itemId, String lotNo, java.math.BigDecimal quantity);
 
     @Query(
         """

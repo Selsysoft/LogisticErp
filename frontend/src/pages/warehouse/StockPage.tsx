@@ -24,6 +24,7 @@ import {
   useWarehouseOptions,
   useWarehouses,
 } from "./common";
+import { OpeningStockDialog } from "./OpeningStockDialog";
 import { Balance } from "./types";
 
 function ReceiptDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
@@ -192,6 +193,7 @@ export function StockPage() {
   const [warehouseId, setWarehouseId] = useState("");
   const [expiresBy, setExpiresBy] = useState("");
   const [receipt, setReceipt] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [issue, setIssue] = useState<Balance | null>(null);
   const [release, setRelease] = useState<Balance | null>(null);
 
@@ -252,11 +254,22 @@ export function StockPage() {
           slotProps={{ inputLabel: { shrink: true } }}
         />
         {canEdit && (
+          <Button variant="outlined" onClick={() => setImporting(true)}>
+            {t("warehouse.opening.open")}
+          </Button>
+        )}
+        {canEdit && (
           <Button variant="contained" onClick={() => setReceipt(true)}>
             {t("warehouse.action.receipt")}
           </Button>
         )}
       </SectionHeader>
+      {importing && (
+        <OpeningStockDialog
+          onClose={() => setImporting(false)}
+          onImported={() => void client.invalidateQueries({ queryKey: ["warehouse"] })}
+        />
+      )}
       <QueryState isPending={balances.isPending} error={balances.error} />
       {balances.data && (
         <DataTable

@@ -72,6 +72,7 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - ✅ G2 Stok (müşteri sahipli, lot/seri) + giriş/çıkış
 - ✅ G3 Elleçleme + 3PL faturalama
 - ✅ G4 Sayım/envanter
+- ✅ G5 Önceki sistemden açılış stoğu içe aktarma — Depo > Stok'ta CSV ile önizleme ve ya-hep-ya-hiç içe aktarma; her satır "Açılış stoğu" referanslı mal kabulü, ürün ve göz yoksa açılır, dolu göz/ürün/lot ve belirsiz miktar reddedilir
 
 ## EPİK H — Uluslararası/Gümrük/ADR (Faz 7) — P1
 - ✅ H1 Gümrük beyanı

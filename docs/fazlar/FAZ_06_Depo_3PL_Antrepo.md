@@ -25,6 +25,7 @@
 > - Antrepo deposuna giren mal "antrepo rejiminde" işaretlenir ve gümrük işlemi girilmeden çıkamaz. Beyanname yalnız numara olarak
 >   tutulur; gerçek gümrük akışı Faz 7'de bağlanacak. Antrepo kuralları gümrük müşaviriyle doğrulanmalıdır.
 > - Depo faturası yasal e-Fatura değildir. `WAREHOUSE_INVOICE` izni finans rollerindedir, depo rolünde yoktur; rol dağılımı varsayımdır.
+> - Açılış stoğu (Depo > Stok > "Açılış stoğu içe aktar") CSV ile yüklenir; sütunlar başlık adıyla bulunur (Müşteri kodu, Ürün kodu, Göz, Miktar; yeni ürün için Ürün adı ve Birim; isteğe bağlı Lot, Son kullanma). Her satır "Açılış stoğu" referanslı bir mal kabulüdür: göz, lot, son kullanma, antrepo ve faturalanmış dönem kuralları normal girişle aynıdır, depolama ücreti açılış tarihinden işler, yanlış satır hareketlerden ters çevrilir. Müşteri carisi önceden açılmış olmalıdır (önce cari açılış bakiyesi yüklenir); ürün ve göz yoksa açılır. Önce önizlenir, tek hatalı satır varsa hiçbir şey yazılmaz. Aynı göz, ürün ve lotta stok varsa satır reddedilir; "1.500" gibi belirsiz miktar reddedilir. Açık sayım varken yüklenemez.
 
 **Amaç:** Depolama ve üçüncü parti lojistik (3PL) süreçleri: depo/antrepo, raf/göz, stok sahipliği
 (müşteri malı), mal kabul/sevk, elleçleme ve depo faturalaması.
