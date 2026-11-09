@@ -14,6 +14,8 @@ services:
       POSTGRES_PASSWORD: blackrose
     tmpfs:
       - /var/lib/postgresql/data
+    # Veri bellekte (tmpfs) tutulur ve bu sınıra dahildir.
+    mem_limit: 768m
 
   mailpit:
     image: axllent/mailpit:v1.27
@@ -23,6 +25,8 @@ services:
   backend:
     build: ./backend
     depends_on: [postgres, mailpit]
+    # İmaj belleğin %70'ini heap'e ayırır; sınırsız bırakılırsa Docker VM'inin tamamına göre büyür.
+    mem_limit: 1g
     environment:
       SPRING_PROFILES_ACTIVE: dev
       DB_URL: jdbc:postgresql://postgres:5432/blackrose

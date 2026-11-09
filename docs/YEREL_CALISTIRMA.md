@@ -33,6 +33,10 @@ Uygulama: http://localhost:5173. `-Djava.version=17` yalnız JDK 21 kurulu deği
  "ownerEmail":"patron@acme.test","ownerFullName":"Firma Sahibi"}
 ```
 
+## Bellek
+
+Backend testleri (`mvn verify`) ve uçtan uca yığın aynı anda Docker, tarayıcı ve IDE ile çalışınca 16 GB'lık makinede bellek tükenebilir. Bu yüzden sınırlar konmuştur: test JVM'i en çok 1 GB heap kullanır (`argLine`, `-DargLine=...` ile değiştirilebilir), test profilinde her Spring bağlamı en çok 5 veritabanı bağlantısı açar, uçtan uca yığında backend 1 GB, PostgreSQL 768 MB ile sınırlıdır. Ölçümde tam backend doğrulaması sırasında Java süreçleri en çok yaklaşık 1,25 GB kullandı. Testlerden önce kullanılmayan geliştirme konteynerlerini durdurmak (`docker stop blackrose-backend blackrose-web`, geri açmak için `docker start ...`) ve backend testleriyle uçtan uca yığını aynı anda çalıştırmamak önerilir.
+
 ## Uçtan uca testler
 Üretim web sunucusu imajı (nginx, CSP), backend, boş bir PostgreSQL ve e-postaları yakalayan Mailpit ile tam yığın açılır; testler Playwright ile gerçek tarayıcıda çalışır.
 ```

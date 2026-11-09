@@ -27,6 +27,9 @@
         <tomcat.version>10.1.61</tomcat.version>
         <postgresql.version>42.7.14</postgresql.version>
         <jackson-bom.version>2.21.8</jackson-bom.version>
+        <!-- Test JVM'i sınırsız bırakılırsa makine belleğinin dörtte birine kadar büyür; geliştirici
+             makinesinde Docker ve tarayıcıyla birlikte bellek tükeniyordu. -DargLine=... ile ezilebilir. -->
+        <argLine>-Xmx1g</argLine>
     </properties>
 
     <dependencies>

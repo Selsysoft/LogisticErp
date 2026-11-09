@@ -26,3 +26,9 @@ app:
       password-reset-per-minute: 100000
       refresh-per-minute: 100000
       tracking-per-minute: 100000
+spring:
+  datasource:
+    hikari:
+      # Testler 3-4 ayrı Spring bağlamı açar; her biri varsayılan 10 bağlantı tutmasın.
+      maximum-pool-size: 5
+      minimum-idle: 1
