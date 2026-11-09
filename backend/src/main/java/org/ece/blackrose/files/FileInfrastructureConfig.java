@@ -39,6 +39,16 @@ public class FileInfrastructureConfig {
   @Bean
   @ConditionalOnProperty(name = "app.files.scan.mode", havingValue = "none", matchIfMissing = true)
   FileScanner noFileScanner() {
-    return content -> null;
+    return new FileScanner() {
+      @Override
+      public String findThreat(java.io.InputStream content) {
+        return null;
+      }
+
+      @Override
+      public boolean enabled() {
+        return false;
+      }
+    };
   }
 }

@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 public class ClamAvScanner implements FileScanner {
 
   private static final byte[] COMMAND = "zINSTREAM\0".getBytes(StandardCharsets.US_ASCII);
+  private static final byte[] PING = "zPING\0".getBytes(StandardCharsets.US_ASCII);
   private static final int CHUNK_BYTES = 64 * 1024;
   private static final int CONNECT_TIMEOUT_MILLIS = 3_000;
   private static final int READ_TIMEOUT_MILLIS = 60_000;
@@ -47,6 +48,21 @@ public class ClamAvScanner implements FileScanner {
       out.writeInt(0);
       out.flush();
       return parse(readReply(socket.getInputStream()));
+    }
+  }
+
+  /** clamd'nin PING komutuna PONG dönmesini bekler. */
+  @Override
+  public void check() throws IOException {
+    try (Socket socket = new Socket()) {
+      socket.connect(new InetSocketAddress(host, port), CONNECT_TIMEOUT_MILLIS);
+      socket.setSoTimeout(CONNECT_TIMEOUT_MILLIS);
+      socket.getOutputStream().write(PING);
+      socket.getOutputStream().flush();
+      String reply = readReply(socket.getInputStream());
+      if (!"PONG".equals(reply)) {
+        throw new IOException("Beklenmeyen tarayıcı yanıtı: " + reply);
+      }
     }
   }
 

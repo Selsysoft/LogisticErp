@@ -24,6 +24,14 @@ public interface PaymentProvider {
 
   ChargeResult charge(ChargeRequest request);
 
+  /** Konsolda gösterilecek sağlayıcı adı. */
+  String describe();
+
+  /** Deneme sağlayıcısı gerçek tahsilat yapmaz; konsol bunu uyarı olarak gösterir. */
+  default boolean test() {
+    return false;
+  }
+
   /** Yalnız dev/test içindir. Kodu "-fail" ile biten firmanın ödemesi reddedilir. */
   @Component
   @Profile("!prod")
@@ -38,6 +46,16 @@ public interface PaymentProvider {
         return new ChargeResult(false, null, "Deneme sağlayıcısı ödemeyi reddetti.");
       }
       return new ChargeResult(true, "MOCK-" + request.idempotencyKey(), null);
+    }
+
+    @Override
+    public String describe() {
+      return "Deneme sağlayıcısı";
+    }
+
+    @Override
+    public boolean test() {
+      return true;
     }
   }
 

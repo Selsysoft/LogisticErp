@@ -69,6 +69,10 @@ Oturum gerektirmeyen uçlarda IP başına dakikalık sınır vardır: giriş 30,
 
 Yerel diskten S3'e geçişte anahtar düzeni aynıdır (`tenant_<kod>/<uuid>`), `FILES_ROOT` içeriği bucket köküne olduğu gibi kopyalanır. Şifreleme ve yaşam döngüsü bucket tarafında ayarlanmalıdır. clamd varsayılan `StreamMaxLength` değeri 25 MB'tır, yükleme sınırı 20 MB olduğu için yeterlidir. Mevcut dosyalar geriye dönük taranmaz.
 
+## Dış bağlantıların denetimi
+
+SaaS konsolunun Sistem sağlığı sekmesindeki "Dış bağlantılar" tablosu e-posta (SMTP bağlantısı ve kimlik doğrulaması), dosya deposu (yerel klasöre yazma veya S3 bucket erişimi), virüs tarama (clamd `PING`) ve ödeme sağlayıcısının durumunu gösterir. E-posta gönderim hataları yalnız günlüğe yazıldığından yanlış SMTP ayarı ilk burada görünür; kurulumdan sonra bu tablo kontrol edilmelidir. Erişilemeyen bağlantı genel durumu "Dikkat gerekiyor"a, dosya deposu ise "Kritik"e çeker. Her bağlantı en çok 8 sn beklenir, sonuç 60 sn saklanır; "Yeniden denetle" beklemeden yeniler. Deneme ödeme sağlayıcısı uyarı olarak gösterilir.
+
 ## Saat dilimi
 
 Sunucunun saat dilimi önemli değildir, UTC bırakılabilir. "Bugün" her yerde firmanın kayıtlı saat dilimiyle hesaplanır: vadeler, deneme süresi, faturalama, günlük özet, SaaS konsolundaki gecikmiş fatura sayısı. TCMB kur çekimi İstanbul saatine göre zamanlanır. Kaynakta sunucu saat dilimine bağlı tarih çağrısı (`LocalDate.now()` vb.) bulunmasını `TimeZoneUsageTest` engeller.

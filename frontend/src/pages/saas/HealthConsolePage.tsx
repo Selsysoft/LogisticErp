@@ -1,5 +1,5 @@
-import { Alert, Stack, TablePagination, Typography } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
+import { Alert, Button, Chip, Stack, TablePagination, Typography } from "@mui/material";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DataTable, QueryState, SectionHeader } from "../finance/common";
@@ -11,15 +11,32 @@ import { AuditRow, Health } from "./types";
 const REFRESH_MILLIS = 30_000;
 const SEVERITY = { OK: "success", DEGRADED: "warning", CRITICAL: "error" } as const;
 const AUDIT_PAGE_SIZE = 50;
+const DEPENDENCY_COLOR = {
+  UP: "success",
+  DOWN: "error",
+  WARNING: "warning",
+  NOT_CONFIGURED: "default",
+} as const;
 
 export function HealthConsolePage() {
   const { t } = useTranslation();
+  const client = useQueryClient();
+  const [rechecking, setRechecking] = useState(false);
   const health = useQuery({
     queryKey: ["saas", "health"],
     queryFn: () => adminGet<Health>("/health"),
     refetchInterval: REFRESH_MILLIS,
   });
   const data = health.data;
+  /** Dış bağımlılıklar bir dakika saklanır; yönetici beklemeden yeniden denetletebilir. */
+  const recheck = async () => {
+    setRechecking(true);
+    try {
+      client.setQueryData(["saas", "health"], await adminGet<Health>("/health?fresh=true"));
+    } finally {
+      setRechecking(false);
+    }
+  };
   return (
     <Stack spacing={2}>
       <SectionHeader title={t("saas.tabs.health")} />
@@ -68,6 +85,34 @@ export function HealthConsolePage() {
               />
             ))}
           </StatGrid>
+          <SectionHeader title={t("saas.health.dependencies")}>
+            <Button variant="outlined" size="small" disabled={rechecking} onClick={recheck}>
+              {t("saas.health.recheck")}
+            </Button>
+          </SectionHeader>
+          <DataTable
+            rows={data.dependencies}
+            rowKey={(row) => row.key}
+            columns={[
+              { header: t("saas.health.dependency"), render: (row) => row.name },
+              {
+                header: t("saas.health.state"),
+                render: (row) => (
+                  <Chip
+                    size="small"
+                    color={DEPENDENCY_COLOR[row.state]}
+                    label={t(`saas.dependencyState.${row.state}`)}
+                  />
+                ),
+              },
+              { header: t("saas.health.detail"), render: (row) => row.detail },
+              {
+                header: t("saas.health.duration"),
+                align: "right",
+                render: (row) => (row.state === "UP" ? `${row.millis} ms` : "—"),
+              },
+            ]}
+          />
           <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 700 }}>
             {t("saas.health.slowest")}
           </Typography>

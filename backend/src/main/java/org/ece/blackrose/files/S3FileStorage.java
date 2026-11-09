@@ -67,6 +67,20 @@ public class S3FileStorage implements FileStorage, AutoCloseable {
   }
 
   @Override
+  public void check() throws IOException {
+    try {
+      client.headBucket(request -> request.bucket(bucket));
+    } catch (SdkException ex) {
+      throw new IOException("Bucket'a erişilemiyor: " + bucket, ex);
+    }
+  }
+
+  @Override
+  public String describe() {
+    return "S3 (" + bucket + ")";
+  }
+
+  @Override
   public void close() {
     client.close();
   }

@@ -15,6 +15,7 @@ import org.ece.blackrose.saas.domain.SaasTypes.LimitedResource;
 import org.ece.blackrose.saas.domain.SaasTypes.SaasInvoiceStatus;
 import org.ece.blackrose.saas.domain.SaasTypes.SubscriptionStatus;
 import org.ece.blackrose.saas.domain.SaasTypes.SuspendReason;
+import org.ece.blackrose.saas.service.DependencyHealth.Dependency;
 import org.ece.blackrose.saas.service.PresenceTracker.Presence;
 import org.ece.blackrose.tenant.domain.TenantStatus;
 
@@ -113,7 +114,8 @@ public final class SaasDtos {
       Map<TenantStatus, Long> tenantsByStatus,
       long onlineActive,
       long onlineIdle,
-      long overdueInvoices) {}
+      long overdueInvoices,
+      List<Dependency> dependencies) {}
 
   /** Firmanın kendi aboneliği. */
   public record MySubscriptionResponse(

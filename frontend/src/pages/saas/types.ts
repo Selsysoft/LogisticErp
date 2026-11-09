@@ -72,6 +72,16 @@ export interface Health {
   onlineActive: number;
   onlineIdle: number;
   overdueInvoices: number;
+  dependencies: Dependency[];
+}
+
+export interface Dependency {
+  key: string;
+  name: string;
+  state: "UP" | "DOWN" | "WARNING" | "NOT_CONFIGURED";
+  detail: string;
+  millis: number;
+  essential: boolean;
 }
 
 export interface AuditRow {

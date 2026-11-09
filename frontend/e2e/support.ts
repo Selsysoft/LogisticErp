@@ -67,7 +67,8 @@ export async function login(page: Page, state: TenantState, password = state.pas
   await page.getByLabel("E-posta").fill(state.email);
   await page.getByLabel("Şifre", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Giriş yap" }).click();
-  await expect(page).not.toHaveURL(/\/login/);
+  // Şifre özeti bilerek yavaştır; paralel testlerde giriş birkaç saniyeyi bulabilir.
+  await expect(page).not.toHaveURL(/\/login/, { timeout: 30_000 });
 }
 
 /**

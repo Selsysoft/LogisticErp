@@ -29,6 +29,19 @@ public class LocalFileStorage implements FileStorage {
     return Files.newInputStream(resolve(key));
   }
 
+  @Override
+  public void check() throws IOException {
+    Files.createDirectories(root);
+    if (!Files.isWritable(root)) {
+      throw new IOException("Dosya klasörüne yazılamıyor: " + root);
+    }
+  }
+
+  @Override
+  public String describe() {
+    return "Yerel disk";
+  }
+
   private Path resolve(String key) {
     Path path = root.resolve(key).normalize();
     if (!path.startsWith(root)) {

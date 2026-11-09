@@ -83,4 +83,37 @@ class ClamAvScannerTest {
                     .findThreat(new ByteArrayInputStream(CONTENT)))
         .isInstanceOf(IOException.class);
   }
+
+  @Test
+  void pingeYanitVerenTarayiciSaglikliSayilir() throws Exception {
+    CompletableFuture<String> command = new CompletableFuture<>();
+    pingWithReply("PONG", command);
+    assertThat(command.get()).isEqualTo("zPING" + (char) 0);
+  }
+
+  @Test
+  void pingeBaskaYanitVerenTarayiciHataVerir() {
+    assertThatThrownBy(() -> pingWithReply("UNKNOWN COMMAND", new CompletableFuture<>()))
+        .isInstanceOf(IOException.class)
+        .hasMessageContaining("UNKNOWN COMMAND");
+  }
+
+  private static void pingWithReply(String reply, CompletableFuture<String> command)
+      throws IOException {
+    try (ServerSocket server = new ServerSocket(0)) {
+      CompletableFuture.runAsync(
+          () -> {
+            try (Socket socket = server.accept()) {
+              byte[] received = socket.getInputStream().readNBytes("zPING".length() + 1);
+              command.complete(new String(received, StandardCharsets.US_ASCII));
+              socket
+                  .getOutputStream()
+                  .write((reply + (char) 0).getBytes(StandardCharsets.US_ASCII));
+            } catch (IOException ex) {
+              command.completeExceptionally(ex);
+            }
+          });
+      new ClamAvScanner("localhost", server.getLocalPort()).check();
+    }
+  }
 }

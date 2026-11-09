@@ -280,6 +280,19 @@ class SaasIT extends AbstractIntegrationTest {
     assertThat(health.get("databaseUp").asBoolean()).isTrue();
     assertThat(health.get("requests").asLong()).isGreaterThan(0);
     assertThat(health.get("onlineActive").asLong()).isGreaterThanOrEqualTo(1);
+    // Testte SMTP ve virüs tarama tanımlı değildir, dosyalar yerel diske yazılır, ödeme deneme
+    // sağlayıcısıdır.
+    Map<String, String> states = new HashMap<>();
+    health
+        .get("dependencies")
+        .forEach(d -> states.put(d.get("key").asText(), d.get("state").asText()));
+    assertThat(states)
+        .containsEntry("mail", "NOT_CONFIGURED")
+        .containsEntry("storage", "UP")
+        .containsEntry("scanner", "NOT_CONFIGURED")
+        .containsEntry("payment", "WARNING");
+    mvc.perform(get(ADMIN + "/health").param("fresh", "true").with(bearer(token)))
+        .andExpect(status().isOk());
 
     // Firma yöneticisi konsola giremez.
     mvc.perform(get(ADMIN + "/tenants").with(bearer(ownerToken("saas-cons"))))

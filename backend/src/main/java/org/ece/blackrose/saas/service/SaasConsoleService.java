@@ -22,6 +22,8 @@ import org.ece.blackrose.saas.domain.Subscription;
 import org.ece.blackrose.saas.repository.SaasRepositories.PlanRepository;
 import org.ece.blackrose.saas.repository.SaasRepositories.SaasInvoiceRepository;
 import org.ece.blackrose.saas.repository.SaasRepositories.SubscriptionRepository;
+import org.ece.blackrose.saas.service.DependencyHealth.Dependency;
+import org.ece.blackrose.saas.service.DependencyHealth.State;
 import org.ece.blackrose.saas.web.SaasDtos.HealthResponse;
 import org.ece.blackrose.saas.web.SaasDtos.HealthStatus;
 import org.ece.blackrose.saas.web.SaasDtos.SlowEndpoint;
@@ -55,6 +57,8 @@ public class SaasConsoleService {
   private final DataSource dataSource;
   private final MeterRegistry metrics;
 
+  private final DependencyHealth dependencies;
+
   public SaasConsoleService(
       TenantRepository tenants,
       SubscriptionRepository subscriptions,
@@ -64,7 +68,9 @@ public class SaasConsoleService {
       PresenceTracker presence,
       JdbcTemplate jdbc,
       DataSource dataSource,
-      MeterRegistry metrics) {
+      MeterRegistry metrics,
+      DependencyHealth dependencies) {
+    this.dependencies = dependencies;
     this.tenants = tenants;
     this.subscriptions = subscriptions;
     this.plans = plans;
@@ -116,9 +122,21 @@ public class SaasConsoleService {
     }
   }
 
-  public HealthResponse health() {
+  public HealthResponse health(boolean fresh) {
     List<String> issues = new ArrayList<>();
     boolean critical = false;
+
+    if (fresh) {
+      dependencies.forget();
+    }
+    List<Dependency> external = dependencies.check();
+    for (Dependency dependency : external) {
+      if (dependency.state() == State.DOWN) {
+        issues.add(dependency.name() + ": " + dependency.detail());
+        // Dosya deposu yoksa yükleme ve indirme çalışmaz.
+        critical |= "storage".equals(dependency.key());
+      }
+    }
 
     boolean databaseUp = true;
     long started = System.nanoTime();
@@ -204,7 +222,8 @@ public class SaasConsoleService {
         byStatus,
         onlineActive,
         onlineIdle,
-        overdue);
+        overdue,
+        external);
   }
 
   /**
