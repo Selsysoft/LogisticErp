@@ -8,20 +8,20 @@ import java.util.Base64;
 import java.util.HexFormat;
 
 /** Rastgele token üretir. Veritabanında yalnız SHA-256 özeti saklanır. */
-final class SecureTokens {
+public final class SecureTokens {
 
   private static final SecureRandom RANDOM = new SecureRandom();
   private static final int TOKEN_BYTES = 32;
 
   private SecureTokens() {}
 
-  static String generate() {
+  public static String generate() {
     byte[] bytes = new byte[TOKEN_BYTES];
     RANDOM.nextBytes(bytes);
     return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
   }
 
-  static String hash(String token) {
+  public static String hash(String token) {
     try {
       return HexFormat.of()
           .formatHex(

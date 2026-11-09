@@ -92,3 +92,4 @@ app:
       login-per-minute: ${RATE_LIMIT_LOGIN:30}
       password-reset-per-minute: ${RATE_LIMIT_PASSWORD_RESET:10}
       refresh-per-minute: ${RATE_LIMIT_REFRESH:300}
+      tracking-per-minute: ${RATE_LIMIT_TRACKING:60}

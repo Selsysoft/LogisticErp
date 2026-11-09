@@ -59,11 +59,15 @@ Bu işlem denetim günlüğüne yazılmaz; kim ne zaman yaptığı ayrıca kayde
 
 ## IP sınırı
 
-Oturum gerektirmeyen uçlarda IP başına dakikalık sınır vardır: giriş 30, şifre sıfırlama 10, token yenileme 300 (`RATE_LIMIT_*`). Aşılınca 429 ve `Retry-After` döner.
+Oturum gerektirmeyen uçlarda IP başına dakikalık sınır vardır: giriş 30, şifre sıfırlama 10, token yenileme 300, müşteri takip bağlantısı 60 (`RATE_LIMIT_*`, takip için `RATE_LIMIT_TRACKING`). Aşılınca 429 ve `Retry-After` döner.
 
 - Sayaçlar bellektedir ve örnek başınadır: 3 örnekte fiili sınır 3 katıdır, yeniden başlatmada sıfırlanır.
 - Tek IP arkasındaki kalabalık bir ofis için sınırlar gerekirse yükseltilmelidir.
 - Daha güçlü koruma (WAF, CDN) bu sınırın yerine geçmez, önüne konur.
+
+## Müşteri takip bağlantısı
+
+Sefer detayındaki "Müşteri takibi" ile müşteriye giriş gerektirmeyen bir bağlantı verilir (`/track/<firma>/<anahtar>`). Bağlantı durum adımlarını, şehirleri, planlanan tarihleri, teslim zamanını ve teslim alanın baş harflerini gösterir; fiyat, sürücü, araç, konum ve notlar gösterilmez. Anahtar 256 bit rastgeledir, veritabanında yalnız SHA-256 özeti tutulur ve tam bağlantı yalnız oluşturulurken bir kez gösterilir. Bağlantı 60 gün geçerlidir; yenisi eskisini geçersiz kılar, iptal edilebilir. Geçersiz, süresi dolmuş ve iptal edilmiş bağlantı aynı yanıtı alır. Yanıt önbelleğe alınmaz (`Cache-Control: no-store`) ve arama motorlarına kapalıdır (`X-Robots-Tag`). Oluşturma ve iptal denetim günlüğüne yazılır; görüntülenme sayısı ofiste görünür.
 
 ## Dosyalar
 

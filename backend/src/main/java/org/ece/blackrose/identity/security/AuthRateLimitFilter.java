@@ -41,7 +41,12 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
-    return !"POST".equals(request.getMethod()) || group(request.getRequestURI()) == null;
+    String group = group(request.getRequestURI());
+    if (group == null) {
+      return true;
+    }
+    // Takip bağlantısı GET ile açılır; anahtar taramasını yavaşlatmak için o da sayılır.
+    return !"POST".equals(request.getMethod()) && !"tracking".equals(group);
   }
 
   @Override
@@ -69,6 +74,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     return switch (group) {
       case "login" -> limits.loginPerMinute();
       case "reset" -> limits.passwordResetPerMinute();
+      case "tracking" -> limits.trackingPerMinute();
       default -> limits.refreshPerMinute();
     };
   }
@@ -79,6 +85,9 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     }
     if (path.startsWith("/api/v1/auth/password-reset/")) {
       return "reset";
+    }
+    if (path.startsWith("/api/v1/public/tracking/")) {
+      return "tracking";
     }
     return path.equals("/api/v1/auth/refresh") ? "refresh" : null;
   }

@@ -1,5 +1,6 @@
 package org.ece.blackrose.identity;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,7 +12,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.ResultActions;
 
-@TestPropertySource(properties = "app.security.rate-limit.login-per-minute=3")
+@TestPropertySource(
+    properties = {
+      "app.security.rate-limit.login-per-minute=3",
+      "app.security.rate-limit.tracking-per-minute=3"
+    })
 class AuthRateLimitIT extends AbstractIntegrationTest {
 
   private ResultActions adminLogin(String ip) throws Exception {
@@ -47,6 +52,28 @@ class AuthRateLimitIT extends AbstractIntegrationTest {
     }
 
     tenantLogin("10.0.0.3").andExpect(status().isTooManyRequests());
+  }
+
+  @Test
+  void takipAnahtariTaramasiDaSinirlanir() throws Exception {
+    for (int i = 0; i < 3; i++) {
+      tracking("10.0.0.4").andExpect(status().is4xxClientError());
+    }
+
+    tracking("10.0.0.4")
+        .andExpect(status().isTooManyRequests())
+        .andExpect(header().exists("Retry-After"));
+    tracking("10.0.0.5").andExpect(status().is4xxClientError());
+  }
+
+  private ResultActions tracking(String ip) throws Exception {
+    return mvc.perform(
+        get("/api/v1/public/tracking/olmayan-firma/" + ip.replace('.', '-'))
+            .with(
+                request -> {
+                  request.setRemoteAddr(ip);
+                  return request;
+                }));
   }
 
   private ResultActions tenantLogin(String ip) throws Exception {

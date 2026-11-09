@@ -20,6 +20,7 @@ import { SetPasswordPage } from "./pages/SetPasswordPage";
 import { WarehouseLayout } from "./pages/warehouse/WarehouseLayout";
 
 const ContractsPage = lazyPage(() => import("./pages/crm/ContractsPage"), "ContractsPage");
+const TrackingPage = lazyPage(() => import("./pages/TrackingPage"), "TrackingPage");
 const CrossingsPage = lazyPage(() => import("./pages/customs/CrossingsPage"), "CrossingsPage");
 const DeclarationDetailPage = lazyPage(
   () => import("./pages/customs/DeclarationsPage"),
@@ -195,6 +196,7 @@ export function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/set-password" element={<SetPasswordPage />} />
         <Route path="/saas/login" element={<SaasLoginPage />} />
+        <Route path="/track/:tenant/:token" element={<TrackingPage />} />
         <Route path="/saas" element={<SaasLayout />}>
           <Route index element={<TenantsConsolePage />} />
           <Route path="plans" element={<PlansConsolePage />} />

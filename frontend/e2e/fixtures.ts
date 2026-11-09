@@ -138,6 +138,19 @@ export class Owner {
     return this.request("POST", `/shipment/shipments/${shipmentId}/status`, { status });
   }
 
+  /** Atama, yükleme, yola çıkış, teslim kanıtı ve teslimden geçmiş sefer. */
+  async deliver(shipmentId: string, legId: string, recipientName: string) {
+    await this.assign(legId, await this.vehicle(plate()), await this.driver(unique("Sürücü ")));
+    for (const status of ["PLANNED", "LOADED", "IN_TRANSIT"]) {
+      await this.moveTo(shipmentId, status);
+    }
+    await this.request("POST", `/shipment/shipments/${shipmentId}/pod`, {
+      recipientName,
+      deliveredAt: new Date().toISOString(),
+    });
+    await this.moveTo(shipmentId, "DELIVERED");
+  }
+
   async shipmentStatus(shipmentId: string) {
     return (await this.request<{ status: string }>("GET", `/shipment/shipments/${shipmentId}`))
       .status;

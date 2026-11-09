@@ -20,6 +20,7 @@ import {
 import { CostsSection, InvoiceSection } from "./FinanceSections";
 import { LegsSection } from "./LegsSection";
 import { Pod, Shipment, ShipmentDocument, ShipmentEvent } from "./types";
+import { TrackingLinkDialog } from "./TrackingLinkDialog";
 
 /** Çıkış ve varış ülkesi farklıysa CMR üç dilli ve Konvansiyon maddeli üretilir. */
 function InternationalSection({ shipment }: { shipment: Shipment }) {
@@ -367,6 +368,7 @@ export function ShipmentDetailPage() {
   const client = useQueryClient();
   const canDispatch = useCan("SHIPMENT_DISPATCH");
   const [cancelling, setCancelling] = useState(false);
+  const [tracking, setTracking] = useState(false);
   const shipment = useQuery({
     queryKey: ["shipment", "detail", id],
     queryFn: () => apiGet<Shipment>(`/shipment/shipments/${id}`),
@@ -394,6 +396,9 @@ export function ShipmentDetailPage() {
               {t(`operations.action.to.${next}`)}
             </Button>
           )}
+          <Button variant="outlined" onClick={() => setTracking(true)}>
+            {t("tracking.link.open")}
+          </Button>
           {canDispatch && canCancel(data.status) && (
             <Button color="error" onClick={() => setCancelling(true)}>
               {t("operations.action.cancel")}
@@ -438,6 +443,13 @@ export function ShipmentDetailPage() {
       <InvoiceSection shipment={data} />
       <FilesSection ownerType="SHIPMENT" ownerId={id} editPermission="SHIPMENT_DISPATCH" />
       <TimelineSection shipmentId={id} />
+      {tracking && (
+        <TrackingLinkDialog
+          shipmentId={id}
+          canEdit={canDispatch && data.status !== "CANCELLED"}
+          onClose={() => setTracking(false)}
+        />
+      )}
       {cancelling && (
         <FormDialog
           title={t("operations.action.cancel")}

@@ -13,6 +13,7 @@ import org.ece.blackrose.shipment.domain.ShipmentCargo;
 import org.ece.blackrose.shipment.domain.ShipmentDocument;
 import org.ece.blackrose.shipment.domain.ShipmentEvent;
 import org.ece.blackrose.shipment.domain.ShipmentLeg;
+import org.ece.blackrose.shipment.domain.ShipmentTrackingLink;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.DocumentStatus;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.DocumentType;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.InvoiceStatus;
@@ -22,6 +23,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -133,6 +135,21 @@ public final class ShipmentRepositories {
   public interface ShipmentEventRepository extends JpaRepository<ShipmentEvent, UUID> {
 
     List<ShipmentEvent> findByShipmentIdOrderByCreatedAt(UUID shipmentId);
+  }
+
+  public interface ShipmentTrackingLinkRepository
+      extends JpaRepository<ShipmentTrackingLink, UUID> {
+
+    Optional<ShipmentTrackingLink> findByTokenHash(String tokenHash);
+
+    List<ShipmentTrackingLink> findByShipmentIdAndRevokedAtIsNull(UUID shipmentId);
+
+    /** Görüntüleme sayacı; herkese açık istekte varlık güncellenmez, yarış da olmaz. */
+    @Modifying
+    @Query(
+        "update ShipmentTrackingLink l set l.viewCount = l.viewCount + 1, l.lastViewedAt = :now"
+            + " where l.id = :id")
+    void markViewed(@Param("id") UUID id, @Param("now") Instant now);
   }
 
   public interface ProofOfDeliveryRepository extends JpaRepository<ProofOfDelivery, UUID> {

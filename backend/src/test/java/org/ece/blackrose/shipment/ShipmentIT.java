@@ -2,6 +2,7 @@ package org.ece.blackrose.shipment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -651,7 +652,88 @@ class ShipmentIT extends AbstractIntegrationTest {
     assertThat(message).contains("eksik belge muayene").doesNotContain("MISSING");
   }
 
+  @Test
+  void trackingLinkShowsOnlyPublicFieldsUntilReplacedOrRevoked() throws Exception {
+    Setup s = setup("trk");
+    String id = deliveredShipment(s, "1000", "34TR01", "S1");
+    String link = "/api/v1/shipment/shipments/" + id + "/tracking-link";
+    send(s.tenant(), get(link))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.active").value(false));
+
+    String path =
+        body(post(s.tenant(), link, null).andExpect(status().isCreated())).get("path").asText();
+    assertThat(path).startsWith("/track/" + s.tenant() + "/");
+    String token = path.substring(path.lastIndexOf('/') + 1);
+    assertThat(token).hasSizeGreaterThanOrEqualTo(40);
+
+    // Oturum ve firma başlığı olmadan açılır; yalnız müşteriye uygun alanlar döner.
+    JsonNode view =
+        body(
+            mvc.perform(get(publicTracking(s.tenant(), token)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(header().string("X-Robots-Tag", "noindex, nofollow")));
+    List<String> fields = new ArrayList<>();
+    view.fieldNames().forEachRemaining(fields::add);
+    assertThat(fields)
+        .containsExactlyInAnyOrder(
+            "company",
+            "number",
+            "status",
+            "origin",
+            "destination",
+            "plannedPickup",
+            "plannedDelivery",
+            "steps",
+            "deliveredAt",
+            "recipientInitials");
+    assertThat(view.get("status").asText()).isEqualTo("DELIVERED");
+    assertThat(view.get("company").asText()).isEqualTo(s.tenant() + " Lojistik");
+    assertThat(view.get("recipientInitials").asText()).isEqualTo("T. A.");
+    List<String> steps = new ArrayList<>();
+    view.get("steps").forEach(step -> steps.add(step.get("status").asText()));
+    assertThat(steps).containsSubsequence("PLANNED", "LOADED", "IN_TRANSIT", "DELIVERED");
+
+    send(s.tenant(), get(link))
+        .andExpect(jsonPath("$.active").value(true))
+        .andExpect(jsonPath("$.viewCount").value(1));
+
+    // Bilinmeyen anahtar ile başka firmanın yolu aynı yanıtı alır.
+    mvc.perform(get(publicTracking(s.tenant(), "yanlis-anahtar")))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("TRACKING_NOT_FOUND"));
+    Setup other = setup("trk2");
+    mvc.perform(get(publicTracking(other.tenant(), token)))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("TRACKING_NOT_FOUND"));
+
+    // Yeni bağlantı eskisini geçersiz kılar; iptal sonrası hiçbiri açılmaz.
+    String next =
+        body(post(s.tenant(), link, null).andExpect(status().isCreated())).get("path").asText();
+    String nextToken = next.substring(next.lastIndexOf('/') + 1);
+    mvc.perform(get(publicTracking(s.tenant(), token))).andExpect(status().isNotFound());
+    mvc.perform(get(publicTracking(s.tenant(), nextToken))).andExpect(status().isOk());
+    send(s.tenant(), MockMvcRequestBuilders.delete(link)).andExpect(status().isNoContent());
+    mvc.perform(get(publicTracking(s.tenant(), nextToken))).andExpect(status().isNotFound());
+    send(s.tenant(), get(link)).andExpect(jsonPath("$.active").value(false));
+  }
+
+  @Test
+  void cancelledShipmentGetsNoTrackingLink() throws Exception {
+    Setup s = setup("trkc");
+    String id = create(s.tenant(), shipmentBody(s, "1000")).get("id").asText();
+    moveTo(s.tenant(), id, "CANCELLED").andExpect(status().isOk());
+    post(s.tenant(), "/api/v1/shipment/shipments/" + id + "/tracking-link", null)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SHIPMENT_CANCELLED"));
+  }
+
   // Yardımcılar
+
+  private static String publicTracking(String tenant, String token) {
+    return "/api/v1/public/tracking/" + tenant + "/" + token;
+  }
 
   private Setup setup(String prefix) throws Exception {
     String t = "shp-" + prefix;

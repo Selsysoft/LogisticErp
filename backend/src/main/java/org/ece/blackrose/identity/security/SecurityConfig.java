@@ -70,6 +70,8 @@ public class SecurityConfig {
                         "/api/v1/admin/auth/login",
                         "/api/v1/admin/auth/2fa/**")
                     .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/public/tracking/**")
+                    .permitAll()
                     .requestMatchers("/actuator/**", "/api/v1/admin/**")
                     .hasAuthority(JwtPrincipalConverter.SAAS_ADMIN_AUTHORITY)
                     .anyRequest()

@@ -25,3 +25,4 @@ app:
       login-per-minute: 100000
       password-reset-per-minute: 100000
       refresh-per-minute: 100000
+      tracking-per-minute: 100000
