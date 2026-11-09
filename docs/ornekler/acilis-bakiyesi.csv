@@ -1,0 +1,4 @@
+Kod;Ad;Tür;Para birimi;Bakiye;Kur;Vergi no
+M001;Örnek Müşteri A.Ş.;Müşteri;TRY;1500,00;;1234567890
+T001;Örnek Tedarikçi Ltd.;Tedarikçi;TRY;-2500,00;;
+M002;Örnek Dış Müşteri;Müşteri;EUR;200,00;35,40;

@@ -18,6 +18,7 @@ import { apiUpload } from "../../api/client";
 import { ErrorState } from "../../components/ErrorState";
 import { DataTable, formatAmount, formatDate, today } from "../finance/common";
 import { useWarehouses } from "./common";
+import { OPENING_STOCK_SAMPLE, downloadCsv } from "../importSamples";
 
 interface Result {
   applied: boolean;
@@ -42,20 +43,8 @@ interface Result {
   }[];
 }
 
-const SAMPLE =
-  "Müşteri kodu;Ürün kodu;Ürün adı;Birim;Göz;Lot;Son kullanma;Miktar\n" +
-  "M001;UN-50;Un 50 kg;ÇUVAL;A-01;L2401;31.12.2027;120\n" +
-  "M001;UN-50;Un 50 kg;ÇUVAL;A-02;L2401;31.12.2027;35\n" +
-  "M002;YAG-5;Ayçiçek yağı 5 L;KOLİ;B-07;;;12,5\n";
-
 function downloadSample() {
-  const blob = new Blob(["﻿" + SAMPLE], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "acilis-stogu-ornek.csv";
-  link.click();
-  URL.revokeObjectURL(url);
+  downloadCsv(OPENING_STOCK_SAMPLE, "acilis-stogu-ornek.csv");
 }
 
 /**

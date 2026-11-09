@@ -57,7 +57,7 @@ public final class CsvRows {
   private CsvRows() {}
 
   public static List<Line> parse(byte[] content) {
-    String text = new String(content, StandardCharsets.UTF_8);
+    String text = decode(content);
     if (!text.isEmpty() && text.charAt(0) == BOM) {
       text = text.substring(1);
     }
@@ -118,9 +118,26 @@ public final class CsvRows {
     return -1;
   }
 
+  /**
+   * UTF-8 olarak okur; geçerli UTF-8 değilse Türkçe Windows'un kodlamasıyla (Windows-1254) okur.
+   * Türkçe Excel'in klasik "CSV (noktalı virgülle ayrılmış)" kaydı bu kodlamayla yazılır.
+   */
+  public static String decode(byte[] content) {
+    try {
+      return StandardCharsets.UTF_8
+          .newDecoder()
+          .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+          .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+          .decode(java.nio.ByteBuffer.wrap(content))
+          .toString();
+    } catch (java.nio.charset.CharacterCodingException ex) {
+      return new String(content, java.nio.charset.Charset.forName("windows-1254"));
+    }
+  }
+
   /** Başlık satırının hücreleri; sütunları adla eşlemek için. */
   public static List<String> header(byte[] content) {
-    String text = new String(content, StandardCharsets.UTF_8);
+    String text = decode(content);
     if (!text.isEmpty() && text.charAt(0) == BOM) {
       text = text.substring(1);
     }

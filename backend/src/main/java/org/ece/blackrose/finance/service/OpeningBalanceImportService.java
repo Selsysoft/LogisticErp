@@ -140,7 +140,8 @@ public class OpeningBalanceImportService {
     Map<String, UUID> created = new HashMap<>();
     int posted = 0;
     for (Parsed parsed : checked.parsed()) {
-      if (parsed.balance().signum() == 0) {
+      // Sıfır bakiyeli yeni cari de açılır: açık faturası ayrıca yüklenecek cariler böyle açılır.
+      if (parsed.balance().signum() == 0 && parsed.existing() != null) {
         continue;
       }
       UUID accountId =
@@ -154,6 +155,9 @@ public class OpeningBalanceImportService {
                               new Account(
                                   code, parsed.name(), parsed.type(), parsed.taxNumber(), null))
                           .getId());
+      if (parsed.balance().signum() == 0) {
+        continue;
+      }
       ledger.post(
           new Posting(
               accountId,
@@ -217,8 +221,9 @@ public class OpeningBalanceImportService {
               rows.stream()
                   .filter(
                       row ->
-                          row.status() == RowStatus.NEW_ACCOUNT
-                              || row.status() == RowStatus.EXISTING_ACCOUNT)
+                          (row.status() == RowStatus.NEW_ACCOUNT
+                                  || row.status() == RowStatus.EXISTING_ACCOUNT)
+                              && row.balance().signum() != 0)
                   .count();
       return new Result(applied, valid(), (int) newAccounts, postings, totals, rows);
     }
@@ -264,9 +269,9 @@ public class OpeningBalanceImportService {
         byCode.putIfAbsent(row.code(), row);
         parsed.add(row);
         RowStatus status =
-            row.balance().signum() == 0
-                ? RowStatus.ZERO
-                : row.existing() == null ? RowStatus.NEW_ACCOUNT : RowStatus.EXISTING_ACCOUNT;
+            row.existing() == null
+                ? RowStatus.NEW_ACCOUNT
+                : row.balance().signum() == 0 ? RowStatus.ZERO : RowStatus.EXISTING_ACCOUNT;
         rows.add(
             new Row(
                 line.number(),

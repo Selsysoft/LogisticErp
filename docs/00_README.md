@@ -18,6 +18,12 @@ listesi ve faz dokümanlarını** içerir.
 - **Tenant çözümleme:** Subdomain ve JWT claim desteklenir, subdomain önceliklidir.
 - **Uygulama sırası:** 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9 → 11 → 10 (ayrıntı: `01_ANA_PROMPT.md` §7).
 
+## İşletim belgeleri
+- `GECIS_REHBERI.md` — önceki sistemden geçiş: sıra, içe aktarma dosyaları (`ornekler/`), kontrol listesi.
+- `URETIM_KURULUM.md` — üretim ayarları, e-posta/dosya/tarama, izleme, hazır olma denetimi.
+- `YEREL_CALISTIRMA.md` — geliştirme ortamı ve testler.
+- `GUVENLIK_GOZDEN_GECIRME.md`, `KVKK_VERI_ISLEME_KAYDI.md` — güvenlik ve kişisel veri kayıtları.
+
 ## Klasör yapısı
 ```
 NakliyeLojistik_SaaS_Promptlar/

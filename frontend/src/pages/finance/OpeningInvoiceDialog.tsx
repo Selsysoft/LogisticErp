@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { apiUpload } from "../../api/client";
 import { ErrorState } from "../../components/ErrorState";
 import { DataTable, formatAmount, formatDate, useBranches } from "./common";
+import { OPENING_INVOICE_SAMPLE, downloadCsv } from "../importSamples";
 
 type Kind = "RECEIVABLE" | "PAYABLE";
 
@@ -39,21 +40,8 @@ interface Result {
   }[];
 }
 
-const SAMPLE =
-  "Cari kodu;Belge no;Belge tarihi;Vade;Tutar;Para birimi;Kur\n" +
-  "M001;ABC2026000123;15.09.2026;15.11.2026;12500,00;TRY;\n" +
-  "M001;ABC2026000187;01.10.2026;30.11.2026;4200,00;TRY;\n" +
-  "T001;F-7781;20.10.2026;20.12.2026;8000,00;TRY;\n" +
-  "M002;EXP-55;05.10.2026;04.12.2026;1500,00;EUR;35,40\n";
-
 function downloadSample() {
-  const blob = new Blob(["﻿" + SAMPLE], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "acik-faturalar-ornek.csv";
-  link.click();
-  URL.revokeObjectURL(url);
+  downloadCsv(OPENING_INVOICE_SAMPLE, "acik-faturalar-ornek.csv");
 }
 
 /**

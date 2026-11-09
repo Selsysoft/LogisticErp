@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { apiUpload } from "../../api/client";
 import { ErrorState } from "../../components/ErrorState";
 import { DataTable, formatAmount, today, useBranches } from "./common";
+import { OPENING_BALANCE_SAMPLE, downloadCsv } from "../importSamples";
 
 type RowStatus = "NEW_ACCOUNT" | "EXISTING_ACCOUNT" | "ZERO" | "ERROR";
 
@@ -45,22 +46,8 @@ const STATUS_COLOR = {
   ERROR: "error",
 } as const;
 
-/** Elle hazırlanacak dosyanın başlığı ve örnek satırları; Excel noktalı virgülü sütun sayar. */
-const SAMPLE =
-  "Kod;Ad;Tür;Para birimi;Bakiye;Kur;Vergi no\n" +
-  "M001;Örnek Müşteri A.Ş.;Müşteri;TRY;1500,00;;1234567890\n" +
-  "T001;Örnek Tedarikçi Ltd.;Tedarikçi;TRY;-2500,00;;\n" +
-  "M002;Örnek Dış Müşteri;Müşteri;EUR;200,00;35,40;\n";
-
 function downloadSample() {
-  // Excel'in Türkçe karakterleri doğru açması için UTF-8 imi (BOM) eklenir.
-  const blob = new Blob(["﻿" + SAMPLE], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "acilis-bakiyesi-ornek.csv";
-  link.click();
-  URL.revokeObjectURL(url);
+  downloadCsv(OPENING_BALANCE_SAMPLE, "acilis-bakiyesi-ornek.csv");
 }
 
 /**

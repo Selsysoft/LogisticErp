@@ -43,7 +43,8 @@ class OpeningBalanceIT extends AbstractIntegrationTest {
     JsonNode preview = body(upload(t, "/preview", file, branch).andExpect(status().isOk()));
     assertThat(preview.get("valid").asBoolean()).isFalse();
     assertThat(statuses(preview))
-        .containsExactly("NEW_ACCOUNT", "NEW_ACCOUNT", "ERROR", "ERROR", "ERROR", "ERROR", "ZERO");
+        .containsExactly(
+            "NEW_ACCOUNT", "NEW_ACCOUNT", "ERROR", "ERROR", "ERROR", "ERROR", "NEW_ACCOUNT");
     assertThat(errors(preview))
         .anyMatch(e -> e.contains("belirsiz"))
         .anyMatch(e -> e.contains("Tür tanınmadı"))
@@ -76,18 +77,23 @@ class OpeningBalanceIT extends AbstractIntegrationTest {
         -2500;T001;Beta AŞ;tedarikçi;;;
         200;M004;Zeta Inc;Müşteri;USD;34,50;
         "750,00";E001;Başka Ad;Müşteri;TRY;;
+        0;S001;Sıfır Cari;Müşteri;TRY;;
+        0;E001;Başka Ad;Müşteri;USD;;
         """;
 
     JsonNode preview = body(upload(t, "/preview", file, branch).andExpect(status().isOk()));
     assertThat(preview.get("valid").asBoolean()).isTrue();
-    assertThat(preview.get("accountsToCreate").asInt()).isEqualTo(3);
+    assertThat(preview.get("accountsToCreate").asInt()).isEqualTo(4);
     assertThat(statuses(preview))
-        .containsExactly("NEW_ACCOUNT", "NEW_ACCOUNT", "NEW_ACCOUNT", "EXISTING_ACCOUNT");
+        .containsExactly(
+            "NEW_ACCOUNT", "NEW_ACCOUNT", "NEW_ACCOUNT", "EXISTING_ACCOUNT", "NEW_ACCOUNT", "ZERO");
     assertThat(codes(t)).doesNotContain("M001");
 
     JsonNode applied = body(upload(t, "", file, branch).andExpect(status().isOk()));
     assertThat(applied.get("applied").asBoolean()).isTrue();
     assertThat(applied.get("postings").asInt()).isEqualTo(4);
+    // Sıfır bakiyeli yeni cari hareketsiz açılır; açık faturası ayrıca yüklenebilir.
+    assertThat(account(t, "S001").get("balances")).isEmpty();
 
     assertThat(balance(t, "M001", "TRY")).isEqualTo("1500.25");
     assertThat(balance(t, "T001", "TRY")).isEqualTo("-2500");

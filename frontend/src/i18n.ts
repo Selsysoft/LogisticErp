@@ -340,7 +340,7 @@ void i18n.use(initReactI18next).init({
             open: "Açılış bakiyesi içe aktar",
             title: "Açılış bakiyesi içe aktar",
             intro:
-              "Önceki sistemdeki cari bakiyelerini CSV dosyasıyla yükleyin. Sütunlar: Kod, Ad, Tür (Müşteri, Tedarikçi, Taşeron, Personel, Banka), Bakiye; isteğe bağlı Para birimi, Kur, Vergi no. Pozitif bakiye cari bize borçlu, negatif bakiye biz cariye borçluyuz demektir. Kodu olmayan cari açılır. Tek hatalı satır varsa hiçbir şey yazılmaz.",
+              "Önceki sistemdeki cari bakiyelerini CSV dosyasıyla yükleyin. Sütunlar: Kod, Ad, Tür (Müşteri, Tedarikçi, Taşeron, Personel, Banka), Bakiye; isteğe bağlı Para birimi, Kur, Vergi no. Pozitif bakiye cari bize borçlu, negatif bakiye biz cariye borçluyuz demektir. Kodu olmayan cari açılır; bakiyesi 0 yazılan yeni cari hareketsiz açılır (açık faturaları ayrıca yüklenecek cariler için). Tek hatalı satır varsa hiçbir şey yazılmaz.",
             date: "Açılış tarihi",
             pick: "Dosya seç",
             sample: "Örnek dosya",

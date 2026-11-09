@@ -54,4 +54,25 @@ class CsvRowsTest {
     assertThat(CsvRows.key(null, "satır")).isEqualTo(CsvRows.key(null, "satır"));
     assertThat(CsvRows.key(null, "satır")).isNotEqualTo(CsvRows.key(null, "diğer"));
   }
+
+  @Test
+  void turkceExcelinWindows1254KaydiDaOkunur() {
+    String text = "Kod;Ad;Tür;Bakiye\nM1;Şirin Gıda Ürünleri;Müşteri;1500,00\n";
+    byte[] cp1254 = text.getBytes(java.nio.charset.Charset.forName("windows-1254"));
+    byte[] utf8 = text.getBytes(StandardCharsets.UTF_8);
+
+    assertThat(CsvRows.decode(cp1254)).isEqualTo(text);
+    assertThat(CsvRows.decode(utf8)).isEqualTo(text);
+    assertThat(CsvRows.header(cp1254)).containsExactly("Kod", "Ad", "Tür", "Bakiye");
+    assertThat(CsvRows.parse(cp1254).get(0).text(1)).isEqualTo("Şirin Gıda Ürünleri");
+  }
+
+  @Test
+  void binlikAyiriciliTekSayiBelirsizdir() {
+    assertThat(CsvRows.ambiguousThousands("1.500")).isTrue();
+    assertThat(CsvRows.ambiguousThousands("12.345.678")).isTrue();
+    assertThat(CsvRows.ambiguousThousands("1.500,00")).isFalse();
+    assertThat(CsvRows.ambiguousThousands("1500")).isFalse();
+    assertThat(CsvRows.ambiguousThousands("1.5")).isFalse();
+  }
 }
