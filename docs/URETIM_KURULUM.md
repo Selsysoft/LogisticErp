@@ -43,6 +43,18 @@ docker run -d -p 8080:8080 -e BACKEND_URL=http://<backend>:8080 blackrose-web
 
 SMTP şu e-postalar için kullanılır: kullanıcı daveti, şifre sıfırlama, SaaS faturası ve günlük özet. Günlük özet saatlik iş ile firmanın saat dilimine göre 07:00'den sonra, her etkin kullanıcıya yetkili olduğu konulardan tek e-posta olarak gider: filo hatırlatmaları (`FLEET_EDIT`), onay bekleyen sürücü masrafları (`SHIPMENT_DISPATCH`), onay bekleyen ödeme planları (`FINANCE_APPROVE`), 3 gün içinde vadesi gelen veya geciken onaylı ödemeler (`FINANCE_PAYMENT_CREATE`). Kullanıcı konuları Hesabım ekranından kapatır; firma filo hatırlatmalarını filo ayarlarından kapatabilir. Gün veritabanında üstlenilir, birden çok örnekte bir kez gönderilir. Gönderim hatası günlüğe yazılır, aynı gün tekrar denenmez. Her bölümde en çok 20 satır gösterilir.
 
+## E-posta teslim edilebilirliği
+
+Müşteriye giden sefer e-postalarının istenmeyen postaya düşmemesi için `MAIL_FROM` adresinin alan adında şu DNS kayıtları tanımlanmalıdır (değerleri e-posta sağlayıcısı verir):
+
+| Kayıt | Ad | Örnek değer |
+|---|---|---|
+| SPF (TXT) | `firma.com` | `v=spf1 include:<sağlayıcının SPF alanı> ~all` |
+| DKIM (TXT veya CNAME) | `<seçici>._domainkey.firma.com` | sağlayıcının verdiği açık anahtar |
+| DMARC (TXT) | `_dmarc.firma.com` | `v=DMARC1; p=quarantine; rua=mailto:dmarc@firma.com` |
+
+SaaS konsolunun "Dış bağlantılar" tablosundaki "Gönderen alan adı" satırı SPF ve DMARC'ı, `MAIL_DKIM_SELECTOR` verilirse DKIM'i de DNS'ten okur. Eksik kayıt veya DNS'e ulaşılamaması uyarı olarak gösterilir, genel durumu düşürmez. Alan adında zaten SPF kaydı varsa yenisi eklenmez, sağlayıcının `include:` ifadesi mevcut kayda eklenir (bir alan adında yalnız bir SPF kaydı olabilir). DMARC'a `p=none` ile başlayıp raporlar temiz gelince `quarantine` veya `reject`'e geçmek güvenli yoldur.
+
 ## SaaS yöneticisi 2FA
 
 `prod` ve `stage`'de zorunludur (`SAAS_2FA_REQUIRED`). İlk girişte konsol anahtarı gösterir; yönetici doğrulayıcı uygulamaya ekleyip ürettiği kodla kurulumu tamamlar.

@@ -14,9 +14,16 @@ test("SaaS yöneticisi dış bağlantıların durumunu görür ve yeniden denetl
   await expect(page).toHaveURL(/\/saas\/health$/);
 
   // E2E yığınında e-posta gerçek SMTP sunucusuna (Mailpit) gider.
-  const mail = page.getByRole("row").filter({ hasText: "E-posta" });
+  const mail = page
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: "E-posta", exact: true }) });
   await expect(mail).toContainText("Çalışıyor");
   await expect(mail).toContainText("SMTP mailpit:1025");
+  // Deneme alan adının SPF ve DMARC kaydı yoktur. Docker'ın DNS'i .local adlarına yanıt
+  // vermeyebilir; iki durum da uyarıdır ve genel durumu düşürmez.
+  const domain = page.getByRole("row").filter({ hasText: "Gönderen alan adı" });
+  await expect(domain).toContainText("Uyarı");
+  await expect(domain).toContainText(/blackrose\.local: (SPF, DMARC kaydı yok|DNS sorgulanamadı)/);
   await expect(page.getByRole("row").filter({ hasText: "Dosya deposu" })).toContainText(
     "Çalışıyor",
   );

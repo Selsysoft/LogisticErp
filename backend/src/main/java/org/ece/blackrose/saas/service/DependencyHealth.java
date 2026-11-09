@@ -15,11 +15,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.ece.blackrose.files.FileScanner;
 import org.ece.blackrose.files.FileStorage;
+import org.ece.blackrose.identity.security.SecurityProperties;
 import org.ece.blackrose.saas.service.PaymentProvider.PaymentProviders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -50,13 +52,18 @@ public class DependencyHealth {
   static final Duration CACHE = Duration.ofSeconds(60);
   static final Duration TIMEOUT = Duration.ofSeconds(8);
   static final String METRIC = "blackrose.dependency.up";
-  static final List<String> KEYS = List.of("mail", "storage", "scanner", "payment");
+  static final List<String> KEYS = List.of("mail", "maildomain", "storage", "scanner", "payment");
+
+  /** Gönderen adresi, isteğe bağlı DKIM seçicisi ve DNS sorgusu. */
+  public record MailDomain(String from, String dkimSelector, MailDomainRecords records) {}
+
   private static final Logger log = LoggerFactory.getLogger(DependencyHealth.class);
 
   private final ObjectProvider<JavaMailSender> mail;
   private final FileStorage storage;
   private final FileScanner scanner;
   private final PaymentProviders payments;
+  private final MailDomain mailDomain;
   private final Clock clock;
   private final Duration timeout;
   private final ExecutorService executor =
@@ -82,8 +89,19 @@ public class DependencyHealth {
       FileStorage storage,
       FileScanner scanner,
       PaymentProviders payments,
-      MeterRegistry metrics) {
-    this(mail, storage, scanner, payments, metrics, Clock.systemUTC(), TIMEOUT);
+      MeterRegistry metrics,
+      SecurityProperties security,
+      @Value("${app.mail.dkim-selector:}") String dkimSelector) {
+    this(
+        mail,
+        storage,
+        scanner,
+        payments,
+        new MailDomain(
+            security.mailFrom(), dkimSelector, new MailDomainRecords(MailDomainRecords.dns())),
+        metrics,
+        Clock.systemUTC(),
+        TIMEOUT);
   }
 
   DependencyHealth(
@@ -91,9 +109,11 @@ public class DependencyHealth {
       FileStorage storage,
       FileScanner scanner,
       PaymentProviders payments,
+      MailDomain mailDomain,
       MeterRegistry metrics,
       Clock clock,
       Duration timeout) {
+    this.mailDomain = mailDomain;
     for (String key : KEYS) {
       Gauge.builder(METRIC, this, health -> health.gaugeOf(key))
           .tag("dependency", key)
@@ -173,10 +193,13 @@ public class DependencyHealth {
   }
 
   private List<Dependency> probeAll() {
-    List<Probe> probes = List.of(this::mail, this::storage, this::scanner, this::payment);
+    List<Probe> probes =
+        List.of(this::mail, this::mailDomain, this::storage, this::scanner, this::payment);
     List<String> keys = KEYS;
-    List<String> names = List.of("E-posta", "Dosya deposu", "Virüs tarama", "Ödeme sağlayıcısı");
-    List<Boolean> essential = List.of(true, true, true, false);
+    List<String> names =
+        List.of(
+            "E-posta", "Gönderen alan adı", "Dosya deposu", "Virüs tarama", "Ödeme sağlayıcısı");
+    List<Boolean> essential = List.of(true, false, true, true, false);
     List<CompletableFuture<Dependency>> futures =
         probes.stream()
             .map(probe -> CompletableFuture.supplyAsync(() -> unchecked(probe), executor))
@@ -258,6 +281,57 @@ public class DependencyHealth {
     scanner.check();
     return new Dependency(
         "scanner", "Virüs tarama", State.UP, "ClamAV", millisSince(started), true);
+  }
+
+  /**
+   * Eksik kayıt veya DNS'e ulaşılamaması uyarıdır, genel durumu düşürmez: gönderim sürer ama
+   * e-postalar istenmeyen postaya düşebilir.
+   */
+  private Dependency mailDomain() {
+    String name = "Gönderen alan adı";
+    JavaMailSender sender = mail.getIfAvailable();
+    if (!(sender instanceof JavaMailSenderImpl smtp) || smtp.getHost() == null) {
+      return new Dependency(
+          "maildomain", name, State.NOT_CONFIGURED, "SMTP tanımlı değil.", 0, false);
+    }
+    String domain = MailDomainRecords.domainOf(mailDomain.from());
+    if (domain == null) {
+      return new Dependency(
+          "maildomain", name, State.WARNING, "MAIL_FROM geçerli bir adres değil.", 0, false);
+    }
+    long started = System.nanoTime();
+    MailDomainRecords.Report report;
+    try {
+      report = mailDomain.records().check(domain, mailDomain.dkimSelector());
+    } catch (javax.naming.NamingException ex) {
+      return new Dependency(
+          "maildomain",
+          name,
+          State.WARNING,
+          domain + ": DNS sorgulanamadı (" + reason(ex) + ")",
+          millisSince(started),
+          false);
+    }
+    List<String> missing = report.missing();
+    String checked = report.dkim() == null ? "SPF, DMARC" : "SPF, DMARC, DKIM";
+    return missing.isEmpty()
+        ? new Dependency(
+            "maildomain",
+            name,
+            State.UP,
+            domain + ": " + checked + " tanımlı",
+            millisSince(started),
+            false)
+        : new Dependency(
+            "maildomain",
+            name,
+            State.WARNING,
+            domain
+                + ": "
+                + String.join(", ", missing)
+                + " kaydı yok; e-postalar istenmeyen postaya düşebilir.",
+            millisSince(started),
+            false);
   }
 
   private Dependency payment() {

@@ -53,6 +53,9 @@ logging:
       console: logstash
 
 app:
+  mail:
+    # Sağlayıcının DKIM seçicisi (ör. s1); verilirse SaaS konsolu DKIM kaydını da denetler.
+    dkim-selector: ${MAIL_DKIM_SELECTOR:}
   files:
     root: ${FILES_ROOT:./data/files}
     storage: ${FILE_STORAGE:local}

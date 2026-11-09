@@ -290,6 +290,7 @@ class SaasIT extends AbstractIntegrationTest {
         .forEach(d -> states.put(d.get("key").asText(), d.get("state").asText()));
     assertThat(states)
         .containsEntry("mail", "NOT_CONFIGURED")
+        .containsEntry("maildomain", "NOT_CONFIGURED")
         .containsEntry("storage", "UP")
         .containsEntry("scanner", "NOT_CONFIGURED")
         .containsEntry("payment", "WARNING");

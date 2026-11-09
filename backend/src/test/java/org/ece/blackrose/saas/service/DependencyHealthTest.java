@@ -30,6 +30,7 @@ class DependencyHealthTest {
   private final MutableClock clock = new MutableClock();
   private final AtomicInteger storageChecks = new AtomicInteger();
   private final SimpleMeterRegistry metrics = new SimpleMeterRegistry();
+  private final Map<String, List<String>> dns = new java.util.HashMap<>();
 
   @Test
   void eksikVeBozukBagimliliklariAyriAyriGosterir() throws Exception {
@@ -124,6 +125,37 @@ class DependencyHealthTest {
     return metrics.get("blackrose.dependency.up").tag("dependency", key).gauge().value();
   }
 
+  @Test
+  void gonderenAlanAdininEksikKaydiUyariOlurGenelDurumuDusurmez() throws Exception {
+    JavaMailSenderImpl smtp = new JavaMailSenderImpl();
+    smtp.setHost("localhost");
+    smtp.setPort(closedPort());
+    dns.put("firma.example", List.of("v=spf1 include:_spf.saglayici.example ~all"));
+
+    Dependency missing =
+        byKey(health(mailOf(smtp), storage(() -> {}), scanner(), List.of()).check())
+            .get("maildomain");
+    assertThat(missing.state()).isEqualTo(State.WARNING);
+    assertThat(missing.detail())
+        .isEqualTo("firma.example: DMARC kaydı yok; e-postalar istenmeyen postaya düşebilir.");
+    assertThat(missing.essential()).isFalse();
+
+    dns.put("_dmarc.firma.example", List.of("v=DMARC1; p=quarantine"));
+    Dependency complete =
+        byKey(health(mailOf(smtp), storage(() -> {}), scanner(), List.of()).check())
+            .get("maildomain");
+    assertThat(complete.state()).isEqualTo(State.UP);
+    assertThat(complete.detail()).isEqualTo("firma.example: SPF, DMARC tanımlı");
+  }
+
+  @Test
+  void smtpYoksaGonderenAlanAdiDenetlenmez() {
+    Dependency result =
+        byKey(health(mailOf(null), storage(() -> {}), scanner(), List.of()).check())
+            .get("maildomain");
+    assertThat(result.state()).isEqualTo(State.NOT_CONFIGURED);
+  }
+
   // Yardımcılar
 
   private interface Check {
@@ -140,6 +172,10 @@ class DependencyHealthTest {
         storage,
         scanner,
         new PaymentProviders(providers),
+        new DependencyHealth.MailDomain(
+            "Blackrose <noreply@firma.example>",
+            "",
+            new MailDomainRecords(name -> dns.getOrDefault(name, List.of()))),
         metrics,
         clock,
         Duration.ofMillis(500));
@@ -197,7 +233,7 @@ class DependencyHealthTest {
   private static Map<String, Dependency> byKey(List<Dependency> dependencies) {
     assertThat(dependencies)
         .extracting(Dependency::key)
-        .containsExactly("mail", "storage", "scanner", "payment");
+        .containsExactly("mail", "maildomain", "storage", "scanner", "payment");
     return dependencies.stream()
         .collect(java.util.stream.Collectors.toMap(Dependency::key, item -> item));
   }
