@@ -1,10 +1,14 @@
 package org.ece.blackrose.saas.service;
 
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -18,12 +22,17 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
  * Dış bağımlılıkların (e-posta, dosya deposu, virüs tarayıcı, ödeme sağlayıcısı) erişilebilirliği.
  * E-posta gönderim hataları yalnız günlüğe yazıldığı için yanlış ayar ancak burada görünür.
  * Kontroller paralel ve zaman aşımlıdır; konsol sık yenilendiği için sonuç kısa süre saklanır.
+ *
+ * <p>Açılıştan kısa süre sonra ve dakikada bir arka planda da denetlenir: durum değişimi günlüğe
+ * yazılır (her dakika aynı uyarı tekrarlanmaz) ve {@code blackrose_dependency_up} göstergesiyle
+ * yayımlanır: 1 çalışıyor veya uyarı, 0 ulaşılamıyor, -1 tanımlı değil.
  */
 @Component
 public class DependencyHealth {
@@ -40,6 +49,8 @@ public class DependencyHealth {
 
   static final Duration CACHE = Duration.ofSeconds(60);
   static final Duration TIMEOUT = Duration.ofSeconds(8);
+  static final String METRIC = "blackrose.dependency.up";
+  static final List<String> KEYS = List.of("mail", "storage", "scanner", "payment");
   private static final Logger log = LoggerFactory.getLogger(DependencyHealth.class);
 
   private final ObjectProvider<JavaMailSender> mail;
@@ -56,6 +67,7 @@ public class DependencyHealth {
             return thread;
           });
   private volatile Snapshot last;
+  private final Map<String, State> observed = new ConcurrentHashMap<>();
 
   private record Snapshot(Instant at, List<Dependency> dependencies) {}
 
@@ -69,8 +81,9 @@ public class DependencyHealth {
       ObjectProvider<JavaMailSender> mail,
       FileStorage storage,
       FileScanner scanner,
-      PaymentProviders payments) {
-    this(mail, storage, scanner, payments, Clock.systemUTC(), TIMEOUT);
+      PaymentProviders payments,
+      MeterRegistry metrics) {
+    this(mail, storage, scanner, payments, metrics, Clock.systemUTC(), TIMEOUT);
   }
 
   DependencyHealth(
@@ -78,8 +91,15 @@ public class DependencyHealth {
       FileStorage storage,
       FileScanner scanner,
       PaymentProviders payments,
+      MeterRegistry metrics,
       Clock clock,
       Duration timeout) {
+    for (String key : KEYS) {
+      Gauge.builder(METRIC, this, health -> health.gaugeOf(key))
+          .tag("dependency", key)
+          .description("1 çalışıyor veya uyarı, 0 ulaşılamıyor, -1 tanımlı değil")
+          .register(metrics);
+    }
     this.timeout = timeout;
     this.mail = mail;
     this.storage = storage;
@@ -95,7 +115,56 @@ public class DependencyHealth {
     }
     List<Dependency> fresh = probeAll();
     last = new Snapshot(clock.instant(), fresh);
+    record(fresh);
     return fresh;
+  }
+
+  /** Konsol açılmasa da yanlış ayar fark edilsin; ilk denetim açılışı geciktirmez. */
+  @Scheduled(initialDelayString = "PT10S", fixedDelayString = "PT60S")
+  public void refresh() {
+    forget();
+    check();
+  }
+
+  /** Göstergeler denetim yapmaz, son sonucu okur; ölçüm toplama isteği bekletilmez. */
+  private double gaugeOf(String key) {
+    Snapshot snapshot = last;
+    if (snapshot == null) {
+      return Double.NaN;
+    }
+    return snapshot.dependencies().stream()
+        .filter(dependency -> dependency.key().equals(key))
+        .findFirst()
+        .map(
+            dependency ->
+                switch (dependency.state()) {
+                  case UP, WARNING -> 1.0;
+                  case DOWN -> 0.0;
+                  case NOT_CONFIGURED -> -1.0;
+                })
+        .orElse(Double.NaN);
+  }
+
+  /** Yalnız ilk gözlem ve durum değişimi günlüğe yazılır. */
+  private void record(List<Dependency> dependencies) {
+    for (Dependency dependency : dependencies) {
+      State previous = observed.put(dependency.key(), dependency.state());
+      if (previous == dependency.state()) {
+        continue;
+      }
+      if (dependency.state() == State.DOWN) {
+        log.warn(
+            "Dış bağlantı ulaşılamıyor: {} — {}{}",
+            dependency.name(),
+            dependency.detail(),
+            previous == null ? "" : " (önceki durum: " + previous + ")");
+      } else if (previous == State.DOWN) {
+        log.info("Dış bağlantı düzeldi: {} — {}", dependency.name(), dependency.detail());
+      } else {
+        log.info(
+            "Dış bağlantı: {} {} — {}", dependency.name(), dependency.state(), dependency.detail());
+      }
+    }
   }
 
   /** Bir sonraki çağrının yeniden denetlemesi için; ayar değişikliğinden sonra kullanılır. */
@@ -105,7 +174,7 @@ public class DependencyHealth {
 
   private List<Dependency> probeAll() {
     List<Probe> probes = List.of(this::mail, this::storage, this::scanner, this::payment);
-    List<String> keys = List.of("mail", "storage", "scanner", "payment");
+    List<String> keys = KEYS;
     List<String> names = List.of("E-posta", "Dosya deposu", "Virüs tarama", "Ödeme sağlayıcısı");
     List<Boolean> essential = List.of(true, true, true, false);
     List<CompletableFuture<Dependency>> futures =

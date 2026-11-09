@@ -73,6 +73,16 @@ Yerel diskten S3'e geçişte anahtar düzeni aynıdır (`tenant_<kod>/<uuid>`), 
 
 SaaS konsolunun Sistem sağlığı sekmesindeki "Dış bağlantılar" tablosu e-posta (SMTP bağlantısı ve kimlik doğrulaması), dosya deposu (yerel klasöre yazma veya S3 bucket erişimi), virüs tarama (clamd `PING`) ve ödeme sağlayıcısının durumunu gösterir. E-posta gönderim hataları yalnız günlüğe yazıldığından yanlış SMTP ayarı ilk burada görünür; kurulumdan sonra bu tablo kontrol edilmelidir. Erişilemeyen bağlantı genel durumu "Dikkat gerekiyor"a, dosya deposu ise "Kritik"e çeker. Her bağlantı en çok 8 sn beklenir, sonuç 60 sn saklanır; "Yeniden denetle" beklemeden yeniler. Deneme ödeme sağlayıcısı uyarı olarak gösterilir.
 
+Aynı denetim konsol açılmasa da açılıştan 10 sn sonra ve dakikada bir arka planda çalışır. İlk sonuç ve her durum değişimi günlüğe yazılır (`Dış bağlantı ulaşılamıyor: …` WARN, `Dış bağlantı düzeldi: …` INFO); aynı uyarı her dakika tekrarlanmaz. Sonuç Prometheus'ta `blackrose_dependency_up{dependency="mail|storage|scanner|payment"}` göstergesiyle yayımlanır: 1 çalışıyor veya uyarı, 0 ulaşılamıyor, -1 tanımlı değil. Örnek alarm:
+
+```yaml
+- alert: DisBaglantiUlasilamiyor
+  expr: blackrose_dependency_up == 0
+  for: 5m
+  annotations:
+    summary: "{{ $labels.dependency }} 5 dakikadır ulaşılamıyor"
+```
+
 ## Saat dilimi
 
 Sunucunun saat dilimi önemli değildir, UTC bırakılabilir. "Bugün" her yerde firmanın kayıtlı saat dilimiyle hesaplanır: vadeler, deneme süresi, faturalama, günlük özet, SaaS konsolundaki gecikmiş fatura sayısı. TCMB kur çekimi İstanbul saatine göre zamanlanır. Kaynakta sunucu saat dilimine bağlı tarih çağrısı (`LocalDate.now()` vb.) bulunmasını `TimeZoneUsageTest` engeller.

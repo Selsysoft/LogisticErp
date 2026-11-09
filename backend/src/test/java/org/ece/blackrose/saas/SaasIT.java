@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -33,6 +34,7 @@ class SaasIT extends AbstractIntegrationTest {
 
   @Autowired private BillingService billing;
   @Autowired private JdbcTemplate jdbc;
+  @Autowired private MeterRegistry meters;
 
   @Test
   void newTenantStartsOnTrialAndExpiredTrialBlocksUntilExtended() throws Exception {
@@ -293,6 +295,9 @@ class SaasIT extends AbstractIntegrationTest {
         .containsEntry("payment", "WARNING");
     mvc.perform(get(ADMIN + "/health").param("fresh", "true").with(bearer(token)))
         .andExpect(status().isOk());
+    // Aynı sonuç izleme göstergesiyle de yayımlanır.
+    assertThat(dependencyGauge("storage")).isEqualTo(1.0);
+    assertThat(dependencyGauge("mail")).isEqualTo(-1.0);
 
     // Firma yöneticisi konsola giremez.
     mvc.perform(get(ADMIN + "/tenants").with(bearer(ownerToken("saas-cons"))))
@@ -375,6 +380,10 @@ class SaasIT extends AbstractIntegrationTest {
   }
 
   // Yardımcılar
+
+  private double dependencyGauge(String key) {
+    return meters.get("blackrose.dependency.up").tag("dependency", key).gauge().value();
+  }
 
   private long overdueInvoices() throws Exception {
     return body(admin(get(ADMIN + "/health"), null).andExpect(status().isOk()))

@@ -2,6 +2,7 @@ package org.ece.blackrose.saas.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.ServerSocket;
@@ -28,6 +29,7 @@ class DependencyHealthTest {
 
   private final MutableClock clock = new MutableClock();
   private final AtomicInteger storageChecks = new AtomicInteger();
+  private final SimpleMeterRegistry metrics = new SimpleMeterRegistry();
 
   @Test
   void eksikVeBozukBagimliliklariAyriAyriGosterir() throws Exception {
@@ -96,6 +98,32 @@ class DependencyHealthTest {
     assertThat(result.get("scanner").state()).isEqualTo(State.UP);
   }
 
+  @Test
+  void durumuIzlemeGostergesiyleYayimlarVeGostergeDenetimYapmaz() throws Exception {
+    JavaMailSenderImpl smtp = new JavaMailSenderImpl();
+    smtp.setHost("localhost");
+    smtp.setPort(closedPort());
+    DependencyHealth health = health(mailOf(smtp), storage(() -> {}), disabledScanner(), List.of());
+
+    assertThat(gauge("storage")).isNaN();
+    assertThat(storageChecks).hasValue(0);
+
+    health.refresh();
+    assertThat(gauge("mail")).isEqualTo(0.0);
+    assertThat(gauge("storage")).isEqualTo(1.0);
+    assertThat(gauge("scanner")).isEqualTo(-1.0);
+    assertThat(gauge("payment")).isEqualTo(-1.0);
+    assertThat(storageChecks).hasValue(1);
+
+    // Zamanlanmış yenileme önbelleği beklemez.
+    health.refresh();
+    assertThat(storageChecks).hasValue(2);
+  }
+
+  private double gauge(String key) {
+    return metrics.get("blackrose.dependency.up").tag("dependency", key).gauge().value();
+  }
+
   // Yardımcılar
 
   private interface Check {
@@ -108,7 +136,13 @@ class DependencyHealthTest {
       FileScanner scanner,
       List<PaymentProvider> providers) {
     return new DependencyHealth(
-        mail, storage, scanner, new PaymentProviders(providers), clock, Duration.ofMillis(500));
+        mail,
+        storage,
+        scanner,
+        new PaymentProviders(providers),
+        metrics,
+        clock,
+        Duration.ofMillis(500));
   }
 
   private static ObjectProvider<JavaMailSender> mailOf(JavaMailSender sender) {
