@@ -39,7 +39,7 @@ public final class SaasRepositories {
     Page<SaasInvoice> findByStatusInOrderByDueOnDesc(
         Collection<SaasInvoiceStatus> status, Pageable pageable);
 
-    long countByStatusAndDueOnBefore(SaasInvoiceStatus status, LocalDate date);
+    List<SaasInvoice> findByStatusAndDueOnBefore(SaasInvoiceStatus status, LocalDate date);
 
     long countByTenantIdAndStatus(UUID tenantId, SaasInvoiceStatus status);
   }

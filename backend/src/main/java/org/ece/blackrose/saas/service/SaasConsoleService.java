@@ -6,11 +6,14 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import org.ece.blackrose.saas.domain.Plan;
@@ -167,7 +170,9 @@ public class SaasConsoleService {
     Map<TenantStatus, Long> byStatus = new EnumMap<>(TenantStatus.class);
     long onlineActive = 0;
     long onlineIdle = 0;
+    Map<UUID, LocalDate> todayByTenant = new HashMap<>();
     for (Tenant tenant : tenants.findAll()) {
+      todayByTenant.put(tenant.getId(), SubscriptionService.todayOf(tenant));
       byStatus.merge(tenant.getStatus(), 1L, Long::sum);
       PresenceTracker.Presence current = presence.presenceOf(tenant.getCode());
       onlineActive += current.active();
@@ -176,7 +181,7 @@ public class SaasConsoleService {
     if (byStatus.getOrDefault(TenantStatus.FAILED, 0L) > 0) {
       issues.add("Altyapısı hatalı firma var.");
     }
-    long overdue = invoices.countByStatusAndDueOnBefore(SaasInvoiceStatus.ISSUED, LocalDate.now());
+    long overdue = overdueInvoices(todayByTenant);
 
     HealthStatus status =
         critical
@@ -200,6 +205,21 @@ public class SaasConsoleService {
         onlineActive,
         onlineIdle,
         overdue);
+  }
+
+  /**
+   * Faturalama vadeyi firmanın yerel tarihiyle değerlendirir; sayım da öyle yapılır. Hiçbir saat
+   * dilimi UTC'nin bir gün ilerisini geçmediği için aday faturalar tek sorguyla daraltılır.
+   */
+  private long overdueInvoices(Map<UUID, LocalDate> todayByTenant) {
+    LocalDate latestToday = LocalDate.now(ZoneOffset.UTC).plusDays(1);
+    return invoices.findByStatusAndDueOnBefore(SaasInvoiceStatus.ISSUED, latestToday).stream()
+        .filter(
+            invoice -> {
+              LocalDate today = todayByTenant.get(invoice.getTenantId());
+              return today != null && invoice.getDueOn().isBefore(today);
+            })
+        .count();
   }
 
   private HikariPoolMXBean pool() {

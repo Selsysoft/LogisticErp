@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -326,7 +327,47 @@ class SaasIT extends AbstractIntegrationTest {
         .andExpect(status().isForbidden());
   }
 
+  /**
+   * Vade, faturanın firmasının yerel tarihiyle değerlendirilir. UTC+14 ile UTC−11 arasında takvim
+   * en az bir gün farklıdır: batıdaki firmanın bugünü vadeli fatura doğuda gecikmiş, batıda
+   * değildir.
+   */
+  @Test
+  void overdueInvoicesAreCountedByEachTenantsOwnDate() throws Exception {
+    String planId = plan("SAAT", "700", 9, 9, 99);
+    String east = "saas-east-fail";
+    String west = "saas-west-fail";
+    Map<String, String> zones = Map.of(east, "Pacific/Kiritimati", west, "Pacific/Pago_Pago");
+    for (String code : List.of(east, west)) {
+      createTenant(code);
+      UUID id = tenantId(code);
+      admin(put(ADMIN + "/tenants/" + id + "/plan"), Map.of("planId", planId))
+          .andExpect(status().isNoContent());
+      admin(post(ADMIN + "/tenants/" + id + "/activate"), null).andExpect(status().isNoContent());
+      billing.process(id, TODAY);
+      jdbc.update("update admin.tenant set time_zone = ? where id = ?", zones.get(code), id);
+    }
+    LocalDate westToday = LocalDate.now(ZoneId.of(zones.get(west)));
+    String eastInvoice = invoicesOf(east).get(0).get("id").asText();
+    String westInvoice = invoicesOf(west).get(0).get("id").asText();
+    String setDue = "update admin.saas_invoice set due_on = ? where id = ?::uuid";
+
+    jdbc.update(setDue, westToday.plusDays(30), eastInvoice);
+    jdbc.update(setDue, westToday.plusDays(30), westInvoice);
+    long before = overdueInvoices();
+    jdbc.update(setDue, westToday, eastInvoice);
+    jdbc.update(setDue, westToday, westInvoice);
+
+    assertThat(overdueInvoices()).isEqualTo(before + 1);
+  }
+
   // Yardımcılar
+
+  private long overdueInvoices() throws Exception {
+    return body(admin(get(ADMIN + "/health"), null).andExpect(status().isOk()))
+        .get("overdueInvoices")
+        .asLong();
+  }
 
   private ResultActions admin(
       org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request,
