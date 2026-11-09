@@ -124,6 +124,15 @@ public final class FinanceRepositories {
 
     Optional<AccountTransaction> findBySourceTypeAndSourceId(String sourceType, UUID sourceId);
 
+    /** Ters çevrilmemiş açılış hareketi; aynı cari ve para biriminde ikinci açılışı önler. */
+    @Query(
+        "select count(t) > 0 from AccountTransaction t where t.accountId = :accountId"
+            + " and t.currency = :currency and t.sourceType = 'OPENING'"
+            + " and not exists (select r from AccountTransaction r"
+            + " where r.sourceType = 'REVERSAL' and r.sourceId = t.id)")
+    boolean hasActiveOpening(
+        @Param("accountId") UUID accountId, @Param("currency") String currency);
+
     boolean existsByAccountId(UUID accountId);
 
     @Query(

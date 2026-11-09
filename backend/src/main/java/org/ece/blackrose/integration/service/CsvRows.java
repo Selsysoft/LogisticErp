@@ -19,7 +19,7 @@ import java.util.Locale;
  * Sağlayıcı dosyalarının ortak okuyucusu. Noktalı virgül, virgül veya sekme ayırıcılı; ilk satır
  * başlıktır. Tutar ve tarih Türkçe veya ISO biçiminde olabilir.
  */
-final class CsvRows {
+public final class CsvRows {
 
   private static final DateTimeFormatter TR_DATE =
       DateTimeFormatter.ofPattern("dd.MM.uuuu").withResolverStyle(ResolverStyle.STRICT);
@@ -30,22 +30,22 @@ final class CsvRows {
   private static final char BOM = '﻿';
 
   /** Hatalı satır dosyanın kalanını engellemez; satıra yazılır. */
-  static final class RowException extends RuntimeException {
+  public static final class RowException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
-    RowException(String message) {
+    public RowException(String message) {
       super(message);
     }
   }
 
-  record Line(int number, List<String> cells, String raw) {
+  public record Line(int number, List<String> cells, String raw) {
 
-    String text(int index) {
+    public String text(int index) {
       String value = index < cells.size() ? cells.get(index).trim() : "";
       return value.isEmpty() ? null : value;
     }
 
-    String required(int index, String label) {
+    public String required(int index, String label) {
       String value = text(index);
       if (value == null) {
         throw new RowException(label + " boş.");
@@ -56,7 +56,7 @@ final class CsvRows {
 
   private CsvRows() {}
 
-  static List<Line> parse(byte[] content) {
+  public static List<Line> parse(byte[] content) {
     String text = new String(content, StandardCharsets.UTF_8);
     if (!text.isEmpty() && text.charAt(0) == BOM) {
       text = text.substring(1);
@@ -75,14 +75,24 @@ final class CsvRows {
     return rows;
   }
 
-  static char detectDelimiter(String header) {
+  /** Başlık satırının hücreleri; sütunları adla eşlemek için. */
+  public static List<String> header(byte[] content) {
+    String text = new String(content, StandardCharsets.UTF_8);
+    if (!text.isEmpty() && text.charAt(0) == BOM) {
+      text = text.substring(1);
+    }
+    String first = text.split("\\r?\\n", 2)[0];
+    return split(first, detectDelimiter(first)).stream().map(String::trim).toList();
+  }
+
+  public static char detectDelimiter(String header) {
     if (header.indexOf(';') >= 0) {
       return ';';
     }
     return header.indexOf('\t') >= 0 ? '\t' : ',';
   }
 
-  static List<String> split(String line, char delimiter) {
+  public static List<String> split(String line, char delimiter) {
     List<String> cells = new ArrayList<>();
     StringBuilder cell = new StringBuilder();
     boolean quoted = false;
@@ -107,7 +117,7 @@ final class CsvRows {
   }
 
   /** 1.234,56 ve 1234.56 biçimlerini okur. */
-  static BigDecimal amount(String value, String label) {
+  public static BigDecimal amount(String value, String label) {
     String text = value.trim().replace(" ", "");
     if (text.contains(",")) {
       text = text.replace(".", "").replace(",", ".");
@@ -119,7 +129,7 @@ final class CsvRows {
     }
   }
 
-  static LocalDate date(String value) {
+  public static LocalDate date(String value) {
     String text = value.trim();
     try {
       return text.contains(".") ? LocalDate.parse(text, TR_DATE) : LocalDate.parse(text);
@@ -129,7 +139,7 @@ final class CsvRows {
   }
 
   /** Saat yoksa günün başı kabul edilir. */
-  static LocalDateTime dateTime(String value) {
+  public static LocalDateTime dateTime(String value) {
     String text = value.trim();
     if (text.length() <= 10) {
       return date(text).atTime(LocalTime.MIN);
@@ -142,12 +152,12 @@ final class CsvRows {
   }
 
   /** Plakayı karşılaştırma için sadeleştirir: 34 ABC 123 ve 34abc123 aynıdır. */
-  static String plate(String value) {
+  public static String plate(String value) {
     return value.replaceAll("\\s", "").toUpperCase(Locale.forLanguageTag("tr"));
   }
 
   /** Sağlayıcı referansı varsa odur; yoksa satırın kendisinden üretilir. */
-  static String key(String reference, String raw) {
+  public static String key(String reference, String raw) {
     if (reference != null) {
       return reference.length() <= 100 ? reference : hash(reference);
     }

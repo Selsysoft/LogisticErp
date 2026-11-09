@@ -123,7 +123,9 @@ public class AccountService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "TRANSACTION_NOT_FOUND", "Hareket bulunamadı."));
-    if (!LedgerService.SOURCE_MANUAL.equals(original.getSourceType())) {
+    // Açılış bakiyesinin belgesi yoktur; yanlış yüklenen açılış ekstreden düzeltilir.
+    if (!LedgerService.SOURCE_MANUAL.equals(original.getSourceType())
+        && !OpeningBalanceImportService.SOURCE_OPENING.equals(original.getSourceType())) {
       throw new BusinessException(
           HttpStatus.CONFLICT,
           "TRANSACTION_NOT_MANUAL",

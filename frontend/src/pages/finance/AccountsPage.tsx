@@ -29,9 +29,11 @@ import {
   useCurrencies,
   usePaging,
 } from "./common";
-import { Account, Page, Statement } from "./types";
+import { OpeningBalanceDialog } from "./OpeningBalanceDialog";
+import { Account, Page, Statement, StatementLine } from "./types";
 
 const ACCOUNT_TYPES = ["CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK"];
+const REVERSIBLE = ["MANUAL", "OPENING"];
 
 export function AccountsPage() {
   const { t } = useTranslation();
@@ -40,6 +42,7 @@ export function AccountsPage() {
   const paging = usePaging();
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const accounts = useQuery({
     queryKey: ["finance", "accounts", search, paging.page, paging.size],
@@ -63,11 +66,22 @@ export function AccountsPage() {
           }}
         />
         {canManage && (
+          <Button variant="outlined" onClick={() => setImporting(true)}>
+            {t("finance.opening.open")}
+          </Button>
+        )}
+        {canManage && (
           <Button variant="contained" onClick={() => setAdding(true)}>
             {t("finance.action.newAccount")}
           </Button>
         )}
       </SectionHeader>
+      {importing && (
+        <OpeningBalanceDialog
+          onClose={() => setImporting(false)}
+          onImported={() => void client.invalidateQueries({ queryKey: ["finance"] })}
+        />
+      )}
       <QueryState isPending={accounts.isPending} error={accounts.error} />
       {accounts.data && (
         <DataTable
@@ -154,6 +168,7 @@ export function AccountDetailPage() {
   const [from, setFrom] = useState(shiftDays(today(), -90));
   const [to, setTo] = useState(today());
   const [adding, setAdding] = useState(false);
+  const [reversing, setReversing] = useState<StatementLine | null>(null);
   const paging = usePaging(50);
 
   const account = useQuery({
@@ -271,6 +286,18 @@ export function AccountDetailPage() {
                 align: "right",
                 render: (line) => formatAmount(line.balance),
               },
+              {
+                header: t("common.actions"),
+                align: "right",
+                // Belgeye bağlı hareket belgesinden iptal edilir; elle ve açılış hareketi buradan.
+                render: (line) =>
+                  canPost &&
+                  REVERSIBLE.includes(line.sourceType) && (
+                    <Button size="small" color="error" onClick={() => setReversing(line)}>
+                      {t("finance.action.reverse")}
+                    </Button>
+                  ),
+              },
             ]}
             pagination={{
               count: statement.data.totalElements,
@@ -281,6 +308,33 @@ export function AccountDetailPage() {
             }}
           />
         </Stack>
+      )}
+      {reversing && (
+        <FormDialog
+          title={`${t("finance.action.reverse")} · ${formatAmount(reversing.amount)} ${currency}`}
+          fields={[
+            {
+              name: "date",
+              label: t("finance.field.date"),
+              type: "date",
+              required: true,
+              defaultValue: today(),
+            },
+            { name: "description", label: t("finance.field.description") },
+          ]}
+          submitLabel={t("finance.action.reverse")}
+          onClose={() => setReversing(null)}
+          onSubmit={(values) =>
+            apiRequest("POST", `/finance/accounts/transactions/${reversing.id}/reverse`, {
+              date: values.date,
+              description: values.description || null,
+            })
+          }
+          onSaved={() => {
+            setReversing(null);
+            void client.invalidateQueries({ queryKey: ["finance"] });
+          }}
+        />
       )}
       {adding && (
         <FormDialog

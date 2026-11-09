@@ -321,6 +321,27 @@ void i18n.use(initReactI18next).init({
           empty: "Kayıt yok.",
           noBranch: "İşlem yapmak için önce Tanımlar sekmesinden şube ekleyin.",
           openingBalance: "Dönem başı bakiye",
+          opening: {
+            open: "Açılış bakiyesi içe aktar",
+            title: "Açılış bakiyesi içe aktar",
+            intro:
+              "Önceki sistemdeki cari bakiyelerini CSV dosyasıyla yükleyin. Sütunlar: Kod, Ad, Tür (Müşteri, Tedarikçi, Taşeron, Personel, Banka), Bakiye; isteğe bağlı Para birimi, Kur, Vergi no. Pozitif bakiye cari bize borçlu, negatif bakiye biz cariye borçluyuz demektir. Kodu olmayan cari açılır. Tek hatalı satır varsa hiçbir şey yazılmaz.",
+            date: "Açılış tarihi",
+            pick: "Dosya seç",
+            sample: "Örnek dosya",
+            preview: "Önizle",
+            apply: "İçe aktar",
+            line: "Satır",
+            ready: "Hazır: {{accounts}} yeni cari, {{postings}} açılış hareketi.",
+            invalid: "{{count}} satır hatalı; düzeltip yeniden yükleyin. Hiçbir şey yazılmadı.",
+            applied: "İçe aktarıldı: {{accounts}} yeni cari, {{postings}} açılış hareketi.",
+            status: {
+              NEW_ACCOUNT: "Yeni cari",
+              EXISTING_ACCOUNT: "Mevcut cari",
+              ZERO: "Sıfır, atlanır",
+              ERROR: "Hatalı",
+            },
+          },
           dashboard: {
             overdue: "Vadesi geçen",
             today: "Bugün ödenecek",
@@ -410,6 +431,7 @@ void i18n.use(initReactI18next).init({
           period: { DAY: "Gün", MONTH: "Ay" },
           source: {
             MANUAL: "Elle",
+            OPENING: "Açılış bakiyesi",
             REVERSAL: "Ters kayıt",
             SETTLEMENT: "Ödeme/Tahsilat",
             TRANSFER: "Transfer",

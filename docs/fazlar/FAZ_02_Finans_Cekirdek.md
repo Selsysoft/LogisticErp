@@ -21,6 +21,7 @@
 > - Plan dışı doğrudan ödeme mümkündür; onay zorunluluğu yalnız plan üzerinden ödemeler içindir.
 > - Kullanıcının kendi planını onaylaması firma ayarıdır (Tanımlar sekmesi); varsayılan kapalıdır (dört göz ilkesi: planı oluşturan onaylayamaz). Tek yöneticili küçük firma ayarı açar; hata mesajı bu yolu gösterir. İlk sürümde varsayılan açıktı; V16 migration'ı ayarı hiç değiştirmemiş firmaları da kapalıya çevirir.
 > - Karşılıksız çekin cari hareketi, karşılıksız gününün kuruyla yazılır.
+> - Açılış bakiyesi (Finans > Cari > "Açılış bakiyesi içe aktar") CSV ile yüklenir: sütunlar başlık adıyla bulunur (Kod, Ad, Tür, Bakiye; isteğe bağlı Para birimi, Kur, Vergi no). Pozitif bakiye borç, negatif alacaktır. Önce önizlenir; tek hatalı satır varsa hiçbir şey yazılmaz. Aynı cari ve para biriminde ters çevrilmemiş açılış varsa satır reddedilir. "1.500" gibi yalnız binlik ayırıcılı tutar belirsiz sayılıp reddedilir. Açılış hareketi, elle hareket gibi cari ekstresinden ters çevrilir (ekstreye bu düğme de eklendi).
 > - Yaşlandırma işlem tarihine göredir ve en eski açık kalemden kapatır; hareketler bellekte işlendiği için büyük veride Faz 9'da iyileştirilmeli.
 > - 3B çek koçanı görünümü (opsiyonel) yapılmadı.
 
