@@ -151,6 +151,7 @@ public class CrmController {
                 request.title(),
                 request.email(),
                 request.phone(),
+                request.notifyDepartures(),
                 request.notifyDeliveries())));
   }
 
@@ -165,16 +166,18 @@ public class CrmController {
         request.title(),
         request.email(),
         request.phone(),
+        request.notifyDepartures(),
         request.notifyDeliveries());
     return mapper.toResponse(contacts.save(contact));
   }
 
   private static void requireEmailForNotice(SaveContactRequest request) {
-    if (request.notifyDeliveries() && (request.email() == null || request.email().isBlank())) {
+    boolean notified = request.notifyDepartures() || request.notifyDeliveries();
+    if (notified && (request.email() == null || request.email().isBlank())) {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST,
           "CONTACT_EMAIL_REQUIRED",
-          "Teslim bildirimi için kişinin e-postası girilmelidir.");
+          "Sefer bildirimi için kişinin e-postası girilmelidir.");
     }
   }
 

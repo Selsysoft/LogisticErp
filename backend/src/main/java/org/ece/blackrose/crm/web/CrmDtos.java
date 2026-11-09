@@ -50,6 +50,7 @@ public final class CrmDtos {
       @Size(max = 100) String title,
       @Email @Size(max = 254) String email,
       @Size(max = 30) String phone,
+      boolean notifyDepartures,
       boolean notifyDeliveries) {}
 
   public record ContactResponse(
@@ -59,6 +60,7 @@ public final class CrmDtos {
       String title,
       String email,
       String phone,
+      boolean notifyDepartures,
       boolean notifyDeliveries) {}
 
   public record SaveOpportunityRequest(

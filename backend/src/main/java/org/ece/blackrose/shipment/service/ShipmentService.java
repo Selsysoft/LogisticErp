@@ -186,8 +186,10 @@ public class ShipmentService {
     }
     move(shipment, target, message);
     // Fatura iptalinde teslim durumuna dönüş move() ile yapılır; müşteriye tekrar e-posta gitmez.
-    if (target == ShipmentStatus.DELIVERED) {
-      deliveryNotifier.prepare(shipment);
+    if (target == ShipmentStatus.IN_TRANSIT) {
+      deliveryNotifier.prepare(shipment, DeliveryNotifier.Kind.DEPARTURE);
+    } else if (target == ShipmentStatus.DELIVERED) {
+      deliveryNotifier.prepare(shipment, DeliveryNotifier.Kind.DELIVERY);
     }
     return shipment;
   }

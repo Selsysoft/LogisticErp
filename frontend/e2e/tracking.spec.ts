@@ -54,7 +54,7 @@ test("ofis takip bağlantısı verir; müşteri giriş yapmadan izler; iptalden 
   await customerContext.close();
 });
 
-test("teslim bildirimi işaretli kişiye e-postayla takip bağlantısı gider", async ({
+test("işaretli kişiye yola çıkışta ve teslimde e-postayla takip bağlantısı gider", async ({
   page,
   browser,
 }) => {
@@ -70,13 +70,19 @@ test("teslim bildirimi işaretli kişiye e-postayla takip bağlantısı gider", 
   const contact = page.getByRole("dialog");
   await contact.getByLabel(/^Ad soyad/).fill("Ayşe Lojistik");
   await contact.getByLabel(/^E-posta/).fill(email);
+  await contact.getByLabel("Sefer yola çıkınca takip bağlantılı e-posta alsın").check();
   await contact.getByLabel("Sefer teslim edilince takip bağlantılı e-posta alsın").check();
   await contact.getByRole("button", { name: "Kaydet" }).click();
   await expect(contact).toBeHidden();
-  await expect(page.getByRole("row").filter({ hasText: email })).toContainText("Evet");
+  await expect(page.getByRole("row").filter({ hasText: email })).toContainText(
+    "Yola çıkış, Teslim",
+  );
 
   const shipment = await owner.shipment(customer, branch);
   await owner.deliver(shipment.id, shipment.legs[0].id, "Ayşe Kabul");
+
+  const departure = await linkFromMail(email, `Gönderiniz yola çıktı: ${shipment.number}`);
+  expect(departure).toContain("/track/");
 
   const link = new URL(await linkFromMail(email, `Gönderiniz teslim edildi: ${shipment.number}`));
   const customerContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -87,5 +93,6 @@ test("teslim bildirimi işaretli kişiye e-postayla takip bağlantısı gider", 
   await customerContext.close();
 
   await page.goto(`/operations/shipments/${shipment.id}`);
+  await expect(page.getByText(`Yola çıkış bildirimi gönderildi: ${email}`)).toBeVisible();
   await expect(page.getByText(`Teslim bildirimi gönderildi: ${email}`)).toBeVisible();
 });

@@ -209,8 +209,14 @@ export function CustomerDetailPage() {
               { header: t("crm.field.email"), render: (r) => r.email },
               { header: t("crm.field.phone"), render: (r) => r.phone },
               {
-                header: t("crm.field.deliveryNotice"),
-                render: (r) => (r.notifyDeliveries ? t("crm.field.yes") : ""),
+                header: t("crm.field.shipmentNotices"),
+                render: (r) =>
+                  [
+                    r.notifyDepartures && t("crm.field.noticeDeparture"),
+                    r.notifyDeliveries && t("crm.field.noticeDelivery"),
+                  ]
+                    .filter(Boolean)
+                    .join(", "),
               },
               {
                 header: t("common.actions"),
@@ -303,6 +309,12 @@ export function CustomerDetailPage() {
               defaultValue: editingContact?.phone ?? "",
             },
             {
+              name: "notifyDepartures",
+              label: t("crm.field.notifyDepartures"),
+              type: "checkbox",
+              defaultValue: editingContact?.notifyDepartures ?? false,
+            },
+            {
               name: "notifyDeliveries",
               label: t("crm.field.notifyDeliveries"),
               type: "checkbox",
@@ -321,6 +333,7 @@ export function CustomerDetailPage() {
                 title: orNull(values.title),
                 email: orNull(values.email),
                 phone: orNull(values.phone),
+                notifyDepartures: flags.notifyDepartures,
                 notifyDeliveries: flags.notifyDeliveries,
               },
             )

@@ -730,25 +730,33 @@ class ShipmentIT extends AbstractIntegrationTest {
   }
 
   @Test
-  void deliveryEmailsMarkedContactsATrackingLinkOnce() throws Exception {
+  void departureAndDeliveryEmailMarkedContactsATrackingLinkOnce() throws Exception {
     Setup s = setup("dlv");
     String contacts = "/api/v1/crm/customers/" + s.customer() + "/contacts";
     String notified = "lojistik@musteri-" + s.tenant() + ".test";
+    String dispatch = "sevkiyat@musteri-" + s.tenant() + ".test";
     String silent = "muhasebe@musteri-" + s.tenant() + ".test";
-    post(s.tenant(), contacts, contact("Ayşe Lojistik", notified, true))
+    post(s.tenant(), contacts, contact("Ayşe Lojistik", notified, false, true))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.notifyDeliveries").value(true));
-    post(s.tenant(), contacts, contact("Ali Muhasebe", silent, false))
+        .andExpect(jsonPath("$.notifyDeliveries").value(true))
+        .andExpect(jsonPath("$.notifyDepartures").value(false));
+    post(s.tenant(), contacts, contact("Can Sevkiyat", dispatch, true, false))
         .andExpect(status().isCreated());
-    post(s.tenant(), contacts, contact("E-postasız", null, true))
+    post(s.tenant(), contacts, contact("Ali Muhasebe", silent, false, false))
+        .andExpect(status().isCreated());
+    post(s.tenant(), contacts, contact("E-postasız", null, true, false))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("CONTACT_EMAIL_REQUIRED"));
 
     String id = deliveredShipment(s, "1000", "34DL01", "S1");
-
-    Notice notice = awaitNotice(notified);
     String number =
         body(send(s.tenant(), get("/api/v1/shipment/shipments/" + id))).get("number").asText();
+
+    // Yola çıkışta yalnız o seçeneği işaretli kişi, planlanan teslimle birlikte haber alır.
+    Notice departure = awaitNotice(dispatch);
+    assertThat(departure.subject()).isEqualTo("Gönderiniz yola çıktı: " + number);
+    assertThat(departure.text()).contains("Planlanan teslim: ", "/track/" + s.tenant() + "/");
+    Notice notice = awaitNotice(notified);
     assertThat(notice.subject()).isEqualTo("Gönderiniz teslim edildi: " + number);
     assertThat(notice.text()).contains(s.tenant() + " Lojistik").doesNotContain("1.000");
     String url =
@@ -759,14 +767,20 @@ class ShipmentIT extends AbstractIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("DELIVERED"));
     assertThat(SENT_NOTICES).noneMatch(sent -> sent.email().equals(silent));
+    Thread.sleep(300);
+    assertThat(SENT_NOTICES.stream().filter(sent -> sent.email().equals(dispatch))).hasSize(1);
+    assertThat(SENT_NOTICES.stream().filter(sent -> sent.email().equals(notified))).hasSize(1);
 
     // Geçmişte kime gittiği görünür; ofisin yeni bağlantısı e-postadakini de geçersiz kılar.
     List<String> notes = new ArrayList<>();
     body(send(s.tenant(), get("/api/v1/shipment/shipments/" + id + "/timeline")))
         .forEach(event -> notes.add(event.path("message").asText()));
-    assertThat(notes).contains("Teslim bildirimi gönderildi: " + notified);
+    assertThat(notes)
+        .contains(
+            "Yola çıkış bildirimi gönderildi: " + dispatch,
+            "Teslim bildirimi gönderildi: " + notified);
     String link = "/api/v1/shipment/shipments/" + id + "/tracking-link";
-    send(s.tenant(), get(link)).andExpect(jsonPath("$.activeCount").value(1));
+    send(s.tenant(), get(link)).andExpect(jsonPath("$.activeCount").value(2));
     post(s.tenant(), link, null).andExpect(status().isCreated());
     mvc.perform(get(publicTracking(s.tenant(), token))).andExpect(status().isNotFound());
 
@@ -780,11 +794,13 @@ class ShipmentIT extends AbstractIntegrationTest {
 
   // Yardımcılar
 
-  private static Map<String, Object> contact(String name, String email, boolean notify) {
+  private static Map<String, Object> contact(
+      String name, String email, boolean departures, boolean deliveries) {
     Map<String, Object> body = new HashMap<>();
     body.put("fullName", name);
     body.put("email", email);
-    body.put("notifyDeliveries", notify);
+    body.put("notifyDepartures", departures);
+    body.put("notifyDeliveries", deliveries);
     return body;
   }
 

@@ -37,6 +37,8 @@ public final class CrmRepositories {
 
     List<Contact> findByAccountIdOrderByFullName(UUID accountId);
 
+    List<Contact> findByAccountIdAndNotifyDeparturesTrue(UUID accountId);
+
     List<Contact> findByAccountIdAndNotifyDeliveriesTrue(UUID accountId);
   }
 
