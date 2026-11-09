@@ -41,8 +41,12 @@ export async function api<T>(
 }
 
 /** Alıcıya gelen son e-postadaki uygulama bağlantısını döner; e-posta gelene kadar bekler. */
-export async function linkFromMail(to: string, subject: string): Promise<string> {
-  let link: string | undefined;
+/** Mailpit'e gelen ilk eşleşen e-postanın metin ve HTML bölümleri. */
+export async function mailMessage(
+  to: string,
+  subject: string,
+): Promise<{ Text: string; HTML: string }> {
+  let found: { Text: string; HTML: string } | undefined;
   await expect
     .poll(
       async () => {
@@ -51,13 +55,19 @@ export async function linkFromMail(to: string, subject: string): Promise<string>
         const { messages } = (await search.json()) as { messages: { ID: string }[] };
         if (!messages.length) return undefined;
         const message = await fetch(`${MAILPIT_URL}/api/v1/message/${messages[0].ID}`);
-        const { Text } = (await message.json()) as { Text: string };
-        link = Text.match(/https?:\/\/\S+/)?.[0];
-        return link;
+        found = (await message.json()) as { Text: string; HTML: string };
+        return found;
       },
       { timeout: 15_000 },
     )
     .toBeTruthy();
+  return found!;
+}
+
+export async function linkFromMail(to: string, subject: string): Promise<string> {
+  const { Text } = await mailMessage(to, subject);
+  const link = Text.match(/https?:\/\/\S+/)?.[0];
+  expect(link, "e-postada bağlantı").toBeTruthy();
   return link!;
 }
 

@@ -43,7 +43,7 @@ public abstract class AbstractIntegrationTest {
   /** E-posta adresine giden son bağlantının token'ı. */
   protected static final Map<String, String> SENT_TOKENS = new ConcurrentHashMap<>();
 
-  protected record Notice(String email, String subject, String text) {}
+  protected record Notice(String email, String subject, String text, String html) {}
 
   /** Gönderilen bildirim e-postaları. */
   protected static final List<Notice> SENT_NOTICES = new CopyOnWriteArrayList<>();
@@ -75,7 +75,12 @@ public abstract class AbstractIntegrationTest {
 
         @Override
         public void sendNotice(String email, String subject, String text) {
-          SENT_NOTICES.add(new Notice(email, subject, text));
+          SENT_NOTICES.add(new Notice(email, subject, text, null));
+        }
+
+        @Override
+        public void sendNotice(String email, String subject, String text, String html) {
+          SENT_NOTICES.add(new Notice(email, subject, text, html));
         }
 
         private void record(String email, String link) {

@@ -763,6 +763,11 @@ class ShipmentIT extends AbstractIntegrationTest {
         notice.text().lines().filter(line -> line.contains("/track/")).findFirst().orElseThrow();
     assertThat(url).contains("/track/" + s.tenant() + "/");
     String token = url.substring(url.lastIndexOf('/') + 1).strip();
+    // HTML bölümü aynı bağlantıyı düğmede taşır.
+    assertThat(notice.html())
+        .contains("<a href=\"" + url.strip() + "\"")
+        .contains("Gönderiyi izle")
+        .contains(s.tenant() + " Lojistik");
     mvc.perform(get(publicTracking(s.tenant(), token)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("DELIVERED"));

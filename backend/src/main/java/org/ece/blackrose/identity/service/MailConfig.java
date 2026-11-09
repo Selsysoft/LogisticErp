@@ -1,5 +1,7 @@
 package org.ece.blackrose.identity.service;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import org.ece.blackrose.identity.security.SecurityProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +13,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 
 /**
  * SMTP tanımlıysa gerçek e-posta gönderilir. Tanımlı değilse bağlantılar yalnız dev/test profilinde
@@ -38,6 +41,21 @@ public class MailConfig {
       @Override
       public void sendNotice(String email, String subject, String text) {
         send(email, subject, text);
+      }
+
+      @Override
+      public void sendNotice(String email, String subject, String text, String html) {
+        try {
+          MimeMessage message = sender.createMimeMessage();
+          MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+          helper.setFrom(properties.mailFrom());
+          helper.setTo(email);
+          helper.setSubject(subject);
+          helper.setText(text, html);
+          sender.send(message);
+        } catch (MessagingException | MailException ex) {
+          log.error("E-posta gönderilemedi", ex);
+        }
       }
 
       private void send(String email, String subject, String text) {

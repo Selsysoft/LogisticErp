@@ -8,4 +8,12 @@ public interface AccountMailer {
 
   /** Abonelik bildirimleri. Gönderim hatası iş akışını durdurmaz. */
   default void sendNotice(String email, String subject, String text) {}
+
+  /**
+   * Düz metin ve HTML birlikte gönderilir; HTML göstermeyen istemci metni okur. HTML'i
+   * desteklemeyen gerçekleme yalnız metni gönderir.
+   */
+  default void sendNotice(String email, String subject, String text, String html) {
+    sendNotice(email, subject, text);
+  }
 }

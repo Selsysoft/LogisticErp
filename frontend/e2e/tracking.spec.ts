@@ -1,5 +1,5 @@
 import { Owner, unique } from "./fixtures";
-import { expect, linkFromMail, login, tenantState, test } from "./support";
+import { expect, linkFromMail, login, mailMessage, tenantState, test } from "./support";
 
 test("ofis takip bağlantısı verir; müşteri giriş yapmadan izler; iptalden sonra açılmaz", async ({
   page,
@@ -84,7 +84,13 @@ test("işaretli kişiye yola çıkışta ve teslimde e-postayla takip bağlantı
   const departure = await linkFromMail(email, `Gönderiniz yola çıktı: ${shipment.number}`);
   expect(departure).toContain("/track/");
 
-  const link = new URL(await linkFromMail(email, `Gönderiniz teslim edildi: ${shipment.number}`));
+  const subject = `Gönderiniz teslim edildi: ${shipment.number}`;
+  const link = new URL(await linkFromMail(email, subject));
+  // Gerçek SMTP'den geçen e-postada HTML bölümü de vardır ve aynı bağlantıyı düğmede taşır.
+  const mail = await mailMessage(email, subject);
+  expect(mail.HTML).toContain(`href="${link.href}"`);
+  expect(mail.HTML).toContain("Gönderiyi izle");
+  expect(mail.HTML).not.toMatch(/<script|<img/i);
   const customerContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const customerPage = await customerContext.newPage();
   await customerPage.goto(link.pathname);

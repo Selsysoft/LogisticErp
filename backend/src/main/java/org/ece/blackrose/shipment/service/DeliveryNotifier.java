@@ -1,7 +1,6 @@
 package org.ece.blackrose.shipment.service;
 
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import org.ece.blackrose.crm.domain.Contact;
 import org.ece.blackrose.crm.repository.CrmRepositories.ContactRepository;
@@ -44,9 +43,7 @@ public class DeliveryNotifier {
   }
 
   /** İşlem sonrası gönderilecek e-postalar; veritabanı veya firma bağlamı gerekmez. */
-  public record DeliveryNotice(List<String> recipients, String subject, String text) {}
-
-  private static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+  public record DeliveryNotice(List<String> recipients, String subject, String text, String html) {}
 
   private final ContactRepository contacts;
   private final ShipmentTrackingService tracking;
@@ -101,40 +98,19 @@ public class DeliveryNotifier {
             null,
             null,
             kind.note + String.join(", ", recipients)));
+    ShipmentNoticeEmail.Content content =
+        ShipmentNoticeEmail.build(
+            kind, tenant.getName(), shipment, url, ZoneId.of(tenant.getTimeZone()));
     publisher.publishEvent(
         new DeliveryNotice(
-            recipients,
-            kind.subject + shipment.getNumber(),
-            text(kind, tenant.getName(), shipment, url, ZoneId.of(tenant.getTimeZone()))));
+            recipients, kind.subject + shipment.getNumber(), content.text(), content.html()));
   }
 
   @Async
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void send(DeliveryNotice notice) {
-    notice.recipients().forEach(email -> mailer.sendNotice(email, notice.subject(), notice.text()));
-  }
-
-  static String text(Kind kind, String company, Shipment shipment, String url, ZoneId zone) {
-    String route =
-        company
-            + " tarafından taşınan "
-            + shipment.getNumber()
-            + " numaralı gönderiniz ("
-            + shipment.getOrigin()
-            + " → "
-            + shipment.getDestination()
-            + ")";
-    String body =
-        kind == Kind.DEPARTURE
-            ? route
-                + " yola çıktı.\nPlanlanan teslim: "
-                + WHEN.format(shipment.getPlannedDelivery().atZone(zone))
-                + "\n\nGönderinin durumunu izlemek için:\n"
-            : route + " teslim edildi.\n\nTeslim zamanı ve sefer geçmişi için:\n";
-    return "Merhaba,\n\n"
-        + body
-        + url
-        + "\n\nBağlantı 60 gün geçerlidir. Bu e-postayı, firmanın sizi sefer bildirimi alacak kişi"
-        + " olarak kaydetmesi nedeniyle aldınız.\n";
+    notice
+        .recipients()
+        .forEach(email -> mailer.sendNotice(email, notice.subject(), notice.text(), notice.html()));
   }
 }
