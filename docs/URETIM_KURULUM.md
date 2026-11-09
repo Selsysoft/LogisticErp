@@ -41,7 +41,7 @@ docker run -d -p 8080:8080 -e BACKEND_URL=http://<backend>:8080 blackrose-web
 
 ## E-posta
 
-SMTP şu e-postalar için kullanılır: kullanıcı daveti, şifre sıfırlama, SaaS faturası ve günlük özet. Günlük özet saatlik iş ile firmanın saat dilimine göre 07:00'den sonra, her etkin kullanıcıya yetkili olduğu konulardan tek e-posta olarak gider: filo hatırlatmaları (`FLEET_EDIT`), onay bekleyen sürücü masrafları (`SHIPMENT_DISPATCH`), onay bekleyen ödeme planları (`FINANCE_APPROVE`), 3 gün içinde vadesi gelen veya geciken onaylı ödemeler (`FINANCE_PAYMENT_CREATE`). Kullanıcı konuları Hesabım ekranından kapatır; firma filo hatırlatmalarını filo ayarlarından kapatabilir. Gün veritabanında üstlenilir, birden çok örnekte bir kez gönderilir. Gönderim hatası günlüğe yazılır, aynı gün tekrar denenmez. Her bölümde en çok 20 satır gösterilir. Ödeme planı akışında ayrıca anlık e-posta gider: plan onaya gönderilince onay yetkisi olanlara (`PAYMENT_APPROVAL` konusu), onaylanınca veya reddedilince planı girene, ret gerekçesiyle (`PLAN_DECISION`). İşlemi yapan kişiye gitmez; kullanıcı konuları Hesabım'dan kapatabilir. E-posta işlem kaydedildikten sonra arka planda gider.
+SMTP şu e-postalar için kullanılır: kullanıcı daveti, şifre sıfırlama, SaaS faturası ve günlük özet. Günlük özet saatlik iş ile firmanın saat dilimine göre 07:00'den sonra, her etkin kullanıcıya yetkili olduğu konulardan tek e-posta olarak gider: filo hatırlatmaları (`FLEET_EDIT`), onay bekleyen sürücü masrafları (`SHIPMENT_DISPATCH`), onay bekleyen ödeme planları (`FINANCE_APPROVE`), 3 gün içinde vadesi gelen veya geciken onaylı ödemeler (`FINANCE_PAYMENT_CREATE`). Kullanıcı konuları Hesabım ekranından kapatır; firma filo hatırlatmalarını filo ayarlarından kapatabilir. Gün veritabanında üstlenilir, birden çok örnekte bir kez gönderilir. Gönderim hatası günlüğe yazılır, aynı gün tekrar denenmez. Her bölümde en çok 20 satır gösterilir. Ödeme planı akışında ayrıca anlık e-posta gider: plan onaya gönderilince onay yetkisi olanlara (`PAYMENT_APPROVAL` konusu), onaylanınca veya reddedilince planı girene, ret gerekçesiyle (`PLAN_DECISION`). Sürücü masrafında da aynısı: masraf girilince sevkiyat yetkisi olanlara (`DRIVER_EXPENSE_APPROVAL`), onaylanınca veya reddedilince sürücünün bağlı hesabına (`EXPENSE_DECISION`; sürücü adına dokunarak Hesabım'dan kapatabilir). İşlemi yapan kişiye gitmez; kullanıcı konuları Hesabım'dan kapatabilir. E-posta işlem kaydedildikten sonra arka planda gider.
 
 ## E-posta teslim edilebilirliği
 
@@ -86,6 +86,10 @@ Müşteri kişilerinde iki seçenek vardır: "Sefer yola çıkınca …" ve "Sef
 ## Dosyalar
 
 Yerel diskten S3'e geçişte anahtar düzeni aynıdır (`tenant_<kod>/<uuid>`), `FILES_ROOT` içeriği bucket köküne olduğu gibi kopyalanır. Şifreleme ve yaşam döngüsü bucket tarafında ayarlanmalıdır. clamd varsayılan `StreamMaxLength` değeri 25 MB'tır, yükleme sınırı 20 MB olduğu için yeterlidir. Mevcut dosyalar geriye dönük taranmaz.
+
+## Hazır olma denetimi
+
+Yük dengeleyici ve dağıtım betikleri `/api/v1/ping`'i kullanmalıdır: sunucu, açılış adımları (ilk SaaS yöneticisi, firma şemalarının migration'ı) bitene kadar 503 döner, sonra 200. Böylece trafik hazır olmayan örneğe gönderilmez.
 
 ## Dış bağlantıların denetimi
 

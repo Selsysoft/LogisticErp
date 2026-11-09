@@ -11,8 +11,10 @@ import org.ece.blackrose.fleet.repository.FleetRepositories.DriverRepository;
 import org.ece.blackrose.identity.domain.Permission;
 import org.ece.blackrose.identity.domain.UserAccount;
 import org.ece.blackrose.identity.repository.IdentityRepositories.UserAccountRepository;
+import org.ece.blackrose.identity.security.AuthenticatedUser;
 import org.ece.blackrose.shipment.service.TripFinanceService;
 import org.ece.blackrose.shipment.web.ShipmentDtos.SaveCostRequest;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -27,12 +29,15 @@ public class DriverExpenseReviewService {
   private final DriverRepository drivers;
   private final UserAccountRepository users;
   private final TripFinanceService tripFinance;
+  private final ApplicationEventPublisher publisher;
 
   public DriverExpenseReviewService(
       DriverExpenseRepository expenses,
       DriverRepository drivers,
       UserAccountRepository users,
-      TripFinanceService tripFinance) {
+      TripFinanceService tripFinance,
+      ApplicationEventPublisher publisher) {
+    this.publisher = publisher;
     this.expenses = expenses;
     this.drivers = drivers;
     this.users = users;
@@ -64,6 +69,7 @@ public class DriverExpenseReviewService {
                     ? "Sürücü masrafı: " + driver.getFullName()
                     : expense.getDescription()));
     expense.approve(cost.getId());
+    publish(expense);
     return expense;
   }
 
@@ -71,7 +77,14 @@ public class DriverExpenseReviewService {
   public DriverExpense reject(UUID id, String note) {
     DriverExpense expense = pending(id);
     expense.reject(note.trim());
+    publish(expense);
     return expense;
+  }
+
+  private void publish(DriverExpense expense) {
+    publisher.publishEvent(
+        new DriverExpenseEvent(
+            expense, AuthenticatedUser.current().map(AuthenticatedUser::email).orElse(null)));
   }
 
   @Transactional(readOnly = true)

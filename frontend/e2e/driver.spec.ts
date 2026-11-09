@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
 import { Owner, plate, unique } from "./fixtures";
-import { expect, login, tenantState, test } from "./support";
+import { expect, login, mailMessage, tenantState, test } from "./support";
 
 /** Sürücü telefonda kullanır; ekran telefon boyutunda denenir. */
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
@@ -77,6 +77,18 @@ test("sürücü atanan seferi yükler, yola çıkar, imzayla teslim eder; masraf
   await expect(office.getByRole("row").filter({ hasText: driverName })).toHaveCount(0);
   await office.close();
 
+  // Ofis masraf girilince, sürücü karar verilince gerçek SMTP'den (Mailpit) e-posta alır.
+  const request = await mailMessage(state.email, `Onay bekleyen sürücü masrafı: ${driverName}`);
+  expect(request.Text).toContain("750,00 TRY");
+  const decision = await mailMessage(driverLogin.email, "Masrafınız onaylandı");
+  expect(decision.Text).toContain("750,00 TRY");
+  expect(decision.Text).toContain(shipment.number);
+
   await page.reload();
   await expect(page.getByText("Onaylandı").first()).toBeVisible();
+
+  // Sürücü adına dokununca Hesabım açılır; karar e-postasını buradan kapatabilir.
+  await page.getByRole("link", { name: /Deneme Kullanıcı/ }).click();
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(page.getByText("Masrafım onaylanınca veya reddedilince (hemen)")).toBeVisible();
 });

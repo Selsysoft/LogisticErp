@@ -151,9 +151,15 @@ export function DriverLayout() {
           alignItems: "center",
         }}
       >
-        <Typography variant="h6" component="span">
+        {/* Ad, Hesabım'a gider: şifre, 2FA ve e-posta tercihleri orada. */}
+        <Button
+          color="inherit"
+          component={RouterLink}
+          to="/account"
+          sx={{ typography: "h6", textTransform: "none", px: 0 }}
+        >
           {me?.fullName}
-        </Typography>
+        </Button>
         <Button color="inherit" onClick={() => void signOut()}>
           {t("nav.logout")}
         </Button>

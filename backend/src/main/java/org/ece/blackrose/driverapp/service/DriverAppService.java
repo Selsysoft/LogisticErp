@@ -47,6 +47,7 @@ import org.ece.blackrose.shipment.service.ShipmentDocumentService;
 import org.ece.blackrose.shipment.service.ShipmentService;
 import org.ece.blackrose.shipment.web.ShipmentDtos.SavePodRequest;
 import org.ece.blackrose.tenant.TenantClock;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -92,6 +93,7 @@ public class DriverAppService {
   private final FileService files;
   private final GpsService gps;
   private final TenantClock clock;
+  private final ApplicationEventPublisher publisher;
 
   public DriverAppService(
       DriverRepository drivers,
@@ -106,7 +108,9 @@ public class DriverAppService {
       DriverExpenseRepository expenses,
       FileService files,
       GpsService gps,
-      TenantClock clock) {
+      TenantClock clock,
+      ApplicationEventPublisher publisher) {
+    this.publisher = publisher;
     this.drivers = drivers;
     this.vehicles = vehicles;
     this.shipments = shipments;
@@ -256,6 +260,9 @@ public class DriverAppService {
                 trim(description),
                 fileId));
     finish(clientId, expense.getId());
+    publisher.publishEvent(
+        new DriverExpenseEvent(
+            expense, AuthenticatedUser.current().map(AuthenticatedUser::email).orElse(null)));
     return new ClientOpResponse(expense.getId(), false);
   }
 

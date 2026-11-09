@@ -196,10 +196,19 @@ class DriverAppIT extends AbstractIntegrationTest {
     } finally {
       TenantContext.clear();
     }
+    // Masraf girilince ofise anlık e-posta da gider; özet ondan ayrıdır.
+    String office = ownerEmail(f.tenant());
+    String driverEmail = "surucu@" + f.tenant() + ".test";
+    awaitNotice(office, "Onay bekleyen sürücü masrafı: Sürücü S1 — Yakıt — 250,00 TRY");
+    Notice toll =
+        awaitNotice(office, "Onay bekleyen sürücü masrafı: Sürücü S1 — Geçiş — 99,00 TRY");
+    assertThat(toll.text()).contains("Tür: Geçiş", "/operations/driver-expenses");
+    assertThat(SENT_NOTICES).noneMatch(n -> n.email().equals(driverEmail));
     Notice digestMail =
         SENT_NOTICES.stream()
-            .filter(n -> n.email().equals(ownerEmail(f.tenant())))
-            .reduce((a, b) -> b)
+            .filter(n -> n.email().equals(office))
+            .filter(n -> n.subject().equals("Onay bekleyen sürücü masrafı: 2"))
+            .findFirst()
             .orElseThrow();
     assertThat(digestMail.subject()).isEqualTo("Onay bekleyen sürücü masrafı: 2");
     assertThat(digestMail.text()).contains("Sürücü S1 — 250 TRY", "/operations/driver-expenses");
@@ -224,6 +233,11 @@ class DriverAppIT extends AbstractIntegrationTest {
             Map.of("note", "Fiş yok"))
         .andExpect(status().isOk());
     assertThat(costCount(f, trip)).isEqualTo(1);
+
+    // Karar sürücünün bağlı hesabına gider; ret gerekçesiyle.
+    awaitNotice(driverEmail, "Masrafınız onaylandı: Yakıt — 250,00 TRY");
+    Notice rejectedMail = awaitNotice(driverEmail, "Masrafınız reddedildi: Geçiş — 99,00 TRY");
+    assertThat(rejectedMail.text()).contains("Ret gerekçesi: Fiş yok", "/driver/expenses");
 
     JsonNode mine = body(driver(f, get(BASE + "/expenses")));
     assertThat(mine.toString()).contains("Fiş yok").contains("APPROVED");
@@ -297,6 +311,19 @@ class DriverAppIT extends AbstractIntegrationTest {
   }
 
   // Yardımcılar
+
+  /** Anlık e-posta işlem kaydedildikten sonra arka planda gider. */
+  private static Notice awaitNotice(String email, String subject) throws InterruptedException {
+    for (int i = 0; i < 100; i++) {
+      for (Notice notice : SENT_NOTICES) {
+        if (notice.email().equals(email) && notice.subject().equals(subject)) {
+          return notice;
+        }
+      }
+      Thread.sleep(50);
+    }
+    throw new AssertionError(email + " için e-posta gelmedi: " + subject);
+  }
 
   private Fixture fixture(String t) throws Exception {
     createTenant(t);
