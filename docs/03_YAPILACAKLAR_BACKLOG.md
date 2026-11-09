@@ -112,9 +112,10 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 
 ## Çapraz kesen (tüm fazlar) — P0/P1
 - 🟦 X1 Belge/dosya yönetimi (yükleme, saklama, virüs tarama, erişim izni) — Faz 3 başlamadan; yerel disk/S3 ve ClamAV taraması hazır (S3 taklidiyle denendi), gerçek AWS ve mevcut dosyaların geriye dönük taranması açık
-- 🟦 X2 Bildirim altyapısı (e-posta/SMS/uygulama içi) + belge süresi hatırlatmaları — Faz 5A; uygulama içi liste ve günlük özet e-postası hazır (filo hatırlatmaları, onay bekleyen sürücü masrafı ve ödeme planı, vadesi gelen ödeme; kullanıcı bazlı tercih, filo için firma ayarı); anlık e-posta, SMS ve push açık
+- 🟦 X2 Bildirim altyapısı (e-posta/SMS/uygulama içi) + belge süresi hatırlatmaları — Faz 5A; uygulama içi liste ve günlük özet e-postası hazır (filo hatırlatmaları, onay bekleyen sürücü masrafı ve ödeme planı, vadesi gelen ödeme; kullanıcı bazlı tercih, filo için firma ayarı); müşteri kişisine yola çıkış ve teslim e-postası (takip bağlantılı, metin+HTML) hazır; kullanıcılara anlık e-posta, SMS ve push açık
 - ⬜ X3 i18n (TR birincil; EN altyapısı)
 - ⬜ X4 Audit/aktivite günlüğü standardı
 - ⬜ X5 Test kapsama hedefleri + sözleşme testleri
 - 🟦 X6 Güvenlik gözden geçirme (OWASP, yetki, kiracı sızıntısı) — kod gözden geçirmesi yapıldı (`docs/GUVENLIK_GOZDEN_GECIRME.md`), iki bulgu düzeltildi; bağımlılık taraması (Trivy, npm audit), yenileme token'ı HttpOnly çerezde, CSP'li nginx imajı ve frontend ana sürüm yükseltmeleri tamam; sızma testi açık
-- 🟦 X7 Üretim hazırlığı — SMTP, S3, ClamAV, IP sınırı, SaaS 2FA, büyük veri ölçümü ve düzeltmeleri, frontend nginx imajı (`docs/URETIM_KURULUM.md`); gerçek sağlayıcılar, TLS/yük dengeleyici ve üretim benzeri ortamda ölçüm açık
+- 🟦 X7 Üretim hazırlığı — SMTP, S3, ClamAV, IP sınırı, SaaS 2FA, büyük veri ölçümü ve düzeltmeleri, frontend nginx imajı, SaaS konsolunda dış bağlantı denetimi ve `blackrose_dependency_up` metriği, gönderen alan adının SPF/DMARC/DKIM denetimi (`docs/URETIM_KURULUM.md`); gerçek sağlayıcılar, DNS kayıtları, TLS/yük dengeleyici ve üretim benzeri ortamda ölçüm açık
+- ⬜ X8 Backend test süresi — tam doğrulama yerelde ~15 dk, CI'da ~5 dk; entegrasyon testleri ~545 sn. Testler ~157 firma şeması kurar, her biri 20 migration ile ~1,0–1,3 sn sürer (toplam ~200 sn). Test PostgreSQL'inde fsync kapatıp veriyi belleğe almak yalnız ~%8 kazandırdı, uygulanmadı. Belirgin kazanç için seçenekler: test sınıfı başına firmayı paylaşmak (yalıtım değişir) veya bir kez migrate edilmiş şablon şemayı kopyalamak; karar bekliyor
