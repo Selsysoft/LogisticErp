@@ -1,0 +1,13 @@
+# Yalnız CI'daki GitHub eylemleri: SHA'ya sabitlenen sürümler eskimesin.
+# npm ve Maven bağımlılıkları CI'daki npm audit ve Trivy taramasıyla izlenir.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "CI"
