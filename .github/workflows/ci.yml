@@ -23,8 +23,19 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
+      # coverage profili: kapsam ölçülen alt sınırın altına düşerse CI durur (backend/pom.xml).
       - name: Derleme, migration ve testler
-        run: mvn -B -f backend/pom.xml verify
+        run: mvn -B -f backend/pom.xml verify -Pcoverage
+      - name: Kapsam özeti
+        if: always() && hashFiles('backend/target/site/jacoco/jacoco.csv') != ''
+        run: python3 .github/scripts/coverage-summary.py backend/target/site/jacoco/jacoco.csv >> "$GITHUB_STEP_SUMMARY"
+      - name: Kapsam raporu
+        if: always() && hashFiles('backend/target/site/jacoco/index.html') != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend-coverage
+          path: backend/target/site/jacoco
+          retention-days: 14
       - name: Container imajı
         run: docker build --pull -t blackrose-backend backend
       # İmajdaki bütün JAR'lar ve işletim sistemi paketleri; düzeltmesi olan yüksek/kritik açıkta CI durur.
