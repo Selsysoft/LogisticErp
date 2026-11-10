@@ -92,7 +92,9 @@ Bu işlem denetim günlüğüne yazılmaz; kim ne zaman yaptığı ayrıca kayde
 
 ## IP sınırı
 
-Oturum gerektirmeyen uçlarda IP başına dakikalık sınır vardır: giriş 30, şifre sıfırlama 10, token yenileme 300, müşteri takip bağlantısı 60 (`RATE_LIMIT_*`, takip için `RATE_LIMIT_TRACKING`). Aşılınca 429 ve `Retry-After` döner.
+Oturum gerektirmeyen uçlarda IP başına dakikalık sınır vardır: giriş 30, şifre sıfırlama 10, token yenileme 300, müşteri takip bağlantısı 60, e-posta sağlayıcısı webhook'u 600 (`RATE_LIMIT_*`, takip için `RATE_LIMIT_TRACKING`, webhook için `RATE_LIMIT_WEBHOOK`). Aşılınca 429 ve `Retry-After` döner.
+
+Dosya yüklemesi dışındaki isteklerin gövdesi en çok 2 MB olabilir (`APP_HTTP_MAX_BODY_SIZE`, ör. `4MB`). JSON gövdesi belleğe okunduğu için, oturum veya imza denetlenmeden önce büyük gövdelerle belleğin doldurulması böyle önlenir; `Content-Length` sınırı aşan istek okunmadan 413 alır. Dosya yüklemeleri 20 MB ile sınırlıdır (`spring.servlet.multipart`, nginx'te `client_max_body_size 21m`).
 
 - Sayaçlar bellektedir ve örnek başınadır: 3 örnekte fiili sınır 3 katıdır, yeniden başlatmada sıfırlanır.
 - Tek IP arkasındaki kalabalık bir ofis için sınırlar gerekirse yükseltilmelidir.

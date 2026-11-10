@@ -102,3 +102,5 @@ app:
       password-reset-per-minute: ${RATE_LIMIT_PASSWORD_RESET:10}
       refresh-per-minute: ${RATE_LIMIT_REFRESH:300}
       tracking-per-minute: ${RATE_LIMIT_TRACKING:60}
+      # E-posta sağlayıcısının teslim bildirimleri; aşılırsa 429 alır ve sonra yeniden dener.
+      webhook-per-minute: ${RATE_LIMIT_WEBHOOK:600}

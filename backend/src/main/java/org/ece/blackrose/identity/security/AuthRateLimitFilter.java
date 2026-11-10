@@ -18,9 +18,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Oturum gerektirmeyen kimlik uçlarını IP başına sınırlar. Hesap kilidi tek hesabı korur; bu filtre
- * çok hesaba yayılan denemeleri ve e-posta tetikleyen istekleri yavaşlatır. Firma çözümlemesinden
- * önce çalışır, böylece firma kodu taraması da sayılır.
+ * Oturum gerektirmeyen kimlik, takip ve webhook uçlarını IP başına sınırlar. Hesap kilidi tek
+ * hesabı korur; bu filtre çok hesaba yayılan denemeleri ve e-posta tetikleyen istekleri yavaşlatır.
+ * Firma çözümlemesinden önce çalışır, böylece firma kodu taraması da sayılır.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
@@ -75,6 +75,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
       case "login" -> limits.loginPerMinute();
       case "reset" -> limits.passwordResetPerMinute();
       case "tracking" -> limits.trackingPerMinute();
+      case "webhook" -> limits.webhookPerMinute();
       default -> limits.refreshPerMinute();
     };
   }
@@ -88,6 +89,10 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     }
     if (path.startsWith("/api/v1/public/tracking/")) {
       return "tracking";
+    }
+    // İmza doğrulanmadan önce sayılır; sağlayıcı tek IP'den gönderir, sınır onun yükünü karşılar.
+    if (path.startsWith("/api/v1/webhooks/")) {
+      return "webhook";
     }
     return path.equals("/api/v1/auth/refresh") ? "refresh" : null;
   }
