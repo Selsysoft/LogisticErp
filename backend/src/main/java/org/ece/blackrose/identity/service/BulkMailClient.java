@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
+import org.ece.blackrose.tenant.TenantContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -110,7 +111,7 @@ public class BulkMailClient {
    */
   public String send(String to, String subject, String text, String html, String kind) {
     EmailRequest request =
-        new EmailRequest(from, to, subject, text, html, Map.of("kind", kind), false, false);
+        new EmailRequest(from, to, subject, text, html, tags(kind), false, false);
     String idempotencyKey = UUID.randomUUID().toString();
     for (int attempt = 1; ; attempt++) {
       try {
@@ -151,6 +152,20 @@ public class BulkMailClient {
         }
       }
     }
+  }
+
+  /**
+   * Teslim bildirimi geldiğinde e-postanın türü ve hangi firmadan gittiği etiketlerden okunur.
+   * Etiket değerleri yalnız harf, rakam, alt çizgi ve tire olabilir; firma kodları buna uyar.
+   */
+  static Map<String, String> tags(String kind) {
+    Map<String, String> tags = new java.util.LinkedHashMap<>();
+    tags.put("kind", kind);
+    TenantContext.current()
+        .map(TenantContext.Current::code)
+        .filter(code -> code.matches("[A-Za-z0-9_-]{1,64}"))
+        .ifPresent(code -> tags.put("tenant", code));
+    return tags;
   }
 
   private boolean pause(Duration duration) {

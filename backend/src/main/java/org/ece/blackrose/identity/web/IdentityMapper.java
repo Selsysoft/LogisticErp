@@ -16,6 +16,7 @@ public interface IdentityMapper {
   RoleResponse toResponse(Role role);
 
   @Mapping(target = "twoFactorEnabled", source = "totpEnabled")
+  @Mapping(target = "mailIssue", ignore = true)
   UserResponse toResponse(UserAccount user);
 
   AuditLogResponse toResponse(AuditLog log);

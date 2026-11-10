@@ -155,6 +155,13 @@ void i18n.use(initReactI18next).init({
           deleteTitle: "Kullanıcı silinsin mi?",
           deleteBody: "{{email}} artık giriş yapamayacak.",
           statusValues: { INVITED: "Davet edildi", ACTIVE: "Aktif", DISABLED: "Kapalı" },
+          mailIssue: {
+            BOUNCED: "E-posta geri döndü",
+            COMPLAINED: "İstenmeyen posta bildirildi",
+            FAILED: "E-posta gönderilemedi",
+          },
+          mailIssueHint:
+            "Bu adrese giden son e-posta teslim edilemedi. Adresin doğru yazıldığını kontrol edin; sonraki başarılı teslimde uyarı kalkar.",
           empty: "Henüz kullanıcı yok.",
         },
         roles: {
@@ -989,6 +996,12 @@ void i18n.use(initReactI18next).init({
             recheck: "Yeniden denetle",
             tenants: "Firma",
             slowest: "En yavaş uçlar",
+            mailEvents: "Teslim edilemeyen e-postalar (son 30 gün)",
+            mailEventsEmpty:
+              "Kayıt yok. BulkMail webhook'u bağlıysa geri dönen ve şikâyet edilen e-postalar burada görünür.",
+            recipient: "Alıcı",
+            tenant: "Firma",
+            subject: "Konu",
             endpoint: "Uç",
             count: "Çağrı",
             mean: "Ortalama",

@@ -39,6 +39,7 @@ const SCHEMA_OF: Record<string, string> = {
   "saas/SaasInvoice": "SaasInvoiceResponse",
   "saas/Plan": "SaasPlanResponse",
   "saas/AuditRow": "AuditLogResponse",
+  "saas/MailEventRow": "MailEventResponse",
   "warehouse/CountDetail": "CountResponse",
   "warehouse/Contract": "WarehouseContractResponse",
   "warehouse/Balance": "WarehouseBalanceResponse",

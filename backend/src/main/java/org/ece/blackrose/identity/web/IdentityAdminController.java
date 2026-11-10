@@ -3,6 +3,8 @@ package org.ece.blackrose.identity.web;
 import jakarta.validation.Valid;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import org.ece.blackrose.common.web.PageResponse;
 import org.ece.blackrose.identity.domain.Permission;
@@ -11,11 +13,14 @@ import org.ece.blackrose.identity.service.RoleService;
 import org.ece.blackrose.identity.service.UserService;
 import org.ece.blackrose.identity.web.IdentityDtos.AuditLogResponse;
 import org.ece.blackrose.identity.web.IdentityDtos.InviteUserRequest;
+import org.ece.blackrose.identity.web.IdentityDtos.MailIssueResponse;
 import org.ece.blackrose.identity.web.IdentityDtos.PermissionResponse;
 import org.ece.blackrose.identity.web.IdentityDtos.RoleResponse;
 import org.ece.blackrose.identity.web.IdentityDtos.SaveRoleRequest;
 import org.ece.blackrose.identity.web.IdentityDtos.UpdateUserRequest;
 import org.ece.blackrose.identity.web.IdentityDtos.UserResponse;
+import org.ece.blackrose.notification.mail.MailEventService;
+import org.ece.blackrose.tenant.TenantContext;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -39,25 +44,58 @@ public class IdentityAdminController {
   private final RoleService roles;
   private final AuditLogRepository auditLogs;
   private final IdentityMapper mapper;
+  private final MailEventService mailEvents;
 
   public IdentityAdminController(
-      UserService users, RoleService roles, AuditLogRepository auditLogs, IdentityMapper mapper) {
+      UserService users,
+      RoleService roles,
+      AuditLogRepository auditLogs,
+      IdentityMapper mapper,
+      MailEventService mailEvents) {
     this.users = users;
     this.roles = roles;
     this.auditLogs = auditLogs;
     this.mapper = mapper;
+    this.mailEvents = mailEvents;
   }
 
   @GetMapping("/users")
   @PreAuthorize("hasAuthority('USER_VIEW')")
   PageResponse<UserResponse> listUsers(Pageable pageable) {
-    return PageResponse.from(users.list(pageable), mapper::toResponse);
+    PageResponse<UserResponse> page = PageResponse.from(users.list(pageable), mapper::toResponse);
+    List<UserResponse> withIssues = withMailIssues(page.content());
+    return new PageResponse<>(
+        withIssues, page.page(), page.size(), page.totalElements(), page.totalPages());
   }
 
   @GetMapping("/users/{id}")
   @PreAuthorize("hasAuthority('USER_VIEW')")
   UserResponse getUser(@PathVariable UUID id) {
-    return mapper.toResponse(users.get(id));
+    return withMailIssues(List.of(mapper.toResponse(users.get(id)))).get(0);
+  }
+
+  /** Davet veya bildirim e-postası geri dönen kullanıcı listede işaretlenir. */
+  private List<UserResponse> withMailIssues(List<UserResponse> list) {
+    String tenant = TenantContext.current().map(TenantContext.Current::code).orElse(null);
+    Map<String, MailEventService.Issue> issues =
+        mailEvents.latestIssues(tenant, list.stream().map(UserResponse::email).toList());
+    return list.stream()
+        .map(
+            user -> {
+              MailEventService.Issue issue = issues.get(user.email().toLowerCase(Locale.ROOT));
+              return issue == null
+                  ? user
+                  : new UserResponse(
+                      user.id(),
+                      user.email(),
+                      user.fullName(),
+                      user.status(),
+                      user.twoFactorEnabled(),
+                      user.roles(),
+                      new MailIssueResponse(
+                          issue.type().name(), issue.detail(), issue.occurredAt()));
+            })
+        .toList();
   }
 
   @PostMapping("/users")

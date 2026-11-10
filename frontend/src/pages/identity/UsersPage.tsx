@@ -25,6 +25,7 @@ import {
   TablePagination,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -111,7 +112,23 @@ export function UsersPage() {
               {users.data.content.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>{user.fullName}</TableCell>
-                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    {user.email}
+                    {user.mailIssue && (
+                      <Tooltip
+                        title={[t("users.mailIssueHint"), user.mailIssue.detail]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        <Chip
+                          label={t(`users.mailIssue.${user.mailIssue.type}`)}
+                          color="warning"
+                          size="small"
+                          sx={{ ml: 1 }}
+                        />
+                      </Tooltip>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                       {user.roles.map((role) => (

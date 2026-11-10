@@ -72,6 +72,9 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/public/tracking/**")
                     .permitAll()
+                    // E-posta sağlayıcısının teslim bildirimleri; imzayla doğrulanır.
+                    .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/**")
+                    .permitAll()
                     .requestMatchers("/actuator/**", "/api/v1/admin/**")
                     .hasAuthority(JwtPrincipalConverter.SAAS_ADMIN_AUTHORITY)
                     .anyRequest()

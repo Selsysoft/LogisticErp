@@ -15,6 +15,14 @@ export interface User {
   status: "INVITED" | "ACTIVE" | "DISABLED";
   twoFactorEnabled: boolean;
   roles: Role[];
+  /** Bu adrese giden son e-posta teslim edilemediyse dolu; sonraki başarılı teslimde kalkar. */
+  mailIssue: MailIssue | null;
+}
+
+export interface MailIssue {
+  type: "BOUNCED" | "COMPLAINED" | "FAILED";
+  detail: string | null;
+  occurredAt: string;
 }
 
 export interface Page<T> {

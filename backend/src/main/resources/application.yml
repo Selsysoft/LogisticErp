@@ -60,6 +60,8 @@ app:
     bulkmail:
       api-key: ${BULKMAIL_API_KEY:}
       base-url: ${BULKMAIL_BASE_URL:https://api.qrestos.com}
+      # BulkMail panelinde webhook oluşturulunca verilen whsec_… değeri; boşsa webhook ucu kapalıdır.
+      webhook-secret: ${BULKMAIL_WEBHOOK_SECRET:}
   files:
     root: ${FILES_ROOT:./data/files}
     storage: ${FILE_STORAGE:local}

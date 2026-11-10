@@ -1,4 +1,8 @@
 app:
+  mail:
+    bulkmail:
+      # Yalnız testte; webhook imzası bununla doğrulanır.
+      webhook-secret: whsec_YmxhY2tyb3NlLXRlc3Qtd2ViaG9vay1zZWNyZXQtMzI=
   saas:
     payment:
       provider: mock

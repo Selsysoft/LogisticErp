@@ -84,6 +84,17 @@ export interface Dependency {
   essential: boolean;
 }
 
+/** BulkMail webhook'undan gelen teslim sorunu. */
+export interface MailEventRow {
+  type: "BOUNCED" | "COMPLAINED" | "FAILED";
+  recipient: string;
+  tenantCode: string | null;
+  kind: string | null;
+  subject: string | null;
+  detail: string | null;
+  occurredAt: string;
+}
+
 export interface AuditRow {
   id: string;
   eventType: string;

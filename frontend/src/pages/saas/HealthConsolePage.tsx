@@ -6,7 +6,7 @@ import { DataTable, QueryState, SectionHeader } from "../finance/common";
 import { formatDateTime } from "../operations/common";
 import { StatGrid, StatTile } from "../reports/components";
 import { adminGet } from "./adminApi";
-import { AuditRow, Health } from "./types";
+import { AuditRow, Health, MailEventRow } from "./types";
 
 const REFRESH_MILLIS = 30_000;
 const SEVERITY = { OK: "success", DEGRADED: "warning", CRITICAL: "error" } as const;
@@ -28,6 +28,11 @@ export function HealthConsolePage() {
     refetchInterval: REFRESH_MILLIS,
   });
   const data = health.data;
+  const mailEvents = useQuery({
+    queryKey: ["saas", "mail-events"],
+    queryFn: () => adminGet<MailEventRow[]>("/mail-events"),
+    refetchInterval: REFRESH_MILLIS,
+  });
   /** Dış bağımlılıklar bir dakika saklanır; yönetici beklemeden yeniden denetletebilir. */
   const recheck = async () => {
     setRechecking(true);
@@ -113,6 +118,36 @@ export function HealthConsolePage() {
               },
             ]}
           />
+          <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 700 }}>
+            {t("saas.health.mailEvents")}
+          </Typography>
+          <QueryState isPending={mailEvents.isPending} error={mailEvents.error} />
+          {mailEvents.data && mailEvents.data.length === 0 && (
+            <Typography color="text.secondary">{t("saas.health.mailEventsEmpty")}</Typography>
+          )}
+          {mailEvents.data && mailEvents.data.length > 0 && (
+            <DataTable
+              rows={mailEvents.data}
+              rowKey={(row) => `${row.occurredAt}-${row.recipient}-${row.type}`}
+              columns={[
+                { header: t("saas.audit.when"), render: (row) => formatDateTime(row.occurredAt) },
+                {
+                  header: t("saas.health.state"),
+                  render: (row) => (
+                    <Chip
+                      size="small"
+                      color={row.type === "BOUNCED" ? "warning" : "error"}
+                      label={t(`users.mailIssue.${row.type}`)}
+                    />
+                  ),
+                },
+                { header: t("saas.health.recipient"), render: (row) => row.recipient },
+                { header: t("saas.health.tenant"), render: (row) => row.tenantCode ?? "—" },
+                { header: t("saas.health.subject"), render: (row) => row.subject ?? "—" },
+                { header: t("saas.health.detail"), render: (row) => row.detail || "—" },
+              ]}
+            />
+          )}
           <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 700 }}>
             {t("saas.health.slowest")}
           </Typography>

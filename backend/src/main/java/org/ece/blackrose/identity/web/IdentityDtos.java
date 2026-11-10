@@ -78,7 +78,15 @@ public final class IdentityDtos {
       String fullName,
       UserStatus status,
       boolean twoFactorEnabled,
-      Set<RoleResponse> roles) {}
+      Set<RoleResponse> roles,
+      MailIssueResponse mailIssue) {}
+
+  /**
+   * Bu adrese giden son e-posta teslim edilemedi (BOUNCED: adres yok veya kutu dolu; COMPLAINED:
+   * alıcı istenmeyen posta diye işaretledi; FAILED: gönderilemedi). Sonraki başarılı teslimde
+   * kalkar.
+   */
+  public record MailIssueResponse(String type, String detail, java.time.Instant occurredAt) {}
 
   public record SaveRoleRequest(
       @NotBlank @Pattern(regexp = "^[A-Z][A-Z0-9_]{1,48}$") String code,

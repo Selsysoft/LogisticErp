@@ -3106,6 +3106,48 @@
         },
         "type" : "object"
       },
+      "MailEventResponse" : {
+        "properties" : {
+          "detail" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "occurredAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "recipient" : {
+            "type" : "string"
+          },
+          "subject" : {
+            "type" : "string"
+          },
+          "tenantCode" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "MailIssueResponse" : {
+        "properties" : {
+          "detail" : {
+            "type" : "string"
+          },
+          "occurredAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ManualAccountTransactionRequest" : {
         "properties" : {
           "branchId" : {
@@ -7773,6 +7815,9 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "mailIssue" : {
+            "$ref" : "#/components/schemas/MailIssueResponse"
+          },
           "roles" : {
             "items" : {
               "$ref" : "#/components/schemas/RoleResponse"
@@ -8419,6 +8464,27 @@
           }
         },
         "tags" : [ "admin-saas-controller" ]
+      }
+    },
+    "/api/v1/admin/mail-events" : {
+      "get" : {
+        "operationId" : "recent",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/MailEventResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "admin-mail-event-controller" ]
       }
     },
     "/api/v1/admin/plans" : {
@@ -17386,7 +17452,7 @@
     },
     "/api/v1/warehouse/receipts" : {
       "post" : {
-        "operationId" : "receive",
+        "operationId" : "receive_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -17531,6 +17597,49 @@
           }
         },
         "tags" : [ "warehouse-controller" ]
+      }
+    },
+    "/api/v1/webhooks/bulkmail" : {
+      "post" : {
+        "operationId" : "receive",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "webhook-id",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "webhook-timestamp",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "webhook-signature",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "format" : "byte",
+                "type" : "string"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "bulk-mail-webhook-controller" ]
       }
     }
   }

@@ -40,6 +40,7 @@ public class TenantFilter extends OncePerRequestFilter {
     String path = request.getRequestURI();
     return !path.startsWith("/api/v1/")
         || path.equals("/api/v1/ping")
+        || path.startsWith("/api/v1/webhooks/")
         || path.startsWith("/api/v1/admin/");
   }
 

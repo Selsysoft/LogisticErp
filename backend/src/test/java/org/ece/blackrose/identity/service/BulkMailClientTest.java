@@ -67,6 +67,19 @@ class BulkMailClientTest {
   }
 
   @Test
+  void firmaBaglamindaGidenEpostaFirmaKoduylaEtiketlenir() {
+    org.ece.blackrose.tenant.TenantContext.set("acme-lojistik", "tenant_acme");
+    try {
+      assertThat(BulkMailClient.tags("notice"))
+          .containsEntry("kind", "notice")
+          .containsEntry("tenant", "acme-lojistik");
+    } finally {
+      org.ece.blackrose.tenant.TenantContext.clear();
+    }
+    assertThat(BulkMailClient.tags("invite")).containsOnlyKeys("kind");
+  }
+
+  @Test
   void htmlYoksaAlanGonderilmez() {
     server
         .expect(requestTo(URL))
