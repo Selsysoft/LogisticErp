@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.ece.blackrose.files.FileScanner;
 import org.ece.blackrose.files.FileStorage;
+import org.ece.blackrose.identity.service.BulkMailClient;
+import org.ece.blackrose.identity.service.BulkMailClientAccess;
 import org.ece.blackrose.saas.service.DependencyHealth.Dependency;
 import org.ece.blackrose.saas.service.DependencyHealth.State;
 import org.ece.blackrose.saas.service.PaymentProvider.MockPaymentProvider;
@@ -158,6 +160,44 @@ class DependencyHealthTest {
 
   // Yardımcılar
 
+  /** Tanımlıysa e-posta BulkMail üzerinden denetlenir. */
+  private BulkMailClient bulkClient;
+
+  @Test
+  void bulkMailAnahtariDenetlenirTestAnahtariUyaridir() {
+    var builder = org.springframework.web.client.RestClient.builder().baseUrl("https://bulk.test");
+    var server = org.springframework.test.web.client.MockRestServiceServer.bindTo(builder).build();
+    server
+        .expect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo(
+                "https://bulk.test/v1/me"))
+        .andExpect(
+            org.springframework.test.web.client.match.MockRestRequestMatchers.header(
+                "Authorization", "Bearer sk_test_abc"))
+        .andRespond(
+            org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess(
+                "{\"object\":\"api_key\",\"id\":\"key_1\",\"mode\":\"test\"}",
+                org.springframework.http.MediaType.APPLICATION_JSON));
+    bulkClient =
+        BulkMailClientAccess.client(builder, "sk_test_abc", "Firma <noreply@firma.example>");
+
+    List<DependencyHealth.Dependency> result =
+        health(mailOf(null), storage(() -> {}), disabledScanner(), List.of()).check();
+
+    DependencyHealth.Dependency mail =
+        result.stream().filter(d -> d.key().equals("mail")).findFirst().orElseThrow();
+    assertThat(mail.state()).isEqualTo(DependencyHealth.State.WARNING);
+    assertThat(mail.detail()).contains("test anahtarı");
+    assertThat(
+            result.stream()
+                .filter(d -> d.key().equals("maildomain"))
+                .findFirst()
+                .orElseThrow()
+                .state())
+        .isEqualTo(DependencyHealth.State.NOT_CONFIGURED);
+    server.verify();
+  }
+
   private interface Check {
     void run() throws IOException;
   }
@@ -167,8 +207,13 @@ class DependencyHealthTest {
       FileStorage storage,
       FileScanner scanner,
       List<PaymentProvider> providers) {
+    StaticListableBeanFactory bulkBeans = new StaticListableBeanFactory();
+    if (bulkClient != null) {
+      bulkBeans.addBean("bulkMail", bulkClient);
+    }
     return new DependencyHealth(
         mail,
+        bulkBeans.getBeanProvider(BulkMailClient.class),
         storage,
         scanner,
         new PaymentProviders(providers),

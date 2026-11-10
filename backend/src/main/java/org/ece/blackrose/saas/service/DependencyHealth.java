@@ -16,6 +16,7 @@ import java.util.concurrent.TimeoutException;
 import org.ece.blackrose.files.FileScanner;
 import org.ece.blackrose.files.FileStorage;
 import org.ece.blackrose.identity.security.SecurityProperties;
+import org.ece.blackrose.identity.service.BulkMailClient;
 import org.ece.blackrose.saas.service.PaymentProvider.PaymentProviders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,6 +61,7 @@ public class DependencyHealth {
   private static final Logger log = LoggerFactory.getLogger(DependencyHealth.class);
 
   private final ObjectProvider<JavaMailSender> mail;
+  private final ObjectProvider<BulkMailClient> bulkMail;
   private final FileStorage storage;
   private final FileScanner scanner;
   private final PaymentProviders payments;
@@ -86,6 +88,7 @@ public class DependencyHealth {
   @Autowired
   public DependencyHealth(
       ObjectProvider<JavaMailSender> mail,
+      ObjectProvider<BulkMailClient> bulkMail,
       FileStorage storage,
       FileScanner scanner,
       PaymentProviders payments,
@@ -94,6 +97,7 @@ public class DependencyHealth {
       @Value("${app.mail.dkim-selector:}") String dkimSelector) {
     this(
         mail,
+        bulkMail,
         storage,
         scanner,
         payments,
@@ -106,6 +110,7 @@ public class DependencyHealth {
 
   DependencyHealth(
       ObjectProvider<JavaMailSender> mail,
+      ObjectProvider<BulkMailClient> bulkMail,
       FileStorage storage,
       FileScanner scanner,
       PaymentProviders payments,
@@ -122,6 +127,7 @@ public class DependencyHealth {
     }
     this.timeout = timeout;
     this.mail = mail;
+    this.bulkMail = bulkMail;
     this.storage = storage;
     this.scanner = scanner;
     this.payments = payments;
@@ -239,6 +245,21 @@ public class DependencyHealth {
   }
 
   private Dependency mail() throws Exception {
+    BulkMailClient bulk = bulkMail.getIfAvailable();
+    if (bulk != null) {
+      long started = System.nanoTime();
+      BulkMailClient.KeyInfo key = bulk.whoAmI();
+      boolean live = "live".equals(key.mode());
+      return new Dependency(
+          "mail",
+          "E-posta",
+          live ? State.UP : State.WARNING,
+          live
+              ? "BulkMail (canlı anahtar)"
+              : "BulkMail test anahtarı: yalnız doğrulanmış sandbox alıcılarına gider.",
+          millisSince(started),
+          true);
+    }
     JavaMailSender sender = mail.getIfAvailable();
     if (!(sender instanceof JavaMailSenderImpl smtp) || smtp.getHost() == null) {
       return new Dependency(
@@ -289,10 +310,21 @@ public class DependencyHealth {
    */
   private Dependency mailDomain() {
     String name = "Gönderen alan adı";
+    BulkMailClient bulk = bulkMail.getIfAvailable();
     JavaMailSender sender = mail.getIfAvailable();
-    if (!(sender instanceof JavaMailSenderImpl smtp) || smtp.getHost() == null) {
+    boolean smtp = sender instanceof JavaMailSenderImpl impl && impl.getHost() != null;
+    if (bulk == null && !smtp) {
       return new Dependency(
-          "maildomain", name, State.NOT_CONFIGURED, "SMTP tanımlı değil.", 0, false);
+          "maildomain", name, State.NOT_CONFIGURED, "E-posta tanımlı değil.", 0, false);
+    }
+    if (bulk != null && bulk.isTestKey()) {
+      return new Dependency(
+          "maildomain",
+          name,
+          State.NOT_CONFIGURED,
+          "Test anahtarı sandbox adresinden gönderir; alan adı canlı anahtarda denetlenir.",
+          0,
+          false);
     }
     String domain = MailDomainRecords.domainOf(mailDomain.from());
     if (domain == null) {

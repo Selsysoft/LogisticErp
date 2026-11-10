@@ -56,6 +56,10 @@ app:
   mail:
     # Sağlayıcının DKIM seçicisi (ör. s1); verilirse SaaS konsolu DKIM kaydını da denetler.
     dkim-selector: ${MAIL_DKIM_SELECTOR:}
+    # Verilirse e-postalar SMTP yerine BulkMail (qrestos) HTTP API'siyle gider.
+    bulkmail:
+      api-key: ${BULKMAIL_API_KEY:}
+      base-url: ${BULKMAIL_BASE_URL:https://api.qrestos.com}
   files:
     root: ${FILES_ROOT:./data/files}
     storage: ${FILE_STORAGE:local}
