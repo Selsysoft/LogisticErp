@@ -57,8 +57,16 @@ const LOCAL = new Set([
   "identity/Page",
 ]);
 
+interface Property {
+  $ref?: string;
+  type?: string;
+  enum?: unknown[];
+}
+
 interface Schema {
-  properties?: Record<string, unknown>;
+  type?: string;
+  enum?: unknown[];
+  properties?: Record<string, Property>;
 }
 
 const schemas: Record<string, Schema> = JSON.parse(readFileSync(SPEC, "utf8")).components.schemas;
@@ -69,9 +77,55 @@ function sourceFiles(): string[] {
   return parsed.fileNames.filter((file) => file.includes("/pages/") && !file.includes(".test."));
 }
 
+type Kind = "string" | "number" | "boolean" | "array" | "object";
+
 interface ApiType {
   key: string;
   fields: string[];
+  /** Alan adı -> kaba tip; birleşik veya belirsiz tipler (any, karışık) yer almaz. */
+  kinds: Record<string, Kind>;
+}
+
+/** TypeScript tipini JSON'daki kaba karşılığına indirger; null/undefined birleşimden atılır. */
+function kindOf(checker: ts.TypeChecker, type: ts.Type): Kind | undefined {
+  const parts = (type.isUnion() ? type.types : [type]).filter(
+    (part) => !(part.flags & (ts.TypeFlags.Null | ts.TypeFlags.Undefined)),
+  );
+  const kinds = new Set<Kind | undefined>(
+    parts.map((part) => {
+      if (part.flags & ts.TypeFlags.StringLike) return "string";
+      if (part.flags & ts.TypeFlags.NumberLike) return "number";
+      if (part.flags & ts.TypeFlags.BooleanLike) return "boolean";
+      if (checker.isArrayType(part) || checker.isTupleType(part)) return "array";
+      if (part.flags & ts.TypeFlags.Object) return "object";
+      return undefined;
+    }),
+  );
+  return kinds.size === 1 ? [...kinds][0] : undefined;
+}
+
+/** Şemadaki alanın kaba tipi; enum ve tarih metindir, başka şemaya bağlantı nesnedir. */
+function schemaKind(property: Property): Kind | undefined {
+  if (property.$ref) {
+    const target = schemas[property.$ref.split("/").pop() ?? ""];
+    return target?.enum || target?.type === "string" ? "string" : "object";
+  }
+  if (property.enum) return "string";
+  switch (property.type) {
+    case "string":
+      return "string";
+    case "integer":
+    case "number":
+      return "number";
+    case "boolean":
+      return "boolean";
+    case "array":
+      return "array";
+    case "object":
+      return "object";
+    default:
+      return undefined;
+  }
 }
 
 function exportedInterfaces(): ApiType[] {
@@ -89,10 +143,17 @@ function exportedInterfaces(): ApiType[] {
       if (!ts.isInterfaceDeclaration(node) || !exported) return;
       const symbol = checker.getSymbolAtLocation(node.name);
       if (!symbol) return;
-      const fields = checker
-        .getPropertiesOfType(checker.getDeclaredTypeOfSymbol(symbol))
-        .map((property) => property.getName());
-      result.push({ key: `${module}/${node.name.text}`, fields });
+      const properties = checker.getPropertiesOfType(checker.getDeclaredTypeOfSymbol(symbol));
+      const kinds: Record<string, Kind> = {};
+      for (const property of properties) {
+        const kind = kindOf(checker, checker.getTypeOfSymbolAtLocation(property, node));
+        if (kind) kinds[property.getName()] = kind;
+      }
+      result.push({
+        key: `${module}/${node.name.text}`,
+        fields: properties.map((property) => property.getName()),
+        kinds,
+      });
     });
   }
   return result;
@@ -136,5 +197,21 @@ describe("API sözleşmesi", () => {
       }
     }
     expect(unknown).toEqual([]);
+  });
+
+  it("frontend'in alan tipi backend'in gönderdiğiyle aynıdır", () => {
+    const mismatched: string[] = [];
+    for (const type of types) {
+      if (LOCAL.has(type.key)) continue;
+      const name = schemaFor(type.key);
+      const properties = (name && schemas[name]?.properties) || {};
+      for (const [field, kind] of Object.entries(type.kinds)) {
+        const expected = properties[field] && schemaKind(properties[field]);
+        if (expected && expected !== kind) {
+          mismatched.push(`${type.key}.${field}: frontend ${kind}, backend ${expected}`);
+        }
+      }
+    }
+    expect(mismatched).toEqual([]);
   });
 });

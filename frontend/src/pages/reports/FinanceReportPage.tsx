@@ -40,7 +40,7 @@ export function FinanceReportPage() {
       ),
     enabled: !!from && !!to,
   });
-  const amount = (value: string) => formatAmount(value);
+  const amount = (value: number) => formatAmount(value);
 
   return (
     <Stack spacing={3}>

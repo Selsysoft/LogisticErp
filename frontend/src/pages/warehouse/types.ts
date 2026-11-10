@@ -26,7 +26,7 @@ export interface StockItem {
   sku: string;
   name: string;
   unit: string;
-  unitsPerBillingUnit: string;
+  unitsPerBillingUnit: number;
 }
 
 export interface Balance {
@@ -44,7 +44,7 @@ export interface Balance {
   lotNo: string;
   expiryDate: string | null;
   customsStatus: CustomsStatus;
-  quantity: string;
+  quantity: number;
 }
 
 export interface Movement {
@@ -57,7 +57,7 @@ export interface Movement {
   accountName: string;
   lotNo: string;
   customsStatus: CustomsStatus;
-  quantity: string;
+  quantity: number;
   movedOn: string;
   reference: string | null;
   createdBy: string;
@@ -72,9 +72,9 @@ export interface CountLine {
   accountName: string;
   lotNo: string;
   customsStatus: CustomsStatus;
-  systemQuantity: string;
-  countedQuantity: string | null;
-  difference: string | null;
+  systemQuantity: number;
+  countedQuantity: number | null;
+  difference: number | null;
 }
 
 export interface CountSummary {
@@ -101,29 +101,29 @@ export interface Contract {
   endDate: string;
   currency: string;
   storageBasis: string;
-  storageRate: string;
+  storageRate: number;
   taxRateId: string | null;
 }
 
 export interface Rate {
   id: string;
   kind: string;
-  unitPrice: string;
+  unitPrice: number;
 }
 
 export interface Handling {
   id: string;
   kind: string;
-  quantity: string;
-  unitPrice: string;
-  amount: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
   chargedOn: string;
   invoiceId: string | null;
   note: string | null;
 }
 
 export interface InvoicePreview {
-  storageQuantity: string;
+  storageQuantity: number;
   storage: Money;
   handling: Money;
   net: Money;

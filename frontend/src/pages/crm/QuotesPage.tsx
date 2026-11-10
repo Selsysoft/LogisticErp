@@ -237,7 +237,7 @@ export function QuoteDetailPage() {
 
   const data = quote.data;
   const isDraft = data?.status === "DRAFT";
-  const amount = (value: string) => `${formatAmount(value)} ${data?.currency}`;
+  const amount = (value: number) => `${formatAmount(value)} ${data?.currency}`;
 
   return (
     <Stack spacing={3}>

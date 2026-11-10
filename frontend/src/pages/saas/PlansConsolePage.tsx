@@ -47,7 +47,7 @@ export function PlansConsolePage() {
       label: t("saas.field.monthlyPrice"),
       type: "amount",
       required: true,
-      defaultValue: current?.monthlyPrice ?? "",
+      defaultValue: current?.monthlyPrice.toString() ?? "",
     },
     {
       name: "currency",

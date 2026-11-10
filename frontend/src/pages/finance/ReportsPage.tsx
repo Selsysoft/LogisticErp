@@ -146,7 +146,7 @@ function AgingSection() {
     queryFn: () => apiGet<Aging[]>(`/finance/reports/aging?type=${type}&asOf=${asOf}`),
     enabled: !!asOf,
   });
-  const amount = (value: string, currency: string) => `${formatAmount(value)} ${currency}`;
+  const amount = (value: number, currency: string) => `${formatAmount(value)} ${currency}`;
 
   return (
     <Box>

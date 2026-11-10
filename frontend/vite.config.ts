@@ -15,11 +15,17 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts", "src/**/types.ts", "src/i18n.ts", "src/theme.ts"],
+      exclude: [
+        "src/**/*.tsx",
+        "src/**/*.test.ts",
+        "src/**/types.ts",
+        "src/i18n.ts",
+        "src/theme.ts",
+      ],
       reporter: ["text-summary", "json-summary", "html"],
-      // 2026-11-10 ölçümü: satır %67, dal %71. Eksikler çoğunlukla React Query sarmalayıcıları ve
+      // 2026-11-10 ölçümü: satır %79, dal %90. Eksikler çoğunlukla React Query sarmalayıcıları ve
       // tarayıcıya özgü IndexedDB/fotoğraf küçültme kodu.
-      thresholds: { lines: 65, branches: 68 },
+      thresholds: { lines: 75, branches: 85 },
     },
   },
 });

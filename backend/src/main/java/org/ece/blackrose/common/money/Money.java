@@ -1,13 +1,18 @@
 package org.ece.blackrose.common.money;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.Objects;
 
 /** Tutar ve para birimi. Eşitlik ölçekten bağımsızdır: 0.3 ile 0.30 eşittir. */
 public record Money(
-    @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal amount, String currency) {
+    // Ondalık hassasiyet kaybolmasın diye tutar JSON'da metindir ("1500.25"); şema da bunu söyler.
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+        @Schema(type = "string", format = "decimal", example = "1500.25")
+        BigDecimal amount,
+    String currency) {
 
   public Money {
     Objects.requireNonNull(amount, "amount");

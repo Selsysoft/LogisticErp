@@ -19,10 +19,10 @@ export interface Branch {
 
 export interface Balance {
   currency: string;
-  debit: string;
-  credit: string;
-  balance: string;
-  tlBalance: string;
+  debit: number;
+  credit: number;
+  balance: number;
+  tlBalance: number;
 }
 
 export interface Account {
@@ -45,24 +45,24 @@ export interface Fund {
   bankName: string | null;
   iban: string | null;
   allowNegative: boolean;
-  balance: string;
+  balance: number;
 }
 
 export interface StatementLine {
   id: string;
   date: string;
   direction: string;
-  amount: string;
-  exchangeRate: string | null;
-  tlAmount: string | null;
+  amount: number;
+  exchangeRate: number | null;
+  tlAmount: number | null;
   description: string | null;
   sourceType: string;
-  balance: string;
+  balance: number;
 }
 
 export interface Statement {
   currency: string;
-  openingBalance: string;
+  openingBalance: number;
   lines: StatementLine[];
   page: number;
   size: number;
@@ -154,14 +154,14 @@ export interface PlanEvent {
 export interface HeatmapCell {
   period: string;
   currency: string;
-  total: string;
+  total: number;
   count: number;
   level: "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH" | null;
 }
 
 export interface CurrencyTotal {
   currency: string;
-  total: string;
+  total: number;
   count: number;
 }
 
@@ -175,9 +175,9 @@ export interface Dashboard {
 
 export interface Threshold {
   currency: string;
-  low: string;
-  medium: string;
-  high: string;
+  low: number;
+  medium: number;
+  high: number;
 }
 
 export interface ExpenseItem {
@@ -196,7 +196,7 @@ export interface ExpenseType {
 export interface Rate {
   currency: string;
   rateDate: string;
-  rate: string;
+  rate: number;
   source: string;
 }
 
@@ -204,9 +204,9 @@ export interface Aging {
   accountId: string;
   accountName: string;
   currency: string;
-  days0To30: string;
-  days31To60: string;
-  days61To90: string;
-  daysOver90: string;
-  total: string;
+  days0To30: number;
+  days31To60: number;
+  days61To90: number;
+  daysOver90: number;
+  total: number;
 }

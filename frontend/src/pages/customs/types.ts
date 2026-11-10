@@ -4,9 +4,9 @@ export interface DeclarationLine {
   id: string;
   hsCode: string;
   description: string;
-  quantity: string | null;
-  weightKg: string | null;
-  value: string;
+  quantity: number | null;
+  weightKg: number | null;
+  value: number;
 }
 
 export type DeclarationStatus = "DRAFT" | "SUBMITTED" | "CLEARED" | "REJECTED" | "CANCELLED";

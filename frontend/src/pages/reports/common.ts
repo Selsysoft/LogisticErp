@@ -15,7 +15,7 @@ export function reportQuery(params: Record<string, QueryValue>) {
 }
 
 /** Payda sıfırsa sunucu boş döner; bu durum "%0" gibi gösterilmemelidir. */
-export function formatPercent(value: string | null) {
+export function formatPercent(value: number | null) {
   if (value === null) {
     return "—";
   }
@@ -28,5 +28,5 @@ export function formatTotals(totals: CurrencyTotal[]) {
     return "—";
   }
   const amount = new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2 });
-  return totals.map((row) => `${amount.format(Number(row.total))} ${row.currency}`).join(" · ");
+  return totals.map((row) => `${amount.format(row.total)} ${row.currency}`).join(" · ");
 }

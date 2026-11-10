@@ -42,7 +42,7 @@ export interface ImportRow {
   occurredAt: string | null;
   place: string | null;
   money: Money | null;
-  liters: string | null;
+  liters: number | null;
   shipmentNumber: string | null;
   status: "MATCHED" | "UNMATCHED" | "ERROR" | "POSTED" | "IGNORED";
   message: string | null;
@@ -57,9 +57,9 @@ export interface VehiclePosition {
   vehicleId: string;
   plate: string;
   recordedAt: string;
-  latitude: string;
-  longitude: string;
-  speedKmh: string | null;
+  latitude: number;
+  longitude: number;
+  speedKmh: number | null;
   shipmentId: string | null;
   shipmentNumber: string | null;
 }
@@ -67,8 +67,8 @@ export interface VehiclePosition {
 export interface Geofence {
   id: string;
   name: string;
-  latitude: string;
-  longitude: string;
+  latitude: number;
+  longitude: number;
   radiusM: number;
 }
 
@@ -84,7 +84,7 @@ export interface GeofenceEvent {
 export interface StatementLine {
   id: string;
   date: string;
-  amount: string;
+  amount: number;
   description: string | null;
   reference: string | null;
   status: "UNMATCHED" | "MATCHED" | "IGNORED";
@@ -94,7 +94,7 @@ export interface StatementLine {
 export interface OpenTransaction {
   id: string;
   date: string;
-  amount: string;
+  amount: number;
   description: string | null;
 }
 
@@ -102,7 +102,7 @@ export interface Reconciliation {
   matched: number;
   unmatched: number;
   ignored: number;
-  unmatchedTotal: string;
+  unmatchedTotal: number;
 }
 
 export interface StatementImportResult {
@@ -116,7 +116,7 @@ export interface RouteDistance {
   id: string;
   origin: string;
   destination: string;
-  distanceKm: string;
+  distanceKm: number;
   minutes: number;
 }
 

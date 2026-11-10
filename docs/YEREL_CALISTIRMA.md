@@ -37,7 +37,7 @@ Uygulama: http://localhost:5173. `-Djava.version=17` yalnız JDK 21 kurulu deği
 
 `mvn -f backend/pom.xml verify` birim ve entegrasyon testlerinin kapsamını JaCoCo ile ölçer; rapor `backend/target/site/jacoco/index.html`'dedir. Alt sınır (satır %93, dal %76) yalnız `-Pcoverage` ile uygulanır; CI bu profille çalışır. Yerelde yalnız bazı testler çalıştırıldığında (`-Dit.test=...`) kapsam doğal olarak düşük çıkar, bu yüzden varsayılan derlemede uygulanmaz. Yeni kod eklerken sınırı korumak için tam takımı `-Pcoverage` ile çalıştırın.
 
-Frontend'de `npm run test:coverage` birim testlerinin kapsamını ölçer; rapor `frontend/coverage/index.html`'dedir. Ekranlar (`.tsx`) uçtan uca testlerle sınandığı için yalnız ekrandan bağımsız mantık dosyaları (`.ts`: API istemcisi, oturum, çevrimdışı sürücü kuyruğu, durum kuralları) ölçülür. Alt sınır satır %65, dal %68'dir (`vite.config.ts`); CI bu komutla çalışır.
+Frontend'de `npm run test:coverage` birim testlerinin kapsamını ölçer; rapor `frontend/coverage/index.html`'dedir. Ekranlar (`.tsx`) uçtan uca testlerle sınandığı için yalnız ekrandan bağımsız mantık dosyaları (`.ts`: API istemcisi, oturum, çevrimdışı sürücü kuyruğu, durum kuralları) ölçülür. Alt sınır satır %75, dal %85'tir (`vite.config.ts`); CI bu komutla çalışır.
 
 ## API sözleşmesi
 
@@ -48,7 +48,7 @@ Backend'in OpenAPI şeması depoda `docs/api/openapi.json` olarak tutulur. İki 
   mvn -f backend/pom.xml verify -Dit.test=OpenApiContractIT -Dtest='NoUnit*' -Dsurefire.failIfNoSpecifiedTests=false -Dopenapi.update=true
   ```
   Dosyanın farkı, değişikliğin API'yi nasıl etkilediğini kod incelemesinde gösterir.
-- Frontend `src/api/contract.test.ts`: `pages/` altındaki dışa aktarılan her arayüzün (ör. `Shipment`) alanları şemadaki karşılığında bulunmalıdır. Backend bir alanı kaldırır veya yeniden adlandırırsa ekran sessizce boş göstermek yerine bu test kırılır. Şemadakinden farklı adlı tipler testteki `SCHEMA_OF`'a, API'ye ait olmayan yerel tipler `LOCAL`'e eklenir.
+- Frontend `src/api/contract.test.ts`: `pages/` altındaki dışa aktarılan her arayüzün (ör. `Shipment`) alanları şemadaki karşılığında bulunmalı ve kaba tipi (metin, sayı, mantıksal, dizi, nesne) aynı olmalıdır. Ondalık alanlar (`BigDecimal`) JSON'da sayıdır, frontend'de `number` yazılır; yalnız `Money.amount` hassasiyet için metindir. Backend bir alanı kaldırır veya yeniden adlandırırsa ekran sessizce boş göstermek yerine bu test kırılır. Şemadakinden farklı adlı tipler testteki `SCHEMA_OF`'a, API'ye ait olmayan yerel tipler `LOCAL`'e eklenir.
 
 Şema adları sınıfın kısa adından gelir; aynı adlı, alanları farklı iki kayıt (ör. CRM ve depo `ContractResponse`) tek şemaya çöker. `SchemaNameUniquenessTest` bunu engeller; böyle bir kayda `@Schema(name = "...")` verilir.
 

@@ -48,7 +48,7 @@ export interface TaxRate {
   id: string;
   code: string;
   name: string;
-  vatPercent: string;
+  vatPercent: number;
   withholdingNumerator: number;
   withholdingDenominator: number;
 }
@@ -62,11 +62,11 @@ export interface Tariff {
   validFrom: string;
   validTo: string | null;
   active: boolean;
-  fuelSurchargePercent: string | null;
-  waitingHourlyFee: string | null;
-  extraStopFee: string | null;
-  adrPercent: string | null;
-  insurancePercent: string | null;
+  fuelSurchargePercent: number | null;
+  waitingHourlyFee: number | null;
+  extraStopFee: number | null;
+  adrPercent: number | null;
+  insurancePercent: number | null;
   taxRateId: string | null;
 }
 
@@ -78,14 +78,14 @@ export interface TariffLine {
   destination: string | null;
   vehicleType: string | null;
   unit: string;
-  unitPrice: string;
-  minAmount: string | null;
+  unitPrice: number;
+  minAmount: number | null;
 }
 
 export interface PriceComponent {
   code: string;
   basis: string;
-  amount: string;
+  amount: number;
 }
 
 export interface PriceBreakdown {
@@ -96,11 +96,11 @@ export interface PriceBreakdown {
   tariffLineId: string | null;
   currency: string;
   components: PriceComponent[];
-  net: string;
-  vatPercent: string;
-  vat: string;
-  withholding: string;
-  total: string;
+  net: number;
+  vatPercent: number;
+  vat: number;
+  withholding: number;
+  total: number;
 }
 
 export interface QuoteLine {
@@ -108,14 +108,14 @@ export interface QuoteLine {
   origin: string;
   destination: string;
   vehicleType: string | null;
-  weightTon: string | null;
+  weightTon: number | null;
   pallets: number | null;
-  distanceKm: string | null;
+  distanceKm: number | null;
   description: string | null;
-  net: string;
-  vat: string;
-  withholding: string;
-  total: string;
+  net: number;
+  vat: number;
+  withholding: number;
+  total: number;
   breakdown: PriceBreakdown;
 }
 
@@ -148,14 +148,14 @@ export interface Contract {
   endDate: string;
   status: "ACTIVE" | "ENDED" | "CANCELLED";
   paymentTermDays: number | null;
-  fuelSurchargePercent: string | null;
-  waitingHourlyFee: string | null;
+  fuelSurchargePercent: number | null;
+  waitingHourlyFee: number | null;
   specialTerms: string | null;
 }
 
 export interface Dashboard {
   funnel: { stage: string; currency: string; count: number; total: string }[];
-  winRatePercent: string;
+  winRatePercent: number;
   owners: { ownerEmail: string; open: number; won: number; lost: number }[];
   upcomingActivities: Activity[];
 }

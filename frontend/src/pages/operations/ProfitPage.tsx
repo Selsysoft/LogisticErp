@@ -25,7 +25,7 @@ export function ProfitPage() {
     queryFn: () => apiGet<Profit[]>(`/shipment/reports/profit?from=${from}&to=${to}`),
     enabled: !!from && !!to,
   });
-  const amount = (value: string | null) => (value === null ? "—" : formatAmount(value));
+  const amount = (value: number | null) => (value === null ? "—" : formatAmount(value));
 
   return (
     <>

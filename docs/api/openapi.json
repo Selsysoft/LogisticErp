@@ -3268,7 +3268,9 @@
       "Money" : {
         "properties" : {
           "amount" : {
-            "type" : "number"
+            "example" : "1500.25",
+            "format" : "decimal",
+            "type" : "string"
           },
           "currency" : {
             "type" : "string"

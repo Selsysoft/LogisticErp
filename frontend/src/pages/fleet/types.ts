@@ -7,14 +7,14 @@ export interface Vehicle {
   brand: string | null;
   model: string | null;
   modelYear: number | null;
-  capacityTon: string | null;
-  capacityM3: string | null;
+  capacityTon: number | null;
+  capacityM3: number | null;
   capacityPallet: number | null;
   fuelType: string | null;
   ownership: string;
   status: string;
   branchId: string | null;
-  odometerKm: string | null;
+  odometerKm: number | null;
 }
 
 export interface Driver {
@@ -48,15 +48,15 @@ export interface VehicleExpense {
   vehicleId: string;
   kind: string;
   expenseDate: string;
-  odometerKm: string | null;
+  odometerKm: number | null;
   description: string | null;
   money: Money;
-  tlAmount: string;
-  liters: string | null;
+  tlAmount: number;
+  liters: number | null;
   station: string | null;
   tirePosition: string | null;
   nextDueDate: string | null;
-  nextDueKm: string | null;
+  nextDueKm: number | null;
 }
 
 export interface Reminder {
@@ -66,8 +66,8 @@ export interface Reminder {
   subjectName: string;
   docType: string | null;
   dueDate: string | null;
-  dueKm: string | null;
-  currentKm: string | null;
+  dueKm: number | null;
+  currentKm: number | null;
   overdue: boolean;
 }
 
@@ -80,7 +80,7 @@ export interface AvailabilityRow {
 }
 
 export interface FuelConsumption {
-  averageLitersPer100Km: string | null;
+  averageLitersPer100Km: number | null;
   rows: {
     expenseId: string;
     date: string;
@@ -95,15 +95,15 @@ export interface FuelConsumption {
 export interface VehicleCost {
   vehicleId: string;
   plate: string;
-  maintenanceTl: string;
-  repairTl: string;
-  tireTl: string;
-  fuelTl: string;
-  totalTl: string;
-  liters: string;
-  distanceKm: string;
-  litersPer100Km: string | null;
-  costPerKmTl: string | null;
+  maintenanceTl: number;
+  repairTl: number;
+  tireTl: number;
+  fuelTl: number;
+  totalTl: number;
+  liters: number;
+  distanceKm: number;
+  litersPer100Km: number | null;
+  costPerKmTl: number | null;
 }
 
 export interface FleetOptions {

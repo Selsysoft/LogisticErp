@@ -31,7 +31,7 @@ export interface Plan {
   id: string;
   code: string;
   name: string;
-  monthlyPrice: string;
+  monthlyPrice: number;
   currency: string;
   maxUsers: number | null;
   maxVehicles: number | null;
@@ -46,7 +46,7 @@ export interface SaasInvoice {
   planName: string;
   periodStart: string;
   periodEnd: string;
-  amount: string;
+  amount: number;
   currency: string;
   status: "ISSUED" | "PAID" | "VOID";
   issuedOn: string;
@@ -107,7 +107,7 @@ export interface AuditRow {
 
 export interface MySubscription {
   planName: string;
-  monthlyPrice: string;
+  monthlyPrice: number;
   currency: string;
   status: SubscriptionStatus;
   trialEndsOn: string | null;

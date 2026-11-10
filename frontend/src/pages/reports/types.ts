@@ -4,19 +4,19 @@ export interface ProfitRow {
   key: string;
   label: string;
   shipments: number;
-  revenueTl: string;
-  costTl: string;
-  marginTl: string;
-  marginPercent: string | null;
+  revenueTl: number;
+  costTl: number;
+  marginTl: number;
+  marginPercent: number | null;
 }
 
 export interface ProfitReport {
   rows: ProfitRow[];
   totalElements: number;
-  revenueTl: string;
-  costTl: string;
-  marginTl: string;
-  marginPercent: string | null;
+  revenueTl: number;
+  costTl: number;
+  marginTl: number;
+  marginPercent: number | null;
 }
 
 export interface KpiReport {
@@ -24,9 +24,9 @@ export interface KpiReport {
   cancelled: number;
   delivered: number;
   onTime: number;
-  onTimePercent: string | null;
-  averageFreightTl: string | null;
-  averageFillPercent: string | null;
+  onTimePercent: number | null;
+  averageFreightTl: number | null;
+  averageFillPercent: number | null;
 }
 
 export interface DriverRow {
@@ -35,37 +35,37 @@ export interface DriverRow {
   shipments: number;
   delivered: number;
   onTime: number;
-  onTimePercent: string | null;
+  onTimePercent: number | null;
 }
 
 export interface ForecastRow {
   weekStart: string | null;
   overdue: boolean;
   currency: string;
-  inflow: string;
-  outflow: string;
-  net: string;
+  inflow: number;
+  outflow: number;
+  net: number;
 }
 
 export interface PositionRow {
   currency: string;
-  cash: string;
-  receivable: string;
-  payable: string;
-  net: string;
+  cash: number;
+  receivable: number;
+  payable: number;
+  net: number;
 }
 
 export interface SettlementPerformanceRow {
   currency: string;
-  collected: string;
-  paid: string;
+  collected: number;
+  paid: number;
   collections: number;
   payments: number;
 }
 
 export interface CurrencyTotal {
   currency: string;
-  total: string;
+  total: number;
   count: number;
 }
 

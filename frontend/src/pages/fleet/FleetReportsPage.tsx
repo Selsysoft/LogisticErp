@@ -23,7 +23,7 @@ export function FleetReportsPage() {
     queryFn: () => apiGet<VehicleCost[]>(`/fleet/reports/vehicle-costs?from=${from}&to=${to}`),
     enabled: !!from && !!to,
   });
-  const amount = (value: string) => formatAmount(value);
+  const amount = (value: number) => formatAmount(value);
 
   return (
     <>

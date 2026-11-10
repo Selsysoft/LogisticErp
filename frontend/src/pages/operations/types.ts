@@ -15,10 +15,10 @@ export type ShipmentStatus =
 export interface Cargo {
   id: string;
   description: string;
-  quantity: string | null;
+  quantity: number | null;
   packaging: string | null;
-  weightKg: string | null;
-  volumeM3: string | null;
+  weightKg: number | null;
+  volumeM3: number | null;
   adrClass: string | null;
   unNumber: string | null;
 }
@@ -61,7 +61,7 @@ export interface Shipment extends ShipmentSummary {
   consigneeName: string | null;
   consigneeAddress: string | null;
   vehicleType: string | null;
-  distanceKm: string | null;
+  distanceKm: number | null;
   vat: Money;
   withholding: Money;
   breakdown: PriceBreakdown;
@@ -133,7 +133,7 @@ export interface TripCost {
   accountName: string | null;
   vehicleExpenseId: string | null;
   money: Money;
-  tlAmount: string;
+  tlAmount: number;
   description: string | null;
   postedAt: string | null;
 }
@@ -151,10 +151,10 @@ export interface Profit {
   number: string;
   accountName: string;
   status: ShipmentStatus;
-  revenueTl: string | null;
-  costTl: string;
-  marginTl: string | null;
-  marginPercent: string | null;
+  revenueTl: number | null;
+  costTl: number;
+  marginTl: number | null;
+  marginPercent: number | null;
   invoiced: boolean;
 }
 

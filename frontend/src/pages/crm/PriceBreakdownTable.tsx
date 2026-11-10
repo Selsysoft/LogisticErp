@@ -6,7 +6,7 @@ import { PriceBreakdown } from "./types";
 /** Hangi kalemin ne kattığını gösterir. */
 export function PriceBreakdownTable({ price }: { price: PriceBreakdown }) {
   const { t } = useTranslation();
-  const amount = (value: string) => `${formatAmount(value)} ${price.currency}`;
+  const amount = (value: number) => `${formatAmount(value)} ${price.currency}`;
 
   return (
     <Stack spacing={1}>

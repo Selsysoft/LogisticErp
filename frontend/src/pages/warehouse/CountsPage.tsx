@@ -106,9 +106,10 @@ export function CountsPage() {
 }
 
 /** Sayılan miktar alanı; odak kaybedilince kaydeder. */
-function CountInput({ line, onSaved }: { line: CountLine; onSaved: () => void }) {
+export function CountInput({ line, onSaved }: { line: CountLine; onSaved: () => void }) {
   const { t } = useTranslation();
-  const [value, setValue] = useState(line.countedQuantity ?? "");
+  // API sayı gönderir; kutu metin tutar. Sayıyla bırakılırsa değiştirmeden çıkışta trim() patlar.
+  const [value, setValue] = useState(line.countedQuantity?.toString() ?? "");
   const save = useMutation({
     mutationFn: (quantity: string) =>
       apiRequest("PUT", `/warehouse/count-lines/${line.id}`, { countedQuantity: quantity }),
@@ -123,7 +124,7 @@ function CountInput({ line, onSaved }: { line: CountLine; onSaved: () => void })
       onChange={(event) => setValue(event.target.value)}
       onBlur={() => {
         const quantity = normalizeAmount(value);
-        if (/^\d+(\.\d{1,3})?$/.test(quantity) && quantity !== line.countedQuantity) {
+        if (/^\d+(\.\d{1,3})?$/.test(quantity) && Number(quantity) !== line.countedQuantity) {
           save.mutate(quantity);
         }
       }}
