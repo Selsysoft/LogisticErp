@@ -399,6 +399,41 @@ class CrmIT extends AbstractIntegrationTest {
                 "/api/v1/crm/customers/" + id + "/contacts",
                 Map.of("fullName", "Deniz Kaya", "email", "deniz@firma.test")));
 
+    // Kişi düzenlenir; sefer bildirimi için e-posta gerekir.
+    send(
+            t,
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
+                    "/api/v1/crm/contacts/" + contact)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content(
+                    json.writeValueAsString(
+                        Map.of(
+                            "fullName", "Deniz Kaya",
+                            "title", "Lojistik Müdürü",
+                            "email", "deniz@firma.test",
+                            "notifyDepartures", true,
+                            "notifyDeliveries", true))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Lojistik Müdürü"))
+        .andExpect(jsonPath("$.notifyDepartures").value(true));
+    send(
+            t,
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
+                    "/api/v1/crm/contacts/" + contact)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content(
+                    json.writeValueAsString(
+                        Map.of("fullName", "Deniz Kaya", "notifyDeliveries", true))))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CONTACT_EMAIL_REQUIRED"));
+    send(
+            t,
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
+                    "/api/v1/crm/contacts/" + java.util.UUID.randomUUID())
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("fullName", "Yok"))))
+        .andExpect(status().isNotFound());
+
     JsonNode customer = body(send(t, get("/api/v1/crm/customers/" + id)));
     assertThat(customer.get("segment").asText()).isEqualTo("Kurumsal");
     assertThat(customer.get("tags").size()).isEqualTo(2);

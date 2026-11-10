@@ -797,6 +797,122 @@ class ShipmentIT extends AbstractIntegrationTest {
     assertThat(SENT_NOTICES.stream().filter(sent -> sent.email().equals(notified))).hasSize(1);
   }
 
+  @Test
+  void listeAramaSecenekEtapMasrafFaturaVeKarlilikUclari() throws Exception {
+    Setup s = setup("web");
+    String carrier = account(s.tenant(), "TS1", "CARRIER");
+    String employee = account(s.tenant(), "P1", "EMPLOYEE");
+
+    // Yeni sefer formunun seçenekleri: kabul edilmiş teklif satırları dahil.
+    String quote =
+        body(post(
+                    s.tenant(),
+                    "/api/v1/crm/quotes",
+                    Map.of(
+                        "accountId",
+                        s.customer(),
+                        "currency",
+                        "TRY",
+                        "validUntil",
+                        tenantToday().plusDays(10).toString()))
+                .andExpect(status().isCreated()))
+            .get("id")
+            .asText();
+    post(
+            s.tenant(),
+            "/api/v1/crm/quotes/" + quote + "/lines",
+            Map.of("origin", "İzmir", "destination", "Bursa", "manualNet", "8000"))
+        .andExpect(status().isCreated());
+    post(s.tenant(), "/api/v1/crm/quotes/" + quote + "/send", null).andExpect(status().isOk());
+    post(
+            s.tenant(),
+            "/api/v1/crm/quotes/" + quote + "/accept",
+            Map.of(
+                "startDate",
+                tenantToday().toString(),
+                "endDate",
+                tenantToday().plusDays(365).toString()))
+        .andExpect(status().isOk());
+    JsonNode options =
+        body(send(s.tenant(), get("/api/v1/shipment/options")).andExpect(status().isOk()));
+    assertThat(options.get("customers").findValuesAsText("id")).containsExactly(s.customer());
+    assertThat(options.get("carriers").findValuesAsText("id"))
+        .containsExactlyInAnyOrder(carrier, s.supplier());
+    assertThat(options.get("costAccounts").findValuesAsText("id"))
+        .containsExactlyInAnyOrder(carrier, s.supplier(), employee);
+    assertThat(options.get("acceptedQuoteLines")).hasSize(1);
+    assertThat(options.get("acceptedQuoteLines").get(0).get("label").asText())
+        .endsWith(" · İzmir - Bursa");
+    assertThat(options.get("acceptedQuoteLines").get(0).get("accountId").asText())
+        .isEqualTo(s.customer());
+
+    // Liste durum ve aramayla süzülür.
+    JsonNode first = create(s.tenant(), shipmentBody(s, "1000"));
+    JsonNode second = create(s.tenant(), shipmentBody(s, "2000"));
+    String number = first.get("number").asText();
+    JsonNode found =
+        body(
+            send(
+                s.tenant(),
+                get("/api/v1/shipment/shipments").param("search", number.toLowerCase())));
+    assertThat(found.get("content").findValuesAsText("number")).containsExactly(number);
+    moveTo(s.tenant(), second.get("id").asText(), "CANCELLED").andExpect(status().isOk());
+    JsonNode cancelled =
+        body(send(s.tenant(), get("/api/v1/shipment/shipments").param("status", "CANCELLED")));
+    assertThat(cancelled.get("content").findValuesAsText("id"))
+        .containsExactly(second.get("id").asText());
+
+    // Etap eklenip silinir; son etap silinemez.
+    String id = first.get("id").asText();
+    String added =
+        body(post(
+                    s.tenant(),
+                    "/api/v1/shipment/shipments/" + id + "/legs",
+                    Map.of(
+                        "origin",
+                        "Ankara",
+                        "destination",
+                        "Kayseri",
+                        "plannedStart",
+                        END.toString(),
+                        "plannedEnd",
+                        END.plus(1, ChronoUnit.DAYS).toString()))
+                .andExpect(status().isCreated()))
+            .get("id")
+            .asText();
+    send(s.tenant(), MockMvcRequestBuilders.delete("/api/v1/shipment/legs/" + added))
+        .andExpect(status().isNoContent());
+    send(s.tenant(), MockMvcRequestBuilders.delete("/api/v1/shipment/legs/" + legOf(first)))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("LAST_LEG"));
+
+    // Masraf eklenip silinir; faturasız seferin faturası yoktur (204).
+    String delivered = deliveredShipment(s, "1000", "34WB01", "W1");
+    String cost =
+        body(addCost(s.tenant(), delivered, "TOLL", s.supplier(), "150")
+                .andExpect(status().isCreated()))
+            .get("id")
+            .asText();
+    send(s.tenant(), MockMvcRequestBuilders.delete("/api/v1/shipment/costs/" + cost))
+        .andExpect(status().isNoContent());
+    send(s.tenant(), get("/api/v1/shipment/shipments/" + delivered + "/invoice"))
+        .andExpect(status().isNoContent());
+    issueInvoice(s.tenant(), delivered);
+    send(s.tenant(), get("/api/v1/shipment/shipments/" + delivered + "/invoice"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.number").value(org.hamcrest.Matchers.startsWith("NF-")));
+
+    // Kârlılık raporu dönemdeki faturalı seferi gösterir.
+    JsonNode profit =
+        body(
+            send(
+                s.tenant(),
+                get("/api/v1/shipment/reports/profit")
+                    .param("from", tenantToday().minusDays(5).toString())
+                    .param("to", tenantToday().plusDays(5).toString())));
+    assertThat(profit.findValuesAsText("shipmentId")).contains(delivered);
+  }
+
   // Yardımcılar
 
   private static Map<String, Object> contact(

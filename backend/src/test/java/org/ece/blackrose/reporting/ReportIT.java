@@ -392,6 +392,41 @@ class ReportIT extends AbstractIntegrationTest {
     }
   }
 
+  @Test
+  void suruculerPozisyonVeOngoruDisaAktarilirTahsilatPerformansiDoner() throws Exception {
+    Setup s = setup("expx");
+    for (String report : List.of("DRIVERS", "POSITION", "FORECAST")) {
+      for (String format : List.of("XLSX", "PDF")) {
+        var response =
+            send(
+                    s.tenant(),
+                    get(BASE + "/export")
+                        .param("report", report)
+                        .param("format", format)
+                        .param("from", FROM.toString())
+                        .param("to", TO.toString()))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse();
+        byte[] content = response.getContentAsByteArray();
+        assertThat(response.getHeader("Content-Disposition"))
+            .as(report + " " + format)
+            .contains("attachment");
+        // XLSX bir zip arşividir ("PK"), PDF "%PDF" ile başlar.
+        String magic = new String(content, 0, 4, java.nio.charset.StandardCharsets.ISO_8859_1);
+        assertThat(magic)
+            .as(report + " " + format)
+            .startsWith(format.equals("PDF") ? "%PDF" : "PK");
+      }
+    }
+    send(
+            s.tenant(),
+            get(BASE + "/settlement-performance")
+                .param("from", FROM.toString())
+                .param("to", TO.toString()))
+        .andExpect(status().isOk());
+  }
+
   // Yardımcılar
 
   private byte[] export(Setup s, String format) throws Exception {

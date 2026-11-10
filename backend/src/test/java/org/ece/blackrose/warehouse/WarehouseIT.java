@@ -351,6 +351,90 @@ class WarehouseIT extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.code").value("COUNT_LINE_EXISTS"));
   }
 
+  @Test
+  void tanimSecenekSozlesmeElleclemeVeSayimListeleri() throws Exception {
+    Setup s = setup("web", false);
+
+    JsonNode options = body(send(s.tenant(), get(BASE + "/options")).andExpect(status().isOk()));
+    assertThat(options.get("customers").findValuesAsText("id")).containsExactly(s.customer());
+    assertThat(options.has("taxRates")).isTrue();
+    assertThat(options.get("shipments")).isEmpty();
+
+    // Depo güncellenir; gözler depoya göre ve hepsi birlikte listelenir.
+    send(
+            s.tenant(),
+            MockMvcRequestBuilders.put(BASE + "/warehouses/" + s.warehouse())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    json.writeValueAsString(
+                        Map.of(
+                            "name",
+                            "Ana Depo (Gebze)",
+                            "branchId",
+                            s.branch(),
+                            "address",
+                            "Gebze OSB",
+                            "bonded",
+                            false))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("Ana Depo (Gebze)"));
+    assertThat(body(send(s.tenant(), get(BASE + "/warehouses"))).findValuesAsText("name"))
+        .containsExactly("Ana Depo (Gebze)");
+    created(
+        post(s.tenant(), BASE + "/warehouses/" + s.warehouse() + "/bins", Map.of("code", "B-02")));
+    assertThat(
+            body(send(s.tenant(), get(BASE + "/bins").param("warehouseId", s.warehouse())))
+                .findValuesAsText("code"))
+        .containsExactly("A-01", "B-02");
+    assertThat(body(send(s.tenant(), get(BASE + "/bins")))).hasSize(2);
+    item(s, "SKU-1", "1");
+    assertThat(body(send(s.tenant(), get(BASE + "/items"))).findValuesAsText("sku"))
+        .containsExactly("SKU-1");
+
+    // Sözleşme, fiyat ve elleçleme listelenir; elleçleme silinir.
+    String contract = contract(s, TODAY.minusDays(5), TODAY, "5", null);
+    assertThat(body(send(s.tenant(), get(BASE + "/contracts"))).findValuesAsText("id"))
+        .containsExactly(contract);
+    post(
+            s.tenant(),
+            BASE + "/contracts/" + contract + "/rates",
+            Map.of("kind", "LABELING", "unitPrice", "20"))
+        .andExpect(status().isOk());
+    assertThat(
+            body(send(s.tenant(), get(BASE + "/contracts/" + contract + "/rates")))
+                .findValuesAsText("kind"))
+        .containsExactly("LABELING");
+    String handling =
+        created(
+            post(
+                s.tenant(),
+                BASE + "/contracts/" + contract + "/handling",
+                Map.of("kind", "LABELING", "quantity", "2", "date", TODAY.toString())));
+    assertThat(body(send(s.tenant(), get(BASE + "/contracts/" + contract + "/handling"))))
+        .hasSize(1);
+    send(s.tenant(), MockMvcRequestBuilders.delete(BASE + "/handling/" + handling))
+        .andExpect(status().isNoContent());
+    assertThat(body(send(s.tenant(), get(BASE + "/contracts/" + contract + "/handling"))))
+        .isEmpty();
+    assertThat(body(send(s.tenant(), get(BASE + "/contracts/" + contract + "/invoices"))))
+        .isEmpty();
+
+    // Açılan sayım listede ve ayrıntıda görünür.
+    send(
+            s.tenant(),
+            MockMvcRequestBuilders.post(BASE + "/counts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    json.writeValueAsString(
+                        Map.of("warehouseId", s.warehouse(), "date", TODAY.toString()))))
+        .andExpect(status().isCreated());
+    JsonNode counts = body(send(s.tenant(), get(BASE + "/counts")));
+    assertThat(counts).hasSize(1);
+    send(s.tenant(), get(BASE + "/counts/" + counts.get(0).get("id").asText()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.count.status").value("OPEN"));
+  }
+
   // Yardımcılar
 
   private Setup setup(String prefix, boolean bonded) throws Exception {
