@@ -25,7 +25,7 @@ jobs:
           cache: maven
       # coverage profili: kapsam ölçülen alt sınırın altına düşerse CI durur (backend/pom.xml).
       - name: Derleme, migration ve testler
-        run: mvn -B -f backend/pom.xml verify -Pcoverage
+        run: mvn -B -f backend/pom.xml verify -Pcoverage -Dit.forkCount=2
       - name: Kapsam özeti
         if: always() && hashFiles('backend/target/site/jacoco/jacoco.csv') != ''
         run: python3 .github/scripts/coverage-summary.py backend/target/site/jacoco/jacoco.csv >> "$GITHUB_STEP_SUMMARY"

@@ -30,6 +30,10 @@
         <!-- Test JVM'i sınırsız bırakılırsa makine belleğinin dörtte birine kadar büyür; geliştirici
              makinesinde Docker ve tarayıcıyla birlikte bellek tükeniyordu. -DargLine=... ile ezilebilir. -->
         <argLine>-Xmx1g</argLine>
+        <!-- Entegrasyon testleri bu kadar ayrı JVM'e dağıtılır. Her JVM kendi Spring bağlamını ve
+             kendi PostgreSQL konteynerini kurar; testler durum paylaşmaz. Her JVM en çok 1 GB heap
+             kullandığı için yerelde 1, CI'da -Dit.forkCount=2 ile çalışır. -->
+        <it.forkCount>1</it.forkCount>
         <jacoco.version>0.8.13</jacoco.version>
     </properties>
 
@@ -182,6 +186,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <forkCount>${it.forkCount}</forkCount>
+                    <reuseForks>true</reuseForks>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
