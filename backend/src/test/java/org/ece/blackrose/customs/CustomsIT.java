@@ -377,6 +377,118 @@ class CustomsIT extends AbstractIntegrationTest {
         .andExpect(status().isForbidden());
   }
 
+  @Test
+  void satirSilmeTransitIptaliIzinIadesiVeKayitKurallari() throws Exception {
+    Setup s = setup("lst");
+    String shipment = shipment(s, null).get("id").asText();
+
+    // Seçenekler: son seferler ve ücret carileri (tedarikçi/taşeron).
+    JsonNode options = body(send(s.tenant(), get(BASE + "/options")).andExpect(status().isOk()));
+    assertThat(options.get("shipments").findValuesAsText("id")).containsExactly(shipment);
+    assertThat(options.get("feeAccounts").findValuesAsText("id")).containsExactly(s.supplier());
+
+    // Taslak beyandan satır silinir; listede ve ayrıntıda görünür.
+    String declaration =
+        created(
+            post(
+                s.tenant(),
+                BASE + "/declarations",
+                Map.of(
+                    "shipmentId", shipment,
+                    "type", "EXPORT",
+                    "customsOffice", "Kapıkule",
+                    "declaredOn", TODAY.toString(),
+                    "currency", "EUR")));
+    JsonNode withLine =
+        body(
+            post(
+                    s.tenant(),
+                    BASE + "/declarations/" + declaration + "/lines",
+                    Map.of("hsCode", "5208.11", "description", "Kumaş", "value", "100"))
+                .andExpect(status().isCreated()));
+    String line = withLine.get("lines").get(0).get("id").asText();
+    send(s.tenant(), MockMvcRequestBuilders.delete(BASE + "/declaration-lines/" + line))
+        .andExpect(status().isNoContent());
+    send(
+            s.tenant(),
+            MockMvcRequestBuilders.delete(
+                BASE + "/declaration-lines/" + java.util.UUID.randomUUID()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("LINE_NOT_FOUND"));
+    send(s.tenant(), get(BASE + "/declarations/" + declaration))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.lines").isEmpty());
+    assertThat(body(send(s.tenant(), get(BASE + "/declarations"))).findValuesAsText("id"))
+        .contains(declaration);
+
+    // Transit: olmayan sefer/beyan reddedilir, erken kapatma reddedilir, iptal edilir.
+    Map<String, Object> noShipment =
+        transitBody(java.util.UUID.randomUUID().toString(), "T1-X", TODAY, TODAY.plusDays(5));
+    post(s.tenant(), BASE + "/transits", noShipment)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("SHIPMENT_NOT_FOUND"));
+    Map<String, Object> badDeclaration = transitBody(shipment, "T1-Y", TODAY, TODAY.plusDays(5));
+    badDeclaration.put("declarationId", java.util.UUID.randomUUID().toString());
+    post(s.tenant(), BASE + "/transits", badDeclaration)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("DECLARATION_NOT_FOUND"));
+    Map<String, Object> linked = transitBody(shipment, "T1-Z", TODAY, TODAY.plusDays(5));
+    linked.put("declarationId", declaration);
+    String transit = created(post(s.tenant(), BASE + "/transits", linked));
+    post(
+            s.tenant(),
+            BASE + "/transits/" + transit + "/discharge",
+            Map.of("date", TODAY.minusDays(1).toString()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("DATE_INVALID"));
+    post(s.tenant(), BASE + "/transits/" + transit + "/cancel", null)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CANCELLED"));
+    post(s.tenant(), BASE + "/transits/" + transit + "/cancel", null)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("TRANSIT_CLOSED"));
+    assertThat(body(send(s.tenant(), get(BASE + "/transits"))).findValuesAsText("id"))
+        .containsExactly(transit);
+
+    // İzin: ters dönem ve tekrar numara reddedilir; kullanım iade edilince kota boşalır.
+    Map<String, Object> permitBody = new HashMap<>();
+    permitBody.put("number", "CEMT-9");
+    permitBody.put("kind", "MULTILATERAL");
+    permitBody.put("country", "Almanya");
+    permitBody.put("validFrom", TODAY.toString());
+    permitBody.put("validTo", TODAY.minusDays(1).toString());
+    permitBody.put("quota", 1);
+    post(s.tenant(), BASE + "/permits", permitBody)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("PERIOD_INVALID"));
+    permitBody.put("validTo", TODAY.plusDays(10).toString());
+    String permit = created(post(s.tenant(), BASE + "/permits", permitBody));
+    post(s.tenant(), BASE + "/permits", permitBody)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("CODE_TAKEN"));
+    usePermit(s, java.util.UUID.randomUUID().toString(), shipment, TODAY)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("PERMIT_NOT_FOUND"));
+    JsonNode used = body(usePermit(s, permit, shipment, TODAY).andExpect(status().isCreated()));
+    String usage = used.get("usages").get(0).get("id").asText();
+    send(s.tenant(), MockMvcRequestBuilders.delete(BASE + "/permit-usages/" + usage))
+        .andExpect(status().isNoContent());
+    send(
+            s.tenant(),
+            MockMvcRequestBuilders.delete(BASE + "/permit-usages/" + java.util.UUID.randomUUID()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("USAGE_NOT_FOUND"));
+    JsonNode permits = body(send(s.tenant(), get(BASE + "/permits")));
+    assertThat(permits.get(0).get("used").asLong()).isZero();
+
+    // İptal edilen sefere transit açılamaz; geçiş listesi boş döner.
+    moveTo(s.tenant(), shipment, "CANCELLED").andExpect(status().isOk());
+    post(s.tenant(), BASE + "/transits", transitBody(shipment, "T1-W", TODAY, TODAY.plusDays(5)))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SHIPMENT_CANCELLED"));
+    assertThat(body(send(s.tenant(), get(BASE + "/crossings")))).isEmpty();
+  }
+
   // Yardımcılar
 
   private String cmrText(Setup s, String shipment) throws Exception {
