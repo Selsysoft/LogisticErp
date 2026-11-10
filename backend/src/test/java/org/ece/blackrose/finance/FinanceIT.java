@@ -742,6 +742,106 @@ class FinanceIT extends AbstractIntegrationTest {
 
   // Yardımcılar
 
+  @Test
+  void fonGuncellenirHareketliFonSilinmezElleVeVirmanHareketiTersCevrilir() throws Exception {
+    String t = tenantCode("fund");
+    String branch = branch(t);
+    String bank = fund(t, "B1", "BANK", "TRY", branch);
+    String cash = fund(t, "K1", "CASH", "TRY", branch);
+    String unused = fund(t, "K2", "CASH", "TRY", branch);
+
+    send(
+            t,
+            put("/api/v1/finance/funds/" + bank)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    json.writeValueAsString(
+                        Map.of(
+                            "name", "Ana Banka",
+                            "branchId", branch,
+                            "bankName", "Örnek Bankası",
+                            "iban", "TR000000000000000000000001",
+                            "allowNegative", false))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("Ana Banka"));
+
+    String deposit =
+        created(
+            post(
+                t,
+                "/api/v1/finance/funds/" + bank + "/transactions",
+                Map.of("direction", "IN", "money", money("1000", "TRY"), "date", DATE)));
+    transfer(t, bank, cash, "300", "TRY", null).andExpect(status().isCreated());
+
+    send(t, delete("/api/v1/finance/funds/" + bank))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("FUND_HAS_TRANSACTIONS"));
+    send(t, delete("/api/v1/finance/funds/" + unused)).andExpect(status().isNoContent());
+    assertThat(body(send(t, get("/api/v1/finance/funds"))).findValuesAsText("id"))
+        .doesNotContain(unused);
+
+    // Ekstre: açılış 0, giriş ve virman çıkışı sırasıyla.
+    JsonNode statement =
+        body(
+            send(
+                    t,
+                    get("/api/v1/finance/funds/" + bank + "/statement")
+                        .param("from", DATE)
+                        .param("to", DATE))
+                .andExpect(status().isOk()));
+    assertThat(statement.get("lines").findValuesAsText("sourceType"))
+        .containsExactly("MANUAL", "TRANSFER");
+    String transferLine = statement.get("lines").get(1).get("id").asText();
+
+    // Virmanın bir bacağını ters çevirmek iki hesabı da eski haline getirir.
+    reverse(t, "/api/v1/finance/funds/transactions/" + transferLine + "/reverse")
+        .andExpect(status().isOk());
+    assertThat(fundBalance(t, bank)).isEqualByComparingTo("1000");
+    assertThat(fundBalance(t, cash)).isEqualByComparingTo("0");
+
+    JsonNode reversal =
+        body(
+            reverse(t, "/api/v1/finance/funds/transactions/" + deposit + "/reverse")
+                .andExpect(status().isOk()));
+    assertThat(fundBalance(t, bank)).isEqualByComparingTo("0");
+    reverse(t, "/api/v1/finance/funds/transactions/" + reversal.get("id").asText() + "/reverse")
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("TRANSACTION_NOT_MANUAL"));
+    reverse(t, "/api/v1/finance/funds/transactions/" + java.util.UUID.randomUUID() + "/reverse")
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("TRANSACTION_NOT_FOUND"));
+  }
+
+  @Test
+  void giderTipiVeKalemiTanimlanirListelerBosDoner() throws Exception {
+    String t = tenantCode("defs");
+    String type =
+        created(post(t, "/api/v1/finance/expense-types", Map.of("code", "YAKIT", "name", "Yakıt")));
+    post(
+            t,
+            "/api/v1/finance/expense-items",
+            Map.of("expenseTypeId", java.util.UUID.randomUUID(), "code", "X", "name", "X"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("EXPENSE_TYPE_NOT_FOUND"));
+    String item =
+        created(
+            post(
+                t,
+                "/api/v1/finance/expense-items",
+                Map.of("expenseTypeId", type, "code", "MOTORIN", "name", "Motorin")));
+    assertThat(body(send(t, get("/api/v1/finance/expense-types"))).findValuesAsText("id"))
+        .contains(type);
+    JsonNode items = body(send(t, get("/api/v1/finance/expense-items")));
+    assertThat(items.findValuesAsText("id")).contains(item);
+
+    // Yeni firmada çek, tahsilat ve alış faturası listeleri boş; eşikler listelenir.
+    assertThat(body(send(t, get("/api/v1/finance/instruments"))).get("content")).isEmpty();
+    assertThat(body(send(t, get("/api/v1/finance/collections"))).get("content")).isEmpty();
+    assertThat(body(send(t, get("/api/v1/finance/purchase-invoices"))).get("content")).isEmpty();
+    send(t, get("/api/v1/finance/density-thresholds")).andExpect(status().isOk());
+    send(t, get("/api/v1/finance/exchange-rates").param("date", DATE)).andExpect(status().isOk());
+  }
+
   private String tenantCode(String prefix) throws Exception {
     String code = "fin-" + prefix;
     createTenant(code);
