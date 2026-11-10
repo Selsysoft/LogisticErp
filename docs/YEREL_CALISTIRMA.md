@@ -37,6 +37,8 @@ Uygulama: http://localhost:5173. `-Djava.version=17` yalnız JDK 21 kurulu deği
 
 `mvn -f backend/pom.xml verify` birim ve entegrasyon testlerinin kapsamını JaCoCo ile ölçer; rapor `backend/target/site/jacoco/index.html`'dedir. Alt sınır (satır %93, dal %76) yalnız `-Pcoverage` ile uygulanır; CI bu profille çalışır. Yerelde yalnız bazı testler çalıştırıldığında (`-Dit.test=...`) kapsam doğal olarak düşük çıkar, bu yüzden varsayılan derlemede uygulanmaz. Yeni kod eklerken sınırı korumak için tam takımı `-Pcoverage` ile çalıştırın.
 
+Frontend'de `npm run test:coverage` birim testlerinin kapsamını ölçer; rapor `frontend/coverage/index.html`'dedir. Ekranlar (`.tsx`) uçtan uca testlerle sınandığı için yalnız ekrandan bağımsız mantık dosyaları (`.ts`: API istemcisi, oturum, çevrimdışı sürücü kuyruğu, durum kuralları) ölçülür. Alt sınır satır %65, dal %68'dir (`vite.config.ts`); CI bu komutla çalışır.
+
 ## API sözleşmesi
 
 Backend'in OpenAPI şeması depoda `docs/api/openapi.json` olarak tutulur. İki test bunu korur:

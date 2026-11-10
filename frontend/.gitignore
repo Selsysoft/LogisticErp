@@ -1,3 +1,4 @@
 e2e/.state/
 playwright-report/
 test-results/
+coverage/
