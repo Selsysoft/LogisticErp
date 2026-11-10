@@ -1,5 +1,6 @@
 package org.ece.blackrose.reporting.web;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -99,6 +100,7 @@ public final class ReportDtos {
   public record CustomsWidget(long openTransits, long overdueTransits) {}
 
   /** Yetkisi olmayan bölüm boş döner; veri sunucudan hiç çıkmaz. */
+  @Schema(name = "ReportDashboardResponse")
   public record DashboardResponse(
       OperationsWidget operations,
       FinanceWidget finance,

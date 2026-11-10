@@ -1,5 +1,6 @@
 package org.ece.blackrose.shipment.web;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -222,6 +223,7 @@ public final class ShipmentDtos {
       String senderInstructions,
       String attachedDocuments) {}
 
+  @Schema(name = "ShipmentDocumentResponse")
   public record DocumentResponse(
       UUID id,
       UUID shipmentId,
@@ -237,6 +239,7 @@ public final class ShipmentDtos {
 
   public record CancelInvoiceRequest(@NotNull LocalDate date) {}
 
+  @Schema(name = "FreightInvoiceResponse")
   public record InvoiceResponse(
       UUID id,
       String number,

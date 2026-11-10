@@ -1,5 +1,6 @@
 package org.ece.blackrose.saas.web;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -44,6 +45,7 @@ public final class SaasDtos {
       @Min(1) Integer maxShipmentsMonth,
       boolean active) {}
 
+  @Schema(name = "SaasPlanResponse")
   public record PlanResponse(
       UUID id,
       String code,
@@ -64,6 +66,7 @@ public final class SaasDtos {
   public record MarkPaidRequest(
       @NotNull LocalDate date, @NotBlank @Size(max = 200) String reference) {}
 
+  @Schema(name = "SaasInvoiceResponse")
   public record InvoiceResponse(
       UUID id,
       UUID tenantId,

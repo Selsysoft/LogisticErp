@@ -1,5 +1,6 @@
 package org.ece.blackrose.finance.service;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -55,6 +56,7 @@ public class OpeningBalanceImportService {
     ERROR
   }
 
+  @Schema(name = "OpeningBalanceRow")
   public record Row(
       int line,
       String code,
@@ -65,8 +67,10 @@ public class OpeningBalanceImportService {
       RowStatus status,
       String error) {}
 
+  @Schema(name = "OpeningBalanceTotal")
   public record Total(String currency, BigDecimal debit, BigDecimal credit) {}
 
+  @Schema(name = "OpeningBalanceResult")
   public record Result(
       boolean applied,
       boolean valid,

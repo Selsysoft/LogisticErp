@@ -1,5 +1,6 @@
 package org.ece.blackrose.fleet.web;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -87,6 +88,7 @@ public final class FleetDtos {
       LocalDate issuedOn,
       @NotNull LocalDate expiresOn) {}
 
+  @Schema(name = "ComplianceDocumentResponse")
   public record DocumentResponse(
       UUID id,
       SubjectType subjectType,

@@ -1,5 +1,6 @@
 package org.ece.blackrose.warehouse.web;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -86,6 +87,7 @@ public final class WarehouseDtos {
 
   public record ReverseMovementRequest(@NotNull LocalDate date) {}
 
+  @Schema(name = "WarehouseBalanceResponse")
   public record BalanceResponse(
       UUID id,
       UUID warehouseId,
@@ -154,6 +156,7 @@ public final class WarehouseDtos {
 
   public record CountResponse(CountSummary count, List<CountLineResponse> lines) {}
 
+  @Schema(name = "SaveWarehouseContractRequest")
   public record SaveContractRequest(
       @NotNull UUID accountId,
       @NotNull UUID warehouseId,
@@ -164,6 +167,7 @@ public final class WarehouseDtos {
       @NotNull @PositiveOrZero BigDecimal storageRate,
       UUID taxRateId) {}
 
+  @Schema(name = "WarehouseContractResponse")
   public record ContractResponse(
       UUID id,
       UUID accountId,

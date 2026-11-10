@@ -1,5 +1,6 @@
 package org.ece.blackrose.warehouse.service;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -54,6 +55,7 @@ public class OpeningStockImportService {
     ERROR
   }
 
+  @Schema(name = "OpeningStockRow")
   public record Row(
       int line,
       String accountCode,
@@ -69,6 +71,7 @@ public class OpeningStockImportService {
       RowStatus status,
       String error) {}
 
+  @Schema(name = "OpeningStockResult")
   public record Result(
       boolean applied,
       boolean valid,

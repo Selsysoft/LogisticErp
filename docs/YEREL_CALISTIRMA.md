@@ -37,6 +37,19 @@ Uygulama: http://localhost:5173. `-Djava.version=17` yalnız JDK 21 kurulu deği
 
 `mvn -f backend/pom.xml verify` birim ve entegrasyon testlerinin kapsamını JaCoCo ile ölçer; rapor `backend/target/site/jacoco/index.html`'dedir. Alt sınır (satır %93, dal %76) yalnız `-Pcoverage` ile uygulanır; CI bu profille çalışır. Yerelde yalnız bazı testler çalıştırıldığında (`-Dit.test=...`) kapsam doğal olarak düşük çıkar, bu yüzden varsayılan derlemede uygulanmaz. Yeni kod eklerken sınırı korumak için tam takımı `-Pcoverage` ile çalıştırın.
 
+## API sözleşmesi
+
+Backend'in OpenAPI şeması depoda `docs/api/openapi.json` olarak tutulur. İki test bunu korur:
+
+- Backend `OpenApiContractIT`: çalışan uygulamanın şeması dosyayla aynı olmalıdır. Bir istek veya yanıt alanını bilerek değiştirdiyseniz dosyayı yenileyin:
+  ```
+  mvn -f backend/pom.xml verify -Dit.test=OpenApiContractIT -Dtest='NoUnit*' -Dsurefire.failIfNoSpecifiedTests=false -Dopenapi.update=true
+  ```
+  Dosyanın farkı, değişikliğin API'yi nasıl etkilediğini kod incelemesinde gösterir.
+- Frontend `src/api/contract.test.ts`: `pages/` altındaki dışa aktarılan her arayüzün (ör. `Shipment`) alanları şemadaki karşılığında bulunmalıdır. Backend bir alanı kaldırır veya yeniden adlandırırsa ekran sessizce boş göstermek yerine bu test kırılır. Şemadakinden farklı adlı tipler testteki `SCHEMA_OF`'a, API'ye ait olmayan yerel tipler `LOCAL`'e eklenir.
+
+Şema adları sınıfın kısa adından gelir; aynı adlı, alanları farklı iki kayıt (ör. CRM ve depo `ContractResponse`) tek şemaya çöker. `SchemaNameUniquenessTest` bunu engeller; böyle bir kayda `@Schema(name = "...")` verilir.
+
 ## Bellek
 
 Backend testleri (`mvn verify`) ve uçtan uca yığın aynı anda Docker, tarayıcı ve IDE ile çalışınca 16 GB'lık makinede bellek tükenebilir. Bu yüzden sınırlar konmuştur: test JVM'i en çok 1 GB heap kullanır (`argLine`, `-DargLine=...` ile değiştirilebilir), test profilinde her Spring bağlamı en çok 5 veritabanı bağlantısı açar, uçtan uca yığında backend 1 GB, PostgreSQL 768 MB ile sınırlıdır. Ölçümde tam backend doğrulaması sırasında Java süreçleri en çok yaklaşık 1,25 GB kullandı. Testlerden önce kullanılmayan geliştirme konteynerlerini durdurmak (`docker stop blackrose-backend blackrose-web`, geri açmak için `docker start ...`) ve backend testleriyle uçtan uca yığını aynı anda çalıştırmamak önerilir.
