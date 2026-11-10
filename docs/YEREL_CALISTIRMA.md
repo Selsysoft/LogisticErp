@@ -35,7 +35,7 @@ Uygulama: http://localhost:5173. `-Djava.version=17` yalnız JDK 21 kurulu deği
 
 ## Test kapsamı
 
-`mvn -f backend/pom.xml verify` birim ve entegrasyon testlerinin kapsamını JaCoCo ile ölçer; rapor `backend/target/site/jacoco/index.html`'dedir. Alt sınır (satır %90, dal %74) yalnız `-Pcoverage` ile uygulanır; CI bu profille çalışır. Yerelde yalnız bazı testler çalıştırıldığında (`-Dit.test=...`) kapsam doğal olarak düşük çıkar, bu yüzden varsayılan derlemede uygulanmaz. Yeni kod eklerken sınırı korumak için tam takımı `-Pcoverage` ile çalıştırın.
+`mvn -f backend/pom.xml verify` birim ve entegrasyon testlerinin kapsamını JaCoCo ile ölçer; rapor `backend/target/site/jacoco/index.html`'dedir. Alt sınır (satır %91, dal %75) yalnız `-Pcoverage` ile uygulanır; CI bu profille çalışır. Yerelde yalnız bazı testler çalıştırıldığında (`-Dit.test=...`) kapsam doğal olarak düşük çıkar, bu yüzden varsayılan derlemede uygulanmaz. Yeni kod eklerken sınırı korumak için tam takımı `-Pcoverage` ile çalıştırın.
 
 ## Bellek
 

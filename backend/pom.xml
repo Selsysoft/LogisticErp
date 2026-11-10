@@ -215,7 +215,7 @@
     <profiles>
         <!-- CI'da tam takımla çalışır: kapsam ölçülen değerin altına düşerse build kırılır.
              Yerelde yalnız bazı testler çalıştırıldığında kapsam doğal olarak düşük olduğundan
-             varsayılan derlemede uygulanmaz. Ölçüm (2026-11-10): satır %91,5, dal %76,4. -->
+             varsayılan derlemede uygulanmaz. Ölçüm (2026-11-10): satır %92,1, dal %77,4. -->
         <profile>
             <id>coverage</id>
             <build>
@@ -238,12 +238,12 @@
                                                 <limit>
                                                     <counter>LINE</counter>
                                                     <value>COVEREDRATIO</value>
-                                                    <minimum>0.90</minimum>
+                                                    <minimum>0.91</minimum>
                                                 </limit>
                                                 <limit>
                                                     <counter>BRANCH</counter>
                                                     <value>COVEREDRATIO</value>
-                                                    <minimum>0.74</minimum>
+                                                    <minimum>0.75</minimum>
                                                 </limit>
                                             </limits>
                                         </rule>
