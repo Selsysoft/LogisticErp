@@ -75,7 +75,7 @@ public class InstrumentService {
 
   @Transactional(readOnly = true)
   public List<InstrumentMovement> history(UUID id) {
-    return movements.findByInstrumentIdOrderByCreatedAt(id);
+    return movements.findByInstrumentIdAndDeletedFalseOrderByCreatedAt(id);
   }
 
   /**

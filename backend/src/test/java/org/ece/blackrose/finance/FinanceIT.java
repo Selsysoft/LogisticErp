@@ -842,6 +842,264 @@ class FinanceIT extends AbstractIntegrationTest {
     send(t, get("/api/v1/finance/exchange-rates").param("date", DATE)).andExpect(status().isOk());
   }
 
+  @Test
+  void checkTransitionsRequireMatchingFundAndIssuedBounceRestoresSupplierDebt() throws Exception {
+    String t = tenantCode("chkf");
+    String branch = branch(t);
+    String customer = account(t, "M1", "CUSTOMER");
+    String supplier = account(t, "T1", "SUPPLIER");
+    String bank = fund(t, "B1", "BANK", "TRY", branch);
+    String usdBank = fund(t, "B2", "BANK", "USD", branch);
+    String cash = fund(t, "K1", "CASH", "TRY", branch);
+    String check = receiveCheck(t, customer, branch, "C-300", "250");
+
+    // Bankaya verme banka hesabı ister; tür ve para birimi çekle uyumlu olmalıdır.
+    move(t, check, "AT_BANK", null)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("FUND_REQUIRED"));
+    move(t, check, "AT_BANK", cash)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("FUND_KIND_MISMATCH"));
+    move(t, check, "AT_BANK", usdBank)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CURRENCY_MISMATCH"));
+    move(t, java.util.UUID.randomUUID().toString(), "AT_BANK", bank)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("INSTRUMENT_NOT_FOUND"));
+    assertThat(body(send(t, get("/api/v1/finance/instruments/" + check + "/movements"))).size())
+        .isEqualTo(1);
+
+    // Portföydeki çek doğrudan kasaya tahsil edilir.
+    move(t, check, "COLLECTED_TO_CASH", cash)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("COLLECTED_TO_CASH"));
+    assertThat(fundBalance(t, cash)).isEqualByComparingTo("250");
+    assertThat(fundBalance(t, bank)).isEqualByComparingTo("0");
+
+    // Ciroda ödeme tutarı çek tutarıyla aynı olmalıdır; ödeme yazılmaz.
+    String other = receiveCheck(t, customer, branch, "C-301", "300");
+    Map<String, Object> endorse = settlementBody("CHECK", supplier, branch, null, "200");
+    endorse.put("instrumentId", other);
+    settlement(t, "payments", endorse, null)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INSTRUMENT_AMOUNT_MISMATCH"));
+    assertThat(body(send(t, get("/api/v1/finance/payments"))).get("content")).isEmpty();
+
+    // Verilen çek karşılıksız çıkınca tedarikçiye borcumuz geri gelir.
+    manual(t, supplier, branch, "CREDIT", "400", "TRY", null).andExpect(status().isCreated());
+    Map<String, Object> issue = settlementBody("CHECK", supplier, branch, null, "400");
+    issue.put("instrument", newCheck("V-9"));
+    String issued =
+        body(settlement(t, "payments", issue, null).andExpect(status().isCreated()))
+            .get("instrumentId")
+            .asText();
+    assertBalance(
+        body(send(t, get("/api/v1/finance/accounts/" + supplier))).get("balances"),
+        "TRY",
+        "0",
+        "0");
+    move(t, issued, "BOUNCED", null)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("BOUNCED"));
+    assertBalance(
+        body(send(t, get("/api/v1/finance/accounts/" + supplier))).get("balances"),
+        "TRY",
+        "-400",
+        "-400");
+  }
+
+  @Test
+  void settlementValidationAndReversalGuards() throws Exception {
+    String t = tenantCode("stlg");
+    allowSelfApproval(t);
+    String branch = branch(t);
+    String customer = account(t, "M1", "CUSTOMER");
+    String supplier = account(t, "T1", "SUPPLIER");
+    String bank = fund(t, "B1", "BANK", "TRY", branch);
+    String cash = fund(t, "K1", "CASH", "TRY", branch);
+    deposit(t, bank, "1000", "TRY");
+
+    settlement(
+            t,
+            "collections",
+            settlementBody("CASH", java.util.UUID.randomUUID().toString(), branch, cash, "10"),
+            null)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("ACCOUNT_NOT_FOUND"));
+    Map<String, Object> unknownItem = settlementBody("BANK", supplier, branch, bank, "10");
+    unknownItem.put("expenseItemId", java.util.UUID.randomUUID().toString());
+    settlement(t, "payments", unknownItem, null)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("EXPENSE_ITEM_NOT_FOUND"));
+    settlement(t, "collections", settlementBody("CASH", null, branch, cash, "10"), null)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("ACCOUNT_REQUIRED"));
+    settlement(t, "collections", settlementBody("CASH", customer, branch, cash, "0"), null)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("AMOUNT_INVALID"));
+    settlement(t, "collections", settlementBody("CASH", customer, branch, null, "10"), null)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("FUND_REQUIRED"));
+    settlement(t, "collections", settlementBody("CHECK", customer, branch, null, "10"), null)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INSTRUMENT_REQUIRED"));
+    settlement(t, "payments", settlementBody("CHECK", supplier, branch, null, "10"), null)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INSTRUMENT_REQUIRED"));
+    assertThat(fundBalance(t, cash)).isEqualByComparingTo("0");
+    assertThat(fundBalance(t, bank)).isEqualByComparingTo("1000");
+
+    reverse(t, "/api/v1/finance/settlements/" + java.util.UUID.randomUUID() + "/reverse")
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("SETTLEMENT_NOT_FOUND"));
+
+    // Nakit tahsilat ters çevrilir; ikinci ters çevirme kasayı yeniden etkilemez.
+    String collection =
+        created(
+            settlement(
+                t, "collections", settlementBody("CASH", customer, branch, cash, "80"), null));
+    assertThat(fundBalance(t, cash)).isEqualByComparingTo("80");
+    reverse(t, "/api/v1/finance/settlements/" + collection + "/reverse")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("REVERSED"));
+    reverse(t, "/api/v1/finance/settlements/" + collection + "/reverse")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("REVERSED"));
+    assertThat(fundBalance(t, cash)).isEqualByComparingTo("0");
+
+    // Çekli ve plana bağlı kayıtlar ters çevrilemez.
+    Map<String, Object> checkBody = settlementBody("CHECK", customer, branch, null, "50");
+    checkBody.put("instrument", newCheck("C-900"));
+    String checkSettlement = created(settlement(t, "collections", checkBody, null));
+    reverse(t, "/api/v1/finance/settlements/" + checkSettlement + "/reverse")
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SETTLEMENT_CHECK_NOT_REVERSIBLE"));
+
+    String plan = plan(t, supplier, branch, "100", "TRY", "2026-11-10");
+    post(t, "/api/v1/finance/payment-plans/" + plan + "/submit", null).andExpect(status().isOk());
+    post(t, "/api/v1/finance/payment-plans/" + plan + "/approve", Map.of())
+        .andExpect(status().isOk());
+    String planPayment = body(pay(t, plan, bank).andExpect(status().isOk())).get("id").asText();
+    reverse(t, "/api/v1/finance/settlements/" + planPayment + "/reverse")
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SETTLEMENT_LINKED_TO_PLAN"));
+    assertThat(fundBalance(t, bank)).isEqualByComparingTo("900");
+  }
+
+  @Test
+  void paymentPlanGuardsRejectUnknownAccountZeroAmountCheckPaymentAndWrongState() throws Exception {
+    String t = tenantCode("plng");
+    allowSelfApproval(t);
+    String branch = branch(t);
+    String supplier = account(t, "T1", "SUPPLIER");
+    String bank = fund(t, "B1", "BANK", "TRY", branch);
+    deposit(t, bank, "1000", "TRY");
+
+    post(
+            t,
+            "/api/v1/finance/payment-plans",
+            Map.of(
+                "accountId",
+                java.util.UUID.randomUUID().toString(),
+                "branchId",
+                branch,
+                "money",
+                money("10", "TRY"),
+                "dueDate",
+                "2026-12-01"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("ACCOUNT_NOT_FOUND"));
+    post(
+            t,
+            "/api/v1/finance/payment-plans",
+            Map.of(
+                "accountId",
+                supplier,
+                "branchId",
+                branch,
+                "money",
+                money("0", "TRY"),
+                "dueDate",
+                "2026-12-01"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("AMOUNT_INVALID"));
+    post(t, "/api/v1/finance/payment-plans/" + java.util.UUID.randomUUID() + "/submit", null)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("PLAN_NOT_FOUND"));
+
+    String plan = plan(t, supplier, branch, "100", "TRY", "2026-12-01");
+    // Taslak plan gönderilmeden onaylanamaz.
+    post(t, "/api/v1/finance/payment-plans/" + plan + "/approve", Map.of())
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("PLAN_INVALID_STATE"));
+    post(t, "/api/v1/finance/payment-plans/" + plan + "/submit", null).andExpect(status().isOk());
+    post(t, "/api/v1/finance/payment-plans/" + plan + "/approve", Map.of())
+        .andExpect(status().isOk());
+
+    post(
+            t,
+            "/api/v1/finance/payment-plans/" + plan + "/pay",
+            Map.of("method", "CHECK", "fundAccountId", bank, "date", DATE))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("PLAN_METHOD_INVALID"));
+    assertThat(fundBalance(t, bank)).isEqualByComparingTo("1000");
+    pay(t, plan, bank).andExpect(status().isOk());
+
+    // Ödenmiş plan ertelenemez.
+    post(t, "/api/v1/finance/payment-plans/" + plan + "/postpone", Map.of("dueDate", "2027-01-01"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("PLAN_INVALID_STATE"));
+    JsonNode paid = body(send(t, get("/api/v1/finance/payment-plans").param("status", "PAID")));
+    assertThat(paid.get("content").get(0).get("dueDate").asText()).isEqualTo("2026-12-01");
+  }
+
+  @Test
+  void accountMaintenanceAndPayableAging() throws Exception {
+    String t = tenantCode("accm");
+    String branch = branch(t);
+    String supplier = account(t, "T1", "SUPPLIER");
+    String carrier = account(t, "N1", "CARRIER");
+    String customer = account(t, "M1", "CUSTOMER");
+
+    post(t, "/api/v1/finance/accounts", Map.of("code", "T1", "name", "Kopya", "type", "SUPPLIER"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("ACCOUNT_CODE_TAKEN"));
+    send(
+            t,
+            put("/api/v1/finance/accounts/" + supplier)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    json.writeValueAsString(
+                        Map.of(
+                            "code",
+                            "T1",
+                            "name",
+                            "Tedarikçi A.Ş.",
+                            "type",
+                            "SUPPLIER",
+                            "taxNumber",
+                            "1234567890"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("Tedarikçi A.Ş."))
+        .andExpect(jsonPath("$.taxNumber").value("1234567890"));
+    reverse(t, "/api/v1/finance/accounts/transactions/" + java.util.UUID.randomUUID() + "/reverse")
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("TRANSACTION_NOT_FOUND"));
+
+    // Borç eskitmesi yalnız tedarikçi ve taşeron carilerinin alacaklı bakiyesini gösterir.
+    manual(t, supplier, branch, "CREDIT", "700", "TRY", null).andExpect(status().isCreated());
+    manual(t, carrier, branch, "CREDIT", "200", "TRY", null).andExpect(status().isCreated());
+    // Alacaklı bakiyeli müşteri borç eskitmesine girmez (cari türü süzgeci).
+    manual(t, customer, branch, "CREDIT", "50", "TRY", null).andExpect(status().isCreated());
+    Map<String, BigDecimal> totals = new HashMap<>();
+    body(send(t, get("/api/v1/finance/reports/aging").param("type", "PAYABLE").param("asOf", DATE)))
+        .forEach(
+            row -> totals.put(row.get("accountName").asText(), row.get("total").decimalValue()));
+    assertThat(totals).hasSize(2).doesNotContainKey("M1 Ltd");
+    assertThat(totals.get("Tedarikçi A.Ş.")).isEqualByComparingTo("700");
+    assertThat(totals.get("N1 Ltd")).isEqualByComparingTo("200");
+  }
+
   private String tenantCode(String prefix) throws Exception {
     String code = "fin-" + prefix;
     createTenant(code);

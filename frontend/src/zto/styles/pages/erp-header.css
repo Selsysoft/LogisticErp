@@ -1,0 +1,256 @@
+/*
+ * ZTO finans sayfa başlığı ("PROFESYONEL ERP HEADER") — ZtoPageHeader.
+ * Kaynak: wwwroot/css/zt/bankstatement/index.css:723-971 birebir kopya. Aynı blok 16 finans sayfa
+ * CSS'inde tekrar ediyor (ör. accounttransaction/transactions.css:1676-, banktransaction/index.css);
+ * bankstatement sürümü en kapsamlısı (chip-info ve erp-btn-info dahil) olduğu için ortak dosya olarak alındı.
+ */
+/* ============================================ */
+/* PROFESYONEL ERP HEADER STİLLERİ */
+/* ============================================ */
+
+/* Header Genel */
+.card-header.bg-white {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+/* Icon Box */
+.erp-header-icon {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  margin-right: 6px;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  color: #495057;
+  font-size: 16px;
+}
+
+/* Breadcrumb */
+.erp-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #6c757d;
+}
+
+.erp-breadcrumb .separator {
+  color: #cbd5e0;
+  font-weight: 300;
+}
+
+.erp-breadcrumb i {
+  font-size: 10px;
+  margin-right: 3px;
+}
+
+/* Info Chips */
+.erp-info-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #495057;
+  transition: all 0.2s ease;
+}
+
+.erp-info-chip:hover {
+  background: #e9ecef;
+  border-color: #cbd5e0;
+}
+
+.erp-info-chip i {
+  font-size: 10px;
+}
+
+/* Chip Varyantları */
+.erp-info-chip.chip-success {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.erp-info-chip.chip-warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.erp-info-chip.chip-danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.erp-info-chip.chip-primary {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.erp-info-chip.chip-info {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+
+/* ERP Butonlar */
+.erp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+  background: #ffffff;
+}
+
+.erp-btn i {
+  font-size: 13px;
+}
+
+/* Buton Varyantları */
+.erp-btn-success {
+  color: #166534;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.erp-btn-success:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.erp-btn-danger {
+  color: #991b1b;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.erp-btn-danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.erp-btn-primary {
+  color: #1e40af;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.erp-btn-primary:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
+.erp-btn-secondary {
+  color: #475569;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.erp-btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e0;
+  color: #475569;
+}
+
+.erp-btn-info {
+  color: #0369a1;
+  border-color: #bae6fd;
+  background: #f0f9ff;
+}
+
+.erp-btn-info:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+.erp-btn-warning {
+  color: #92400e;
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.erp-btn-warning:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+  color: #92400e;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card-header.bg-white {
+    padding: 8px 15px !important;
+  }
+
+  .erp-header-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+
+  .card-header h6 {
+    font-size: 13px !important;
+  }
+
+  .erp-breadcrumb {
+    font-size: 10px;
+  }
+
+  .erp-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+
+  .erp-btn span {
+    display: none !important;
+  }
+
+  .erp-btn i {
+    margin: 0;
+  }
+}
+
+/* Print Style */
+@media print {
+  .erp-btn,
+  .erp-info-chip {
+    display: none !important;
+  }
+
+  .card-header.bg-white {
+    border-bottom: 2px solid #000;
+  }
+}
+
+/* Focus States */
+.erp-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+}
+
+/* Loading State */
+.erp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -1,0 +1,178 @@
+/*
+ * ZTO layout satır içi <style> bloğu (her sayfaya uygulanır). Kaynak: Views/Shared/_ExpertLayout.cshtml:43-201,
+ * :215-218 ve :493-496 (aynı blok _ProductionLayout.cshtml:57-231 ve :538-541, _Layout.cshtml:54+ ve :445-448).
+ * Yalnız finans ekranlarını etkileyen kısımlar birebir alındı: KOMPAKT NAV TABS (+ @keyframes tabGlow),
+ * .small-icon ve .input-group .select2-container. Razor kaçışı (çift @) tek @ yapıldı.
+ * Alınmayanlar: .card opacity/.card.animate (JS ile açılır; alınırsa kartlar görünmez kalır), .loader,
+ * .divider2, @keyframes blink, .btn-logout/.logout-*, .sb-topnav, .messenger-nav-btn, .chat-pill-*.
+ * Sıra (zto-finans.css): ZTO'daki gibi layout.css → styles.css → dataTables'tan sonra, sayfa CSS'lerinden önce.
+ */
+        /* ============================================ */
+        /* KOMPAKT NAV TABS - ERP SİSTEMİ TASARIMI */
+        /* ============================================ */
+        .nav-tabs {
+            border-bottom: 2px solid #e9ecef;
+            background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+            padding: 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border-radius: 6px 6px 0 0;
+        }
+
+            .nav-tabs .nav-item {
+                margin-bottom: 0;
+            }
+
+            .nav-tabs .nav-link {
+                border: none;
+                background: transparent;
+                color: #6c757d;
+                font-weight: 600;
+                font-size: 12px;
+                padding: 10px 18px;
+                margin: 0;
+                position: relative;
+                transition: all 0.3s ease;
+                border-radius: 0;
+                text-decoration: none;
+            }
+
+                /* Seçilmemiş tab - Gri */
+                .nav-tabs .nav-link:not(.active) {
+                    color: #6c757d;
+                    background: transparent;
+                }
+
+                    .nav-tabs .nav-link:not(.active):hover {
+                        color: #007bff;
+                        background: rgba(0, 123, 255, 0.05);
+                        border-bottom: 2px solid rgba(0, 123, 255, 0.3);
+                    }
+
+                    .nav-tabs .nav-link:not(.active) i {
+                        color: #adb5bd;
+                        margin-right: 6px;
+                        transition: all 0.3s ease;
+                    }
+
+                    .nav-tabs .nav-link:not(.active):hover i {
+                        color: #007bff;
+                        transform: scale(1.05);
+                    }
+
+                /* Seçili tab - Mavi (#007bff tonları) */
+                .nav-tabs .nav-link.active {
+                    color: #007bff !important;
+                    background: linear-gradient(to bottom, #ffffff 0%, #e7f3ff 100%) !important;
+                    border: none !important;
+                    border-bottom: 3px solid #007bff !important;
+                    box-shadow: 0 -1px 5px rgba(0, 123, 255, 0.1);
+                    position: relative;
+                }
+
+                    .nav-tabs .nav-link.active::before {
+                        content: '';
+                        position: absolute;
+                        bottom: -3px;
+                        left: 0;
+                        right: 0;
+                        height: 3px;
+                        background: linear-gradient(to right, #0056b3, #007bff, #0056b3);
+                        animation: tabGlow 2s ease-in-out infinite;
+                    }
+
+        @keyframes tabGlow {
+            0%, 100% {
+                box-shadow: 0 0 3px rgba(0, 123, 255, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 8px rgba(0, 123, 255, 0.6);
+            }
+        }
+
+        .nav-tabs .nav-link.active i {
+            color: #007bff !important;
+            margin-right: 6px;
+        }
+
+        /* Hover efekti - Aktif tab */
+        .nav-tabs .nav-link.active:hover {
+            background: linear-gradient(to bottom, #ffffff 0%, #d4e9ff 100%) !important;
+        }
+
+        /* İkonlar için genel stil */
+        .nav-tabs .nav-link i {
+            font-size: 13px;
+            vertical-align: middle;
+            transition: all 0.3s ease;
+        }
+
+        /* Responsive tasarım */
+        @media (max-width: 768px) {
+            .nav-tabs {
+                border-radius: 0;
+            }
+
+                .nav-tabs .nav-link {
+                    font-size: 11px;
+                    padding: 8px 12px;
+                }
+
+                    .nav-tabs .nav-link i {
+                        font-size: 12px;
+                        margin-right: 4px;
+                    }
+        }
+
+        /* Tab geçiş animasyonu */
+        .nav-tabs .nav-link {
+            overflow: hidden;
+        }
+
+            .nav-tabs .nav-link::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 50%;
+                width: 0;
+                height: 2px;
+                background: #007bff;
+                transition: all 0.3s ease;
+                transform: translateX(-50%);
+            }
+
+            .nav-tabs .nav-link:hover::after {
+                width: 100%;
+            }
+
+            .nav-tabs .nav-link.active::after {
+                width: 100%;
+            }
+
+            /* Odaklanma efekti (accessibility) */
+            .nav-tabs .nav-link:focus {
+                outline: 2px solid #007bff;
+                outline-offset: -2px;
+                box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+            }
+
+            /* Disabled tab stil */
+            .nav-tabs .nav-link.disabled {
+                color: #dee2e6 !important;
+                pointer-events: none;
+                cursor: not-allowed;
+            }
+
+                .nav-tabs .nav-link.disabled i {
+                    color: #dee2e6 !important;
+                }
+
+        .small-icon {
+            padding-left: 6px;
+            font-size: 18px; /* Boyutu küçült */
+        }
+
+        .input-group .select2-container {
+            flex: 1 1 auto; /* Select2, input gibi davranır */
+            width: auto !important; /* %100 değil */
+        }

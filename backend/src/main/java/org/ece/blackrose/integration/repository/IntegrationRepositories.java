@@ -91,6 +91,7 @@ public final class IntegrationRepositories {
         """
         select t from FundTransaction t
         where t.fundAccountId = :fundId and t.transactionDate between :from and :to
+          and t.deleted = false
           and not exists (
             select 1 from BankStatementLine l where l.matchedTransactionId = t.id)
         order by t.transactionDate desc

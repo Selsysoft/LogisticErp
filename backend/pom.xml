@@ -223,7 +223,10 @@
     <profiles>
         <!-- CI'da tam takımla çalışır: kapsam ölçülen değerin altına düşerse build kırılır.
              Yerelde yalnız bazı testler çalıştırıldığında kapsam doğal olarak düşük olduğundan
-             varsayılan derlemede uygulanmaz. Ölçüm (2026-11-10): satır %93,3, dal %78,0. -->
+             varsayılan derlemede uygulanmaz. Ölçüm (2026-11-13, `clean verify -Pcoverage`): satır %95,4,
+             dal %82,3. Yerelde `clean` olmadan ölçmeyin: IDE'nin (VS Code Java / ECJ) target/classes'a
+             derlediği sınıflar farklı satır tablosu verir ve oranı yanlış düşük gösterir. -->
+
         <profile>
             <id>coverage</id>
             <build>

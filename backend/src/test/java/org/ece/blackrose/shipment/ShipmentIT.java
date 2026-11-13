@@ -913,6 +913,134 @@ class ShipmentIT extends AbstractIntegrationTest {
     assertThat(profit.findValuesAsText("shipmentId")).contains(delivered);
   }
 
+  @Test
+  void assignmentAndLegEditingValidateResourcesCarrierAndDates() throws Exception {
+    Setup s = setup("asg");
+    String truck = compliantVehicle(s.tenant(), "34AS01", "TRUCK");
+    String driver = compliantDriver(s.tenant(), "S1");
+    JsonNode shipment = create(s.tenant(), shipmentBody(s, "100"));
+    String id = shipment.get("id").asText();
+    String leg = legOf(shipment);
+    String unknown = java.util.UUID.randomUUID().toString();
+    Map<String, Object> cost = Map.of("amount", "750", "currency", "TRY");
+
+    // Ya kendi aracı ve sürücüsü ya da taşeron seçilir; ikisi birden ya da hiçbiri olmaz.
+    assign(s.tenant(), leg, Map.of())
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("ASSIGNMENT_INVALID"));
+    assign(
+            s.tenant(),
+            leg,
+            Map.of("vehicleId", truck, "carrierAccountId", s.supplier(), "carrierCost", cost))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("ASSIGNMENT_INVALID"));
+    assign(s.tenant(), leg, Map.of("vehicleId", truck))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("ASSIGNMENT_INVALID"));
+    assign(s.tenant(), leg, Map.of("vehicleId", unknown, "driverId", driver))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("VEHICLE_NOT_FOUND"));
+    assign(s.tenant(), leg, Map.of("vehicleId", truck, "driverId", unknown))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("DRIVER_NOT_FOUND"));
+    assign(s.tenant(), unknown, Map.of("vehicleId", truck, "driverId", driver))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("LEG_NOT_FOUND"));
+
+    // Taşeron maliyet ister ve tedarikçi/taşeron carisi olmalıdır.
+    assign(s.tenant(), leg, Map.of("carrierAccountId", s.supplier()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CARRIER_COST_REQUIRED"));
+    assign(s.tenant(), leg, Map.of("carrierAccountId", s.customer(), "carrierCost", cost))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CARRIER_INVALID"));
+    assertThat(body(send(s.tenant(), get("/api/v1/shipment/shipments/" + id + "/costs"))))
+        .isEmpty();
+    assign(s.tenant(), leg, Map.of("carrierAccountId", s.supplier(), "carrierCost", cost))
+        .andExpect(status().isOk());
+    JsonNode costs = body(send(s.tenant(), get("/api/v1/shipment/shipments/" + id + "/costs")));
+    assertThat(costs).hasSize(1);
+    assertThat(costs.get(0).get("kind").asText()).isEqualTo("SUBCONTRACTOR");
+    assertThat(costs.get(0).get("tlAmount").decimalValue()).isEqualByComparingTo("750");
+
+    // Etap tarihleri sıralı olmalıdır; olmayan sefere etap eklenmez.
+    Map<String, Object> backwards =
+        Map.of(
+            "origin",
+            "Ankara",
+            "destination",
+            "Adana",
+            "plannedStart",
+            END.toString(),
+            "plannedEnd",
+            START.toString());
+    post(s.tenant(), "/api/v1/shipment/shipments/" + id + "/legs", backwards)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("LEG_DATES_INVALID"));
+    Map<String, Object> forward =
+        Map.of(
+            "origin",
+            "Ankara",
+            "destination",
+            "Adana",
+            "plannedStart",
+            END.toString(),
+            "plannedEnd",
+            END.plus(1, ChronoUnit.DAYS).toString());
+    post(s.tenant(), "/api/v1/shipment/shipments/" + unknown + "/legs", forward)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("SHIPMENT_NOT_FOUND"));
+
+    // Sefer gideri ya cariye ya araç giderine bağlanır; tutar pozitif olmalıdır.
+    Map<String, Object> money = Map.of("amount", "100", "currency", "TRY");
+    post(
+            s.tenant(),
+            "/api/v1/shipment/shipments/" + id + "/costs",
+            Map.of("kind", "TOLL", "money", money))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("COST_TARGET_REQUIRED"));
+    post(
+            s.tenant(),
+            "/api/v1/shipment/shipments/" + id + "/costs",
+            Map.of(
+                "kind",
+                "TOLL",
+                "accountId",
+                s.supplier(),
+                "vehicleExpenseId",
+                unknown,
+                "money",
+                money))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("COST_TARGET_REQUIRED"));
+    post(
+            s.tenant(),
+            "/api/v1/shipment/shipments/" + id + "/costs",
+            Map.of("kind", "FUEL", "vehicleExpenseId", unknown))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("EXPENSE_NOT_FOUND"));
+    addCost(s.tenant(), id, "TOLL", s.supplier(), "0")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("AMOUNT_INVALID"));
+    send(s.tenant(), MockMvcRequestBuilders.delete("/api/v1/shipment/costs/" + unknown))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("COST_NOT_FOUND"));
+    assertThat(body(send(s.tenant(), get("/api/v1/shipment/shipments/" + id + "/costs"))))
+        .hasSize(1);
+
+    // İptal edilmiş seferin etapları ve giderleri değiştirilemez.
+    moveTo(s.tenant(), id, "CANCELLED").andExpect(status().isOk());
+    addCost(s.tenant(), id, "TOLL", s.supplier(), "100")
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SHIPMENT_NOT_EDITABLE"));
+    post(s.tenant(), "/api/v1/shipment/shipments/" + id + "/legs", forward)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SHIPMENT_NOT_EDITABLE"));
+    assign(s.tenant(), leg, Map.of("vehicleId", truck, "driverId", driver))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SHIPMENT_NOT_EDITABLE"));
+  }
+
   // Yardımcılar
 
   private static Map<String, Object> contact(

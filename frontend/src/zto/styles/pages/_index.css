@@ -1,0 +1,9 @@
+/*
+ * Sayfa stilleri (MX4 B.3 adım 1). ZTO view'larındaki <style> blokları ve gerekli wwwroot/css
+ * parçaları (zto-admin.css, definition-list.css, css/zt/* vb.) sayfa yazıldıkça bu klasöre ayrı dosya
+ * olarak birebir kopyalanır ve buradan @import edilir. Kaynak dosya:satır her dosyanın başına yazılır.
+ */
+@import "./zt-sidebar.css";
+@import "./erp-header.css";
+@import "./branch-multiselect.css";
+@import "./all-transactions.css";

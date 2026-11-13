@@ -3,6 +3,7 @@ import { expect, login, tenantState, test } from "./support";
 /** Menüdeki her modül açılır ve hata göstermez; sayfalar ayrı dosyadan yüklendiği için önemlidir. */
 const MODULES = [
   { menu: "Finans", url: /\/finance$/ },
+  { menu: "ZTO Finans", url: /\/zto-finans\/cari-hareketler$/ },
   { menu: "Operasyon", url: /\/operations$/ },
   { menu: "Satış/CRM", url: /\/crm$/ },
   { menu: "Filo", url: /\/fleet$/ },

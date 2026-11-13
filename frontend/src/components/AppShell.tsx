@@ -1,4 +1,5 @@
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import BadgeIcon from "@mui/icons-material/Badge";
@@ -41,6 +42,12 @@ const DRAWER_WIDTH = 240;
 export const MODULE_ITEMS = [
   { path: "/dashboard", label: "nav.dashboard", Icon: DashboardIcon },
   { path: "/finance", label: "nav.finance", permission: "FINANCE_VIEW", Icon: AccountBalanceIcon },
+  {
+    path: "/zto-finans",
+    label: "nav.ztoFinance",
+    permission: "FINANCE_VIEW",
+    Icon: AccountBalanceWalletIcon,
+  },
   {
     path: "/operations",
     label: "nav.operations",

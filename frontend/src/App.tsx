@@ -180,6 +180,15 @@ const WarehouseDefinitionsPage = lazyPage(
 );
 const MovementsPage = lazyPage(() => import("./pages/warehouse/MovementsPage"), "MovementsPage");
 const StockPage = lazyPage(() => import("./pages/warehouse/StockPage"), "StockPage");
+const ZtoFinansLayout = lazyPage(() => import("./zto/finans/ZtoFinansLayout"), "ZtoFinansLayout");
+const ZtoAllTransactionsPage = lazyPage(
+  () => import("./zto/finans/pages/AllTransactionsPlaceholderPage"),
+  "AllTransactionsPlaceholderPage",
+);
+// Bileşen vitrini yalnız geliştirme ortamında; üretim paketine girmez.
+const ZtoShowcasePage = import.meta.env.DEV
+  ? lazyPage(() => import("./zto/finans/pages/ShowcasePage"), "ShowcasePage")
+  : null;
 
 export function App() {
   const { t } = useTranslation();
@@ -239,6 +248,18 @@ export function App() {
               <Route path="plans" element={<PlansPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="definitions" element={<DefinitionsPage />} />
+            </Route>
+            <Route
+              path="/zto-finans"
+              element={
+                <RequirePermission permission="FINANCE_VIEW">
+                  <ZtoFinansLayout />
+                </RequirePermission>
+              }
+            >
+              <Route index element={<Navigate to="cari-hareketler" replace />} />
+              <Route path="cari-hareketler" element={<ZtoAllTransactionsPage />} />
+              {ZtoShowcasePage && <Route path="vitrin" element={<ZtoShowcasePage />} />}
             </Route>
             <Route
               path="/crm"
@@ -355,6 +376,7 @@ export function App() {
                 item.permission &&
                 ![
                   "/finance",
+                  "/zto-finans",
                   "/crm",
                   "/fleet",
                   "/operations",

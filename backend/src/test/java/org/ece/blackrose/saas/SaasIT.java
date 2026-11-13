@@ -13,6 +13,7 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -378,6 +379,115 @@ class SaasIT extends AbstractIntegrationTest {
     jdbc.update(setDue, westToday, westInvoice);
 
     assertThat(overdueInvoices()).isEqualTo(before + 1);
+  }
+
+  @Test
+  void subscriptionLifecycleRejectsInvalidPlansStatesAndInvoices() throws Exception {
+    createTenant("saas-guard-fail");
+    UUID id = tenantId("saas-guard-fail");
+    String unknown = UUID.randomUUID().toString();
+
+    // Plan kodu tekildir; olmayan plan ve firma bulunamaz.
+    String paid = plan("KORUMA", "500", 9, 9, 99);
+    Map<String, Object> duplicate = new HashMap<>();
+    duplicate.put("code", "KORUMA");
+    duplicate.put("name", "Kopya");
+    duplicate.put("monthlyPrice", "1");
+    duplicate.put("currency", "TRY");
+    duplicate.put("active", true);
+    admin(post(ADMIN + "/plans"), duplicate)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("PLAN_CODE_TAKEN"));
+    admin(put(ADMIN + "/plans/" + unknown), duplicate)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("PLAN_NOT_FOUND"));
+    admin(put(ADMIN + "/tenants/" + unknown + "/plan"), Map.of("planId", paid))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("TENANT_NOT_FOUND"));
+
+    // Pasif plan ne mevcut firmaya ne yeni firmaya seçilebilir.
+    String retired = plan("EMEKLI", "10", 9, 9, 99);
+    Map<String, Object> retire = new HashMap<>(duplicate);
+    retire.put("code", "EMEKLI");
+    retire.put("name", "Emekli");
+    retire.put("active", false);
+    admin(put(ADMIN + "/plans/" + retired), retire)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.active").value(false))
+        .andExpect(jsonPath("$.name").value("Emekli"));
+    admin(put(ADMIN + "/tenants/" + id + "/plan"), Map.of("planId", retired))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("PLAN_INACTIVE"));
+    Map<String, Object> onRetired = new HashMap<>();
+    onRetired.put("code", "saas-retired");
+    onRetired.put("name", "Emekli Lojistik");
+    onRetired.put("defaultCurrency", "TRY");
+    onRetired.put("timeZone", "Europe/Istanbul");
+    onRetired.put("ownerEmail", ownerEmail("saas-retired"));
+    onRetired.put("ownerFullName", "Firma Sahibi");
+    onRetired.put("planCode", "EMEKLI");
+    admin(post(ADMIN + "/tenants"), onRetired)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("PLAN_INACTIVE"));
+    // Reddedilen istek firma kaydı bırakmaz.
+    List<String> codes = new ArrayList<>();
+    body(admin(get(ADMIN + "/tenants"), null).andExpect(status().isOk()))
+        .forEach(row -> codes.add(row.get("code").asText()));
+    assertThat(codes).doesNotContain("saas-retired");
+
+    // Etkin firma "devam ettirilemez"; deneme bitişi ileri bir tarih olmalıdır.
+    admin(post(ADMIN + "/tenants/" + id + "/resume"), null)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("TENANT_NOT_SUSPENDED"));
+    admin(post(ADMIN + "/tenants/" + id + "/extend-trial"), Map.of("until", TODAY.toString()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("TRIAL_DATE_INVALID"));
+
+    admin(put(ADMIN + "/tenants/" + id + "/plan"), Map.of("planId", paid))
+        .andExpect(status().isNoContent());
+    admin(post(ADMIN + "/tenants/" + id + "/activate"), null).andExpect(status().isNoContent());
+    admin(post(ADMIN + "/tenants/" + id + "/activate"), null)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SUBSCRIPTION_NOT_TRIAL"));
+    admin(
+            post(ADMIN + "/tenants/" + id + "/extend-trial"),
+            Map.of("until", TODAY.plusDays(10).toString()))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SUBSCRIPTION_NOT_TRIAL"));
+
+    // Tahsil edilemeyen fatura iptal edilince gecikmiş abonelik yeniden etkin olur.
+    billing.process(id, TODAY);
+    JsonNode invoice = invoicesOf("saas-guard-fail").get(0);
+    assertThat(invoice.get("status").asText()).isEqualTo("ISSUED");
+    assertThat(overview("saas-guard-fail").get("subscriptionStatus").asText())
+        .isEqualTo("PAST_DUE");
+    admin(post(ADMIN + "/invoices/" + invoice.get("id").asText() + "/void"), null)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("VOID"));
+    assertThat(overview("saas-guard-fail").get("subscriptionStatus").asText()).isEqualTo("ACTIVE");
+    admin(post(ADMIN + "/invoices/" + invoice.get("id").asText() + "/void"), null)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("INVOICE_NOT_OPEN"));
+    admin(
+            post(ADMIN + "/invoices/" + unknown + "/pay"),
+            Map.of("date", TODAY.toString(), "reference", "EFT"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("INVOICE_NOT_FOUND"));
+
+    // Askıya alma yalnız etkin firmada, kapatma yalnız etkin/askıdaki firmada yapılır.
+    admin(post(ADMIN + "/tenants/" + id + "/suspend"), null).andExpect(status().isNoContent());
+    admin(post(ADMIN + "/tenants/" + id + "/suspend"), null)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("TENANT_STATUS_INVALID"));
+    admin(post(ADMIN + "/tenants/" + id + "/close"), Map.of("confirmCode", "saas-guard-fail"))
+        .andExpect(status().isNoContent());
+    admin(post(ADMIN + "/tenants/" + id + "/close"), Map.of("confirmCode", "saas-guard-fail"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("TENANT_NOT_CLOSABLE"));
+    admin(post(ADMIN + "/tenants/" + id + "/activate"), null)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SUBSCRIPTION_CANCELLED"));
+    assertThat(overview("saas-guard-fail").get("status").asText()).isEqualTo("CLOSED");
   }
 
   // Yardımcılar

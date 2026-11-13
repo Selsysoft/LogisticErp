@@ -121,7 +121,100 @@ class OpeningStockIT extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.code").value("COUNT_OPEN"));
   }
 
+  @Test
+  void dosyaBasligiBoyutuDepoTarihVeSatirAlanlariDogrulanir() throws Exception {
+    Setup s = setup("osv", false);
+
+    upload(s, "/preview", "Açıklama;Not\nx;y\n")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("OPENING_IMPORT_HEADER"))
+        .andExpect(
+            jsonPath(
+                "$.message",
+                org.hamcrest.Matchers.containsString("müşteri kodu, ürün kodu, göz, miktar")));
+    String header = "Müşteri kodu;Ürün kodu;Ürün adı;Birim;Göz;Lot;SKT;Miktar\n";
+    upload(s, "/preview", header)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("OPENING_IMPORT_EMPTY"));
+    StringBuilder large = new StringBuilder(header);
+    for (int i = 0; i <= 10_000; i++) {
+      large.append("M1;U-").append(i).append(";Ürün;KOLİ;A-01;;;1\n");
+    }
+    upload(s, "/preview", large.toString())
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("OPENING_IMPORT_TOO_LARGE"));
+    String one = header + "M1;U-1;Un;ÇUVAL;A-01;;;1\n";
+    uploadTo(s, java.util.UUID.randomUUID().toString(), DATE, one)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("WAREHOUSE_NOT_FOUND"));
+    uploadTo(s, s.warehouse(), tenantToday().plusDays(1), one)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("OPENING_DATE_INVALID"));
+
+    String longText = "X".repeat(51);
+    String rows =
+        header
+            + "M1;"
+            + longText
+            + ";Ad;KOLİ;A-01;;;1\n"
+            + "M1;U-2;Ad;KOLİ;"
+            + "G".repeat(31)
+            + ";;;1\n"
+            + "M1;U-3;Ad;KOLİ;A-01;"
+            + longText
+            + ";;1\n"
+            + "M1;U-4;Ad;KOLİ;A-01;L4;bozuk;1\n"
+            + "M1;U-5;Ad;KOLİ;A-01;;;0\n"
+            + "M1;U-6;Ad;KOLİ;A-01;;;1,2345\n"
+            + "M1;U-7;Ad;;A-01;;;1\n"
+            + "M1;U-8;"
+            + "A".repeat(201)
+            + ";KOLİ;A-01;;;1\n"
+            + "M1;U-9;Pirinç;KG;A-01;;;1\n"
+            + "M1;U-9;Pirinç;ÇUVAL;B-01;;;1\n";
+    JsonNode preview = body(upload(s, "/preview", rows).andExpect(status().isOk()));
+    assertThat(preview.get("valid").asBoolean()).isFalse();
+    assertThat(statuses(preview))
+        .containsExactly(
+            "ERROR", "ERROR", "ERROR", "ERROR", "ERROR", "ERROR", "ERROR", "ERROR", "READY",
+            "ERROR");
+    assertThat(errors(preview))
+        .anyMatch(e -> e.contains("Ürün kodu en çok 50"))
+        .anyMatch(e -> e.contains("Göz kodu en çok 30"))
+        .anyMatch(e -> e.contains("Lot en çok 50"))
+        .anyMatch(e -> e.contains("Son kullanma tarihi okunamadı: bozuk"))
+        .anyMatch(e -> e.contains("Miktar sıfırdan büyük"))
+        .anyMatch(e -> e.contains("en çok üç ondalık"))
+        .anyMatch(e -> e.contains("Birim boş"))
+        .anyMatch(e -> e.contains("Ürün adı en çok 200"))
+        .anyMatch(e -> e.contains("ad veya birim farklı"));
+    assertThat(balances(s)).isEmpty();
+
+    // Sistemde kayıtlı lot başka son kullanma tarihiyle yeniden açılamaz.
+    upload(s, "", header + "M1;U-1;Un;ÇUVAL;A-01;L1;31.12.2027;5\n").andExpect(status().isOk());
+    JsonNode conflict =
+        body(
+            upload(s, "/preview", header + "M1;U-1;Un;ÇUVAL;B-01;L1;31.12.2028;5\n")
+                .andExpect(status().isOk()));
+    assertThat(errors(conflict))
+        .singleElement()
+        .satisfies(e -> assertThat(e).contains("başka son kullanma tarihiyle"));
+    assertThat(balances(s)).hasSize(1);
+  }
+
   // Yardımcılar
+
+  private ResultActions uploadTo(Setup s, String warehouse, LocalDate date, String content)
+      throws Exception {
+    return mvc.perform(
+        multipart(BASE + "/opening-stock/preview")
+            .file(
+                new MockMultipartFile(
+                    "file", "stok.csv", "text/csv", content.getBytes(StandardCharsets.UTF_8)))
+            .param("warehouseId", warehouse)
+            .param("date", date.toString())
+            .with(asOwner(s.tenant())));
+  }
 
   private Setup setup(String prefix, boolean bonded) throws Exception {
     String t = prefix + "-" + Long.toString(System.nanoTime(), 36);

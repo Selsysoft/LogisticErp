@@ -43,7 +43,11 @@ NakliyeLojistik_SaaS_Promptlar/
    ├─ FAZ_08_Entegrasyonlar.md
    ├─ FAZ_09_Raporlama_BI_Dashboard.md
    ├─ FAZ_10_Mobil_Surucu_POD.md
-   └─ FAZ_11_SaaS_Operasyon_Lisans_Faturalama.md
+   ├─ FAZ_11_SaaS_Operasyon_Lisans_Faturalama.md
+   └─ FAZ_12_ZTO_Finans_Eklemeleri.md
+zto-finans/                          ← ZTO Fabrika finans analizi ve karar matrisi (Faz 12 girdisi)
+├─ 00_README.md                      ← devir notu, okuma sırası
+└─ analiz/ (01–04, envanter/, matris/)
 ```
 
 ## Nasıl kullanılır (önerilen akış)
@@ -69,6 +73,7 @@ NakliyeLojistik_SaaS_Promptlar/
 | 9 | Raporlama / BI / Dashboard | P1 |
 | 10 | Mobil Sürücü / POD | P2 |
 | 11 | SaaS Operasyon / Abonelik / İzleme | P1 |
+| 12 | ZTO Fabrika eklemeleri: ZTO görünümlü finans ekranları, çoklu şirket, ödeme/tahsilat, kredi, vadeli mevduat, çek koçanı, döviz bozumu, bilanço, personel/bordro, Uyumsoft e-Dönüşüm, ZTO Fabrika canlı entegrasyonu (2026-11-12/13) | P1 |
 
 ## Açık karar bekleyen başlıklar (dokümanlarda "Açık Sorular" olarak işaretli)
 Fazlar boyunca kararını beklediğim konular (özet):

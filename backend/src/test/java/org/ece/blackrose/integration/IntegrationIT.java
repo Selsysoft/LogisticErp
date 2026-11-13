@@ -52,6 +52,22 @@ class IntegrationIT extends AbstractIntegrationTest {
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("COMPANY_TAX_REQUIRED"));
     settings(s);
+    send(s.tenant(), get(BASE + "/e-document-settings"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.taxNumber").value("1234567890"))
+        .andExpect(jsonPath("$.taxOffice").value("Kadıköy"));
+    post(
+            s.tenant(),
+            BASE + "/e-documents",
+            Map.of(
+                "kind",
+                "EARSIV",
+                "sourceType",
+                "FREIGHT_INVOICE",
+                "sourceId",
+                java.util.UUID.randomUUID().toString()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("INVOICE_NOT_FOUND"));
     // Müşterinin vergi numarası yok: e-Fatura gitmez, e-Arşiv gider.
     post(s.tenant(), BASE + "/e-documents", send)
         .andExpect(status().isConflict())
@@ -102,6 +118,17 @@ class IntegrationIT extends AbstractIntegrationTest {
     post(s.tenant(), BASE + "/e-documents/" + id + "/cancel", null)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("CANCELLED"));
+    // İptal edilmiş belge yeniden iptal edilemez; olmayan belge bulunamaz.
+    post(s.tenant(), BASE + "/e-documents/" + id + "/cancel", null)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("EDOCUMENT_NOT_ACTIVE"));
+    String unknown = java.util.UUID.randomUUID().toString();
+    post(s.tenant(), BASE + "/e-documents/" + unknown + "/refresh", null)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("EDOCUMENT_NOT_FOUND"));
+    send(s.tenant(), get(BASE + "/e-documents/" + unknown + "/ubl"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("EDOCUMENT_NOT_FOUND"));
     post(
             s.tenant(),
             "/api/v1/shipment/invoices/" + invoiceId + "/cancel",
@@ -161,8 +188,25 @@ class IntegrationIT extends AbstractIntegrationTest {
     post(s.tenant(), BASE + "/e-documents", sendWaybill)
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("DOCUMENT_NOT_ISSUED"));
+    assertThat(candidateIds(s)).doesNotContain(waybill);
     post(s.tenant(), "/api/v1/shipment/documents/" + waybill + "/issue", null)
         .andExpect(status().isOk());
+    // Kesilmiş irsaliye aday listesine girer; gönderilince listeden çıkar.
+    assertThat(candidateIds(s)).contains(waybill);
+    // Yeniden gönderilen fatura artık aday değildir.
+    assertThat(candidateIds(s)).doesNotContain(invoice.get("id").asText());
+    post(
+            s.tenant(),
+            BASE + "/e-documents",
+            Map.of(
+                "kind",
+                "EIRSALIYE",
+                "sourceType",
+                "WAYBILL",
+                "sourceId",
+                java.util.UUID.randomUUID().toString()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("DOCUMENT_NOT_FOUND"));
     post(
             s.tenant(),
             BASE + "/e-documents",
@@ -171,6 +215,7 @@ class IntegrationIT extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.code").value("EDOCUMENT_KIND_INVALID"));
     String sent = created(post(s.tenant(), BASE + "/e-documents", sendWaybill));
     assertThat(parse(s, sent).getDocumentElement().getLocalName()).isEqualTo("DespatchAdvice");
+    assertThat(candidateIds(s)).doesNotContain(waybill);
   }
 
   @Test
@@ -233,6 +278,15 @@ class IntegrationIT extends AbstractIntegrationTest {
     // Yeniden yükleme: aynı referanslar atlanır, gider çoğalmaz.
     JsonNode again = upload(s, "TOLL", file);
     assertThat(again.get("batch").get("duplicates").asInt()).isEqualTo(3);
+    JsonNode batches = body(send(s.tenant(), get(BASE + "/imports")).andExpect(status().isOk()));
+    assertThat(batches).hasSize(2);
+    assertThat(batches.get(0).get("id").asText()).isEqualTo(again.get("batch").get("id").asText());
+    JsonNode first = body(send(s.tenant(), get(BASE + "/imports/" + batch)));
+    assertThat(first.get("batch").get("kind").asText()).isEqualTo("TOLL");
+    assertThat(rows(first)).hasSize(4);
+    send(s.tenant(), get(BASE + "/imports/" + java.util.UUID.randomUUID()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("IMPORT_NOT_FOUND"));
     post(s.tenant(), BASE + "/imports/" + again.get("batch").get("id").asText() + "/post", null)
         .andExpect(status().isOk());
     assertThat(body(send(s.tenant(), get("/api/v1/shipment/shipments/" + shipmentId + "/costs"))))
@@ -361,6 +415,35 @@ class IntegrationIT extends AbstractIntegrationTest {
     assertThat(after.get("matched").asInt()).isEqualTo(2);
     assertThat(after.get("ignored").asInt()).isEqualTo(1);
     assertThat(after.get("unmatchedTotal").decimalValue()).isEqualByComparingTo("750");
+
+    // Eşleşme geri alınır; satır yeniden açık olur.
+    post(s.tenant(), BASE + "/bank/lines/" + ambiguous + "/unmatch", null)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("UNMATCHED"));
+    JsonNode reopened = body(send(s.tenant(), get(BASE + "/bank/" + fund + "/summary")));
+    assertThat(reopened.get("matched").asInt()).isEqualTo(1);
+    assertThat(reopened.get("unmatchedTotal").decimalValue()).isEqualByComparingTo("1250");
+    post(s.tenant(), BASE + "/bank/lines/" + java.util.UUID.randomUUID() + "/unmatch", null)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("LINE_NOT_FOUND"));
+
+    // Bilinmeyen hesaba ekstre yüklenmez; sıfır tutarlı satır hatalı sayılır.
+    mvc.perform(
+            MockMvcRequestBuilders.multipart(
+                    BASE + "/bank/" + java.util.UUID.randomUUID() + "/statements")
+                .file(file(file))
+                .with(asOwner(s.tenant())))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("FUND_NOT_FOUND"));
+    JsonNode zero =
+        body(
+            mvc.perform(
+                    MockMvcRequestBuilders.multipart(BASE + "/bank/" + fund + "/statements")
+                        .file(file("tarih;tutar;aciklama;ref\n" + date + ";0;Sıfır;Z1\n"))
+                        .with(asOwner(s.tenant())))
+                .andExpect(status().isCreated()));
+    assertThat(zero.get("imported").asInt()).isZero();
+    assertThat(zero.get("errors").get(0).asText()).contains("sıfır");
   }
 
   @Test
@@ -417,6 +500,17 @@ class IntegrationIT extends AbstractIntegrationTest {
         .contains("Ankara Depo bölgesinden çıktı");
     assertThat(body(send(s.tenant(), get(BASE + "/gps/events")))).hasSize(2);
 
+    JsonNode zones = body(send(s.tenant(), get(BASE + "/gps/geofences")));
+    assertThat(zones).hasSize(1);
+    assertThat(zones.get(0).get("name").asText()).isEqualTo("Ankara Depo");
+    assertThat(zones.get(0).get("radiusM").asInt()).isEqualTo(1000);
+    send(
+            s.tenant(),
+            MockMvcRequestBuilders.delete(
+                BASE + "/gps/geofences/" + zones.get(0).get("id").asText()))
+        .andExpect(status().isNoContent());
+    assertThat(body(send(s.tenant(), get(BASE + "/gps/geofences")))).isEmpty();
+
     post(
             s.tenant(),
             BASE + "/gps/positions",
@@ -455,6 +549,23 @@ class IntegrationIT extends AbstractIntegrationTest {
         body(
             post(s.tenant(), "/api/v1/shipment/shipments", manual).andExpect(status().isCreated()));
     assertThat(typed.get("distanceKm").decimalValue()).isEqualByComparingTo("480");
+
+    JsonNode table = body(send(s.tenant(), get(BASE + "/distances")));
+    assertThat(table).hasSize(1);
+    assertThat(table.get(0).get("origin").asText()).isEqualTo("İstanbul");
+    assertThat(table.get(0).get("minutes").asInt()).isEqualTo(330);
+    send(
+            s.tenant(),
+            MockMvcRequestBuilders.delete(BASE + "/distances/" + table.get(0).get("id").asText()))
+        .andExpect(status().isNoContent());
+    assertThat(body(send(s.tenant(), get(BASE + "/distances")))).isEmpty();
+    // Silinen güzergâh yeniden tanımlanabilir.
+    post(
+            s.tenant(),
+            BASE + "/distances",
+            Map.of(
+                "origin", "istanbul", "destination", "ANKARA", "distanceKm", "455", "minutes", 1))
+        .andExpect(status().isCreated());
   }
 
   @Test
@@ -493,6 +604,13 @@ class IntegrationIT extends AbstractIntegrationTest {
     return factory
         .newDocumentBuilder()
         .parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+  }
+
+  private List<String> candidateIds(Setup s) throws Exception {
+    List<String> ids = new java.util.ArrayList<>();
+    body(send(s.tenant(), get(BASE + "/e-documents/candidates")).andExpect(status().isOk()))
+        .forEach(row -> ids.add(row.get("id").asText()));
+    return ids;
   }
 
   private void settings(Setup s) throws Exception {

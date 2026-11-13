@@ -3,7 +3,7 @@
 Öncelik: **P0** = MVP zorunlu, **P1** = MVP sonrası yakın, **P2** = sonraki. Durum: ⬜ açık /
 🟦 devam / ✅ bitti. Ajan ilerledikçe işaretler.
 
-Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9 → 11 → 10.
+Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9 → 11 → 10. Faz 12 (ZTO finans eklemeleri, 2026-11-12'de eklendi) Faz 0–7 tamam olduğu için bağımsız ilerler.
 
 ---
 
@@ -38,7 +38,7 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - ✅ C12 (P1) ERP'den açılış bakiyesi import aracı — Finans > Cari'de CSV ile önizleme ve ya-hep-ya-hiç içe aktarma; yeni cari açar, mevcut cariyle kodla eşleşir, dövizli satırda kur, mükerrer açılışı engeller, belirsiz tutarı (1.500) reddeder; açılış hareketi ekstreden ters çevrilir
 - ✅ C12b Önceki sistemden açık faturaları içe aktarma — müşteri faturası nakit öngörüsüne vadesiyle, tedarikçi/taşeron faturası taslak ödeme planına girer; cariye belge tarihiyle yazılır (yaşlandırma doğru); kendi numaralandırmamıza ve gelir raporlarına girmez; aynı caride açılış bakiyesiyle birlikte yüklenemez; ekstreden geri alınır (ödenmiş plan hariç). Varsayım: muhasebe görüşüyle doğrulanmalı
 - ✅ C13 PurchaseInvoice (tedarikçi/taşeron faturası) → cari + ödeme planı
-- ⬜ C14 (P2) Kredi/finansman modülü (faz ataması bekliyor)
+- ⬜ C14 (P2) Kredi/finansman modülü — Faz 12'ye atandı (M5)
 
 ## EPİK D — CRM + Fiyatlandırma (Faz 3) — P0
 - ✅ D1 Account (CRM görünümü) + Contact + segment/etiket
@@ -109,6 +109,25 @@ Uygulama sırası: 0 → 1 → 2 → 3 → 5A → 4 + 5B → 6 → 7 → 8 → 9
 - ✅ L4 Kullanım ölçümü
 - 🟦 L5 Sağlık & izleme konsolu + çevrimiçi kullanım — tek sunucu, bellek içi; firma bazlı hata ve alarm yok
 - ✅ L6 Çapraz-tenant denetimli erişim + log
+
+## EPİK M — ZTO Fabrika Finans Eklemeleri (Faz 12) — P1
+Plan: `fazlar/FAZ_12_ZTO_Finans_Eklemeleri.md` · Kararlar: `zto-finans/analiz/04_UYARLAMA_KARAR_MATRISI.md` (migration sırası §4, Z-kimlikleri) · Dal `zto-finans-eklemeleri` (push yok)
+- ✅ M-A Analiz: ZTO finans envanteri, bağımlılık grafiği, ~175 modalın alan düzeyinde eşleme matrisi (MX1–MX9), iş kuralı kararları §6.1 (2026-11-12); kapsam taraması ve MX5–MX9 (2026-11-13)
+- ✅ M-K Kullanıcı kararları 04 §6.2 (Y1–Y9) — 2026-11-13, hepsi önerildiği gibi
+- ✅ M0 Ön yüz altyapısı: kapsamlı ZTO CSS (`.zto-finans`), BS4 modal, DataTables görünümlü tablo, select2 görünümlü select, ortak şube seçim bileşeni, FA5 webfont, Excel/PDF/grafik, i18n ad alanları, "ZTO Finans" menüsü + açılış sayfası; bakiye/ekstre sorgularında `deleted=false` düzeltmesi — 2026-11-13; Excel için exceljs, `@layer zto` uygulanmadı (gerekçe FAZ_12 Uygulama Notu 12.0); CSS sızması Playwright ve `check:zto-css` (CI) ile denetlenir
+- ⬜ M1a İş yeri / şube / çoklu şirket (Z01–Z05, ZA1): Şirket → Şube → İş Yeri; şirket başına unvan, VKN, SGK sicili, logo, belge serisi; kullanıcı iş yeri kısıtı; şirket seçici + konsolide; BranchProvince, WorkPlace, Şirketler ekranı (MX5)
+- ⬜ M1 Cari (Z06, Z10–Z12): profil/limit/alt grup, cari IBAN (BankAccounts ekranları), Borç/Alacak Ekle + vergi, sezon devri, cari transfer + çek/senet taşıma; CustomerAccounts, Transactions, AllTransactions, Statement (MX1, MX8)
+- ⬜ M2 Banka/kasa (Z07, Z13, Z14): fon ek alanları + açılış hareketi, transfer merkezi + döviz bozumu + masraf, gelir/gider defteri; tanım, hareket, BankStatement ekranları (MX2)
+- ⬜ M2a Ödemeler ve tahsilatlar (Z15, Z16): Payments, Collections, günlük ödeme/tahsilat raporları, ortak ödeme/tahsilat modalları, düzeltme = ters + yeni, faturayla eşleştirme (MX7)
+- ⬜ M3 Çek/senet (Z08, Z09): ek alanlar + 4 yeni durum, çek koçanı; Checks, Bills, CheckBooks (MX3)
+- ⬜ M4 Ödeme planı/onay (Z19): plan genişletme + banka talimatı + 5 seviyeli yoğunluk; PaymentApproval/Index, PaymentManagement, "Ödendi" banka/kasa seçimli (MX3, MX7)
+- ⬜ M5 Kredi sözleşmeleri (Z18): sözleşme, taksit, hareket; gün sayımı/BSMV/KKDF parametrik; geçmiş kredi açılış borcu; CreditContracts, AccountCredits (MX3, MX7 §5) — C14'ü kapatır
+- ⬜ M6 Vadeli mevduat (Z17): açılış, faiz tahsili, vade sonu, erken bozma; TimeDeposits (MX2)
+- ⬜ M7 Masraf + taşeron gideri (Z20, Z21): tek masraf modeli (genel/araç/sefer/depo/sürücü), SalesTruckExpenses → `trip_cost` SUBCONTRACTOR; ExpenseItems, ProductionExpenses (MX4, MX8)
+- ⬜ M8 Raporlar: yaşlandırma/performans, FinanceReport, bilanço, kur farkı raporu/kaydı (Y8), 8 haftalık nakit akışı, kur ekranı (MX1, MX8)
+- ⬜ M9 Personel ve bordro (Z22–Z30, ZA2): şirket bazında personel ve istihdam, yasal bordro motoru + yıllık parametreler, dört göz onay, toplu ödeme, avans, ek ödeme, devamsızlık, izin, zimmet, raporlar, SGK takibi; sürücü = personel (MX6)
+- ⬜ M10 Uyumsoft e-Dönüşüm (Z31–Z34): sağlayıcı adaptörü (WSDL + test hesabı gerekli), şirket başına ayar, gelen kutusu → alış faturası, GİB uyumlu e-İrsaliye, ShedLock (MX9 B, D) — I1'i ilerletir
+- ⬜ M11 ZTO Fabrika ↔ Blackrose canlı entegrasyon (Z35–Z39, ZA3): 14 dış uç, OAuth2 client credentials, HMAC webhook, outbox, E0–E6 (MX9 A)
 
 ---
 

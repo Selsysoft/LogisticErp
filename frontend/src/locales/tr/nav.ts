@@ -1,0 +1,20 @@
+// "translation" ad alanı: nav.* anahtarları.
+export default {
+  dashboard: "Ana Sayfa",
+  finance: "Finans",
+  ztoFinance: "ZTO Finans",
+  operations: "Operasyon",
+  integrations: "Entegrasyonlar",
+  reports: "Raporlar",
+  crm: "Satış/CRM",
+  fleet: "Filo",
+  warehouse: "Depo",
+  customs: "Gümrük",
+  driver: "Sürücü",
+  users: "Kullanıcılar",
+  roles: "Roller ve İzinler",
+  audit: "Denetim Günlüğü",
+  account: "Hesabım",
+  subscription: "Abonelik",
+  logout: "Çıkış",
+};

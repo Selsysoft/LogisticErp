@@ -115,6 +115,8 @@ public class BankStatementService {
     FundTransaction transaction =
         transactions
             .findById(transactionId)
+            // Hareket tablosunda @SQLRestriction yok; silinmiş işaretli hareket eşlenmez.
+            .filter(candidate -> !candidate.isDeleted())
             .orElseThrow(
                 () ->
                     new BusinessException(

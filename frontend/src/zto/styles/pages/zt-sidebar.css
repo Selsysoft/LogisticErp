@@ -1,0 +1,330 @@
+/*
+ * ZTO finans yan menüsü (zt-sidebar) — ZtoFinanceSidebar.
+ * Kaynak: Views/Shared/_CustomerSideMenus/_SideMenu_Assets.cshtml:6-223 satır içi <style> bloğunun birebir
+ * kopyası. En alttaki "Blackrose eki" ZTO'da yok: menü pencereye değil ZTO köküne bağlanır (Blackrose
+ * AppBar + Drawer korunur), uygulanmamış öğeler soluk ve tıklanamaz, kapalı panel klavye sırasından çıkar.
+ */
+/* ─── SIDEBAR WRAPPER ─────────────────────────────────────── */
+.zt-sidebar {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  height: calc(100vh - 56px);
+  z-index: 1050;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+
+/* ─── TOGGLE ARROW ───────────────────────────────────────── */
+.zt-sidebar-arrow {
+  width: 14px;
+  min-height: 100%;
+  background: #007bff;
+  border-radius: 0 8px 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 2px 0 8px rgba(0, 123, 255, 0.35);
+  transition:
+    width 0.2s ease,
+    background 0.2s ease;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.zt-sidebar-arrow:hover {
+  width: 18px;
+  background: #0056b3;
+}
+
+.zt-sidebar-arrow i {
+  color: #fff;
+  font-size: 11px;
+  transition: transform 0.3s ease;
+  pointer-events: none;
+}
+
+/* ─── PANEL ──────────────────────────────────────────────── */
+.zt-sidebar-panel {
+  width: 0;
+  height: calc(100vh - 56px);
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.13);
+  transition:
+    width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.25s ease;
+  opacity: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.zt-sidebar-panel::-webkit-scrollbar {
+  width: 4px;
+}
+.zt-sidebar-panel::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+/* ─── OPEN STATE ─────────────────────────────────────────── */
+.zt-sidebar.open .zt-sidebar-panel {
+  width: 260px;
+  opacity: 1;
+}
+
+.zt-sidebar.open .zt-sidebar-arrow i {
+  transform: rotate(180deg);
+}
+
+/* ─── PANEL INNER ─────────────────────────────────────────── */
+.zt-sidebar-inner {
+  padding: 12px 0;
+  min-width: 240px;
+}
+
+/* ─── HEADER ─────────────────────────────────────────────── */
+.zt-sidebar-header {
+  padding: 8px 16px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 4px;
+}
+
+.zt-sidebar-header span {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+/* ─── MENU ITEMS ─────────────────────────────────────────── */
+.zt-sidebar-nav {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.zt-sidebar-nav li {
+  margin: 1px 8px;
+}
+
+.zt-sidebar-nav li a {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  text-decoration: none;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
+  white-space: normal;
+}
+
+.zt-sidebar-nav li a:hover {
+  background: #e7f3ff;
+  color: #007bff;
+  transform: translateX(2px);
+}
+
+.zt-sidebar-nav li a.zt-active {
+  background: linear-gradient(90deg, #e7f3ff, #cce3ff);
+  color: #0056b3;
+  font-weight: 600;
+  border-left: 3px solid #007bff;
+  padding-left: 8px;
+}
+
+.zt-sidebar-nav li a .zt-icon {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  margin-top: 1px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  background: #f1f5f9;
+  color: #64748b;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.zt-sidebar-nav li a:hover .zt-icon {
+  background: #cce3ff;
+  color: #007bff;
+}
+
+.zt-sidebar-nav li a.zt-active .zt-icon {
+  background: #b3d4ff;
+  color: #0056b3;
+}
+
+.zt-sidebar-nav li a .zt-label {
+  flex: 1;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+}
+
+/* ─── DIVIDER ────────────────────────────────────────────── */
+.zt-sidebar-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 6px 16px;
+}
+/* ─── GROUP HEADERS ─────────────────────────────────── */
+.zt-sidebar-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px 3px;
+  margin-top: 2px;
+}
+
+.zt-sidebar-group-header::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.zt-sidebar-group-header i {
+  font-size: 9px;
+  color: #94a3b8;
+}
+
+.zt-sidebar-group-header span {
+  font-size: 9px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  white-space: nowrap;
+}
+
+/* ─── ACTION ITEM (Yeni Kayıt vb.) ──────────────────────── */
+.zt-sidebar-nav li a.zt-action-add {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px dashed #bbf7d0;
+}
+
+.zt-sidebar-nav li a.zt-action-add .zt-icon {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.zt-sidebar-nav li a.zt-action-add:hover {
+  background: #dcfce7;
+  color: #15803d;
+  transform: translateX(2px);
+}
+
+/* ─── Blackrose eki ──────────────────────────────────────── */
+/* ZTO'da menü pencereye sabit (top: 56px; left: 0). Blackrose'da sol tarafta Drawer olduğu için menü,
+   ZTO kökünün sol kenarında, AppBar'ın (64px; dar ekranda 56px) altında yapışkan durur. Genişliği 0'dır;
+   ok ve panel içeriğin üstüne taşar — ZTO sayfalarının "padding-left:25px" boşluğu aynen geçerli. */
+.zto-finans-layout {
+  display: flex;
+  align-items: flex-start;
+}
+
+.zto-finans-layout > .zt-sidebar {
+  position: sticky;
+  top: 64px;
+  left: auto;
+  width: 0;
+  /* Akışa yükseklik katmaz (ZTO'daki fixed gibi); ok ve panel kendi yüksekliğiyle taşar. Aksi halde
+     sayfa her zaman 100vh + main dolgusu kadar uzar ve gereksiz kaydırma çubuğu çıkar. */
+  height: 0;
+  /* AppShell main üst dolgusu (md: p=3 → 24px) geri alınır: menü AppBar'ın hemen altından başlar. */
+  margin-top: -24px;
+  overflow: visible;
+}
+
+.zto-finans-layout > .zt-sidebar .zt-sidebar-arrow {
+  /* Kapsayıcı 0 yükseklikli; min-height: 100% artık 0'a çözülür. */
+  height: calc(100vh - 64px);
+}
+
+.zto-finans-layout > .zt-sidebar .zt-sidebar-panel {
+  /* Genişliği 0 olan kapsayıcıda panel daralmasın. */
+  flex-shrink: 0;
+  height: calc(100vh - 64px);
+  visibility: hidden;
+  transition:
+    width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.25s ease,
+    visibility 0s linear 0.32s;
+}
+
+.zto-finans-layout > .zt-sidebar.open .zt-sidebar-panel {
+  visibility: visible;
+  transition:
+    width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.25s ease,
+    visibility 0s;
+}
+
+.zto-finans-layout > .zto-finans-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 899.95px) {
+  /* main dolgusu md altında 16px (p: { xs: 2 }). */
+  .zto-finans-layout > .zt-sidebar {
+    margin-top: -16px;
+  }
+}
+
+@media (max-width: 599.95px) {
+  .zto-finans-layout > .zt-sidebar {
+    top: 56px;
+  }
+
+  .zto-finans-layout > .zt-sidebar .zt-sidebar-arrow,
+  .zto-finans-layout > .zt-sidebar .zt-sidebar-panel {
+    height: calc(100vh - 56px);
+  }
+}
+
+.zt-sidebar-arrow:focus-visible {
+  outline: 2px solid #0056b3;
+  outline-offset: 1px;
+}
+
+.zt-sidebar-nav li a.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.zt-sidebar-nav li a.disabled:hover {
+  background: transparent;
+  color: #475569;
+  transform: none;
+}
+
+.zt-sidebar-nav li a.disabled:hover .zt-icon {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.zt-sidebar-nav li a .zt-phase {
+  align-self: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  white-space: nowrap;
+}

@@ -531,7 +531,311 @@ class CrmIT extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.landingPath").value("/crm"));
   }
 
+  @Test
+  void tariffAndTaxRateMaintenanceEnforcesUniqueCodesDatesAndRoutes() throws Exception {
+    String t = tenantCode("trf");
+    String tariff = tariff(t, "T1", null, null, null);
+
+    post(t, "/api/v1/crm/tariffs", tariffBody("T1", null, null, null))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("TARIFF_CODE_TAKEN"));
+    Map<String, Object> backwards = tariffBody("T2", null, null, null);
+    backwards.put("validTo", TODAY.minusDays(20).toString());
+    post(t, "/api/v1/crm/tariffs", backwards)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("TARIFF_DATES_INVALID"));
+
+    // Güncelleme tarih kuralını yeniden uygular; bilinmeyen tarife 404 döner.
+    Map<String, Object> renamed = tariffBody("T1", null, "7", null);
+    renamed.put("name", "Yeni ad");
+    JsonNode updated =
+        body(
+            send(t, put("/api/v1/crm/tariffs/" + tariff, renamed))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Yeni ad")));
+    assertThat(updated.get("fuelSurchargePercent").decimalValue()).isEqualByComparingTo("7");
+    renamed.put("validTo", TODAY.minusDays(20).toString());
+    send(t, put("/api/v1/crm/tariffs/" + tariff, renamed))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("TARIFF_DATES_INVALID"));
+    renamed.remove("validTo");
+    send(t, put("/api/v1/crm/tariffs/" + java.util.UUID.randomUUID(), renamed))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("TARIFF_NOT_FOUND"));
+    JsonNode list = body(send(t, get("/api/v1/crm/tariffs")).andExpect(status().isOk()));
+    assertThat(list.size()).isEqualTo(1);
+    assertThat(list.get(0).get("name").asText()).isEqualTo("Yeni ad");
+
+    // Güzergâh satırı çıkış ve varış ister; silinen satır listeden düşer.
+    post(
+            t,
+            "/api/v1/crm/tariffs/" + tariff + "/lines",
+            Map.of(
+                "kind", "ROUTE", "origin", "A", "destination", " ", "unit", "TRIP", "unitPrice", 1))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("ROUTE_REQUIRED"));
+    routeLine(t, tariff, " A ", "B", " ", "TRIP", "100");
+    JsonNode lines = body(send(t, get("/api/v1/crm/tariffs/" + tariff + "/lines")));
+    assertThat(lines.size()).isEqualTo(1);
+    assertThat(lines.get(0).get("origin").asText()).isEqualTo("A");
+    assertThat(lines.get(0).get("vehicleType").isNull()).isTrue();
+    send(t, delete("/api/v1/crm/tariff-lines/" + lines.get(0).get("id").asText()))
+        .andExpect(status().isNoContent());
+    assertThat(body(send(t, get("/api/v1/crm/tariffs/" + tariff + "/lines"))).size()).isZero();
+    send(t, get("/api/v1/crm/tariffs/" + java.util.UUID.randomUUID() + "/lines"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("TARIFF_NOT_FOUND"));
+
+    // Vergi kodu tekildir; tevkifat oranı 1'i aşamaz.
+    taxRate(t, "KDV20", "20", 0, 1);
+    post(
+            t,
+            "/api/v1/crm/tax-rates",
+            Map.of(
+                "code", "KDV20",
+                "name", "x",
+                "vatPercent", "20",
+                "withholdingNumerator", 0,
+                "withholdingDenominator", 1))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("TAX_RATE_CODE_TAKEN"));
+    post(
+            t,
+            "/api/v1/crm/tax-rates",
+            Map.of(
+                "code", "TEV",
+                "name", "x",
+                "vatPercent", "20",
+                "withholdingNumerator", 3,
+                "withholdingDenominator", 2))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("WITHHOLDING_INVALID"));
+    JsonNode rates = body(send(t, get("/api/v1/crm/tax-rates")).andExpect(status().isOk()));
+    assertThat(rates.size()).isEqualTo(1);
+    assertThat(rates.get(0).get("code").asText()).isEqualTo("KDV20");
+  }
+
+  @Test
+  void quoteLinesCanBeRemovedOnlyFromDraftAndRejectionOpensNewVersion() throws Exception {
+    String t = tenantCode("rej");
+    String account = customer(t, "M1", "CUSTOMER");
+
+    Map<String, Object> orphan = new HashMap<>();
+    orphan.put("accountId", account);
+    orphan.put("opportunityId", java.util.UUID.randomUUID().toString());
+    orphan.put("currency", "TRY");
+    orphan.put("validUntil", FUTURE);
+    post(t, "/api/v1/crm/quotes", orphan)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("OPPORTUNITY_NOT_FOUND"));
+
+    // Tarifeden fiyatlanan satırın para birimi teklifle aynı olmalıdır.
+    String tariff = tariff(t, "T1", null, null, null);
+    routeLine(t, tariff, "A", "B", null, "TRIP", "1000");
+    Map<String, Object> euroQuote = new HashMap<>();
+    euroQuote.put("accountId", account);
+    euroQuote.put("tariffId", tariff);
+    euroQuote.put("currency", "EUR");
+    euroQuote.put("validUntil", FUTURE);
+    String euro = created(post(t, "/api/v1/crm/quotes", euroQuote));
+    addLine(t, euro, line("A", "B"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CURRENCY_MISMATCH"));
+    assertThat(body(send(t, get("/api/v1/crm/quotes/" + euro))).get("lines").size()).isZero();
+
+    String quote = quote(t, account, null, null, null);
+    addLine(t, quote, manualLine("100")).andExpect(status().isCreated());
+    JsonNode withTwo = body(addLine(t, quote, manualLine("250")).andExpect(status().isCreated()));
+    assertThat(new BigDecimal(withTwo.get("total").get("amount").asText()))
+        .isEqualByComparingTo("350");
+    String firstLine = withTwo.get("lines").get(0).get("id").asText();
+
+    JsonNode afterRemove =
+        body(
+            send(t, delete("/api/v1/crm/quotes/" + quote + "/lines/" + firstLine))
+                .andExpect(status().isOk()));
+    assertThat(afterRemove.get("lines").size()).isEqualTo(1);
+    assertThat(new BigDecimal(afterRemove.get("total").get("amount").asText()))
+        .isEqualByComparingTo("250");
+    // Satır başka teklife aitse ya da yoksa bulunamaz.
+    send(t, delete("/api/v1/crm/quotes/" + euro + "/lines/" + firstLine))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("QUOTE_LINE_NOT_FOUND"));
+
+    // Taslak reddedilemez ve yeni sürümü açılamaz.
+    post(t, "/api/v1/crm/quotes/" + quote + "/reject", null)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("QUOTE_INVALID_STATE"));
+    post(t, "/api/v1/crm/quotes/" + quote + "/new-version", null)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("QUOTE_INVALID_STATE"));
+
+    post(t, "/api/v1/crm/quotes/" + quote + "/send", null).andExpect(status().isOk());
+    send(t, delete("/api/v1/crm/quotes/" + quote + "/lines/" + firstLine))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("QUOTE_LOCKED"));
+    post(t, "/api/v1/crm/quotes/" + quote + "/reject", null)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("REJECTED"));
+    post(t, "/api/v1/crm/quotes/" + quote + "/accept", Map.of("startDate", DATE, "endDate", FUTURE))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("QUOTE_INVALID_STATE"));
+
+    JsonNode rejected =
+        body(
+            send(
+                    t,
+                    get("/api/v1/crm/quotes")
+                        .param("status", "REJECTED")
+                        .param("accountId", account))
+                .andExpect(status().isOk()));
+    assertThat(rejected.get("content").size()).isEqualTo(1);
+    assertThat(rejected.get("content").get(0).get("id").asText()).isEqualTo(quote);
+
+    JsonNode next =
+        body(
+            post(t, "/api/v1/crm/quotes/" + quote + "/new-version", null)
+                .andExpect(status().isCreated()));
+    assertThat(next.get("version").asInt()).isEqualTo(2);
+    assertThat(new BigDecimal(next.get("total").get("amount").asText()))
+        .isEqualByComparingTo("250");
+    send(t, get("/api/v1/crm/quotes/" + java.util.UUID.randomUUID()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("QUOTE_NOT_FOUND"));
+  }
+
+  @Test
+  void quoteOnClosedOpportunityCannotBeSent() throws Exception {
+    String t = tenantCode("cls");
+    String account = customer(t, "M1", "CUSTOMER");
+    String opportunity = opportunity(t, account, "100");
+    String quote = quote(t, account, opportunity, null, null);
+    addLine(t, quote, manualLine("100")).andExpect(status().isCreated());
+    move(t, opportunity, "LOST");
+
+    post(t, "/api/v1/crm/quotes/" + quote + "/send", null)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("OPPORTUNITY_CLOSED"));
+    assertThat(body(send(t, get("/api/v1/crm/quotes/" + quote))).get("status").asText())
+        .isEqualTo("DRAFT");
+  }
+
+  @Test
+  void opportunityActivityCustomerAndContractMaintenanceRules() throws Exception {
+    String t = tenantCode("mnt");
+    String account = customer(t, "M1", "LEAD");
+
+    // Boş panoda kazanma oranı sıfırdır.
+    assertThat(
+            body(send(t, get("/api/v1/crm/dashboard").param("today", DATE)))
+                .get("winRatePercent")
+                .decimalValue())
+        .isEqualByComparingTo("0");
+
+    send(
+            t,
+            put(
+                "/api/v1/crm/customers/" + account,
+                Map.of("code", "M1", "name", "Yeni Ünvan", "type", "CUSTOMER", "segment", "KOBİ")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("Yeni Ünvan"))
+        .andExpect(jsonPath("$.type").value("CUSTOMER"))
+        .andExpect(jsonPath("$.segment").value("KOBİ"));
+
+    String opportunity = opportunity(t, account, "100");
+    send(
+            t,
+            put(
+                "/api/v1/crm/opportunities/" + opportunity,
+                Map.of("accountId", account, "title", "Güncel iş", "money", money("750"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Güncel iş"))
+        .andExpect(jsonPath("$.money.currency").value("TRY"));
+    send(
+            t,
+            put(
+                "/api/v1/crm/opportunities/" + java.util.UUID.randomUUID(),
+                Map.of("accountId", account, "title", "Yok", "money", money("1"))))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("OPPORTUNITY_NOT_FOUND"));
+
+    // Aşama değişikliği aktivitesi elle girilemez; olmayan aktivite tamamlanamaz.
+    post(
+            t,
+            "/api/v1/crm/activities",
+            Map.of("accountId", account, "type", "STAGE_CHANGE", "subject", "Hile"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("ACTIVITY_TYPE_INVALID"));
+    post(t, "/api/v1/crm/activities/" + java.util.UUID.randomUUID() + "/complete", null)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("ACTIVITY_NOT_FOUND"));
+    post(
+            t,
+            "/api/v1/crm/activities",
+            Map.of("accountId", account, "type", "NOTE", "subject", "Not düşüldü"))
+        .andExpect(status().isCreated());
+    List<String> subjects = new ArrayList<>();
+    body(send(t, get("/api/v1/crm/customers/" + account + "/activities")))
+        .get("content")
+        .forEach(row -> subjects.add(row.get("subject").asText()));
+    // "LEAD": fırsat açılırken yazılan aşama değişikliği (STAGE_CHANGE, null → LEAD) aktivitesinin
+    // konusu; müşterinin türüyle ilgisi yok.
+    assertThat(subjects).contains("Not düşüldü", "LEAD");
+
+    // Sözleşme tarihleri ve tarifesi doğrulanır; yalnız aktif sözleşme kapatılır.
+    post(
+            t,
+            "/api/v1/crm/contracts",
+            Map.of("accountId", account, "startDate", FUTURE, "endDate", DATE))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CONTRACT_DATES_INVALID"));
+    post(
+            t,
+            "/api/v1/crm/contracts",
+            Map.of(
+                "accountId",
+                account,
+                "tariffId",
+                java.util.UUID.randomUUID().toString(),
+                "startDate",
+                DATE,
+                "endDate",
+                FUTURE))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("TARIFF_NOT_FOUND"));
+    String contract =
+        created(
+            post(
+                t,
+                "/api/v1/crm/contracts",
+                Map.of("accountId", account, "startDate", DATE, "endDate", FUTURE)));
+    post(t, "/api/v1/crm/contracts/" + contract + "/status", Map.of("status", "ACTIVE"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("CONTRACT_INVALID_STATE"));
+    post(t, "/api/v1/crm/contracts/" + contract + "/status", Map.of("status", "CANCELLED"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CANCELLED"));
+    post(t, "/api/v1/crm/contracts/" + contract + "/status", Map.of("status", "ENDED"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("CONTRACT_INVALID_STATE"));
+    post(
+            t,
+            "/api/v1/crm/contracts/" + java.util.UUID.randomUUID() + "/status",
+            Map.of("status", "ENDED"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("CONTRACT_NOT_FOUND"));
+    JsonNode contracts = body(send(t, get("/api/v1/crm/contracts").param("accountId", account)));
+    assertThat(contracts.get("content").size()).isEqualTo(1);
+    assertThat(contracts.get("content").get(0).get("status").asText()).isEqualTo("CANCELLED");
+  }
+
   // Yardımcılar
+
+  private MockHttpServletRequestBuilder put(String path, Object body) throws Exception {
+    return MockMvcRequestBuilders.put(path)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(json.writeValueAsString(body));
+  }
 
   private String tenantCode(String prefix) throws Exception {
     String code = "crm-" + prefix;

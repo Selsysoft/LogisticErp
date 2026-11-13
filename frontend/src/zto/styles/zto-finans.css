@@ -1,0 +1,23 @@
+/*
+ * ZTO Finans stil paketi — tek giriş. Yalnız ZtoFinansRoot'un tembel yüklenen parçasında içe aktarılır.
+ * Derlemede (vite.config.ts → prefixTransform.ts) her seçici .zto-finans altına alınır; MUI ekranlarına
+ * sızmaz. Sıra ZTO _ExpertLayout ile birebir: layout.css önce (:29), Bootstrap/SB Admin onu ezer (:30),
+ * dataTables (:31), layout'un satır içi <style> bloğu (:42-573), sayfa CSS'leri BS'den sonra (RenderBody
+ * :1114), buttons/select2 temaları en son (:1176, :1192, :1198); Blackrose eki zto-overrides en sonda.
+ * Önekten sonra özgüllükler eşit kaldığı için kazananı ZTO'daki gibi bu sıra belirler.
+ *
+ * Harici kaynak yok (CSP): ZTO'nun Google Fonts (Open Sans 400/600, Plus Jakarta Sans, JetBrains Mono,
+ * Material Icons) ve cdnjs Font Awesome 5.11.2 all.min.js bağlantıları alınmadı. Open Sans @fontsource ile
+ * ZtoFinansRoot.tsx'te, Font Awesome 5.15.4 CSS webfont olarak npm'den yüklenir (SVG değiştirici JS yok;
+ * ZTO'da JS ile yüklendiği için sırada yeri yok).
+ */
+@import "./vendor/layout.css";
+@import "./vendor/sb-admin-6.0.0-styles.css";
+@import "./vendor/dataTables.bootstrap4.min.css";
+@import "./vendor/layout-inline.css";
+@import "@fortawesome/fontawesome-free/css/all.css";
+@import "./pages/_index.css";
+@import "./vendor/buttons.dataTables.min.css";
+@import "./vendor/select2.min.css";
+@import "./vendor/select2-bootstrap.min.css";
+@import "./zto-overrides.css";

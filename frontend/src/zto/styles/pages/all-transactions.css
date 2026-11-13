@@ -1,0 +1,65 @@
+/*
+ * Günlük Tüm Cari İşlemleri (AllTransactions) — 12.0 iskeletinin kullandığı parçalar.
+ * Kaynak: Views/AccountTransaction/AllTransactions.cshtml satır içi <style> bloğu, birebir:
+ *  - :773-778 başlık kartı (.at-header-card)
+ *  - :918-956 üst panel (.at-top-panel; customeraccounts/index başlığı)
+ * Sayfanın geri kalan stilleri (filtre, arama, tablo) ekranla birlikte 12.1'de eklenecek.
+ */
+
+/* Header kartı, alttaki filtre/tablo üstünde kalsın (dropdown stacking) */
+.at-header-card {
+  position: relative;
+  z-index: 500;
+  overflow: visible !important;
+}
+
+/* ───────── ÜST PANEL (customeraccounts/index başlığı) ───────── */
+.at-top-panel {
+  margin-bottom: 6px;
+}
+
+.at-top-panel .content {
+  margin-top: 5px;
+  margin-left: 4px;
+}
+
+.at-top-panel .page-header-modern {
+  margin-bottom: 4px;
+}
+
+.at-top-panel .page-header-modern h6 {
+  margin-bottom: 2px;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.at-top-panel .page-subtitle {
+  color: #64748b;
+  font-size: 12px;
+  margin: 0;
+}
+
+.at-top-panel hr {
+  margin: 8px 0 0 0;
+  border: 0;
+  border-top: 1px solid #e9edf3;
+}
+
+.at-top-panel .welcome {
+  padding: 8px 10px;
+  background-color: #007bff;
+  color: #fff;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.at-top-panel .welcome-content {
+  margin-bottom: 3px;
+  font-size: 13px;
+}
+.at-top-panel .lower-opacity {
+  opacity: 0.75;
+  font-size: 11px;
+  margin-bottom: 0;
+}

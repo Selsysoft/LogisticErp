@@ -72,6 +72,9 @@ jobs:
       - name: Birim testleri ve kapsam
         run: npm run test:coverage
       - run: npm run build
+      # Derlenmiş ZTO Finans CSS'i .zto-finans dışına sızmamalı, lisans bildirimi pakette kalmalı.
+      - name: ZTO CSS kapsam denetimi
+        run: npm run check:zto-css
       - name: Web sunucusu imajı
         run: docker build --pull -t blackrose-web .
       - name: Bağımlılık taraması (Trivy)

@@ -219,6 +219,52 @@ class OpeningInvoiceIT extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.code").value("OPENING_INVOICE_PAID"));
   }
 
+  @Test
+  void dosyaBasligiBoyutuVeSatirBicimiDogrulanir() throws Exception {
+    Setup s = setup("oiv");
+
+    upload(s, "/preview", "Açıklama;Not\nx;y\n")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("OPENING_IMPORT_HEADER"))
+        .andExpect(
+            jsonPath(
+                "$.message",
+                org.hamcrest.Matchers.containsString(
+                    "cari kodu, belge no, belge tarihi, vade, tutar")));
+    upload(s, "/preview", HEADER)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("OPENING_IMPORT_EMPTY"));
+    StringBuilder large = new StringBuilder(HEADER);
+    for (int i = 0; i <= 10_000; i++) {
+      large.append(row("M1", "B-" + i, -1, 1, "1", "", ""));
+    }
+    upload(s, "/preview", large.toString())
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("OPENING_IMPORT_TOO_LARGE"));
+
+    String file =
+        HEADER
+            + row("M1", "X".repeat(51), -10, 20, "100", "", "")
+            + "M1;A-2;32.13.2026;"
+            + TR.format(TODAY)
+            + ";100;;\n"
+            + row("M1", "A-3", -10, 20, "10,125", "", "")
+            + row("M1", "A-4", -10, 20, "100", "XYZ", "")
+            + row("T1", "A-5", -10, 20, "100", "try", "");
+    JsonNode preview = body(upload(s, "/preview", file).andExpect(status().isOk()));
+    assertThat(preview.get("valid").asBoolean()).isFalse();
+    assertThat(statuses(preview)).containsExactly("ERROR", "ERROR", "ERROR", "ERROR", "READY");
+    assertThat(errors(preview))
+        .anyMatch(e -> e.contains("Belge no en çok 50"))
+        .anyMatch(e -> e.contains("Belge tarihi okunamadı: 32.13.2026"))
+        .anyMatch(e -> e.contains("en çok iki ondalık"))
+        .anyMatch(e -> e.contains("Para birimi tanımlı değil: XYZ"));
+    // Küçük harfli para birimi büyütülür; geçerli satır borç olarak toplanır.
+    assertThat(preview.get("rows").get(4).get("currency").asText()).isEqualTo("TRY");
+    assertThat(preview.get("rows").get(4).get("kind").asText()).isEqualTo("PAYABLE");
+    assertThat(balance(s, "M1")).isEqualByComparingTo("0");
+  }
+
   // Yardımcılar
 
   /** Belge tarihi bugünden, vade belge tarihinden gün farkıyla verilir. */

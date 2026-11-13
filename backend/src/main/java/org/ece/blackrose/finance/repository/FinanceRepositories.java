@@ -131,6 +131,11 @@ public final class FinanceRepositories {
         UUID accountId, String currency, OpeningInvoice.Status status);
   }
 
+  /**
+   * Hareket tablolarında @SQLRestriction yok: idempotency araması (source_type, source_id tekil
+   * kısıtı) silinmiş satırı da görmelidir. Bu yüzden bakiye ve ekstre sorguları deleted = false
+   * koşulunu kendileri uygular.
+   */
   public interface AccountTransactionRepository extends JpaRepository<AccountTransaction, UUID> {
 
     Optional<AccountTransaction> findBySourceTypeAndSourceId(String sourceType, UUID sourceId);
@@ -138,9 +143,9 @@ public final class FinanceRepositories {
     /** Ters çevrilmemiş açılış hareketi; aynı cari ve para biriminde ikinci açılışı önler. */
     @Query(
         "select count(t) > 0 from AccountTransaction t where t.accountId = :accountId"
-            + " and t.currency = :currency and t.sourceType = 'OPENING'"
+            + " and t.currency = :currency and t.sourceType = 'OPENING' and t.deleted = false"
             + " and not exists (select r from AccountTransaction r"
-            + " where r.sourceType = 'REVERSAL' and r.sourceId = t.id)")
+            + " where r.sourceType = 'REVERSAL' and r.sourceId = t.id and r.deleted = false)")
     boolean hasActiveOpening(
         @Param("accountId") UUID accountId, @Param("currency") String currency);
 
@@ -155,7 +160,7 @@ public final class FinanceRepositories {
                    coalesce(sum(case when direction = 'DEBIT' then tl_amount else -tl_amount end), 0)
                      as "tlBalance"
             from account_transaction
-            where account_id in (:accountIds)
+            where account_id in (:accountIds) and deleted = false
             group by account_id, currency
             order by currency
             """,
@@ -168,6 +173,7 @@ public final class FinanceRepositories {
             select coalesce(sum(case when direction = 'DEBIT' then amount else -amount end), 0)
             from account_transaction
             where account_id = :accountId and currency = :currency and transaction_date < :before
+              and deleted = false
             """,
         nativeQuery = true)
     BigDecimal balanceBefore(
@@ -185,14 +191,14 @@ public final class FinanceRepositories {
                      over (order by transaction_date, created_at, id) as "runningBalance"
             from account_transaction
             where account_id = :accountId and currency = :currency
-              and transaction_date between :from and :to
+              and transaction_date between :from and :to and deleted = false
             order by transaction_date, created_at, id
             """,
         countQuery =
             """
             select count(*) from account_transaction
             where account_id = :accountId and currency = :currency
-              and transaction_date between :from and :to
+              and transaction_date between :from and :to and deleted = false
             """,
         nativeQuery = true)
     Page<AccountStatementRow> statement(
@@ -292,7 +298,7 @@ public final class FinanceRepositories {
                    coalesce(sum(case when direction = 'IN' then amount else -amount end), 0)
                      as "balance"
             from fund_transaction
-            where fund_account_id in (:ids)
+            where fund_account_id in (:ids) and deleted = false
             group by fund_account_id
             """,
         nativeQuery = true)
@@ -303,7 +309,7 @@ public final class FinanceRepositories {
             """
             select coalesce(sum(case when direction = 'IN' then amount else -amount end), 0)
             from fund_transaction
-            where fund_account_id = :id and transaction_date < :before
+            where fund_account_id = :id and transaction_date < :before and deleted = false
             """,
         nativeQuery = true)
     BigDecimal balanceBefore(@Param("id") UUID id, @Param("before") LocalDate before);
@@ -317,12 +323,14 @@ public final class FinanceRepositories {
                      over (order by transaction_date, created_at, id) as "runningBalance"
             from fund_transaction
             where fund_account_id = :id and transaction_date between :from and :to
+              and deleted = false
             order by transaction_date, created_at, id
             """,
         countQuery =
             """
             select count(*) from fund_transaction
             where fund_account_id = :id and transaction_date between :from and :to
+              and deleted = false
             """,
         nativeQuery = true)
     Page<FundStatementRow> statement(
@@ -351,7 +359,7 @@ public final class FinanceRepositories {
 
   public interface InstrumentMovementRepository extends JpaRepository<InstrumentMovement, UUID> {
 
-    List<InstrumentMovement> findByInstrumentIdOrderByCreatedAt(UUID instrumentId);
+    List<InstrumentMovement> findByInstrumentIdAndDeletedFalseOrderByCreatedAt(UUID instrumentId);
   }
 
   public interface SettlementRepository extends JpaRepository<Settlement, UUID> {

@@ -413,7 +413,196 @@ class FleetIT extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.landingPath").value("/fleet"));
   }
 
+  @Test
+  void driverDocumentAndBlockMaintenanceValidatesSubjectAndDates() throws Exception {
+    String t = tenantCode("reg");
+    String driver = driverNode(t, "S1", "Ali Veli").get("id").asText();
+    driverNode(t, "S2", "Ayşe Kaya");
+
+    // Arama küçük harfe çevrilir; ad parçasıyla bulunur.
+    JsonNode found = body(send(t, get("/api/v1/fleet/drivers").param("search", "  Ali ")));
+    assertThat(found.get("totalElements").asInt()).isEqualTo(1);
+    assertThat(found.get("content").get(0).get("id").asText()).isEqualTo(driver);
+    assertThat(body(send(t, get("/api/v1/fleet/drivers"))).get("totalElements").asInt())
+        .isEqualTo(2);
+
+    send(
+            t,
+            put(
+                "/api/v1/fleet/drivers/" + driver,
+                Map.of(
+                    "fullName", "Ali Veli Yılmaz",
+                    "phone", "05550000000",
+                    "licenseClass", "CE",
+                    "status", "ON_LEAVE")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.fullName").value("Ali Veli Yılmaz"))
+        .andExpect(jsonPath("$.status").value("ON_LEAVE"))
+        .andExpect(jsonPath("$.code").value("S1"));
+    send(
+            t,
+            put(
+                "/api/v1/fleet/drivers/" + java.util.UUID.randomUUID(),
+                Map.of("fullName", "Yok", "status", "ACTIVE")))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("DRIVER_NOT_FOUND"));
+
+    // Sürücü carisi kodu önceden alınmışsa sürücü açılmaz.
+    account(t, "SRC-S3", "EMPLOYEE");
+    post(t, "/api/v1/fleet/drivers", driverBody("S3", "Çakışan"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("ACCOUNT_CODE_TAKEN"));
+    assertThat(body(send(t, get("/api/v1/fleet/drivers"))).get("totalElements").asInt())
+        .isEqualTo(2);
+
+    // Belge: bitiş düzenlemeden önce olamaz; silinen belge listeden düşer.
+    post(
+            t,
+            "/api/v1/fleet/DRIVER/" + driver + "/documents",
+            Map.of(
+                "docType",
+                "LICENSE",
+                "issuedOn",
+                TODAY.toString(),
+                "expiresOn",
+                TODAY.minusDays(1).toString()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("DOCUMENT_DATES_INVALID"));
+    document(t, "DRIVER", driver, "LICENSE", TODAY.plusYears(5));
+    JsonNode documents = body(send(t, get("/api/v1/fleet/DRIVER/" + driver + "/documents")));
+    assertThat(documents.size()).isEqualTo(1);
+    assertThat(documents.get(0).get("docType").asText()).isEqualTo("LICENSE");
+    send(
+            t,
+            MockMvcRequestBuilders.delete(
+                "/api/v1/fleet/documents/" + documents.get(0).get("id").asText()))
+        .andExpect(status().isNoContent());
+    assertThat(body(send(t, get("/api/v1/fleet/DRIVER/" + driver + "/documents"))).size()).isZero();
+    send(t, get("/api/v1/fleet/VEHICLE/" + java.util.UUID.randomUUID() + "/documents"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("VEHICLE_NOT_FOUND"));
+
+    // Takvim kapatma: bitiş başlangıçtan önce olamaz; silinen kapatma listeden düşer.
+    post(
+            t,
+            "/api/v1/fleet/DRIVER/" + driver + "/blocks",
+            Map.of("startDate", TODAY.toString(), "endDate", TODAY.minusDays(1).toString()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("BLOCK_DATES_INVALID"));
+    String block =
+        created(
+            post(
+                t,
+                "/api/v1/fleet/DRIVER/" + driver + "/blocks",
+                Map.of(
+                    "startDate",
+                    TODAY.toString(),
+                    "endDate",
+                    TODAY.plusDays(3).toString(),
+                    "reason",
+                    "Yıllık izin")));
+    JsonNode blocks = body(send(t, get("/api/v1/fleet/DRIVER/" + driver + "/blocks")));
+    assertThat(blocks.size()).isEqualTo(1);
+    assertThat(blocks.get(0).get("reason").asText()).isEqualTo("Yıllık izin");
+    send(t, MockMvcRequestBuilders.delete("/api/v1/fleet/blocks/" + block))
+        .andExpect(status().isNoContent());
+    assertThat(body(send(t, get("/api/v1/fleet/DRIVER/" + driver + "/blocks"))).size()).isZero();
+    send(t, get("/api/v1/fleet/DRIVER/" + java.util.UUID.randomUUID() + "/blocks"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("DRIVER_NOT_FOUND"));
+  }
+
+  @Test
+  void vehiclePlateCannotBeChangedToAnotherVehiclesPlate() throws Exception {
+    String t = tenantCode("plt");
+    String first = vehicle(t, "34 AA 01", "TRUCK", "ACTIVE");
+    vehicle(t, "34 BB 02", "TRUCK", "ACTIVE");
+
+    send(t, put("/api/v1/fleet/vehicles/" + first, vehicleBody("34bb02", "TRUCK", "ACTIVE")))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("PLATE_TAKEN"));
+    assertThat(body(send(t, get("/api/v1/fleet/vehicles/" + first))).get("plate").asText())
+        .isEqualTo("34AA01");
+  }
+
+  @Test
+  void expenseRejectsUnknownTargetsAndPaysRepairAndFuelFromFundItems() throws Exception {
+    String t = tenantCode("exr");
+    String branch = branch(t);
+    String truck = vehicle(t, "06EX01", "TRUCK", "ACTIVE");
+    String supplier = account(t, "T1", "SUPPLIER");
+    String carrier = account(t, "N1", "CARRIER");
+    account(t, "M1", "CUSTOMER");
+    String cash = fund(t, "K1", "CASH", branch);
+    deposit(t, cash, "1000");
+
+    Map<String, Object> repair = expense("REPAIR", branch, "100");
+    repair.put("supplierAccountId", supplier);
+    post(t, "/api/v1/fleet/vehicles/" + java.util.UUID.randomUUID() + "/expenses", repair)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("VEHICLE_NOT_FOUND"));
+    post(t, "/api/v1/fleet/vehicles/" + truck + "/expenses", expenseWith(repair, "0"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("AMOUNT_INVALID"));
+    Map<String, Object> unknownFund = expense("REPAIR", branch, "100");
+    unknownFund.put("fundAccountId", java.util.UUID.randomUUID().toString());
+    post(t, "/api/v1/fleet/vehicles/" + truck + "/expenses", unknownFund)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("FUND_NOT_FOUND"));
+    post(
+            t,
+            "/api/v1/fleet/expenses/" + java.util.UUID.randomUUID() + "/reverse",
+            Map.of("date", DATE))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("EXPENSE_NOT_FOUND"));
+    assertThat(body(send(t, get("/api/v1/fleet/expenses"))).get("totalElements").asInt()).isZero();
+    assertThat(tryBalance(t, supplier)).isEqualByComparingTo("0");
+
+    // Kasadan ödenen bakım ve yakıt ödeme kaydı açar: bakım/onarım REPAIR, yakıt FUEL kalemine.
+    Map<String, Object> maintenance = expense("MAINTENANCE", branch, "300");
+    maintenance.put("fundAccountId", cash);
+    post(t, "/api/v1/fleet/vehicles/" + truck + "/expenses", maintenance)
+        .andExpect(status().isCreated());
+    Map<String, Object> fuel = expense("FUEL", branch, "200");
+    fuel.put("fundAccountId", cash);
+    fuel.put("liters", "100");
+    fuel.put("odometerKm", "1000");
+    post(t, "/api/v1/fleet/vehicles/" + truck + "/expenses", fuel).andExpect(status().isCreated());
+    assertThat(fundBalance(t, cash)).isEqualByComparingTo("500");
+
+    Map<String, String> itemCodes = new HashMap<>();
+    body(send(t, get("/api/v1/finance/expense-items")))
+        .forEach(item -> itemCodes.put(item.get("id").asText(), item.get("code").asText()));
+    List<String> paidItems = new ArrayList<>();
+    body(send(t, get("/api/v1/finance/payments")))
+        .get("content")
+        .forEach(row -> paidItems.add(itemCodes.get(row.get("expenseItemId").asText())));
+    assertThat(paidItems).containsExactlyInAnyOrder("REPAIR", "FUEL");
+
+    // Seçenekler yalnız tedarikçi ve taşeron carilerini ve banka/kasa hesaplarını (burada tek kasa)
+    // verir.
+    JsonNode options = body(send(t, get("/api/v1/fleet/options")).andExpect(status().isOk()));
+    List<String> suppliers = new ArrayList<>();
+    options.get("suppliers").forEach(row -> suppliers.add(row.get("id").asText()));
+    assertThat(suppliers).containsExactlyInAnyOrder(supplier, carrier);
+    assertThat(options.get("funds").size()).isEqualTo(1);
+    assertThat(options.get("funds").get(0).get("kind").asText()).isEqualTo("CASH");
+    assertThat(options.get("funds").get(0).get("currency").asText()).isEqualTo("TRY");
+  }
+
   // Yardımcılar
+
+  private MockHttpServletRequestBuilder put(String path, Object body) throws Exception {
+    return MockMvcRequestBuilders.put(path)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(json.writeValueAsString(body));
+  }
+
+  private static Map<String, Object> expenseWith(Map<String, Object> base, String amount) {
+    Map<String, Object> copy = new HashMap<>(base);
+    copy.put("money", Map.of("amount", amount, "currency", "TRY"));
+    return copy;
+  }
 
   private String tenantCode(String prefix) throws Exception {
     String code = "flt-" + prefix;
