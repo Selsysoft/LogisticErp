@@ -34,6 +34,7 @@ public class Instrument extends AuditableEntity {
   private UUID accountId;
   private UUID endorsedAccountId;
   private UUID branchId;
+  private UUID companyId;
   private UUID fundAccountId;
   private BigDecimal amount;
   private String currency;
@@ -51,6 +52,7 @@ public class Instrument extends AuditableEntity {
       String bankName,
       UUID accountId,
       UUID branchId,
+      UUID companyId,
       Money money,
       LocalDate dueDate,
       InstrumentStatus status) {
@@ -61,6 +63,7 @@ public class Instrument extends AuditableEntity {
     this.bankName = bankName;
     this.accountId = accountId;
     this.branchId = branchId;
+    this.companyId = companyId;
     this.amount = money.amount();
     this.currency = money.currency();
     this.dueDate = dueDate;
@@ -125,5 +128,9 @@ public class Instrument extends AuditableEntity {
 
   public InstrumentStatus getStatus() {
     return status;
+  }
+
+  public UUID getCompanyId() {
+    return companyId;
   }
 }

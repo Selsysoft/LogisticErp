@@ -2,6 +2,7 @@ package org.ece.blackrose.identity.repository;
 
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -12,8 +13,11 @@ import org.ece.blackrose.identity.domain.Role;
 import org.ece.blackrose.identity.domain.SaasAdmin;
 import org.ece.blackrose.identity.domain.SaasRevokedToken;
 import org.ece.blackrose.identity.domain.UserAccount;
+import org.ece.blackrose.identity.domain.UserBranch;
 import org.ece.blackrose.identity.domain.UserStatus;
 import org.ece.blackrose.identity.domain.UserToken;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -41,6 +45,35 @@ public final class IdentityRepositories {
 
     @Query("select count(u) from UserAccount u join u.roles r where r.id = :roleId")
     long countByRole(@Param("roleId") UUID roleId);
+
+    /**
+     * LIMITED yöneticinin görebildiği kullanıcılar: kendisi ve tüm iş yerleri yöneticinin
+     * kapsamında olan LIMITED kullanıcılar.
+     */
+    @Query(
+        """
+        select u from UserAccount u
+        where u.id = :self
+           or (u.branchScope = org.ece.blackrose.identity.domain.BranchScope.LIMITED
+               and exists (select 1 from UserBranch b where b.userId = u.id)
+               and not exists (select 1 from UserBranch b
+                               where b.userId = u.id and b.branchId not in :allowed))
+        """)
+    Page<UserAccount> findManageable(
+        @Param("self") UUID self, @Param("allowed") Collection<UUID> allowed, Pageable pageable);
+  }
+
+  public interface UserBranchRepository extends JpaRepository<UserBranch, UserBranch.Key> {
+
+    @Query("select u.branchId from UserBranch u where u.userId = :id")
+    List<UUID> branchIdsOf(@Param("id") UUID id);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = false)
+    @Query("delete from UserBranch u where u.userId = :id")
+    void deleteByUserId(@Param("id") UUID id);
+
+    @Query("select count(u) > 0 from UserBranch u where u.branchId = :id")
+    boolean existsByBranchId(@Param("id") UUID id);
   }
 
   public interface RoleRepository extends JpaRepository<Role, UUID> {

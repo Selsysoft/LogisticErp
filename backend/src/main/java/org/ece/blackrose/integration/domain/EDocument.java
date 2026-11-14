@@ -26,6 +26,7 @@ public class EDocument extends AuditableEntity {
 
   private UUID sourceId;
   private String sourceNo;
+  private UUID companyId;
   private UUID ettn;
   private String provider;
   private String providerRef;
@@ -43,6 +44,7 @@ public class EDocument extends AuditableEntity {
       EDocumentSource sourceType,
       UUID sourceId,
       String sourceNo,
+      UUID companyId,
       UUID ettn,
       String provider,
       String ubl) {
@@ -51,6 +53,7 @@ public class EDocument extends AuditableEntity {
     this.sourceType = sourceType;
     this.sourceId = sourceId;
     this.sourceNo = sourceNo;
+    this.companyId = companyId;
     this.ettn = ettn;
     this.provider = provider;
     this.ubl = ubl;
@@ -107,5 +110,9 @@ public class EDocument extends AuditableEntity {
 
   public String getUbl() {
     return ubl;
+  }
+
+  public UUID getCompanyId() {
+    return companyId;
   }
 }

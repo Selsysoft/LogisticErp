@@ -24,6 +24,7 @@ import org.ece.blackrose.fleet.web.FleetDtos.SaveBlockRequest;
 import org.ece.blackrose.fleet.web.FleetDtos.SaveDocumentRequest;
 import org.ece.blackrose.fleet.web.FleetDtos.SaveVehicleRequest;
 import org.ece.blackrose.fleet.web.FleetDtos.UpdateDriverRequest;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -43,6 +44,7 @@ public class FleetRegistryService {
   private final FleetSettingsRepository settings;
   private final AccountRepository accounts;
   private final org.ece.blackrose.saas.service.PlanLimitService planLimits;
+  private final BranchScopeService scope;
 
   public FleetRegistryService(
       VehicleRepository vehicles,
@@ -51,7 +53,9 @@ public class FleetRegistryService {
       ResourceBlockRepository blocks,
       FleetSettingsRepository settings,
       AccountRepository accounts,
-      org.ece.blackrose.saas.service.PlanLimitService planLimits) {
+      org.ece.blackrose.saas.service.PlanLimitService planLimits,
+      BranchScopeService scope) {
+    this.scope = scope;
     this.planLimits = planLimits;
     this.vehicles = vehicles;
     this.drivers = drivers;
@@ -63,12 +67,14 @@ public class FleetRegistryService {
 
   @Transactional(readOnly = true)
   public Page<Vehicle> listVehicles(String search, Pageable pageable) {
-    return vehicles.search(normalizeSearch(search), pageable);
+    return vehicles.search(normalizeSearch(search), scope.filter(null, null), pageable);
   }
 
   @Transactional(readOnly = true)
   public Vehicle getVehicle(UUID id) {
-    return findVehicle(id);
+    Vehicle vehicle = findVehicle(id);
+    scope.requireVisible(vehicle.getBranchId());
+    return vehicle;
   }
 
   @Transactional
@@ -84,6 +90,8 @@ public class FleetRegistryService {
   @Transactional
   public Vehicle updateVehicle(UUID id, SaveVehicleRequest request) {
     Vehicle vehicle = findVehicle(id);
+    scope.requireVisible(vehicle.getBranchId());
+    scope.requireForUpdate(request.branchId(), vehicle.getBranchId());
     String plate = normalizePlate(request.plate());
     vehicles
         .findByPlate(plate)
@@ -99,12 +107,14 @@ public class FleetRegistryService {
 
   @Transactional(readOnly = true)
   public Page<Driver> listDrivers(String search, Pageable pageable) {
-    return drivers.search(normalizeSearch(search), pageable);
+    return drivers.search(normalizeSearch(search), scope.filter(null, null), pageable);
   }
 
   @Transactional(readOnly = true)
   public Driver getDriver(UUID id) {
-    return findDriver(id);
+    Driver driver = findDriver(id);
+    scope.requireVisible(driver.getBranchId());
+    return driver;
   }
 
   /** Sürücüyle birlikte harcırah ve avans için personel carisi açılır. */
@@ -137,6 +147,8 @@ public class FleetRegistryService {
   @Transactional
   public Driver updateDriver(UUID id, UpdateDriverRequest request) {
     Driver driver = findDriver(id);
+    scope.requireVisible(driver.getBranchId());
+    scope.requireForUpdate(request.branchId(), driver.getBranchId());
     driver.update(
         request.fullName(),
         request.phone(),

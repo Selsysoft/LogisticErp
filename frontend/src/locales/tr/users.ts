@@ -23,4 +23,14 @@ export default {
   mailIssueHint:
     "Bu adrese giden son e-posta teslim edilemedi. Adresin doğru yazıldığını kontrol edin; sonraki başarılı teslimde uyarı kalkar.",
   empty: "Henüz kullanıcı yok.",
+  tabGeneral: "Genel",
+  tabBranchScope: "İş Yeri Yetkisi",
+  scopeAll: "Tüm iş yerleri",
+  scopeLimited: "Seçili iş yerleri",
+  defaultBranch: "Varsayılan iş yeri",
+  selectAtLeastOneBranch: "En az bir iş yeri seçin.",
+  scopeSaved: "İş yeri yetkisi kaydedildi.",
+  scopeColumn: "İş Yerleri",
+  scopeAllShort: "Tümü",
+  scopeLimitedShort: "Sınırlı",
 };

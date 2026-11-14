@@ -7,3 +7,5 @@
 @import "./erp-header.css";
 @import "./branch-multiselect.css";
 @import "./all-transactions.css";
+/* Views/Uyumsoft/Settings.cshtml gövde içi <style> (Şirketler › e-Belge); tanım CSS'leri zto-finans.css'te. */
+@import "./uyumsoft-settings.css";

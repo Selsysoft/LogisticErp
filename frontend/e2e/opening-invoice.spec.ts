@@ -12,7 +12,8 @@ test("açık faturalar içe aktarılır; tedarikçi faturası ödeme planı, mü
 }) => {
   test.setTimeout(90_000);
   const owner = await Owner.login(tenantState());
-  await owner.branch();
+  const branchName = `Merkez ${unique("")}`;
+  await owner.branch(branchName);
   const customerCode = unique("M").slice(0, 20);
   const supplierCode = unique("T").slice(0, 20);
   await owner.request("POST", "/finance/accounts", {
@@ -38,7 +39,7 @@ test("açık faturalar içe aktarılır; tedarikçi faturası ödeme planı, mü
   await page.getByRole("button", { name: "Açık faturaları içe aktar" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("combobox", { name: "Şube" }).click();
-  await page.getByRole("option").first().click();
+  await page.getByRole("option", { name: new RegExp(`${branchName}$`) }).click();
   await dialog
     .locator('input[type="file"]')
     .setInputFiles({ name: "acik.csv", mimeType: "text/csv", buffer: Buffer.from(file, "utf8") });

@@ -18,6 +18,7 @@ import org.ece.blackrose.identity.web.IdentityDtos.TokenResponse;
 import org.ece.blackrose.identity.web.IdentityDtos.TwoFactorSetupResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.http.HttpStatus;
@@ -48,7 +49,7 @@ public class SaasAuthService implements ApplicationRunner {
       TokenService tokens,
       SecurityProperties properties,
       AuditService audit,
-      TextEncryptor totpEncryptor,
+      @Qualifier("totpEncryptor") TextEncryptor totpEncryptor,
       SaasRevokedTokenRepository revokedTokens) {
     this.totpEncryptor = totpEncryptor;
     this.revokedTokens = revokedTokens;

@@ -9,12 +9,10 @@ import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.finance.domain.Account;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
 import org.ece.blackrose.integration.domain.EDocument;
-import org.ece.blackrose.integration.domain.EDocumentSettings;
 import org.ece.blackrose.integration.domain.IntegrationTypes.EDocumentKind;
 import org.ece.blackrose.integration.domain.IntegrationTypes.EDocumentSource;
 import org.ece.blackrose.integration.domain.IntegrationTypes.EDocumentStatus;
 import org.ece.blackrose.integration.repository.IntegrationRepositories.EDocumentRepository;
-import org.ece.blackrose.integration.repository.IntegrationRepositories.EDocumentSettingsRepository;
 import org.ece.blackrose.integration.service.EDocumentProvider.Outgoing;
 import org.ece.blackrose.integration.service.EDocumentProvider.Result;
 import org.ece.blackrose.integration.service.UblWriter.InvoiceData;
@@ -22,6 +20,12 @@ import org.ece.blackrose.integration.service.UblWriter.Party;
 import org.ece.blackrose.integration.service.UblWriter.WaybillData;
 import org.ece.blackrose.integration.web.IntegrationDtos.EDocumentCandidate;
 import org.ece.blackrose.integration.web.IntegrationDtos.SendEDocumentRequest;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.Company;
+import org.ece.blackrose.organization.CompanyIdentityService;
+import org.ece.blackrose.organization.CompanyIdentityService.CompanyIdentity;
+import org.ece.blackrose.organization.CompanyResolver;
+import org.ece.blackrose.organization.CompanyService;
 import org.ece.blackrose.shipment.domain.FreightInvoice;
 import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.domain.ShipmentDocument;
@@ -34,8 +38,6 @@ import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentReposi
 import org.ece.blackrose.shipment.service.InvoiceCancelGuard;
 import org.ece.blackrose.shipment.web.ShipmentDtos.DocumentContent;
 import org.ece.blackrose.tenant.TenantClock;
-import org.ece.blackrose.tenant.TenantContext;
-import org.ece.blackrose.tenant.repository.TenantRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,34 +53,40 @@ public class EDocumentService implements InvoiceCancelGuard {
       Set.of(EDocumentStatus.SENT, EDocumentStatus.ACCEPTED);
 
   private final EDocumentRepository documents;
-  private final EDocumentSettingsRepository settings;
+  private final CompanyService companyService;
   private final FreightInvoiceRepository invoices;
   private final ShipmentDocumentRepository shipmentDocuments;
   private final ShipmentRepository shipments;
   private final AccountRepository accounts;
-  private final TenantRepository tenants;
+  private final CompanyIdentityService identities;
   private final EDocumentProvider provider;
   private final ObjectMapper json;
+  private final CompanyResolver companies;
   private final TenantClock clock;
+  private final BranchScopeService scope;
 
   public EDocumentService(
       EDocumentRepository documents,
-      EDocumentSettingsRepository settings,
+      CompanyService companyService,
       FreightInvoiceRepository invoices,
       ShipmentDocumentRepository shipmentDocuments,
       ShipmentRepository shipments,
       AccountRepository accounts,
-      TenantRepository tenants,
+      CompanyIdentityService identities,
       EDocumentProvider provider,
       ObjectMapper json,
-      TenantClock clock) {
+      TenantClock clock,
+      CompanyResolver companies,
+      BranchScopeService scope) {
+    this.scope = scope;
+    this.companies = companies;
     this.documents = documents;
-    this.settings = settings;
+    this.companyService = companyService;
     this.invoices = invoices;
     this.shipmentDocuments = shipmentDocuments;
     this.shipments = shipments;
     this.accounts = accounts;
-    this.tenants = tenants;
+    this.identities = identities;
     this.provider = provider;
     this.json = json;
     this.clock = clock;
@@ -88,16 +96,23 @@ public class EDocumentService implements InvoiceCancelGuard {
     return provider;
   }
 
+  /**
+   * Eski e-belge ayarı cephesi: varsayılan şirketin vergi kimliği ve adresi ({@code
+   * edocument_settings} tablosu artık okunmaz).
+   */
   @Transactional(readOnly = true)
-  public EDocumentSettings settings() {
-    return settings.findById(1).orElseThrow();
+  public Company settings() {
+    return companyService.find(companies.defaultCompanyId());
   }
 
+  /**
+   * Cephe yazımı şirket kartından geçer: VKN temizlenir ve doğrulanır, tekillik, denetim kaydı,
+   * güncelleme sayacı ve grup carisi eşitlemesi {@link CompanyService#updateIdentity}'dedir.
+   */
   @Transactional
-  public EDocumentSettings saveSettings(String taxNumber, String taxOffice, String address) {
-    EDocumentSettings row = settings.findById(1).orElseThrow();
-    row.update(taxNumber, taxOffice, address);
-    return row;
+  public Company saveSettings(String taxNumber, String taxOffice, String address) {
+    return companyService.updateIdentity(
+        companies.defaultCompanyId(), taxNumber, taxOffice, address);
   }
 
   @Transactional
@@ -112,19 +127,24 @@ public class EDocumentService implements InvoiceCancelGuard {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "EDOCUMENT_KIND_INVALID", "Belge türü kaynakla uyuşmuyor.");
     }
-    EDocumentSettings company = settings();
-    if (company.getTaxNumber() == null) {
-      throw new BusinessException(
-          HttpStatus.CONFLICT, "COMPANY_TAX_REQUIRED", "Önce firma vergi numarasını girin.");
-    }
-    Party supplier =
-        new Party(
-            companyName(), company.getTaxNumber(), company.getTaxOffice(), company.getAddress());
     UUID ettn = UUID.randomUUID();
-    return waybill ? sendWaybill(request, supplier, ettn) : sendInvoice(request, supplier, ettn);
+    return waybill ? sendWaybill(request, ettn) : sendInvoice(request, ettn);
   }
 
-  private EDocument sendInvoice(SendEDocumentRequest request, Party supplier, UUID ettn) {
+  /**
+   * Gönderen, kaynak belgenin şirketidir (unvan, VKN/TCKN, vergi dairesi, adres); kiracı adı ya da
+   * varsayılan şirket değil.
+   */
+  private Party supplier(UUID companyId) {
+    CompanyIdentity company = identities.withoutLogo(companyId);
+    if (company.taxNumber() == null) {
+      throw new BusinessException(
+          HttpStatus.CONFLICT, "COMPANY_TAX_REQUIRED", "Önce şirketin vergi numarasını girin.");
+    }
+    return new Party(company.title(), company.taxNumber(), company.taxOffice(), company.address());
+  }
+
+  private EDocument sendInvoice(SendEDocumentRequest request, UUID ettn) {
     FreightInvoice invoice =
         invoices
             .findById(request.sourceId())
@@ -133,6 +153,8 @@ public class EDocumentService implements InvoiceCancelGuard {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Geçerli fatura bulunamadı."));
+    scope.requireVisible(invoice.getBranchId());
+    Party supplier = supplier(invoice.getCompanyId());
     Account customer = accounts.findById(invoice.getAccountId()).orElseThrow();
     if (request.kind() == EDocumentKind.EFATURA && customer.getTaxNumber() == null) {
       throw new BusinessException(
@@ -153,10 +175,11 @@ public class EDocumentService implements InvoiceCancelGuard {
                 invoice.getVat(),
                 invoice.getWithholding(),
                 invoice.getTotal()));
-    return deliver(request, invoice.getNumber(), ettn, customer.getTaxNumber(), ubl);
+    return deliver(
+        request, invoice.getNumber(), invoice.getCompanyId(), ettn, customer.getTaxNumber(), ubl);
   }
 
-  private EDocument sendWaybill(SendEDocumentRequest request, Party supplier, UUID ettn) {
+  private EDocument sendWaybill(SendEDocumentRequest request, UUID ettn) {
     ShipmentDocument document =
         shipmentDocuments
             .findById(request.sourceId())
@@ -170,6 +193,9 @@ public class EDocumentService implements InvoiceCancelGuard {
           HttpStatus.CONFLICT, "DOCUMENT_NOT_ISSUED", "Önce irsaliyeyi yayımlayın.");
     }
     Shipment shipment = shipments.findById(document.getShipmentId()).orElseThrow();
+    scope.requireVisible(shipment.getBranchId());
+    UUID companyId = companies.companyOf(shipment.getBranchId());
+    Party supplier = supplier(companyId);
     Account customer = accounts.findById(shipment.getAccountId()).orElseThrow();
     DocumentContent content = read(document.getContent());
     String ubl =
@@ -187,11 +213,16 @@ public class EDocumentService implements InvoiceCancelGuard {
                 content.plates(),
                 content.drivers(),
                 content.totalWeightKg()));
-    return deliver(request, document.getNumber(), ettn, customer.getTaxNumber(), ubl);
+    return deliver(request, document.getNumber(), companyId, ettn, customer.getTaxNumber(), ubl);
   }
 
   private EDocument deliver(
-      SendEDocumentRequest request, String number, UUID ettn, String receiverTax, String ubl) {
+      SendEDocumentRequest request,
+      String number,
+      UUID companyId,
+      UUID ettn,
+      String receiverTax,
+      String ubl) {
     Result result = provider.send(new Outgoing(request.kind(), ettn, receiverTax, ubl));
     EDocument document =
         new EDocument(
@@ -199,6 +230,7 @@ public class EDocumentService implements InvoiceCancelGuard {
             request.sourceType(),
             request.sourceId(),
             number,
+            companyId,
             ettn,
             provider.name(),
             ubl);
@@ -251,10 +283,31 @@ public class EDocumentService implements InvoiceCancelGuard {
     }
   }
 
+  /** e-Belge listesi; LIMITED kullanıcıda yalnız görebildiği şirketlerinkiler. */
+  @Transactional(readOnly = true)
+  public List<EDocument> list() {
+    List<EDocument> all = documents.findAllByOrderByCreatedAtDesc();
+    if (!scope.limited()) {
+      return all;
+    }
+    Set<UUID> visible = Set.copyOf(scope.visibleCompanyIds());
+    return all.stream().filter(document -> visible.contains(document.getCompanyId())).toList();
+  }
+
+  @Transactional(readOnly = true)
+  public EDocument get(UUID id) {
+    return find(id);
+  }
+
+  /** Gönderilebilecek belgeler; LIMITED kullanıcıda yalnız kapsamdaki iş yerlerinin belgeleri. */
   @Transactional(readOnly = true)
   public List<EDocumentCandidate> candidates() {
+    Set<UUID> allowed = scope.allowedOrNull();
     List<EDocumentCandidate> rows = new ArrayList<>();
     for (FreightInvoice invoice : invoices.findByStatus(InvoiceStatus.ISSUED)) {
+      if (allowed != null && !allowed.contains(invoice.getBranchId())) {
+        continue;
+      }
       if (!documents.existsBySourceTypeAndSourceIdAndStatusIn(
           EDocumentSource.FREIGHT_INVOICE, invoice.getId(), ACTIVE)) {
         rows.add(
@@ -262,8 +315,21 @@ public class EDocumentService implements InvoiceCancelGuard {
                 invoice.getId(), EDocumentSource.FREIGHT_INVOICE, invoice.getNumber()));
       }
     }
-    for (ShipmentDocument document :
-        shipmentDocuments.findByTypeAndStatus(DocumentType.WAYBILL, DocumentStatus.ISSUED)) {
+    List<ShipmentDocument> waybills =
+        shipmentDocuments.findByTypeAndStatus(DocumentType.WAYBILL, DocumentStatus.ISSUED);
+    Set<UUID> visibleShipments =
+        allowed == null
+            ? null
+            : shipments
+                .findAllById(waybills.stream().map(ShipmentDocument::getShipmentId).toList())
+                .stream()
+                .filter(shipment -> allowed.contains(shipment.getBranchId()))
+                .map(Shipment::getId)
+                .collect(java.util.stream.Collectors.toSet());
+    for (ShipmentDocument document : waybills) {
+      if (visibleShipments != null && !visibleShipments.contains(document.getShipmentId())) {
+        continue;
+      }
       if (!documents.existsBySourceTypeAndSourceIdAndStatusIn(
           EDocumentSource.WAYBILL, document.getId(), ACTIVE)) {
         rows.add(
@@ -282,16 +348,18 @@ public class EDocumentService implements InvoiceCancelGuard {
     }
   }
 
-  private String companyName() {
-    return tenants.findByCode(TenantContext.currentCode().orElseThrow()).orElseThrow().getName();
-  }
-
+  /** e-Belgeyi yükler; LIMITED kullanıcıda belgenin şirketi görünür olmalı (403). */
   private EDocument find(UUID id) {
-    return documents
-        .findById(id)
-        .orElseThrow(
-            () ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "EDOCUMENT_NOT_FOUND", "e-Belge bulunamadı."));
+    EDocument document =
+        documents
+            .findById(id)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "EDOCUMENT_NOT_FOUND", "e-Belge bulunamadı."));
+    if (scope.limited() && !scope.visibleCompanyIds().contains(document.getCompanyId())) {
+      throw BranchScopeService.companyOutOfScope();
+    }
+    return document;
   }
 }

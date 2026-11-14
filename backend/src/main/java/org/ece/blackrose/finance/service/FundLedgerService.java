@@ -77,6 +77,7 @@ public class FundLedgerService {
     return transactions.save(
         new FundTransaction(
             fund.getId(),
+            fund.getCompanyId(),
             posting.direction(),
             posting.money(),
             conversion.rate(),
@@ -114,6 +115,7 @@ public class FundLedgerService {
               return transactions.save(
                   new FundTransaction(
                       original.getFundAccountId(),
+                      original.getCompanyId(),
                       original.getDirection().opposite(),
                       original.getMoney(),
                       original.getExchangeRate(),

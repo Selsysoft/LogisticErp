@@ -1,7 +1,7 @@
 export type TenantStatus = "PROVISIONING" | "ACTIVE" | "SUSPENDED" | "CLOSED" | "FAILED";
 export type SubscriptionStatus = "TRIAL" | "ACTIVE" | "PAST_DUE" | "SUSPENDED" | "CANCELLED";
 export type SuspendReason = "TRIAL_ENDED" | "PAYMENT" | "MANUAL";
-export type LimitedResource = "USERS" | "VEHICLES" | "SHIPMENTS_MONTH";
+export type LimitedResource = "USERS" | "VEHICLES" | "SHIPMENTS_MONTH" | "COMPANIES" | "BRANCHES";
 
 export interface LimitUsage {
   resource: LimitedResource;
@@ -36,6 +36,9 @@ export interface Plan {
   maxUsers: number | null;
   maxVehicles: number | null;
   maxShipmentsMonth: number | null;
+  /** 12.1a (D20): en çok aktif şirket / iş yeri; null = sınırsız. */
+  maxCompanies: number | null;
+  maxBranches: number | null;
   active: boolean;
 }
 

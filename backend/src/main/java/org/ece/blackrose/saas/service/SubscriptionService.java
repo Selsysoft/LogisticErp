@@ -97,6 +97,8 @@ public class SubscriptionService {
         request.maxUsers(),
         request.maxVehicles(),
         request.maxShipmentsMonth(),
+        request.maxCompanies(),
+        request.maxBranches(),
         request.active());
     return plans.save(plan);
   }

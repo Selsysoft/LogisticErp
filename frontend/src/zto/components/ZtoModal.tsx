@@ -6,11 +6,16 @@ import { ztoModalManager } from "./ztoModalManager";
 
 export type ZtoModalSize = "sm" | "lg" | "xl";
 
-export interface ZtoModalProps {
+export type ZtoModalProps = {
   show: boolean;
   onHide: () => void;
   /** h5.modal-title içeriği; ZTO başlıkları çoğunlukla "<i class='fas …'></i> Metin". */
   title?: ReactNode;
+  /**
+   * Başlığın üstündeki öğe; verilirse başlık `div > {titlePrefix} + h5.modal-title` olarak sarılır
+   * (ZTO _DefinitionDetailsModal.cshtml:31-34 "KAYIT DETAYI" üst etiketi).
+   */
+  titlePrefix?: ReactNode;
   size?: ZtoModalSize;
   centered?: boolean;
   scrollable?: boolean;
@@ -47,7 +52,7 @@ export interface ZtoModalProps {
   onEntered?: () => void;
   onExited?: () => void;
   children?: ReactNode;
-}
+};
 
 // Bootstrap 4'te ".modal-open .modal" kuralı body'deki sınıfa bakar; kapsamlı CSS'te sınıf kökte
 // olduğu için (".zto-finans .modal-open .modal" eşleşmez) uzun modalın kaydırması satır içi verilir.
@@ -68,6 +73,7 @@ export function ZtoModal({
   show,
   onHide,
   title,
+  titlePrefix,
   size,
   centered,
   scrollable,
@@ -140,11 +146,19 @@ export function ZtoModal({
       <ZtoOverlayContainerContext.Provider value={modalElement}>
         {hasHeader && (
           <div className={headerClassName ? `modal-header ${headerClassName}` : "modal-header"}>
-            {title !== undefined && (
-              <TitleTag className="modal-title" id={titleId}>
-                {title}
-              </TitleTag>
-            )}
+            {title !== undefined &&
+              (titlePrefix !== undefined ? (
+                <div>
+                  {titlePrefix}
+                  <TitleTag className="modal-title" id={titleId}>
+                    {title}
+                  </TitleTag>
+                </div>
+              ) : (
+                <TitleTag className="modal-title" id={titleId}>
+                  {title}
+                </TitleTag>
+              ))}
             {closeButton && (
               <button
                 type="button"

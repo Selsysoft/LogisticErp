@@ -16,7 +16,7 @@ import { ChangeEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiUpload } from "../../api/client";
 import { ErrorState } from "../../components/ErrorState";
-import { DataTable, formatAmount, formatDate, useBranches } from "./common";
+import { DataTable, formatAmount, formatDate, useBranchOptions } from "./common";
 import { OPENING_INVOICE_SAMPLE, downloadCsv } from "../importSamples";
 
 type Kind = "RECEIVABLE" | "PAYABLE";
@@ -57,7 +57,7 @@ export function OpeningInvoiceDialog({
   onImported: () => void;
 }) {
   const { t } = useTranslation();
-  const branches = useBranches();
+  const { optionsFor } = useBranchOptions();
   const [branchId, setBranchId] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -109,9 +109,9 @@ export function OpeningInvoiceDialog({
               }}
               sx={{ minWidth: 200 }}
             >
-              {(branches.data ?? []).map((branch) => (
-                <MenuItem key={branch.id} value={branch.id}>
-                  {branch.name}
+              {optionsFor().map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
                 </MenuItem>
               ))}
             </TextField>

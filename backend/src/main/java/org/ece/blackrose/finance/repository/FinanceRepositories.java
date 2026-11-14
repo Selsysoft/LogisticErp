@@ -27,6 +27,7 @@ import org.ece.blackrose.finance.domain.PaymentPlan;
 import org.ece.blackrose.finance.domain.PaymentPlanEvent;
 import org.ece.blackrose.finance.domain.PurchaseInvoice;
 import org.ece.blackrose.finance.domain.Settlement;
+import org.ece.blackrose.organization.BranchFilter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -123,12 +124,16 @@ public final class FinanceRepositories {
 
   public interface OpeningInvoiceRepository extends JpaRepository<OpeningInvoice, UUID> {
 
-    boolean existsByAccountIdAndNumberAndStatus(
-        UUID accountId, String number, OpeningInvoice.Status status);
+    /** Numara tekilliği şirket + cari bazındadır (devir şirket bazında). */
+    boolean existsByAccountIdAndCompanyIdAndNumberAndStatus(
+        UUID accountId, UUID companyId, String number, OpeningInvoice.Status status);
 
-    /** Açık faturası olan cariye ayrıca açılış bakiyesi yüklenmez (bakiye iki kez sayılır). */
-    boolean existsByAccountIdAndCurrencyAndStatus(
-        UUID accountId, String currency, OpeningInvoice.Status status);
+    /**
+     * Açık faturası olan cariye aynı şirkette ayrıca açılış bakiyesi yüklenmez (bakiye iki kez
+     * sayılır).
+     */
+    boolean existsByAccountIdAndCompanyIdAndCurrencyAndStatus(
+        UUID accountId, UUID companyId, String currency, OpeningInvoice.Status status);
   }
 
   /**
@@ -140,14 +145,20 @@ public final class FinanceRepositories {
 
     Optional<AccountTransaction> findBySourceTypeAndSourceId(String sourceType, UUID sourceId);
 
-    /** Ters çevrilmemiş açılış hareketi; aynı cari ve para biriminde ikinci açılışı önler. */
+    /**
+     * Ters çevrilmemiş açılış hareketi; aynı cari, şirket ve para biriminde ikinci açılışı önler.
+     * Açılış şirket bazındadır: A şirketinde açılmış cari B'de de açılabilir.
+     */
     @Query(
         "select count(t) > 0 from AccountTransaction t where t.accountId = :accountId"
+            + " and t.companyId = :companyId"
             + " and t.currency = :currency and t.sourceType = 'OPENING' and t.deleted = false"
             + " and not exists (select r from AccountTransaction r"
             + " where r.sourceType = 'REVERSAL' and r.sourceId = t.id and r.deleted = false)")
     boolean hasActiveOpening(
-        @Param("accountId") UUID accountId, @Param("currency") String currency);
+        @Param("accountId") UUID accountId,
+        @Param("companyId") UUID companyId,
+        @Param("currency") String currency);
 
     boolean existsByAccountId(UUID accountId);
 
@@ -161,11 +172,28 @@ public final class FinanceRepositories {
                      as "tlBalance"
             from account_transaction
             where account_id in (:accountIds) and deleted = false
+              and (:allCompanies = true or company_id = :companyId)
+              and (:allBranches = true or branch_id in (:branchIds))
             group by account_id, currency
             order by currency
             """,
         nativeQuery = true)
-    List<BalanceRow> balances(@Param("accountIds") Collection<UUID> accountIds);
+    List<BalanceRow> balances(
+        @Param("accountIds") Collection<UUID> accountIds,
+        @Param("allCompanies") boolean allCompanies,
+        @Param("companyId") UUID companyId,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds);
+
+    /** Cari başına bakiye; süzgeçteki şirket boşsa konsolide (tüm şirketlerin toplamı). */
+    default List<BalanceRow> balances(Collection<UUID> accountIds, BranchFilter filter) {
+      return balances(
+          accountIds,
+          filter.companyId() == null,
+          companyOrNone(filter),
+          filter.allBranches(),
+          filter.branchIds());
+    }
 
     @Query(
         value =
@@ -174,12 +202,30 @@ public final class FinanceRepositories {
             from account_transaction
             where account_id = :accountId and currency = :currency and transaction_date < :before
               and deleted = false
+              and (:allCompanies = true or company_id = :companyId)
+              and (:allBranches = true or branch_id in (:branchIds))
             """,
         nativeQuery = true)
     BigDecimal balanceBefore(
         @Param("accountId") UUID accountId,
         @Param("currency") String currency,
-        @Param("before") LocalDate before);
+        @Param("before") LocalDate before,
+        @Param("allCompanies") boolean allCompanies,
+        @Param("companyId") UUID companyId,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds);
+
+    default BigDecimal balanceBefore(
+        UUID accountId, String currency, LocalDate before, BranchFilter filter) {
+      return balanceBefore(
+          accountId,
+          currency,
+          before,
+          filter.companyId() == null,
+          companyOrNone(filter),
+          filter.allBranches(),
+          filter.branchIds());
+    }
 
     @Query(
         value =
@@ -192,6 +238,8 @@ public final class FinanceRepositories {
             from account_transaction
             where account_id = :accountId and currency = :currency
               and transaction_date between :from and :to and deleted = false
+              and (:allCompanies = true or company_id = :companyId)
+              and (:allBranches = true or branch_id in (:branchIds))
             order by transaction_date, created_at, id
             """,
         countQuery =
@@ -199,6 +247,8 @@ public final class FinanceRepositories {
             select count(*) from account_transaction
             where account_id = :accountId and currency = :currency
               and transaction_date between :from and :to and deleted = false
+              and (:allCompanies = true or company_id = :companyId)
+              and (:allBranches = true or branch_id in (:branchIds))
             """,
         nativeQuery = true)
     Page<AccountStatementRow> statement(
@@ -206,26 +256,55 @@ public final class FinanceRepositories {
         @Param("currency") String currency,
         @Param("from") LocalDate from,
         @Param("to") LocalDate to,
+        @Param("allCompanies") boolean allCompanies,
+        @Param("companyId") UUID companyId,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds,
         Pageable pageable);
+
+    default Page<AccountStatementRow> statement(
+        UUID accountId,
+        String currency,
+        LocalDate from,
+        LocalDate to,
+        BranchFilter filter,
+        Pageable pageable) {
+      return statement(
+          accountId,
+          currency,
+          from,
+          to,
+          filter.companyId() == null,
+          companyOrNone(filter),
+          filter.allBranches(),
+          filter.branchIds(),
+          pageable);
+    }
 
     /**
      * Vadesiz eskitme. Karşı yöndeki hareketler en eski kalemleri kapattığı için kapanan tutar,
      * tarih sırasındaki kalemlerin başından düşülür; açık kalan her zaman en yeni kalemlerdir.
+     * Eşleştirme şirket kırılımlıdır (yasal kişi bazında), konsolidede de: A'daki borç B'deki
+     * ödemeyle kapanmaz; konsolide satır şirket satırlarının toplamıdır.
      */
     @Query(
         value =
             """
             with moves as (
-              select t.account_id, t.currency, t.transaction_date, t.direction, t.amount,
+              select t.account_id, t.company_id, t.currency, t.transaction_date, t.direction,
+                     t.amount,
                      sum(case when t.direction = :open then t.amount else 0 end) over (
-                       partition by t.account_id, t.currency
+                       partition by t.account_id, t.company_id, t.currency
                        order by t.transaction_date, t.created_at, t.id) as opened,
                      sum(case when t.direction <> :open then t.amount else 0 end) over (
-                       partition by t.account_id, t.currency) as closed
+                       partition by t.account_id, t.company_id, t.currency) as closed
               from account_transaction t
               join account a on a.id = t.account_id
               where t.transaction_date <= :asOf and t.deleted = false
                 and a.deleted = false and a.type in (:types)
+                and (:allCompanies = true or t.company_id = :companyId)
+                and (:allBranches = true or t.branch_id in (:branchIds))
+                and (:excludeIntercompany = false or a.represents_company_id is null)
             ),
             open_items as (
               select account_id, currency, cast(:asOf as date) - transaction_date as age,
@@ -245,7 +324,37 @@ public final class FinanceRepositories {
     List<AgingRow> agingRows(
         @Param("asOf") LocalDate asOf,
         @Param("open") String openDirection,
-        @Param("types") Collection<String> types);
+        @Param("types") Collection<String> types,
+        @Param("allCompanies") boolean allCompanies,
+        @Param("companyId") UUID companyId,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds,
+        @Param("excludeIntercompany") boolean excludeIntercompany);
+
+    default List<AgingRow> agingRows(
+        LocalDate asOf,
+        String openDirection,
+        Collection<String> types,
+        BranchFilter filter,
+        boolean excludeIntercompany) {
+      return agingRows(
+          asOf,
+          openDirection,
+          types,
+          filter.companyId() == null,
+          companyOrNone(filter),
+          filter.allBranches(),
+          filter.branchIds(),
+          excludeIntercompany);
+    }
+  }
+
+  /**
+   * Native sorgularda NULL UUID bağlamak tip çıkarımı sorunu doğurur; konsolidede şirket yerine
+   * nöbetçi verilir ve ayrı bayrak ({@code allCompanies}) koşulu atlatır.
+   */
+  private static UUID companyOrNone(BranchFilter filter) {
+    return filter.companyId() == null ? BranchFilter.NONE : filter.companyId();
   }
 
   public interface FundBalanceRow {
@@ -280,6 +389,47 @@ public final class FinanceRepositories {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select f from FundAccount f where f.id = :id")
     Optional<FundAccount> findForUpdate(@Param("id") UUID id);
+
+    @Query(
+        """
+        select f from FundAccount f
+        where (:companyId is null or f.companyId = :companyId)
+          and (:allBranches = true or f.branchId in :branchIds)
+        """)
+    List<FundAccount> search(
+        @Param("companyId") UUID companyId,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds);
+
+    default List<FundAccount> search(BranchFilter filter) {
+      return search(filter.companyId(), filter.allBranches(), filter.branchIds());
+    }
+
+    /**
+     * Hesap "kullanılmış" mı: hareketi, çeke atanmışlığı (hareket oluşmadan da), ödeme/tahsilatı,
+     * araç gideri, banka ekstresi satırı ya da bir şirketin varsayılan hesabı olması. Silinmişler
+     * dahildir; kullanılmış hesabın şirketi değiştirilemez.
+     */
+    @Query(
+        value =
+            """
+            select exists (select 1 from fund_transaction where fund_account_id = :id)
+                or exists (select 1 from instrument where fund_account_id = :id)
+                or exists (select 1 from settlement where fund_account_id = :id)
+                or exists (select 1 from vehicle_expense where fund_account_id = :id)
+                or exists (select 1 from bank_statement_line where fund_account_id = :id)
+                or exists (select 1 from company where default_fund_account_id = :id)
+            """,
+        nativeQuery = true)
+    boolean isUsed(@Param("id") UUID id);
+
+    /** Hesap, silinmemiş bir şirketin varsayılan banka hesabı mı (silmeyi engeller). */
+    @Query(
+        value =
+            "select exists (select 1 from company where default_fund_account_id = :id"
+                + " and deleted = false)",
+        nativeQuery = true)
+    boolean isCompanyDefault(@Param("id") UUID id);
   }
 
   public interface FundTransactionRepository extends JpaRepository<FundTransaction, UUID> {
@@ -353,8 +503,24 @@ public final class FinanceRepositories {
     @Query("select i from Instrument i where i.id = :id")
     Optional<Instrument> findForUpdate(@Param("id") UUID id);
 
-    @Query("select i from Instrument i where (:status is null or i.status = :status)")
-    Page<Instrument> search(@Param("status") InstrumentStatus status, Pageable pageable);
+    @Query(
+        """
+        select i from Instrument i
+        where (:status is null or i.status = :status)
+          and (:companyId is null or i.companyId = :companyId)
+          and (:allBranches = true or i.branchId in :branchIds)
+        """)
+    Page<Instrument> search(
+        @Param("status") InstrumentStatus status,
+        @Param("companyId") UUID companyId,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds,
+        Pageable pageable);
+
+    default Page<Instrument> search(
+        InstrumentStatus status, BranchFilter filter, Pageable pageable) {
+      return search(status, filter.companyId(), filter.allBranches(), filter.branchIds(), pageable);
+    }
   }
 
   public interface InstrumentMovementRepository extends JpaRepository<InstrumentMovement, UUID> {
@@ -366,34 +532,65 @@ public final class FinanceRepositories {
 
     Optional<Settlement> findByIdempotencyKey(String idempotencyKey);
 
-    Page<Settlement> findByType(SettlementType type, Pageable pageable);
+    @Query(
+        """
+        select s from Settlement s
+        where s.type = :type
+          and (:companyId is null or s.companyId = :companyId)
+          and (:allBranches = true or s.branchId in :branchIds)
+        """)
+    Page<Settlement> search(
+        @Param("type") SettlementType type,
+        @Param("companyId") UUID companyId,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds,
+        Pageable pageable);
+
+    default Page<Settlement> search(SettlementType type, BranchFilter filter, Pageable pageable) {
+      return search(type, filter.companyId(), filter.allBranches(), filter.branchIds(), pageable);
+    }
 
     @Query(
         """
         select s from Settlement s
         where s.type = :type and s.settlementDate = :date
           and s.status = org.ece.blackrose.finance.domain.FinanceTypes.SettlementStatus.POSTED
-          and s.branchId in :branchIds
+          and (:companyId is null or s.companyId = :companyId)
+          and (:allBranches = true or s.branchId in :branchIds)
         order by s.createdAt
         """)
-    List<Settlement> dailyForBranches(
+    List<Settlement> daily(
         @Param("type") SettlementType type,
         @Param("date") LocalDate date,
+        @Param("companyId") UUID companyId,
+        @Param("allBranches") boolean allBranches,
         @Param("branchIds") Collection<UUID> branchIds);
 
-    @Query(
-        """
-        select s from Settlement s
-        where s.type = :type and s.settlementDate = :date
-          and s.status = org.ece.blackrose.finance.domain.FinanceTypes.SettlementStatus.POSTED
-        order by s.createdAt
-        """)
-    List<Settlement> daily(@Param("type") SettlementType type, @Param("date") LocalDate date);
+    default List<Settlement> daily(SettlementType type, LocalDate date, BranchFilter filter) {
+      return daily(type, date, filter.companyId(), filter.allBranches(), filter.branchIds());
+    }
   }
 
   public interface PurchaseInvoiceRepository extends JpaRepository<PurchaseInvoice, UUID> {
 
     Optional<PurchaseInvoice> findByAccountIdAndNumber(UUID accountId, String number);
+
+    @Query(
+        """
+        select i from PurchaseInvoice i
+        where 1 = 1
+          and (:companyId is null or i.companyId = :companyId)
+          and (:allBranches = true or i.branchId in :branchIds)
+        """)
+    Page<PurchaseInvoice> search(
+        @Param("companyId") UUID companyId,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds,
+        Pageable pageable);
+
+    default Page<PurchaseInvoice> search(BranchFilter filter, Pageable pageable) {
+      return search(filter.companyId(), filter.allBranches(), filter.branchIds(), pageable);
+    }
   }
 
   public interface PaymentPlanRepository extends JpaRepository<PaymentPlan, UUID> {
@@ -402,18 +599,92 @@ public final class FinanceRepositories {
     @Query("select p from PaymentPlan p where p.id = :id")
     Optional<PaymentPlan> findForUpdate(@Param("id") UUID id);
 
-    @Query("select p from PaymentPlan p where (:status is null or p.status = :status)")
-    Page<PaymentPlan> search(@Param("status") PlanStatus status, Pageable pageable);
+    @Query(
+        """
+        select p from PaymentPlan p
+        where (:status is null or p.status = :status)
+          and (:companyId is null or p.companyId = :companyId)
+          and (:allBranches = true or p.branchId in :branchIds)
+        """)
+    Page<PaymentPlan> search(
+        @Param("status") PlanStatus status,
+        @Param("companyId") UUID companyId,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds,
+        Pageable pageable);
+
+    default Page<PaymentPlan> search(PlanStatus status, BranchFilter filter, Pageable pageable) {
+      return search(status, filter.companyId(), filter.allBranches(), filter.branchIds(), pageable);
+    }
+
+    /** Kiracı geneli (günlük özet). */
+    default Page<PaymentPlan> search(PlanStatus status, Pageable pageable) {
+      return search(status, BranchFilter.all(null), pageable);
+    }
 
     List<PaymentPlan> findByPurchaseInvoiceId(UUID purchaseInvoiceId);
 
-    List<PaymentPlan> findByStatusInAndDueDateBetween(
-        Collection<PlanStatus> statuses, LocalDate from, LocalDate to);
+    @Query(
+        """
+        select p from PaymentPlan p
+        where p.status in :statuses and p.dueDate between :from and :to
+          and (:companyId is null or p.companyId = :companyId)
+          and (:allBranches = true or p.branchId in :branchIds)
+        """)
+    List<PaymentPlan> dueBetween(
+        @Param("statuses") Collection<PlanStatus> statuses,
+        @Param("from") LocalDate from,
+        @Param("to") LocalDate to,
+        @Param("companyId") UUID companyId,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds);
 
+    default List<PaymentPlan> dueBetween(
+        Collection<PlanStatus> statuses, LocalDate from, LocalDate to, BranchFilter filter) {
+      return dueBetween(
+          statuses, from, to, filter.companyId(), filter.allBranches(), filter.branchIds());
+    }
+
+    @Query(
+        """
+        select p from PaymentPlan p
+        where p.status in :statuses and p.dueDate < :before
+          and (:companyId is null or p.companyId = :companyId)
+          and (:allBranches = true or p.branchId in :branchIds)
+        """)
+    List<PaymentPlan> dueBefore(
+        @Param("statuses") Collection<PlanStatus> statuses,
+        @Param("before") LocalDate before,
+        @Param("companyId") UUID companyId,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds);
+
+    default List<PaymentPlan> dueBefore(
+        Collection<PlanStatus> statuses, LocalDate before, BranchFilter filter) {
+      return dueBefore(
+          statuses, before, filter.companyId(), filter.allBranches(), filter.branchIds());
+    }
+
+    /** Kiracı geneli (günlük özet). */
     List<PaymentPlan> findByStatusInAndDueDateBefore(
         Collection<PlanStatus> statuses, LocalDate before);
 
-    long countByStatus(PlanStatus status);
+    @Query(
+        """
+        select count(p) from PaymentPlan p
+        where p.status = :status
+          and (:companyId is null or p.companyId = :companyId)
+          and (:allBranches = true or p.branchId in :branchIds)
+        """)
+    long countByStatus(
+        @Param("status") PlanStatus status,
+        @Param("companyId") UUID companyId,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds);
+
+    default long countByStatus(PlanStatus status, BranchFilter filter) {
+      return countByStatus(status, filter.companyId(), filter.allBranches(), filter.branchIds());
+    }
   }
 
   public interface PaymentPlanEventRepository extends JpaRepository<PaymentPlanEvent, UUID> {

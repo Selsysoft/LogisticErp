@@ -1,4 +1,5 @@
-import type { BranchTree } from "../branch/branchTree";
+import type { Me } from "../../auth/authStore";
+import { isMultiCompany, type BranchTree } from "../branch/branchTree";
 import { searchKey } from "../searchKey";
 
 /**
@@ -257,8 +258,9 @@ export interface BranchSelectItemsOptions {
 
 /**
  * Şube ağacı → ZtoSelect seçenekleri (MX5 §1.7 Varyant A). Optgroup = şube grubu; ≥2 şirkette etiket
- * "Şirket › Grup". ZTO her iş yerini COALESCE(şube,'Diğer') ile bir gruba koyar
- * (CustomerAccountPaymentController.cs:293-331); grupsuz şubeler "Diğer" optgroup'unda görünür.
+ * "Şirket › Grup" (şubesi olan şirketler sayılır, isMultiCompany). ZTO her iş yerini
+ * COALESCE(şube,'Diğer') ile bir gruba koyar (CustomerAccountPaymentController.cs:293-331); grupsuz
+ * şubeler "Diğer" optgroup'unda görünür.
  * Pasif şubeler (includeInactive) seçilemez.
  */
 export function branchTreeToSelectItems(
@@ -266,7 +268,7 @@ export function branchTreeToSelectItems(
   { allLabel, inactiveSuffix }: BranchSelectItemsOptions,
 ): ZtoSelectItem[] {
   const items: ZtoSelectItem[] = allLabel === undefined ? [] : [{ value: "", label: allLabel }];
-  const multiCompany = tree.length > 1;
+  const multiCompany = isMultiCompany(tree);
   const groups = tree.flatMap((company) =>
     company.groups
       .filter((group) => group.branches.length > 0)
@@ -287,11 +289,11 @@ export function branchTreeToSelectItems(
   return items;
 }
 
-/** Kullanıcının varsayılan şubesi; oturum bilgisinde alan yoksa (12.1a öncesi) undefined. */
-export function readDefaultBranchId(me: unknown): string | undefined {
-  if (me && typeof me === "object" && "defaultBranchId" in me) {
-    const value = (me as { defaultBranchId?: unknown }).defaultBranchId;
-    return typeof value === "string" && value !== "" ? value : undefined;
-  }
-  return undefined;
+/**
+ * Kullanıcının varsayılan şubesi (`Me.defaultBranchId`, 12.1a §5.3). Önbellekteki eski oturum
+ * bilgisinde alan yoksa ya da geçersizse undefined.
+ */
+export function readDefaultBranchId(me: Me | null | undefined): string | undefined {
+  const value: unknown = me?.defaultBranchId;
+  return typeof value === "string" && value !== "" ? value : undefined;
 }

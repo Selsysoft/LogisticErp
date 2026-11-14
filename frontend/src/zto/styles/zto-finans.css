@@ -6,11 +6,18 @@
  * :1114), buttons/select2 temaları en son (:1176, :1192, :1198); Blackrose eki zto-overrides en sonda.
  * Önekten sonra özgüllükler eşit kaldığı için kazananı ZTO'daki gibi bu sıra belirler.
  *
+ * Tanım ekranları (12.1a §6.7): ZTO _Layout.cshtml:31-33 introduction-audit.css → definition-list.css →
+ * definition-form.css'i layout.css ve Bootstrap'tan (:44-47) ÖNCE yükler; eşit özgüllükte Bootstrap
+ * kazanır (ör. Detay düğmesi .btn-sm). Bu yüzden üçü _index.css'te değil, vendor/layout.css'ten önce.
+ *
  * Harici kaynak yok (CSP): ZTO'nun Google Fonts (Open Sans 400/600, Plus Jakarta Sans, JetBrains Mono,
  * Material Icons) ve cdnjs Font Awesome 5.11.2 all.min.js bağlantıları alınmadı. Open Sans @fontsource ile
  * ZtoFinansRoot.tsx'te, Font Awesome 5.15.4 CSS webfont olarak npm'den yüklenir (SVG değiştirici JS yok;
  * ZTO'da JS ile yüklendiği için sırada yeri yok).
  */
+@import "./pages/introduction-audit.css";
+@import "./pages/definition-list.css";
+@import "./pages/definition-form.css";
 @import "./vendor/layout.css";
 @import "./vendor/sb-admin-6.0.0-styles.css";
 @import "./vendor/dataTables.bootstrap4.min.css";

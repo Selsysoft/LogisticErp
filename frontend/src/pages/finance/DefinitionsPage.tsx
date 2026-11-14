@@ -1,9 +1,11 @@
-import { Box, Button, FormControlLabel, Stack, Switch } from "@mui/material";
+import { Box, Button, Chip, FormControlLabel, Link, Stack, Switch } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link as RouterLink } from "react-router-dom";
 import { apiGet, apiRequest } from "../../api/client";
 import { ErrorState } from "../../components/ErrorState";
+import { invalidateOrganization, useBranchGroups } from "../organization/api";
 import {
   DataTable,
   FormDialog,
@@ -14,9 +16,12 @@ import {
   today,
   useBranches,
   useCan,
+  companyIdOf,
+  useCompanyField,
   useCurrencies,
+  useMultiCompany,
 } from "./common";
-import { ExpenseItem, ExpenseType, Rate, Threshold } from "./types";
+import { Branch, ExpenseItem, ExpenseType, Rate, Threshold } from "./types";
 
 export function DefinitionsPage() {
   return (
@@ -34,12 +39,26 @@ function BranchesSection() {
   const { t } = useTranslation();
   const client = useQueryClient();
   const canManage = useCan("BRANCH_MANAGE");
+  const canOpenZto = useCan("FINANCE_VIEW");
   const branches = useBranches();
+  const multiCompany = useMultiCompany();
+  const companyField = useCompanyField(t("finance.definitions.company"));
   const [adding, setAdding] = useState(false);
+  // Grup seçenekleri yalnız ekleme penceresi açıkken okunur (aktif gruplar).
+  const groups = useBranchGroups({ active: true }, adding);
 
   return (
     <Box>
       <SectionHeader title={t("finance.definitions.branches")}>
+        {canOpenZto && (
+          <Link
+            component={RouterLink}
+            to="/zto-finans/tanimlar/is-yerleri"
+            sx={{ alignSelf: "center" }}
+          >
+            {t("finance.definitions.manageInZto")}
+          </Link>
+        )}
         {canManage && (
           <Button variant="contained" onClick={() => setAdding(true)}>
             {t("finance.action.add")}
@@ -54,6 +73,27 @@ function BranchesSection() {
           columns={[
             { header: t("finance.field.code"), render: (branch) => branch.code },
             { header: t("finance.field.name"), render: (branch) => branch.name },
+            {
+              header: t("finance.definitions.branchGroup"),
+              render: (branch) => branch.branchGroupName ?? "—",
+            },
+            ...(multiCompany
+              ? [
+                  {
+                    header: t("finance.definitions.company"),
+                    render: (branch: Branch) => branch.companyName,
+                  },
+                ]
+              : []),
+            {
+              header: t("finance.definitions.status"),
+              render: (branch) =>
+                branch.active === false ? (
+                  <Chip size="small" label={t("finance.definitions.passive")} />
+                ) : (
+                  <Chip size="small" color="success" label={t("finance.definitions.active")} />
+                ),
+            },
           ]}
         />
       )}
@@ -61,14 +101,37 @@ function BranchesSection() {
         <FormDialog
           title={t("finance.definitions.branches")}
           fields={[
-            { name: "code", label: t("finance.field.code"), required: true },
+            {
+              name: "code",
+              label: t("finance.field.code"),
+              helperText: t("finance.definitions.codeOptional"),
+            },
             { name: "name", label: t("finance.field.name"), required: true },
+            ...companyField,
+            {
+              name: "branchGroupId",
+              label: t("finance.definitions.branchGroup"),
+              type: "select",
+              // Grup şirketin grubu olmalı (aksi 422 COMPANY_MISMATCH): seçili şirkete göre süzülür.
+              optionsFrom: (values) =>
+                (groups.data ?? [])
+                  .filter((group) => !values.companyId || group.companyId === values.companyId)
+                  .map((group) => ({ value: group.id, label: group.name })),
+            },
           ]}
           onClose={() => setAdding(false)}
-          onSubmit={(values) => apiRequest("POST", "/organization/branches", values)}
+          onSubmit={(values) =>
+            apiRequest("POST", "/organization/branches", {
+              code: values.code || null,
+              name: values.name,
+              // Grupsuz iş yerinde şirket: seçilen ya da (LIMITED) görünen tek şirket (§6.13).
+              companyId: companyIdOf(values).companyId ?? null,
+              branchGroupId: values.branchGroupId || null,
+            })
+          }
           onSaved={() => {
             setAdding(false);
-            void client.invalidateQueries({ queryKey: ["branches"] });
+            void invalidateOrganization(client);
           }}
         />
       )}

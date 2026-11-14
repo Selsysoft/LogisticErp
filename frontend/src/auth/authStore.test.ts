@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiGet, apiRequest, onSessionExpired, refreshSession } from "../api/client";
+import { queryClient } from "../api/queryClient";
 import { hasPermission, Me, useAuthStore } from "./authStore";
+import { storageKey, useCompanyStore } from "./companyStore";
 import { session } from "./session";
 
 vi.mock("../api/client", async (original) => ({
@@ -113,6 +115,18 @@ describe("bootstrap", () => {
   });
 });
 
+describe("bootstrap — kullanıcı okunamaz", () => {
+  it("yenileme sonrası kullanıcı okunamaz ve saklı kullanıcı yoksa anonim açılır", async () => {
+    session.setAccessToken("eski");
+    refresh.mockResolvedValue("ok");
+    get.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await useAuthStore.getState().bootstrap();
+
+    expect(useAuthStore.getState()).toMatchObject({ status: "anonymous", me: null });
+  });
+});
+
 describe("login ve logout", () => {
   it("firma kodunu küçültüp saklar, token'ı alır, kullanıcıyı yükler", async () => {
     request.mockResolvedValue({ accessToken: "erisim", refreshToken: null, expiresInSeconds: 900 });
@@ -168,6 +182,85 @@ describe("login ve logout", () => {
 
     expect(useAuthStore.getState()).toMatchObject({ status: "anonymous", me: null });
     expect(rememberedMe()).toBeNull();
+  });
+});
+
+describe("aktif şirket ve sorgu önbelleği (12.1a)", () => {
+  const MULTI: Me = {
+    ...ME,
+    branchScope: "LIMITED",
+    allowedBranchIds: ["b1"],
+    defaultBranchId: "b1",
+    companies: [
+      { id: "c1", code: "A", shortName: "A", title: "A AŞ", defaultCompany: true, active: true },
+      { id: "c2", code: "B", shortName: "B", title: "B AŞ", defaultCompany: false, active: true },
+    ],
+  };
+
+  beforeEach(() => {
+    useCompanyStore.getState().clear();
+    queryClient.clear();
+  });
+
+  it("kullanıcı yüklenince saklı aktif şirket seçimi geri gelir; yeni alanlar korunur", async () => {
+    storage.set(storageKey("acme", "u1"), "c2");
+    get.mockResolvedValue(MULTI);
+
+    await useAuthStore.getState().reloadMe();
+
+    expect(useAuthStore.getState().me).toEqual(MULTI);
+    expect(useCompanyStore.getState().activeCompanyId).toBe("c2");
+  });
+
+  it("giriş sonrası tek şirketli kiracıda seçim konsolidedir", async () => {
+    storage.set(storageKey("acme", "u1"), "c2");
+    request.mockResolvedValue({ accessToken: "erisim", refreshToken: null, expiresInSeconds: 900 });
+    get.mockResolvedValue({ ...MULTI, companies: [MULTI.companies![0]] });
+
+    await useAuthStore.getState().login({ email: "ali@acme.test", password: "sifre" });
+
+    expect(useCompanyStore.getState().activeCompanyId).toBeNull();
+  });
+
+  it("çevrimdışı açılışta saklı kullanıcının şirket seçimi kurulur", async () => {
+    session.setAccessToken("eski");
+    storage.set("blackrose.me", JSON.stringify(MULTI));
+    storage.set(storageKey("acme", "u1"), "c1");
+    refresh.mockResolvedValue("unreachable");
+
+    await useAuthStore.getState().bootstrap();
+
+    expect(useCompanyStore.getState().activeCompanyId).toBe("c1");
+  });
+
+  it("çıkışta aktif şirket bellekten, sorgu önbelleği tümüyle silinir; tercih saklı kalır", async () => {
+    storage.set(storageKey("acme", "u1"), "c2");
+    get.mockResolvedValue(MULTI);
+    await useAuthStore.getState().reloadMe();
+    queryClient.setQueryData(["branch-tree", "acme", "u1"], []);
+    request.mockResolvedValue(undefined);
+
+    await useAuthStore.getState().logout();
+
+    expect(useCompanyStore.getState().activeCompanyId).toBeNull();
+    expect(queryClient.getQueryData(["branch-tree", "acme", "u1"])).toBeUndefined();
+    expect(storage.get(storageKey("acme", "u1"))).toBe("c2");
+  });
+
+  it("oturum düşünce ve yenileme reddedilince de önbellek temizlenir", async () => {
+    useCompanyStore.setState({ activeCompanyId: "c2" });
+    queryClient.setQueryData(["funds"], []);
+    sessionExpired();
+    expect(useCompanyStore.getState().activeCompanyId).toBeNull();
+    expect(queryClient.getQueryData(["funds"])).toBeUndefined();
+
+    useCompanyStore.setState({ activeCompanyId: "c2" });
+    queryClient.setQueryData(["funds"], []);
+    session.setAccessToken("eski");
+    refresh.mockResolvedValue("rejected");
+    await useAuthStore.getState().bootstrap();
+    expect(useCompanyStore.getState().activeCompanyId).toBeNull();
+    expect(queryClient.getQueryData(["funds"])).toBeUndefined();
   });
 });
 

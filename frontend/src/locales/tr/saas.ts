@@ -98,6 +98,12 @@ export default {
     USERS: "Kullanıcı",
     VEHICLES: "Araç",
     SHIPMENTS_MONTH: "Aylık sefer",
+    COMPANIES: "Şirket",
+    BRANCHES: "İş yeri",
+  },
+  plan: {
+    maxCompanies: "En çok şirket",
+    maxBranches: "En çok iş yeri",
   },
   dependencyState: {
     UP: "Çalışıyor",

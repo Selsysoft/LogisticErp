@@ -26,6 +26,7 @@ public class WarehouseInvoice extends AuditableEntity {
   private UUID contractId;
   private UUID accountId;
   private UUID branchId;
+  private UUID companyId;
   private LocalDate periodFrom;
   private LocalDate periodTo;
   private LocalDate invoiceDate;
@@ -48,6 +49,7 @@ public class WarehouseInvoice extends AuditableEntity {
       String number,
       WarehouseContract contract,
       UUID branchId,
+      UUID companyId,
       LocalDate periodFrom,
       LocalDate periodTo,
       LocalDate invoiceDate,
@@ -59,6 +61,7 @@ public class WarehouseInvoice extends AuditableEntity {
     this.contractId = contract.getId();
     this.accountId = contract.getAccountId();
     this.branchId = branchId;
+    this.companyId = companyId;
     this.periodFrom = periodFrom;
     this.periodTo = periodTo;
     this.invoiceDate = invoiceDate;
@@ -144,5 +147,9 @@ public class WarehouseInvoice extends AuditableEntity {
 
   public WarehouseInvoiceStatus getStatus() {
     return status;
+  }
+
+  public UUID getCompanyId() {
+    return companyId;
   }
 }

@@ -17,12 +17,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 class TenantProvisioningIT extends AbstractIntegrationTest {
 
   @MockitoSpyBean TenantMigrator migrator;
   @Autowired TenantRepository tenants;
+  @Autowired JdbcTemplate jdbc;
 
   @AfterEach
   void restoreMigrator() {
@@ -38,6 +40,28 @@ class TenantProvisioningIT extends AbstractIntegrationTest {
     mvc.perform(get("/api/v1/organization/branches").with(asOwner("gamma-lojistik")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalElements").value(0));
+
+    // Faz 12.1a: yeni kiracıda varsayılan şirket kiracının adıyla, serileri ve e-belge ayarıyla
+    // açılır.
+    String schema = tenants.findByCode("gamma-lojistik").orElseThrow().getSchemaName();
+    var company =
+        jdbc.queryForMap("select * from \"%s\".company where not deleted".formatted(schema));
+    assertThat(company.get("is_default")).isEqualTo(true);
+    assertThat(company.get("active")).isEqualTo(true);
+    assertThat(company.get("title")).isEqualTo("gamma-lojistik Lojistik");
+    assertThat(company.get("tax_number")).isNull();
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from \"%s\".document_series where company_id = ?"
+                    .formatted(schema),
+                Long.class,
+                company.get("id")))
+        .isEqualTo(2);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from \"%s\".company_edocument_settings".formatted(schema),
+                Long.class))
+        .isEqualTo(1);
   }
 
   @Test

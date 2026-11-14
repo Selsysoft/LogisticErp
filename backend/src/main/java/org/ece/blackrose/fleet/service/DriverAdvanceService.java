@@ -12,6 +12,7 @@ import org.ece.blackrose.finance.web.FinanceDtos.SettlementRequest;
 import org.ece.blackrose.fleet.domain.Driver;
 import org.ece.blackrose.fleet.repository.FleetRepositories.DriverRepository;
 import org.ece.blackrose.fleet.web.FleetDtos.DriverAdvanceRequest;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,9 +24,14 @@ public class DriverAdvanceService {
   private final DriverRepository drivers;
   private final FundAccountRepository funds;
   private final SettlementService settlements;
+  private final BranchScopeService scope;
 
   public DriverAdvanceService(
-      DriverRepository drivers, FundAccountRepository funds, SettlementService settlements) {
+      DriverRepository drivers,
+      FundAccountRepository funds,
+      SettlementService settlements,
+      BranchScopeService scope) {
+    this.scope = scope;
     this.drivers = drivers;
     this.funds = funds;
     this.settlements = settlements;
@@ -41,6 +47,7 @@ public class DriverAdvanceService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "DRIVER_NOT_FOUND", "Sürücü bulunamadı."));
+    scope.requireVisible(driver.getBranchId());
     FundAccount fund =
         funds
             .findById(request.fundAccountId())

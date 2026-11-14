@@ -17,6 +17,17 @@ export interface User {
   roles: Role[];
   /** Bu adrese giden son e-posta teslim edilemediyse dolu; sonraki başarılı teslimde kalkar. */
   mailIssue: MailIssue | null;
+  /** İş yeri kapsamı (12.1a §5.2); liste "Tümü"/"Sınırlı" gösterir. */
+  branchScope: BranchScopeValue;
+}
+
+export type BranchScopeValue = "ALL" | "LIMITED";
+
+/** Şema `UserBranchScopeResponse` (12.1a §5.2); ALL'da `branchIds` boştur. */
+export interface UserBranchScope {
+  scope: BranchScopeValue;
+  branchIds: string[];
+  defaultBranchId: string | null;
 }
 
 export interface MailIssue {

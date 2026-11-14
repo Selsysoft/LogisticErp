@@ -22,6 +22,7 @@ public class FreightInvoice extends AuditableEntity {
   private UUID shipmentId;
   private UUID accountId;
   private UUID branchId;
+  private UUID companyId;
   private LocalDate invoiceDate;
   private LocalDate dueDate;
   private String currency;
@@ -39,6 +40,7 @@ public class FreightInvoice extends AuditableEntity {
   public FreightInvoice(
       String number,
       Shipment shipment,
+      UUID companyId,
       LocalDate invoiceDate,
       LocalDate dueDate,
       BigDecimal netTl) {
@@ -47,6 +49,7 @@ public class FreightInvoice extends AuditableEntity {
     this.shipmentId = shipment.getId();
     this.accountId = shipment.getAccountId();
     this.branchId = shipment.getBranchId();
+    this.companyId = companyId;
     this.invoiceDate = invoiceDate;
     this.dueDate = dueDate;
     this.currency = shipment.getTotal().currency();
@@ -112,5 +115,9 @@ public class FreightInvoice extends AuditableEntity {
 
   public InvoiceStatus getStatus() {
     return status;
+  }
+
+  public UUID getCompanyId() {
+    return companyId;
   }
 }

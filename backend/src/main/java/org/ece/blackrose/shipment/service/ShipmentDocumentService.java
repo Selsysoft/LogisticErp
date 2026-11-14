@@ -8,6 +8,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.ece.blackrose.common.error.BusinessException;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyIdentityService;
 import org.ece.blackrose.shipment.domain.ProofOfDelivery;
 import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.domain.ShipmentDocument;
@@ -25,8 +27,6 @@ import org.ece.blackrose.shipment.web.ShipmentDtos.DocumentResponse;
 import org.ece.blackrose.shipment.web.ShipmentDtos.LegResponse;
 import org.ece.blackrose.shipment.web.ShipmentDtos.SavePodRequest;
 import org.ece.blackrose.tenant.TenantClock;
-import org.ece.blackrose.tenant.TenantContext;
-import org.ece.blackrose.tenant.repository.TenantRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,8 +46,9 @@ public class ShipmentDocumentService {
   private final ShipmentCargoRepository cargo;
   private final ProofOfDeliveryRepository pods;
   private final ShipmentViews views;
-  private final TenantRepository tenants;
+  private final CompanyIdentityService identities;
   private final TenantClock clock;
+  private final BranchScopeService scope;
 
   public ShipmentDocumentService(
       ShipmentDocumentRepository documents,
@@ -56,20 +57,23 @@ public class ShipmentDocumentService {
       ShipmentCargoRepository cargo,
       ProofOfDeliveryRepository pods,
       ShipmentViews views,
-      TenantRepository tenants,
-      TenantClock clock) {
+      CompanyIdentityService identities,
+      TenantClock clock,
+      BranchScopeService scope) {
+    this.scope = scope;
     this.documents = documents;
     this.shipments = shipments;
     this.legs = legs;
     this.cargo = cargo;
     this.pods = pods;
     this.views = views;
-    this.tenants = tenants;
+    this.identities = identities;
     this.clock = clock;
   }
 
   @Transactional(readOnly = true)
   public List<DocumentResponse> list(UUID shipmentId) {
+    requireVisible(shipmentId);
     return documents.findByShipmentIdOrderByType(shipmentId).stream()
         .map(this::toResponse)
         .toList();
@@ -124,6 +128,7 @@ public class ShipmentDocumentService {
   public ProofOfDelivery savePod(UUID shipmentId, SavePodRequest request) {
     Shipment shipment =
         shipments.findForUpdate(shipmentId).orElseThrow(ShipmentDocumentService::notFound);
+    scope.requireVisible(shipment.getBranchId());
     if (!POD_ALLOWED.contains(shipment.getStatus())) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "POD_NOT_ALLOWED", "Teslim kanıtı yalnız yoldaki sefere girilir.");
@@ -136,6 +141,7 @@ public class ShipmentDocumentService {
 
   @Transactional(readOnly = true)
   public ProofOfDelivery pod(UUID shipmentId) {
+    requireVisible(shipmentId);
     return pods.findByShipmentId(shipmentId).orElse(null);
   }
 
@@ -149,8 +155,7 @@ public class ShipmentDocumentService {
             .map(CargoResponse::weightKg)
             .filter(Objects::nonNull)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-    String company =
-        tenants.findByCode(TenantContext.currentCode().orElseThrow()).orElseThrow().getName();
+    String company = identities.ofBranch(shipment.getBranchId()).title();
     Map<Boolean, List<LegResponse>> split =
         legResponses.stream()
             .collect(Collectors.partitioningBy(leg -> leg.carrierAccountId() != null));
@@ -217,16 +222,28 @@ public class ShipmentDocumentService {
   }
 
   private Shipment find(UUID id) {
-    return shipments.findById(id).orElseThrow(ShipmentDocumentService::notFound);
+    Shipment shipment = shipments.findById(id).orElseThrow(ShipmentDocumentService::notFound);
+    scope.requireVisible(shipment.getBranchId());
+    return shipment;
   }
 
   private ShipmentDocument findDocument(UUID id) {
-    return documents
-        .findById(id)
-        .orElseThrow(
-            () ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "DOCUMENT_NOT_FOUND", "Belge bulunamadı."));
+    ShipmentDocument document =
+        documents
+            .findById(id)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "DOCUMENT_NOT_FOUND", "Belge bulunamadı."));
+    requireVisible(document.getShipmentId());
+    return document;
+  }
+
+  /** Sefer varsa kapsamı denetlenir (yoksa eski davranış: boş sonuç ya da kendi 404'ü). */
+  private void requireVisible(UUID shipmentId) {
+    shipments
+        .findById(shipmentId)
+        .ifPresent(shipment -> scope.requireVisible(shipment.getBranchId()));
   }
 
   private static BusinessException notFound() {

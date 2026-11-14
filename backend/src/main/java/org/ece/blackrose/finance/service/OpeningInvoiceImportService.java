@@ -35,6 +35,8 @@ import org.ece.blackrose.integration.service.CsvRows;
 import org.ece.blackrose.integration.service.CsvRows.Line;
 import org.ece.blackrose.integration.service.CsvRows.RowException;
 import org.ece.blackrose.organization.BranchRepository;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyResolver;
 import org.ece.blackrose.tenant.TenantClock;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -96,6 +98,8 @@ public class OpeningInvoiceImportService {
   private final PaymentPlanService planService;
   private final TenantClock clock;
   private final AuditService audit;
+  private final CompanyResolver companies;
+  private final BranchScopeService scope;
 
   public OpeningInvoiceImportService(
       AccountRepository accounts,
@@ -108,7 +112,11 @@ public class OpeningInvoiceImportService {
       LedgerService ledger,
       PaymentPlanService planService,
       TenantClock clock,
-      AuditService audit) {
+      AuditService audit,
+      CompanyResolver companies,
+      BranchScopeService scope) {
+    this.scope = scope;
+    this.companies = companies;
     this.accounts = accounts;
     this.transactions = transactions;
     this.invoices = invoices;
@@ -136,6 +144,7 @@ public class OpeningInvoiceImportService {
           "OPENING_INVOICE_INVALID",
           "Dosyada hatalı satır var; önizlemedeki hataları düzeltip yeniden yükleyin.");
     }
+    UUID companyId = companies.companyOf(branchId);
     for (Parsed p : parsed) {
       Row row = p.row();
       Money money = new Money(row.amount(), row.currency());
@@ -144,6 +153,7 @@ public class OpeningInvoiceImportService {
               new OpeningInvoice(
                   p.account().getId(),
                   branchId,
+                  companyId,
                   row.kind(),
                   row.number(),
                   row.invoiceDate(),
@@ -211,6 +221,10 @@ public class OpeningInvoiceImportService {
     if (branchId == null || !branches.existsById(branchId)) {
       throw new BusinessException(HttpStatus.BAD_REQUEST, "BRANCH_INVALID", "Şube seçilmelidir.");
     }
+    // Kullanıcının seçtiği iş yeri: kapsamda (403) ve aktif (422) olmalı.
+    scope.requireNew(branchId);
+    // Devir şirket bazındadır: aynı numara ve açılış başka şirkette serbesttir.
+    UUID companyId = companies.companyOf(branchId);
     Columns columns = columns(CsvRows.header(content));
     List<Line> lines = CsvRows.parse(content);
     if (lines.isEmpty()) {
@@ -228,7 +242,7 @@ public class OpeningInvoiceImportService {
     List<Parsed> parsed = new ArrayList<>();
     for (Line line : lines) {
       try {
-        parsed.add(parse(line, columns, today, seen));
+        parsed.add(parse(line, columns, today, seen, companyId));
       } catch (RowException | BusinessException ex) {
         parsed.add(
             new Parsed(
@@ -251,7 +265,8 @@ public class OpeningInvoiceImportService {
     return parsed;
   }
 
-  private Parsed parse(Line line, Columns columns, LocalDate today, Set<String> seen) {
+  private Parsed parse(
+      Line line, Columns columns, LocalDate today, Set<String> seen, UUID companyId) {
     String code = line.required(columns.account(), "Cari kodu");
     Account account =
         accounts
@@ -308,11 +323,11 @@ public class OpeningInvoiceImportService {
     if (!seen.add(code + "|" + number)) {
       throw new RowException("Aynı cari ve belge no dosyada iki kez var.");
     }
-    if (invoices.existsByAccountIdAndNumberAndStatus(
-        account.getId(), number, OpeningInvoice.Status.OPEN)) {
+    if (invoices.existsByAccountIdAndCompanyIdAndNumberAndStatus(
+        account.getId(), companyId, number, OpeningInvoice.Status.OPEN)) {
       throw new RowException("Bu belge zaten yüklenmiş: " + number);
     }
-    if (transactions.hasActiveOpening(account.getId(), currency)) {
+    if (transactions.hasActiveOpening(account.getId(), companyId, currency)) {
       throw new RowException(
           code
               + " için "

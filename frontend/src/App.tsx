@@ -6,6 +6,7 @@ import { LandingRedirect, RequireAuth, RequirePermission } from "./auth/guards";
 import { AppShell, MODULE_ITEMS } from "./components/AppShell";
 import { EmptyState } from "./components/EmptyState";
 import { lazyPage, PageLoading } from "./components/lazyPage";
+import { ZtoRequirePermission } from "./zto/components/ZtoRequirePermission";
 import { CustomsLayout } from "./pages/customs/CustomsLayout";
 import { CrmLayout } from "./pages/crm/CrmLayout";
 import { FinanceLayout } from "./pages/finance/FinanceLayout";
@@ -185,6 +186,31 @@ const ZtoAllTransactionsPage = lazyPage(
   () => import("./zto/finans/pages/AllTransactionsPlaceholderPage"),
   "AllTransactionsPlaceholderPage",
 );
+// ZTO tanım ekranları (12.1a §6.6): İş Yerleri, Şubeler, Şirketler.
+const ZtoWorkPlacesPage = lazyPage(
+  () => import("./zto/finans/pages/definitions/WorkPlacesPage"),
+  "WorkPlacesPage",
+);
+const ZtoWorkPlaceFormPage = lazyPage(
+  () => import("./zto/finans/pages/definitions/WorkPlaceFormPage"),
+  "WorkPlaceFormPage",
+);
+const ZtoBranchGroupsPage = lazyPage(
+  () => import("./zto/finans/pages/definitions/BranchGroupsPage"),
+  "BranchGroupsPage",
+);
+const ZtoBranchGroupFormPage = lazyPage(
+  () => import("./zto/finans/pages/definitions/BranchGroupFormPage"),
+  "BranchGroupFormPage",
+);
+const ZtoCompaniesPage = lazyPage(
+  () => import("./zto/finans/pages/definitions/CompaniesPage"),
+  "CompaniesPage",
+);
+const ZtoCompanyFormPage = lazyPage(
+  () => import("./zto/finans/pages/definitions/CompanyFormPage"),
+  "CompanyFormPage",
+);
 // Bileşen vitrini yalnız geliştirme ortamında; üretim paketine girmez.
 const ZtoShowcasePage = import.meta.env.DEV
   ? lazyPage(() => import("./zto/finans/pages/ShowcasePage"), "ShowcasePage")
@@ -259,6 +285,78 @@ export function App() {
             >
               <Route index element={<Navigate to="cari-hareketler" replace />} />
               <Route path="cari-hareketler" element={<ZtoAllTransactionsPage />} />
+              <Route
+                path="tanimlar/is-yerleri"
+                element={
+                  <ZtoRequirePermission permission="BRANCH_VIEW">
+                    <ZtoWorkPlacesPage />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="tanimlar/is-yerleri/yeni"
+                element={
+                  <ZtoRequirePermission permission="BRANCH_MANAGE">
+                    <ZtoWorkPlaceFormPage mode="add" />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="tanimlar/is-yerleri/:id"
+                element={
+                  <ZtoRequirePermission permission="BRANCH_MANAGE">
+                    <ZtoWorkPlaceFormPage mode="edit" />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="tanimlar/subeler"
+                element={
+                  <ZtoRequirePermission permission="BRANCH_VIEW">
+                    <ZtoBranchGroupsPage />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="tanimlar/subeler/yeni"
+                element={
+                  <ZtoRequirePermission permission="BRANCH_MANAGE">
+                    <ZtoBranchGroupFormPage mode="add" />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="tanimlar/subeler/:id"
+                element={
+                  <ZtoRequirePermission permission="BRANCH_MANAGE">
+                    <ZtoBranchGroupFormPage mode="edit" />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="tanimlar/sirketler"
+                element={
+                  <ZtoRequirePermission permission="BRANCH_VIEW">
+                    <ZtoCompaniesPage />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="tanimlar/sirketler/yeni"
+                element={
+                  <ZtoRequirePermission permission="COMPANY_MANAGE">
+                    <ZtoCompanyFormPage mode="add" />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="tanimlar/sirketler/:id"
+                element={
+                  <ZtoRequirePermission permission="COMPANY_MANAGE">
+                    <ZtoCompanyFormPage mode="edit" />
+                  </ZtoRequirePermission>
+                }
+              />
               {ZtoShowcasePage && <Route path="vitrin" element={<ZtoShowcasePage />} />}
             </Route>
             <Route

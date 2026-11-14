@@ -1,0 +1,27 @@
+// ztoFinans ad alanı: İş Yerleri (ZTO WorkPlace/Index, Add, Edit; 12.1a §6.9–§6.10).
+export default {
+  title: "İş Yerleri",
+  listTitle: "İş Yerleri Listesi",
+  crumb: "İş Yeri",
+  addTitle: "Yeni İş Yeri",
+  editTitle: "İş Yeri Düzenle",
+  name: "Ad",
+  phone: "Telefon Numarası",
+  address: "Adres",
+  location: "Konum",
+  locationColumn: "Lokasyon",
+  mapsTitle: "Google Haritalar'da Görüntüle",
+  showOnMap: "Haritada Göster",
+  group: "Şube",
+  code: "Kod",
+  create: "Yeni İş Yeri Oluştur",
+  creating: "Yeni İş Yeri Oluşturuluyor",
+  created: "İş yeri oluşturuldu.",
+  updated: "İş yeri güncellendi.",
+  deactivated: "İş yeri pasifleştirildi.",
+  activated: "İş yeri aktifleştirildi.",
+  phoneInvalid: "Telefon numarası en çok 11 rakam olmalıdır.",
+  locationInvalid: 'Konum "enlem,boylam" biçiminde olmalıdır.',
+  // Blackrose eki: detay modalı başlığı (ZTO DefinitionAuditRegistry varlık adı)
+  entityTitle: "İş Yeri",
+} as const;

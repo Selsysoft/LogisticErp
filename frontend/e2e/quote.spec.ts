@@ -6,7 +6,8 @@ test("teklif hazırlanır, kabul edilir ve kabul edilen satırdan fiyatıyla sef
 }) => {
   test.setTimeout(90_000);
   const owner = await Owner.login(tenantState());
-  await owner.branch();
+  const branchName = `Merkez ${unique("")}`;
+  await owner.branch(branchName);
   const customerName = `Teklif Müşterisi ${unique("")}`;
   await owner.account("CUSTOMER", customerName);
 
@@ -49,7 +50,7 @@ test("teklif hazırlanır, kabul edilir ve kabul edilen satırdan fiyatıyla sef
   await shipment.getByRole("combobox", { name: /^Müşteri/ }).click();
   await page.getByRole("option", { name: customerName, exact: true }).click();
   await shipment.getByRole("combobox", { name: /^Şube/ }).click();
-  await page.getByRole("option").first().click();
+  await page.getByRole("option", { name: new RegExp(`${branchName}$`) }).click();
   await shipment.getByLabel(/^Çıkış/).fill("İzmir");
   await shipment.getByLabel(/^Varış/).fill("Bursa");
   await shipment.getByRole("combobox", { name: /^Kabul edilmiş teklif satırı/ }).click();

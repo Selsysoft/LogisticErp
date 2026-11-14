@@ -10,14 +10,17 @@ import org.ece.blackrose.common.web.PageResponse;
 import org.ece.blackrose.identity.domain.Permission;
 import org.ece.blackrose.identity.repository.IdentityRepositories.AuditLogRepository;
 import org.ece.blackrose.identity.service.RoleService;
+import org.ece.blackrose.identity.service.UserBranchScopeService;
 import org.ece.blackrose.identity.service.UserService;
 import org.ece.blackrose.identity.web.IdentityDtos.AuditLogResponse;
+import org.ece.blackrose.identity.web.IdentityDtos.BranchScopeRequest;
 import org.ece.blackrose.identity.web.IdentityDtos.InviteUserRequest;
 import org.ece.blackrose.identity.web.IdentityDtos.MailIssueResponse;
 import org.ece.blackrose.identity.web.IdentityDtos.PermissionResponse;
 import org.ece.blackrose.identity.web.IdentityDtos.RoleResponse;
 import org.ece.blackrose.identity.web.IdentityDtos.SaveRoleRequest;
 import org.ece.blackrose.identity.web.IdentityDtos.UpdateUserRequest;
+import org.ece.blackrose.identity.web.IdentityDtos.UserBranchScopeResponse;
 import org.ece.blackrose.identity.web.IdentityDtos.UserResponse;
 import org.ece.blackrose.notification.mail.MailEventService;
 import org.ece.blackrose.tenant.TenantContext;
@@ -45,13 +48,16 @@ public class IdentityAdminController {
   private final AuditLogRepository auditLogs;
   private final IdentityMapper mapper;
   private final MailEventService mailEvents;
+  private final UserBranchScopeService branchScopes;
 
   public IdentityAdminController(
       UserService users,
       RoleService roles,
       AuditLogRepository auditLogs,
       IdentityMapper mapper,
-      MailEventService mailEvents) {
+      MailEventService mailEvents,
+      UserBranchScopeService branchScopes) {
+    this.branchScopes = branchScopes;
     this.users = users;
     this.roles = roles;
     this.auditLogs = auditLogs;
@@ -93,7 +99,8 @@ public class IdentityAdminController {
                       user.twoFactorEnabled(),
                       user.roles(),
                       new MailIssueResponse(
-                          issue.type().name(), issue.detail(), issue.occurredAt()));
+                          issue.type().name(), issue.detail(), issue.occurredAt()),
+                      user.branchScope());
             })
         .toList();
   }
@@ -123,6 +130,19 @@ public class IdentityAdminController {
   @PreAuthorize("hasAuthority('USER_MANAGE')")
   void resendInvite(@PathVariable UUID id) {
     users.resendInvite(id);
+  }
+
+  @GetMapping("/users/{id}/branch-scope")
+  @PreAuthorize("hasAuthority('USER_VIEW')")
+  UserBranchScopeResponse getBranchScope(@PathVariable UUID id) {
+    return branchScopes.get(id);
+  }
+
+  @PutMapping("/users/{id}/branch-scope")
+  @PreAuthorize("hasAuthority('USER_MANAGE')")
+  UserBranchScopeResponse updateBranchScope(
+      @PathVariable UUID id, @Valid @RequestBody BranchScopeRequest request) {
+    return branchScopes.update(id, request);
   }
 
   @GetMapping("/roles")

@@ -783,3 +783,83 @@ describe("ZtoDataTable sunucu taraflı", () => {
     expect(onStateChange).toHaveBeenLastCalledWith(expect.objectContaining({ search: "x" }));
   });
 });
+
+describe("ZtoDataTable tanım listesi seçenekleri (12.1a)", () => {
+  it("searchPlaceholder arama kutusunun placeholder ve aria-label'ı; lengthAriaLabel", () => {
+    const { container } = render(
+      <ZtoDataTable
+        columns={columns}
+        data={makeRows(3)}
+        searchPlaceholder="Listede ara..."
+        lengthAriaLabel="Sayfadaki kayıt sayısı"
+      />,
+    );
+    const search = container.querySelector(".dataTables_filter input") as HTMLInputElement;
+    expect(search.placeholder).toBe("Listede ara...");
+    expect(search.getAttribute("aria-label")).toBe("Listede ara...");
+    const length = container.querySelector(".dataTables_length select") as HTMLSelectElement;
+    expect(length.getAttribute("aria-label")).toBe("Sayfadaki kayıt sayısı");
+  });
+
+  it("varsayılanlar bugünkü gibi: boş placeholder, aria-label ve data-label yok", () => {
+    const { container } = render(<ZtoDataTable columns={columns} data={makeRows(2)} />);
+    const search = container.querySelector(".dataTables_filter input") as HTMLInputElement;
+    expect(search.placeholder).toBe("");
+    expect(search.hasAttribute("aria-label")).toBe(false);
+    expect(container.querySelector(".dataTables_length select")?.hasAttribute("aria-label")).toBe(
+      false,
+    );
+    expect(container.querySelector("td[data-label]")).toBeNull();
+  });
+
+  it("cellDataLabel: her gövde td'si başlık metnini taşır (JSX başlıkta exportHeader, yoksa id)", () => {
+    const labelled = [
+      ...columns.slice(0, 4),
+      helper.display({
+        id: "islem",
+        header: () => <i className="fa fa-cog" />,
+        meta: { exportHeader: "İşlemler" },
+        cell: () => "…",
+      }),
+      helper.display({ id: "kimlik", header: () => <b>x</b>, cell: () => "-" }),
+    ];
+    const { container } = render(
+      <ZtoDataTable
+        columns={labelled}
+        data={makeRows(2)}
+        cellDataLabel
+        tableDataAttributes={{ "data-definition-density": "grouped" }}
+      />,
+    );
+    const firstRow = container.querySelector("tbody tr") as HTMLTableRowElement;
+    expect(Array.from(firstRow.cells, (td) => td.getAttribute("data-label"))).toEqual([
+      "No",
+      "Cari",
+      "Tutar",
+      "Şehir",
+      "İşlemler",
+      "kimlik",
+    ]);
+    expect(container.querySelector("table")?.getAttribute("data-definition-density")).toBe(
+      "grouped",
+    );
+  });
+
+  it("meta.cellClassName yalnız td'ye; meta.className th ve td'ye", () => {
+    const withCell = [
+      helper.accessor("name", {
+        header: "Cari",
+        meta: { className: "ortak", cellClassName: "yalniz-td", headerClassName: "yalniz-th" },
+      }),
+    ];
+    const { container } = render(<ZtoDataTable columns={withCell} data={makeRows(1)} />);
+    const th = container.querySelector("thead th") as HTMLElement;
+    const td = container.querySelector("tbody td") as HTMLElement;
+    expect(th.classList.contains("ortak")).toBe(true);
+    expect(th.classList.contains("yalniz-th")).toBe(true);
+    expect(th.classList.contains("yalniz-td")).toBe(false);
+    expect(td.classList.contains("ortak")).toBe(true);
+    expect(td.classList.contains("yalniz-td")).toBe(true);
+    expect(td.classList.contains("yalniz-th")).toBe(false);
+  });
+});

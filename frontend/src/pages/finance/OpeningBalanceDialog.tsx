@@ -16,7 +16,7 @@ import { ChangeEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiUpload } from "../../api/client";
 import { ErrorState } from "../../components/ErrorState";
-import { DataTable, formatAmount, today, useBranches } from "./common";
+import { DataTable, formatAmount, today, useBranchOptions } from "./common";
 import { OPENING_BALANCE_SAMPLE, downloadCsv } from "../importSamples";
 
 type RowStatus = "NEW_ACCOUNT" | "EXISTING_ACCOUNT" | "ZERO" | "ERROR";
@@ -62,7 +62,7 @@ export function OpeningBalanceDialog({
   onImported: () => void;
 }) {
   const { t } = useTranslation();
-  const branches = useBranches();
+  const { optionsFor } = useBranchOptions();
   const [branchId, setBranchId] = useState("");
   const [date, setDate] = useState(today());
   const [file, setFile] = useState<File | null>(null);
@@ -116,9 +116,9 @@ export function OpeningBalanceDialog({
               }}
               sx={{ minWidth: 200 }}
             >
-              {(branches.data ?? []).map((branch) => (
-                <MenuItem key={branch.id} value={branch.id}>
-                  {branch.name}
+              {optionsFor().map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
                 </MenuItem>
               ))}
             </TextField>

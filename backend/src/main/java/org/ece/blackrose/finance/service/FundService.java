@@ -25,6 +25,8 @@ import org.ece.blackrose.finance.web.FinanceDtos.StatementResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.TransferRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.TransferResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.UpdateFundRequest;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyResolver;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -39,19 +41,25 @@ public class FundService {
   private final FundAccountRepository funds;
   private final FundTransactionRepository transactions;
   private final FundLedgerService ledger;
+  private final CompanyResolver companies;
+  private final BranchScopeService scope;
 
   public FundService(
       FundAccountRepository funds,
       FundTransactionRepository transactions,
-      FundLedgerService ledger) {
+      FundLedgerService ledger,
+      CompanyResolver companies,
+      BranchScopeService scope) {
+    this.scope = scope;
     this.funds = funds;
     this.transactions = transactions;
     this.ledger = ledger;
+    this.companies = companies;
   }
 
   @Transactional(readOnly = true)
-  public List<FundResponse> list() {
-    List<FundAccount> all = funds.findAll();
+  public List<FundResponse> list(UUID companyId) {
+    List<FundAccount> all = funds.search(scope.filter(companyId, null));
     Map<UUID, BigDecimal> balances = balances(all.stream().map(FundAccount::getId).toList());
     return all.stream()
         .map(fund -> toResponse(fund, balances.getOrDefault(fund.getId(), BigDecimal.ZERO)))
@@ -65,6 +73,7 @@ public class FundService {
           HttpStatus.CONFLICT, "FUND_CODE_TAKEN", "Bu hesap kodu kullanımda.");
     }
     String currency = Currency.getInstance(request.currency()).getCurrencyCode();
+    UUID companyId = companies.companyOf(request.branchId());
     FundAccount fund =
         funds.save(
             new FundAccount(
@@ -73,6 +82,7 @@ public class FundService {
                 request.kind(),
                 currency,
                 request.branchId(),
+                companyId,
                 request.bankName(),
                 request.iban(),
                 request.allowNegative()));
@@ -82,9 +92,19 @@ public class FundService {
   @Transactional
   public FundResponse update(UUID id, UpdateFundRequest request) {
     FundAccount fund = find(id);
+    scope.requireForUpdate(request.branchId(), fund.getBranchId());
+    UUID companyId = companies.companyOf(request.branchId());
+    // Kullanılmış hesabın şirketi değişmez; bileşik FK'ler de aynı durumu keser (§4.13 #4).
+    if (!companyId.equals(fund.getCompanyId()) && funds.isUsed(id)) {
+      throw new BusinessException(
+          HttpStatus.CONFLICT,
+          "FUND_COMPANY_LOCKED",
+          "Kullanılmış hesabın şirketi değiştirilemez.");
+    }
     fund.update(
         request.name(),
         request.branchId(),
+        companyId,
         request.bankName(),
         request.iban(),
         request.allowNegative());
@@ -93,16 +113,23 @@ public class FundService {
 
   @Transactional
   public void delete(UUID id) {
-    FundAccount fund = find(id);
+    FundAccount fund = visible(id);
     if (transactions.existsByFundAccountId(id)) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "FUND_HAS_TRANSACTIONS", "Hareketi olan hesap silinemez.");
+    }
+    if (funds.isCompanyDefault(id)) {
+      throw new BusinessException(
+          HttpStatus.CONFLICT,
+          "FUND_IS_COMPANY_DEFAULT",
+          "Şirketin varsayılan banka hesabı silinemez; önce şirket kartından kaldırın.");
     }
     fund.markDeleted();
   }
 
   @Transactional
   public FundTransaction postManual(UUID fundId, ManualFundTransactionRequest request) {
+    visible(fundId);
     return ledger.post(
         new FundPosting(
             fundId,
@@ -124,6 +151,7 @@ public class FundService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "TRANSACTION_NOT_FOUND", "Hareket bulunamadı."));
+    visible(original.getFundAccountId());
     if (!LedgerService.SOURCE_MANUAL.equals(original.getSourceType())
         && !SOURCE_TRANSFER.equals(original.getSourceType())) {
       throw new BusinessException(
@@ -147,6 +175,14 @@ public class FundService {
     if (request.fromFundId().equals(request.toFundId())) {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "TRANSFER_SAME_FUND", "Kaynak ve hedef hesap aynı olamaz.");
+    }
+    if (!visible(request.fromFundId())
+        .getCompanyId()
+        .equals(visible(request.toFundId()).getCompanyId())) {
+      throw new BusinessException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          "COMPANY_MISMATCH",
+          "Şirketler arası para aktarımı intercompany ile yapılır (Faz 12.2).");
     }
     UUID transferId =
         idempotencyKey == null
@@ -177,7 +213,7 @@ public class FundService {
 
   @Transactional(readOnly = true)
   public StatementResponse statement(UUID id, LocalDate from, LocalDate to, Pageable pageable) {
-    FundAccount fund = find(id);
+    FundAccount fund = visible(id);
     BigDecimal opening = transactions.balanceBefore(id, from);
     Page<FundStatementRow> page = transactions.statement(id, from, to, pageable);
     List<StatementLine> lines =
@@ -205,6 +241,13 @@ public class FundService {
         page.getTotalPages());
   }
 
+  /** Kapsam denetimiyle hesap: fonun iş yeri LIMITED kullanıcının kapsamında olmalı (403). */
+  private FundAccount visible(UUID id) {
+    FundAccount fund = find(id);
+    scope.requireVisible(fund.getBranchId());
+    return fund;
+  }
+
   FundAccount find(UUID id) {
     return funds
         .findById(id)
@@ -230,6 +273,7 @@ public class FundService {
         fund.getKind(),
         fund.getCurrency(),
         fund.getBranchId(),
+        fund.getCompanyId(),
         fund.getBankName(),
         fund.getIban(),
         fund.isAllowNegative(),

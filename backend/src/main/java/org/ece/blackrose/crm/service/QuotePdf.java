@@ -22,6 +22,8 @@ import java.util.Locale;
 import org.ece.blackrose.common.money.Money;
 import org.ece.blackrose.crm.domain.Quote;
 import org.ece.blackrose.crm.domain.QuoteLine;
+import org.ece.blackrose.organization.CompanyIdentityService.CompanyIdentity;
+import org.ece.blackrose.organization.CompanyPdfHeader;
 
 /** Teklif belgesi. Türkçe karakterler için Windows-1254 kodlaması kullanılır. */
 final class QuotePdf {
@@ -36,7 +38,7 @@ final class QuotePdf {
   private QuotePdf() {}
 
   static byte[] render(
-      Quote quote, List<QuoteLine> lines, String customerName, String companyName) {
+      Quote quote, List<QuoteLine> lines, String customerName, CompanyIdentity company) {
     try {
       BaseFont base = BaseFont.createFont(BaseFont.HELVETICA, "Cp1254", BaseFont.NOT_EMBEDDED);
       BaseFont bold = BaseFont.createFont(BaseFont.HELVETICA_BOLD, "Cp1254", BaseFont.NOT_EMBEDDED);
@@ -47,7 +49,7 @@ final class QuotePdf {
       Document document = new Document(PageSize.A4);
       PdfWriter.getInstance(document, out);
       document.open();
-      document.add(new Paragraph(companyName, new Font(bold, TITLE_SIZE)));
+      document.add(CompanyPdfHeader.render(company));
       document.add(
           new Paragraph("Teklif " + quote.getNumber() + " / Sürüm " + quote.getVersion(), strong));
       document.add(new Paragraph("Müşteri: " + customerName, body));

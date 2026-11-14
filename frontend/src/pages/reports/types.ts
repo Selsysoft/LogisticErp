@@ -75,7 +75,8 @@ export interface Dashboard {
     overdue: CurrencyTotal[];
     dueThisWeek: CurrencyTotal[];
     pendingApproval: number;
-    position: PositionRow[];
+    /** LIMITED (iş yeri kapsamlı) kullanıcıda null: net pozisyon kiracı geneli olduğu için gizlenir (§4.16). */
+    position: PositionRow[] | null;
   } | null;
   fleet: { overdueReminders: number; upcomingReminders: number } | null;
   customs: { openTransits: number; overdueTransits: number } | null;

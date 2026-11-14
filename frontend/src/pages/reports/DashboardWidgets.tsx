@@ -73,7 +73,8 @@ export function DashboardWidgets() {
             label={t("reports.dashboard.pendingApproval")}
             value={String(data.finance.pendingApproval)}
           />
-          {data.finance.position.map((row) => (
+          {/* LIMITED kullanıcıda position null gelir (§4.16): net pozisyon kutucukları çizilmez. */}
+          {data.finance.position?.map((row) => (
             <StatTile
               key={row.currency}
               label={t("reports.dashboard.netPosition", { currency: row.currency })}

@@ -8,6 +8,19 @@ import { useAuthStore } from "../../auth/authStore";
 import { AllTransactionsPlaceholderPage } from "./pages/AllTransactionsPlaceholderPage";
 import { SIDEBAR_LEAVE_DELAY_MS } from "./ZtoFinanceSidebar";
 import { ZtoFinansLayout } from "./ZtoFinansLayout";
+import { useZtoRootClass } from "./ZtoRootClassContext";
+import { addRootClass, removeRootClass, rootClassName } from "./rootClass";
+
+function ListLike() {
+  useZtoRootClass("definition-list-page");
+  return <p>liste</p>;
+}
+
+function FormLike() {
+  useZtoRootClass("definition-form-page");
+  useZtoRootClass("definition-form-page");
+  return <p>form</p>;
+}
 
 function Where() {
   return <span data-testid="where">{useLocation().pathname}</span>;
@@ -25,6 +38,8 @@ function renderAt(path: string, broken = false) {
             element={broken ? <Broken /> : <AllTransactionsPlaceholderPage />}
           />
           <Route path="vitrin" element={<p>vitrin</p>} />
+          <Route path="tanimlar/is-yerleri" element={<ListLike />} />
+          <Route path="tanimlar/is-yerleri/yeni" element={<FormLike />} />
         </Route>
       </Routes>
       <Where />
@@ -38,7 +53,9 @@ const sidebar = () => q("#ztSidebar");
 const arrow = () => screen.getByRole("button", { name: "Finans menüsünü aç/kapat" });
 
 beforeEach(() => {
-  useAuthStore.setState({ me: { fullName: "Ayşe Yılmaz" } as never });
+  useAuthStore.setState({
+    me: { fullName: "Ayşe Yılmaz", permissions: ["FINANCE_VIEW", "BRANCH_VIEW"] } as never,
+  });
 });
 
 afterEach(() => {
@@ -167,5 +184,63 @@ describe("ZtoFinansLayout", () => {
     expect(alert.closest(".zto-finans")).not.toBeNull();
     expect(screen.getByRole("button", { name: "Sayfayı yenile" }).className).toContain("btn");
     error.mockRestore();
+  });
+
+  it("TEMEL TANIMLAR bölümü 'GELİŞTİRME'den önce; BRANCH_VIEW yoksa gizli", () => {
+    renderAt("/zto-finans/cari-hareketler");
+    const groups = Array.from(
+      document.querySelectorAll(".zt-sidebar-group-header span"),
+      (s) => s.textContent,
+    );
+    expect(groups.slice(-2)).toEqual(["TEMEL TANIMLAR", "GELİŞTİRME"]);
+    expect(document.querySelectorAll(".zt-sidebar-divider")).toHaveLength(groups.length - 1);
+    const workPlaces = screen.getByText("İş Yerleri").closest("a") as HTMLAnchorElement;
+    expect(workPlaces.getAttribute("href")).toBe("/zto-finans/tanimlar/is-yerleri");
+    expect(workPlaces.querySelector(".zt-icon > i.fas.fa-building")).not.toBeNull();
+    expect(screen.getByText("Şubeler").closest("a")?.getAttribute("href")).toBe(
+      "/zto-finans/tanimlar/subeler",
+    );
+    expect(screen.getByText("Şirketler").closest("a")?.getAttribute("href")).toBe(
+      "/zto-finans/tanimlar/sirketler",
+    );
+    cleanup();
+
+    useAuthStore.setState({ me: { fullName: "A", permissions: ["FINANCE_VIEW"] } as never });
+    renderAt("/zto-finans/cari-hareketler");
+    expect(screen.queryByText("TEMEL TANIMLAR")).toBeNull();
+    expect(screen.queryByText("İş Yerleri")).toBeNull();
+  });
+
+  it("sayfalar köke sınıf ekler (ZTO body sınıfı); alt yolda menü öğesi etkin kalır", () => {
+    renderAt("/zto-finans/tanimlar/is-yerleri");
+    const root = q(".zto-finans");
+    expect(root.className).toBe("zto-finans sb-nav-fixed definition-list-page");
+    // Derlenmiş ".definition-list-page x" kuralları için kök altında da bir ata.
+    expect(q(".zto-finans > .zto-finans-layout").className).toBe(
+      "zto-finans-layout definition-list-page",
+    );
+    expect(q("a.zt-active").getAttribute("href")).toBe("/zto-finans/tanimlar/is-yerleri");
+    cleanup();
+
+    renderAt("/zto-finans/tanimlar/is-yerleri/yeni");
+    expect(q(".zto-finans").className).toBe("zto-finans sb-nav-fixed definition-form-page");
+    expect(q("a.zt-active").getAttribute("href")).toBe("/zto-finans/tanimlar/is-yerleri");
+    cleanup();
+
+    renderAt("/zto-finans/cari-hareketler");
+    expect(q(".zto-finans").className).toBe("zto-finans sb-nav-fixed");
+    expect(q(".zto-finans-layout").className).toBe("zto-finans-layout");
+  });
+
+  it("kök sınıf listesi sayaçlıdır", () => {
+    let list = addRootClass([], "a");
+    list = addRootClass(list, "b");
+    list = addRootClass(list, "a");
+    expect(rootClassName(list)).toBe("a b");
+    list = removeRootClass(list, "a");
+    expect(rootClassName(list)).toBe("b a");
+    expect(removeRootClass(list, "yok")).toEqual(list);
+    expect(rootClassName(removeRootClass(removeRootClass(list, "a"), "b"))).toBeUndefined();
+    expect(rootClassName([" ", ""])).toBeUndefined();
   });
 });

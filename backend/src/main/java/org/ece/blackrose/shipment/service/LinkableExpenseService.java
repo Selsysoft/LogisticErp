@@ -12,16 +12,23 @@ import org.ece.blackrose.fleet.domain.Vehicle;
 import org.ece.blackrose.fleet.domain.VehicleExpense;
 import org.ece.blackrose.fleet.repository.FleetRepositories.VehicleExpenseRepository;
 import org.ece.blackrose.fleet.repository.FleetRepositories.VehicleRepository;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyResolver;
+import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.domain.ShipmentLeg;
 import org.ece.blackrose.shipment.domain.TripCost;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentLegRepository;
+import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentRepository;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.TripCostRepository;
 import org.ece.blackrose.shipment.web.ShipmentDtos.LinkableExpense;
 import org.ece.blackrose.tenant.TenantClock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Sefere bağlanabilecek araç giderleri: seferin araçları, etap tarihleri, henüz bağlanmamış. */
+/**
+ * Sefere bağlanabilecek araç giderleri: seferin araçları, etap tarihleri, henüz bağlanmamış ve
+ * seferin şirketinde (başka şirketin gideri bağlanamaz, §4.13 #6).
+ */
 @Service
 public class LinkableExpenseService {
 
@@ -32,13 +39,22 @@ public class LinkableExpenseService {
   private final VehicleRepository vehicles;
   private final TripCostRepository costs;
   private final TenantClock clock;
+  private final ShipmentRepository shipments;
+  private final CompanyResolver companies;
+  private final BranchScopeService scope;
 
   public LinkableExpenseService(
       ShipmentLegRepository legs,
       VehicleExpenseRepository expenses,
       VehicleRepository vehicles,
       TripCostRepository costs,
-      TenantClock clock) {
+      TenantClock clock,
+      ShipmentRepository shipments,
+      CompanyResolver companies,
+      BranchScopeService scope) {
+    this.scope = scope;
+    this.shipments = shipments;
+    this.companies = companies;
     this.legs = legs;
     this.expenses = expenses;
     this.vehicles = vehicles;
@@ -48,6 +64,11 @@ public class LinkableExpenseService {
 
   @Transactional(readOnly = true)
   public List<LinkableExpense> forShipment(UUID shipmentId) {
+    Shipment shipment = shipments.findById(shipmentId).orElse(null);
+    if (shipment == null) {
+      return List.of();
+    }
+    scope.requireVisible(shipment.getBranchId());
     List<ShipmentLeg> shipmentLegs = legs.findByShipmentIdOrderBySequenceNo(shipmentId);
     Set<UUID> vehicleIds =
         shipmentLegs.stream()
@@ -66,8 +87,11 @@ public class LinkableExpenseService {
         shipmentLegs.stream().map(ShipmentLeg::getPlannedEnd).max(Instant::compareTo).orElseThrow();
     LocalDate from = clock.dateOf(start).minusDays(MARGIN_DAYS);
     LocalDate to = clock.dateOf(end).plusDays(MARGIN_DAYS);
+    UUID companyId = companies.companyOf(shipment.getBranchId());
     List<VehicleExpense> candidates =
-        expenses.findByVehicleIdInAndExpenseDateBetween(vehicleIds, from, to);
+        expenses.findByVehicleIdInAndExpenseDateBetween(vehicleIds, from, to).stream()
+            .filter(expense -> companyId.equals(expense.getCompanyId()))
+            .toList();
     Set<UUID> linked =
         costs
             .findByVehicleExpenseIdIn(candidates.stream().map(VehicleExpense::getId).toList())

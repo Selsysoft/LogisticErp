@@ -51,6 +51,7 @@ public class CustomerService {
 
   @Transactional
   public CustomerResponse create(SaveCustomerRequest request) {
+    Account.requireNotReserved(request.type());
     if (accounts.findByCode(request.code()).isPresent()) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "ACCOUNT_CODE_TAKEN", "Bu cari kodu kullanımda.");
@@ -64,6 +65,9 @@ public class CustomerService {
   @Transactional
   public CustomerResponse update(UUID id, SaveCustomerRequest request) {
     Account account = find(id);
+    if (account.getRepresentsCompanyId() == null) {
+      Account.requireNotReserved(request.type());
+    }
     account.update(request.name(), request.type(), request.taxNumber(), account.getBranchId());
     return toResponse(account, saveProfile(id, request));
   }

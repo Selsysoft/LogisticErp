@@ -5,11 +5,13 @@ import java.time.LocalDate;
 import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.common.money.Money;
+import org.ece.blackrose.finance.domain.Account;
 import org.ece.blackrose.finance.domain.AccountTransaction;
 import org.ece.blackrose.finance.domain.FinanceTypes.Direction;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountTransactionRepository;
 import org.ece.blackrose.finance.service.ExchangeRateService.Conversion;
+import org.ece.blackrose.organization.CompanyResolver;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,14 +37,17 @@ public class LedgerService {
   private final AccountTransactionRepository transactions;
   private final AccountRepository accounts;
   private final ExchangeRateService rates;
+  private final CompanyResolver companies;
 
   public LedgerService(
       AccountTransactionRepository transactions,
       AccountRepository accounts,
-      ExchangeRateService rates) {
+      ExchangeRateService rates,
+      CompanyResolver companies) {
     this.transactions = transactions;
     this.accounts = accounts;
     this.rates = rates;
+    this.companies = companies;
   }
 
   @Transactional
@@ -53,18 +58,32 @@ public class LedgerService {
   }
 
   private AccountTransaction insert(Posting posting) {
-    if (!accounts.existsById(posting.accountId())) {
-      throw new BusinessException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Cari bulunamadı.");
-    }
+    Account account =
+        accounts
+            .findById(posting.accountId())
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Cari bulunamadı."));
     if (posting.money().amount().signum() <= 0) {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "AMOUNT_INVALID", "Tutar sıfırdan büyük olmalıdır.");
+    }
+    UUID companyId = companies.companyOf(posting.branchId());
+    // Kimlik kuralı (§4.13 #14): şirket kendi grup carisine hareket yazamaz. Ters kayıt reverse
+    // yolundan geçer ve denetlenmez.
+    if (companyId.equals(account.getRepresentsCompanyId())) {
+      throw new BusinessException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          "COMPANY_MISMATCH",
+          "Şirket kendi grup carisine hareket yazamaz.");
     }
     Conversion conversion = rates.convert(posting.money(), posting.date(), posting.manualRate());
     return transactions.save(
         new AccountTransaction(
             posting.accountId(),
             posting.branchId(),
+            companyId,
             posting.direction(),
             posting.money(),
             conversion.rate(),
@@ -99,6 +118,7 @@ public class LedgerService {
                     new AccountTransaction(
                         original.getAccountId(),
                         original.getBranchId(),
+                        original.getCompanyId(),
                         original.getDirection().opposite(),
                         original.getMoney(),
                         original.getExchangeRate(),

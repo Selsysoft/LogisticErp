@@ -25,6 +25,7 @@ import org.ece.blackrose.fleet.repository.FleetRepositories.VehicleRepository;
 import org.ece.blackrose.fleet.service.FleetInsightService;
 import org.ece.blackrose.fleet.service.ResourceBusyProvider;
 import org.ece.blackrose.fleet.web.FleetDtos.AvailabilityResponse;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.domain.ShipmentCargo;
 import org.ece.blackrose.shipment.domain.ShipmentEvent;
@@ -71,6 +72,7 @@ public class DispatchService implements ResourceBusyProvider {
   private final ExchangeRateService rates;
   private final ShipmentViews views;
   private final TenantClock clock;
+  private final BranchScopeService scope;
 
   public DispatchService(
       ShipmentLegRepository legs,
@@ -84,7 +86,9 @@ public class DispatchService implements ResourceBusyProvider {
       FleetInsightService insights,
       ExchangeRateService rates,
       ShipmentViews views,
-      TenantClock clock) {
+      TenantClock clock,
+      BranchScopeService scope) {
+    this.scope = scope;
     this.legs = legs;
     this.shipments = shipments;
     this.cargo = cargo;
@@ -396,13 +400,18 @@ public class DispatchService implements ResourceBusyProvider {
     Instant start = clock.startOf(from);
     Instant end = clock.startOf(to.plusDays(1));
     List<ShipmentLeg> active = legs.activeBetween(start, end);
+    Set<UUID> allowed = scope.allowedOrNull();
     Map<UUID, Shipment> byId =
         ShipmentViews.index(
-            shipments.findAllById(active.stream().map(ShipmentLeg::getShipmentId).toList()),
+            shipments.findAllById(active.stream().map(ShipmentLeg::getShipmentId).toList()).stream()
+                .filter(shipment -> allowed == null || allowed.contains(shipment.getBranchId()))
+                .toList(),
             Shipment::getId);
+    List<ShipmentLeg> visible =
+        active.stream().filter(leg -> byId.containsKey(leg.getShipmentId())).toList();
     Map<UUID, LegResponse> responses =
-        ShipmentViews.index(views.legResponses(active), LegResponse::id);
-    return active.stream()
+        ShipmentViews.index(views.legResponses(visible), LegResponse::id);
+    return visible.stream()
         .sorted(Comparator.comparing(ShipmentLeg::getPlannedStart))
         .map(
             leg -> {
@@ -456,10 +465,18 @@ public class DispatchService implements ResourceBusyProvider {
                     HttpStatus.NOT_FOUND, "VEHICLE_NOT_FOUND", "Araç bulunamadı."));
   }
 
+  /** Etabı yükler; seferi kullanıcının kapsamı dışındaysa 403. */
   private ShipmentLeg findLeg(UUID id) {
-    return legs.findById(id)
-        .orElseThrow(
-            () -> new BusinessException(HttpStatus.NOT_FOUND, "LEG_NOT_FOUND", "Etap bulunamadı."));
+    ShipmentLeg leg =
+        legs.findById(id)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "LEG_NOT_FOUND", "Etap bulunamadı."));
+    shipments
+        .findById(leg.getShipmentId())
+        .ifPresent(shipment -> scope.requireVisible(shipment.getBranchId()));
+    return leg;
   }
 
   private Shipment lockEditable(UUID shipmentId) {
@@ -470,6 +487,7 @@ public class DispatchService implements ResourceBusyProvider {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "SHIPMENT_NOT_FOUND", "Sefer bulunamadı."));
+    scope.requireVisible(shipment.getBranchId());
     if (!EDITABLE.contains(shipment.getStatus())) {
       throw new BusinessException(
           HttpStatus.CONFLICT,

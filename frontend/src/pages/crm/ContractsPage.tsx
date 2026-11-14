@@ -12,7 +12,9 @@ import {
   SectionHeader,
   shiftDays,
   today,
+  companyIdOf,
   useCan,
+  useCompanyField,
   usePaging,
 } from "../finance/common";
 import { Page } from "../finance/types";
@@ -27,6 +29,7 @@ export function ContractsPage() {
   const tariffs = useTariffs();
   const paging = usePaging();
   const [adding, setAdding] = useState(false);
+  const companyField = useCompanyField(t("crm.field.company"));
 
   const list = useQuery({
     queryKey: ["crm", "contracts", paging.page, paging.size],
@@ -109,6 +112,7 @@ export function ContractsPage() {
         <FormDialog
           title={t("crm.action.newContract")}
           fields={[
+            ...companyField,
             {
               name: "accountId",
               label: t("finance.field.account"),
@@ -147,6 +151,7 @@ export function ContractsPage() {
           onClose={() => setAdding(false)}
           onSubmit={(values) =>
             apiRequest("POST", "/crm/contracts", {
+              ...companyIdOf(values),
               accountId: values.accountId,
               tariffId: orNull(values.tariffId),
               startDate: values.startDate,

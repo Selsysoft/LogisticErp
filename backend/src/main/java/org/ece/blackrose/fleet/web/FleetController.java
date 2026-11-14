@@ -39,6 +39,7 @@ import org.ece.blackrose.fleet.web.FleetDtos.UpdateDriverRequest;
 import org.ece.blackrose.fleet.web.FleetDtos.VehicleCostRow;
 import org.ece.blackrose.fleet.web.FleetDtos.VehicleExpenseResponse;
 import org.ece.blackrose.fleet.web.FleetDtos.VehicleResponse;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.tenant.TenantClock;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -71,6 +72,7 @@ public class FleetController {
   private final TenantClock clock;
   private final FleetMapper mapper;
   private final DriverAdvanceService advances;
+  private final BranchScopeService scope;
 
   public FleetController(
       FleetRegistryService registry,
@@ -80,7 +82,9 @@ public class FleetController {
       FundAccountRepository funds,
       TenantClock clock,
       FleetMapper mapper,
-      DriverAdvanceService advances) {
+      DriverAdvanceService advances,
+      BranchScopeService scope) {
+    this.scope = scope;
     this.advances = advances;
     this.registry = registry;
     this.expenses = expenses;
@@ -110,6 +114,9 @@ public class FleetController {
   @ResponseStatus(HttpStatus.CREATED)
   @PreAuthorize(EDIT)
   VehicleResponse createVehicle(@Valid @RequestBody SaveVehicleRequest request) {
+    if (request.branchId() != null) {
+      scope.requireNew(request.branchId());
+    }
     return mapper.toResponse(registry.createVehicle(request));
   }
 
@@ -139,6 +146,9 @@ public class FleetController {
   @ResponseStatus(HttpStatus.CREATED)
   @PreAuthorize(EDIT)
   DriverResponse createDriver(@Valid @RequestBody CreateDriverRequest request) {
+    if (request.branchId() != null) {
+      scope.requireNew(request.branchId());
+    }
     return mapper.toResponse(registry.createDriver(request));
   }
 
@@ -156,6 +166,7 @@ public class FleetController {
       @PathVariable UUID id,
       @Valid @RequestBody DriverAdvanceRequest request,
       @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey) {
+    scope.requireNew(request.branchId());
     return new DriverAdvanceResponse(advances.giveAdvance(id, request, idempotencyKey).getId());
   }
 
@@ -223,6 +234,7 @@ public class FleetController {
   @PreAuthorize(EDIT)
   VehicleExpenseResponse createExpense(
       @PathVariable UUID id, @Valid @RequestBody SaveVehicleExpenseRequest request) {
+    scope.requireNew(request.branchId());
     return mapper.toResponse(expenses.create(id, request));
   }
 
@@ -244,7 +256,7 @@ public class FleetController {
                         || account.getType() == AccountType.CARRIER)
             .map(account -> new Option(account.getId(), account.getName()))
             .toList(),
-        funds.findAll().stream()
+        funds.search(scope.filter(null, null)).stream()
             .map(
                 fund ->
                     new FundOption(

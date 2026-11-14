@@ -21,6 +21,7 @@ public class PurchaseInvoice extends AuditableEntity {
   @Id private UUID id;
   private UUID accountId;
   private UUID branchId;
+  private UUID companyId;
   private String number;
   private LocalDate invoiceDate;
   private LocalDate dueDate;
@@ -39,6 +40,7 @@ public class PurchaseInvoice extends AuditableEntity {
   public PurchaseInvoice(
       UUID accountId,
       UUID branchId,
+      UUID companyId,
       String number,
       LocalDate invoiceDate,
       LocalDate dueDate,
@@ -48,6 +50,7 @@ public class PurchaseInvoice extends AuditableEntity {
     this.id = UUID.randomUUID();
     this.accountId = accountId;
     this.branchId = branchId;
+    this.companyId = companyId;
     this.number = number;
     this.invoiceDate = invoiceDate;
     this.dueDate = dueDate;
@@ -105,5 +108,9 @@ public class PurchaseInvoice extends AuditableEntity {
 
   public String getDescription() {
     return description;
+  }
+
+  public UUID getCompanyId() {
+    return companyId;
   }
 }

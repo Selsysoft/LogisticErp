@@ -31,7 +31,9 @@ export default {
     addGeofence: "Bölge ekle",
     addDistance: "Güzergâh ekle",
   },
+  goToCompanies: "Şirketler ekranına git",
   field: {
+    company: "Şirket",
     taxNumber: "Vergi no",
     taxOffice: "Vergi dairesi",
     source: "Kaynak",
@@ -68,6 +70,8 @@ export default {
   rowLine: { MATCHED: "Eşleşen", UNMATCHED: "Eşleşmeyen", IGNORED: "Yoksayılan" },
   geofenceEvent: { ENTER: "Giriş", EXIT: "Çıkış" },
   notice: {
+    defaultCompanyOnly:
+      "Bu bilgiler varsayılan şirkete aittir. Diğer şirketler Şirketler ekranından yönetilir.",
     testProvider: "Deneme sağlayıcısı açık: belgeler GİB'e gitmez ve yasal değildir.",
     noProvider: "e-Belge entegratörü tanımlı değil; gönderim yapılamaz.",
     noTaxNumber: "Firma vergi numarası girilmemiş; belge gönderilemez.",

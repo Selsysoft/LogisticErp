@@ -34,6 +34,7 @@ public class OpeningInvoice extends AuditableEntity {
   @Id private UUID id;
   private UUID accountId;
   private UUID branchId;
+  private UUID companyId;
 
   @Enumerated(EnumType.STRING)
   private Kind kind;
@@ -54,6 +55,7 @@ public class OpeningInvoice extends AuditableEntity {
   public OpeningInvoice(
       UUID accountId,
       UUID branchId,
+      UUID companyId,
       Kind kind,
       String number,
       LocalDate invoiceDate,
@@ -62,6 +64,7 @@ public class OpeningInvoice extends AuditableEntity {
     this.id = UUID.randomUUID();
     this.accountId = accountId;
     this.branchId = branchId;
+    this.companyId = companyId;
     this.kind = kind;
     this.number = number;
     this.invoiceDate = invoiceDate;
@@ -109,5 +112,9 @@ public class OpeningInvoice extends AuditableEntity {
 
   public UUID getPaymentPlanId() {
     return paymentPlanId;
+  }
+
+  public UUID getCompanyId() {
+    return companyId;
   }
 }

@@ -14,6 +14,7 @@ import org.ece.blackrose.fleet.domain.FleetTypes.SubjectType;
 import org.ece.blackrose.fleet.domain.ResourceBlock;
 import org.ece.blackrose.fleet.domain.Vehicle;
 import org.ece.blackrose.fleet.domain.VehicleExpense;
+import org.ece.blackrose.organization.BranchFilter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -38,8 +39,18 @@ public final class FleetRepositories {
         select v from Vehicle v
         where (:search = '' or lower(v.plate) like concat('%', :search, '%')
                or lower(coalesce(v.brand, '')) like concat('%', :search, '%'))
+          and (:allBranches = true or v.branchId is null or v.branchId in :branchIds)
         """)
-    Page<Vehicle> search(@Param("search") String search, Pageable pageable);
+    Page<Vehicle> search(
+        @Param("search") String search,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds,
+        Pageable pageable);
+
+    /** Şubesiz araç her kullanıcıya görünür. */
+    default Page<Vehicle> search(String search, BranchFilter filter, Pageable pageable) {
+      return search(search, filter.allBranches(), filter.branchIds(), pageable);
+    }
   }
 
   public interface DriverRepository extends JpaRepository<Driver, UUID> {
@@ -57,8 +68,18 @@ public final class FleetRepositories {
         select d from Driver d
         where (:search = '' or lower(d.fullName) like concat('%', :search, '%')
                or lower(d.code) like concat('%', :search, '%'))
+          and (:allBranches = true or d.branchId is null or d.branchId in :branchIds)
         """)
-    Page<Driver> search(@Param("search") String search, Pageable pageable);
+    Page<Driver> search(
+        @Param("search") String search,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds,
+        Pageable pageable);
+
+    /** Şubesiz sürücü her kullanıcıya görünür. */
+    default Page<Driver> search(String search, BranchFilter filter, Pageable pageable) {
+      return search(search, filter.allBranches(), filter.branchIds(), pageable);
+    }
   }
 
   public interface ComplianceDocumentRepository extends JpaRepository<ComplianceDocument, UUID> {
@@ -93,9 +114,19 @@ public final class FleetRepositories {
         select e from VehicleExpense e
         where (:vehicleId is null or e.vehicleId = :vehicleId)
           and (:kind is null or e.kind = :kind)
+          and (:allBranches = true or e.branchId in :branchIds)
         """)
     Page<VehicleExpense> search(
-        @Param("vehicleId") UUID vehicleId, @Param("kind") ExpenseKind kind, Pageable pageable);
+        @Param("vehicleId") UUID vehicleId,
+        @Param("kind") ExpenseKind kind,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds,
+        Pageable pageable);
+
+    default Page<VehicleExpense> search(
+        UUID vehicleId, ExpenseKind kind, BranchFilter filter, Pageable pageable) {
+      return search(vehicleId, kind, filter.allBranches(), filter.branchIds(), pageable);
+    }
 
     List<VehicleExpense> findByExpenseDateBetween(LocalDate from, LocalDate to);
 

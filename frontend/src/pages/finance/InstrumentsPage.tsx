@@ -11,6 +11,9 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiGet, apiRequest } from "../../api/client";
+import { useActiveCompanyId } from "../../auth/companyStore";
+import { fundsOfCompany } from "./branchOptions";
+import { withCompany } from "./companyQuery";
 import {
   DataTable,
   FormDialog,
@@ -53,16 +56,20 @@ export function InstrumentsPage() {
   const canPost = useCan("FINANCE_PAYMENT_CREATE");
   const accounts = useAccounts();
   const funds = useFunds();
+  const companyId = useActiveCompanyId();
   const paging = usePaging();
   const [status, setStatus] = useState("");
   const [moving, setMoving] = useState<Instrument | null>(null);
   const [viewing, setViewing] = useState<Instrument | null>(null);
 
   const list = useQuery({
-    queryKey: ["finance", "instruments", status, paging.page, paging.size],
+    queryKey: ["finance", "instruments", status, paging.page, paging.size, companyId],
     queryFn: () =>
       apiGet<Page<Instrument>>(
-        `/finance/instruments?page=${paging.page}&size=${paging.size}&sort=dueDate${status ? `&status=${status}` : ""}`,
+        withCompany(
+          `/finance/instruments?page=${paging.page}&size=${paging.size}&sort=dueDate${status ? `&status=${status}` : ""}`,
+          companyId,
+        ),
       ),
     placeholderData: keepPreviousData,
   });
@@ -165,7 +172,8 @@ export function InstrumentsPage() {
               name: "fundAccountId",
               label: t("finance.field.fund"),
               type: "select",
-              options: (funds.data ?? [])
+              // Çek yalnız kendi şirketinin fonuna tahsil edilir (12.1a §4.13).
+              options: fundsOfCompany(funds.data, moving.companyId)
                 .filter((fund) => fund.currency === moving.money.currency)
                 .map((fund) => ({
                   value: fund.id,

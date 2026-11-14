@@ -15,6 +15,9 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import { apiGet, apiRequest } from "../../api/client";
+import { useAuthStore } from "../../auth/authStore";
+import { useActiveCompanyId } from "../../auth/companyStore";
+import { defaultBranchValue } from "./branchOptions";
 import {
   DataTable,
   FormDialog,
@@ -24,12 +27,13 @@ import {
   SectionHeader,
   shiftDays,
   today,
-  useBranches,
+  useBranchOptions,
   useCan,
   useCurrencies,
   usePaging,
 } from "./common";
 import { OpeningBalanceDialog } from "./OpeningBalanceDialog";
+import { withCompany } from "./companyQuery";
 import { OpeningInvoiceDialog } from "./OpeningInvoiceDialog";
 import { Account, Page, Statement, StatementLine } from "./types";
 
@@ -45,12 +49,17 @@ export function AccountsPage() {
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importingInvoices, setImportingInvoices] = useState(false);
+  // Kart listesi ortaktır; bakiyeler aktif şirketin hareketlerinden (konsolidede tümü).
+  const companyId = useActiveCompanyId();
 
   const accounts = useQuery({
-    queryKey: ["finance", "accounts", search, paging.page, paging.size],
+    queryKey: ["finance", "accounts", search, paging.page, paging.size, companyId],
     queryFn: () =>
       apiGet<Page<Account>>(
-        `/finance/accounts?page=${paging.page}&size=${paging.size}&sort=name&search=${encodeURIComponent(search)}`,
+        withCompany(
+          `/finance/accounts?page=${paging.page}&size=${paging.size}&sort=name&search=${encodeURIComponent(search)}`,
+          companyId,
+        ),
       ),
     placeholderData: keepPreviousData,
   });
@@ -175,7 +184,8 @@ export function AccountDetailPage() {
   const { id } = useParams();
   const client = useQueryClient();
   const canPost = useCan("FINANCE_PAYMENT_CREATE");
-  const branches = useBranches();
+  const { optionsFor, companyId } = useBranchOptions();
+  const defaultBranchId = useAuthStore((state) => state.me?.defaultBranchId);
   const currencies = useCurrencies();
   const [currency, setCurrency] = useState("TRY");
   const [from, setFrom] = useState(shiftDays(today(), -90));
@@ -185,14 +195,17 @@ export function AccountDetailPage() {
   const paging = usePaging(50);
 
   const account = useQuery({
-    queryKey: ["finance", "accounts", "detail", id],
-    queryFn: () => apiGet<Account>(`/finance/accounts/${id}`),
+    queryKey: ["finance", "accounts", "detail", id, companyId],
+    queryFn: () => apiGet<Account>(withCompany(`/finance/accounts/${id}`, companyId)),
   });
   const statement = useQuery({
-    queryKey: ["finance", "statement", id, currency, from, to, paging.page, paging.size],
+    queryKey: ["finance", "statement", id, currency, from, to, paging.page, paging.size, companyId],
     queryFn: () =>
       apiGet<Statement>(
-        `/finance/accounts/${id}/statement?currency=${currency}&from=${from}&to=${to}&page=${paging.page}&size=${paging.size}`,
+        withCompany(
+          `/finance/accounts/${id}/statement?currency=${currency}&from=${from}&to=${to}&page=${paging.page}&size=${paging.size}`,
+          companyId,
+        ),
       ),
     enabled: !!from && !!to,
   });
@@ -358,7 +371,8 @@ export function AccountDetailPage() {
               label: t("finance.field.branch"),
               type: "select",
               required: true,
-              options: (branches.data ?? []).map((b) => ({ value: b.id, label: b.name })),
+              options: optionsFor(),
+              defaultValue: defaultBranchValue(optionsFor(), defaultBranchId),
             },
             {
               name: "direction",

@@ -65,10 +65,12 @@ export const SHOWCASE_BRANCH_TREE: BranchTree = [
   {
     companyId: "c1",
     companyName: "Blackrose Lojistik A.Ş.",
+    companyActive: true,
     groups: [
       {
         groupId: "g1",
         groupName: "Marmara",
+        groupActive: true,
         branches: [
           { id: "b1", code: "IST", name: "İstanbul Merkez", active: true },
           { id: "b2", code: "GEB", name: "Gebze Depo", active: true },
@@ -78,6 +80,7 @@ export const SHOWCASE_BRANCH_TREE: BranchTree = [
       {
         groupId: "g2",
         groupName: "Ege",
+        groupActive: true,
         branches: [
           { id: "b4", code: "IZM", name: "İzmir", active: true },
           { id: "b5", code: "MAN", name: "Manisa", active: true },
@@ -88,10 +91,12 @@ export const SHOWCASE_BRANCH_TREE: BranchTree = [
   {
     companyId: "c2",
     companyName: "Blackrose Gümrük Ltd. Şti.",
+    companyActive: true,
     groups: [
       {
         groupId: "g3",
         groupName: "Sınır Kapıları",
+        groupActive: true,
         branches: [
           { id: "b6", code: "KPK", name: "Kapıkule", active: true },
           { id: "b7", code: "MRS", name: "Mersin Liman", active: true },
@@ -100,6 +105,7 @@ export const SHOWCASE_BRANCH_TREE: BranchTree = [
       {
         groupId: null,
         groupName: "Diğer",
+        groupActive: true,
         branches: [{ id: "b8", code: "ANK", name: "Ankara İrtibat", active: true }],
       },
     ],

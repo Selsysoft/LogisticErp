@@ -6,8 +6,11 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.Set;
+import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.identity.domain.AuditEvent;
+import org.ece.blackrose.identity.domain.BranchScope;
 import org.ece.blackrose.identity.domain.RevokedAccessToken;
 import org.ece.blackrose.identity.domain.Role;
 import org.ece.blackrose.identity.domain.UserAccount;
@@ -22,7 +25,9 @@ import org.ece.blackrose.identity.web.IdentityDtos.LoginRequest;
 import org.ece.blackrose.identity.web.IdentityDtos.MeResponse;
 import org.ece.blackrose.identity.web.IdentityDtos.TokenResponse;
 import org.ece.blackrose.identity.web.IdentityDtos.TwoFactorSetupResponse;
+import org.ece.blackrose.organization.CompanyService;
 import org.ece.blackrose.tenant.TenantContext;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,6 +50,7 @@ public class AuthService {
   private final PasswordEncoder passwordEncoder;
   private final TextEncryptor totpEncryptor;
   private final AuditService audit;
+  private final CompanyService companies;
 
   public AuthService(
       UserAccountRepository users,
@@ -54,8 +60,10 @@ public class AuthService {
       RefreshTokenService sessions,
       AccountTokenService accountTokens,
       PasswordEncoder passwordEncoder,
-      TextEncryptor totpEncryptor,
-      AuditService audit) {
+      @Qualifier("totpEncryptor") TextEncryptor totpEncryptor,
+      AuditService audit,
+      CompanyService companies) {
+    this.companies = companies;
     this.users = users;
     this.userTokens = userTokens;
     this.refreshTokens = refreshTokens;
@@ -109,8 +117,13 @@ public class AuthService {
     audit.record(AuditEvent.LOGOUT, null, null);
   }
 
+  /**
+   * Oturumdaki kullanıcı; iş yeri kapsamı bu isteğin başında okunan değerdir. Şirketler
+   * kullanıcının görebildikleridir (LIMITED: izinli iş yerlerinin şirketleri).
+   */
   public MeResponse me() {
     UserAccount user = currentUser();
+    Set<UUID> allowed = AuthenticatedUser.require().allowedBranchIds();
     return new MeResponse(
         user.getId(),
         user.getEmail(),
@@ -119,7 +132,11 @@ public class AuthService {
         user.getEffectivePermissions(),
         user.getRoles().stream().map(Role::getName).sorted().toList(),
         user.landingPath(),
-        user.isTotpEnabled());
+        user.isTotpEnabled(),
+        allowed == null ? BranchScope.ALL : BranchScope.LIMITED,
+        allowed == null ? null : allowed.stream().sorted().toList(),
+        user.getDefaultBranchId(),
+        companies.meCompanies());
   }
 
   /** E-postanın kayıtlı olup olmadığı yanıttan anlaşılmaz. */

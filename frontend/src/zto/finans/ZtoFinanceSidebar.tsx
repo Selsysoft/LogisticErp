@@ -1,6 +1,7 @@
 import { Fragment, KeyboardEvent, PointerEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
+import { hasPermission, useAuthStore } from "../../auth/authStore";
 import {
   isActive,
   isNavigable,
@@ -27,7 +28,7 @@ interface ZtoFinanceSidebarProps {
  * _SideMenu_FinanceItems.cshtml, davranış _SideMenu_Assets.cshtml:228-275 ile aynı: fare üzerine
  * gelince açılır, çıkınca 120 ms sonra kapanır; dokunmatikte ok ile açılıp kapanır; dışarı tıklayınca
  * kapanır. Blackrose ekleri: Escape ve klavye (ok düğmesi), sayfa değişince kapanma, Faz'ı gelmemiş
- * öğeler pasif ("Faz 12.x").
+ * öğeler pasif ("Faz 12.x"), izni olmayan öğe gizli (TEMEL TANIMLAR: BRANCH_VIEW).
  */
 export function ZtoFinanceSidebar({
   dev = import.meta.env.DEV,
@@ -40,7 +41,8 @@ export function ZtoFinanceSidebar({
   const arrowRef = useRef<HTMLDivElement>(null);
   const leaveTimer = useRef<ReturnType<typeof setTimeout>>();
   const panelId = useId();
-  const visible = visibleSections(dev, sections);
+  const me = useAuthStore((state) => state.me);
+  const visible = visibleSections(dev, sections, (permission) => hasPermission(me, permission));
 
   // Sayfa değişince kapanır (ZTO'da tam sayfa yüklemesi menüyü kapatır).
   useEffect(() => {

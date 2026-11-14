@@ -7,11 +7,15 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
+import org.ece.blackrose.organization.BranchFilter;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.reporting.service.ForecastCalculator.Due;
 import org.ece.blackrose.reporting.service.ForecastCalculator.OpenInvoice;
 import org.ece.blackrose.reporting.web.ReportDtos.DriverRow;
@@ -109,16 +113,40 @@ public class ReportService {
 
   @PersistenceContext private EntityManager entityManager;
   private final TenantClock clock;
+  private final BranchScopeService scope;
 
-  public ReportService(TenantClock clock) {
+  public ReportService(TenantClock clock, BranchScopeService scope) {
     this.clock = clock;
+    this.scope = scope;
+  }
+
+  /**
+   * Seferlere dayanan raporların iş yeri koşulu. İstenen iş yeri kapsamda olmalı (403); istek boşsa
+   * LIMITED kullanıcıda izinli iş yerlerine daralır, ALL kullanıcıda süzgeç yoktur.
+   */
+  private record BranchCondition(String sql, UUID branchId, Collection<UUID> branchIds) {}
+
+  private BranchCondition branchCondition(UUID branchId) {
+    if (branchId != null) {
+      scope.requireVisible(branchId);
+      return new BranchCondition("and s.branch_id = :branch", branchId, null);
+    }
+    Set<UUID> allowed = scope.allowedOrNull();
+    if (allowed == null) {
+      return new BranchCondition("", null, null);
+    }
+    return new BranchCondition(
+        "and s.branch_id in (:branches)",
+        null,
+        allowed.isEmpty() ? List.of(BranchFilter.NONE) : List.copyOf(allowed));
   }
 
   public ProfitReport profitability(
       ProfitGroup group, LocalDate from, LocalDate to, UUID branchId, int page, int size) {
     ensurePeriod(from, to);
+    BranchCondition branch = branchCondition(branchId);
     String sql =
-        BASE.formatted(branchId == null ? "" : "and s.branch_id = :branch")
+        BASE.formatted(branch.sql())
             + """
             select q.k, q.label, q.shipments, q.revenue, q.cost,
                    count(*) over () as total_rows,
@@ -129,7 +157,7 @@ public class ReportService {
             limit :limit offset :offset
             """
                 .formatted(GROUPS.get(group));
-    Query query = period(sql, from, to, branchId);
+    Query query = period(sql, from, to, branch);
     query.setParameter("limit", size);
     query.setParameter("offset", page * size);
     List<ProfitRow> rows = new ArrayList<>();
@@ -160,7 +188,7 @@ public class ReportService {
 
   public KpiReport kpi(LocalDate from, LocalDate to, UUID branchId) {
     ensurePeriod(from, to);
-    String branch = branchId == null ? "" : "and s.branch_id = :branch";
+    BranchCondition branch = branchCondition(branchId);
     String sql =
         """
         select
@@ -184,8 +212,8 @@ public class ReportService {
         ) fill on true
         where s.deleted = false and s.planned_pickup >= :start and s.planned_pickup < :end %s
         """
-            .formatted(branch);
-    Object[] cells = (Object[]) period(sql, from, to, branchId).getSingleResult();
+            .formatted(branch.sql());
+    Object[] cells = (Object[]) period(sql, from, to, branch).getSingleResult();
     long delivered = ((Number) cells[2]).longValue();
     long onTime = ((Number) cells[3]).longValue();
     return new KpiReport(
@@ -200,7 +228,7 @@ public class ReportService {
 
   public List<DriverRow> drivers(LocalDate from, LocalDate to, UUID branchId) {
     ensurePeriod(from, to);
-    String branch = branchId == null ? "" : "and s.branch_id = :branch";
+    BranchCondition branch = branchCondition(branchId);
     String sql =
         """
         select cast(d.id as varchar), d.full_name,
@@ -218,9 +246,9 @@ public class ReportService {
         group by d.id, d.full_name
         order by shipments desc, d.full_name
         """
-            .formatted(branch);
+            .formatted(branch.sql());
     List<DriverRow> rows = new ArrayList<>();
-    for (Object row : period(sql, from, to, branchId).getResultList()) {
+    for (Object row : period(sql, from, to, branch).getResultList()) {
       Object[] cells = (Object[]) row;
       long delivered = ((Number) cells[3]).longValue();
       long onTime = ((Number) cells[4]).longValue();
@@ -236,8 +264,9 @@ public class ReportService {
     return rows;
   }
 
-  /** Cari ve banka/kasa bakiyelerinin para birimi kırılımı. */
+  /** Cari ve banka/kasa bakiyelerinin para birimi kırılımı (kiracı geneli; LIMITED'e kapalı). */
   public List<PositionRow> position() {
+    scope.requireAll("POSITION");
     String sql =
         """
         with balances as (
@@ -277,7 +306,9 @@ public class ReportService {
     return rows;
   }
 
+  /** Nakit öngörüsü (kiracı geneli; LIMITED'e kapalı). */
   public List<ForecastRow> forecast() {
+    scope.requireAll("FORECAST");
     Map<String, BigDecimal> balances = new HashMap<>();
     for (Object row :
         entityManager
@@ -331,7 +362,9 @@ public class ReportService {
         FORECAST_WEEKS);
   }
 
+  /** Tahsilat/ödeme performansı (kiracı geneli; LIMITED'e kapalı). */
   public List<SettlementPerformanceRow> settlementPerformance(LocalDate from, LocalDate to) {
+    scope.requireAll("SETTLEMENT_PERFORMANCE");
     ensurePeriod(from, to);
     Query query =
         entityManager.createNativeQuery(
@@ -362,12 +395,15 @@ public class ReportService {
     return rows;
   }
 
-  private Query period(String sql, LocalDate from, LocalDate to, UUID branchId) {
+  private Query period(String sql, LocalDate from, LocalDate to, BranchCondition branch) {
     Query query = entityManager.createNativeQuery(sql);
     query.setParameter("start", clock.startOf(from));
     query.setParameter("end", clock.startOf(to.plusDays(1)));
-    if (branchId != null) {
-      query.setParameter("branch", branchId);
+    if (branch.branchId() != null) {
+      query.setParameter("branch", branch.branchId());
+    }
+    if (branch.branchIds() != null) {
+      query.setParameter("branches", branch.branchIds());
     }
     return query;
   }

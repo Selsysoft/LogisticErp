@@ -4,6 +4,7 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../i18n";
 import { useAuthStore } from "../../auth/authStore";
+import { useCompanyStore } from "../../auth/companyStore";
 import type { BranchTree } from "../branch/branchTree";
 import { ZtoFinansRoot } from "../ZtoFinansRoot";
 import { ZtoBranchSelect, ZtoBranchSelectProps } from "./ZtoBranchSelect";
@@ -27,7 +28,15 @@ const singleFlat: BranchTree = [
   {
     companyId: null,
     companyName: "",
-    groups: [{ groupId: null, groupName: "Diğer", branches: [b("a", "Merkez"), b("c", "Depo")] }],
+    companyActive: true,
+    groups: [
+      {
+        groupId: null,
+        groupName: "Diğer",
+        groupActive: true,
+        branches: [b("a", "Merkez"), b("c", "Depo")],
+      },
+    ],
   },
 ];
 
@@ -35,12 +44,16 @@ const multiCompany: BranchTree = [
   {
     companyId: "c1",
     companyName: "Acme",
-    groups: [{ groupId: "g1", groupName: "İzmir", branches: [b("a", "Çiğli")] }],
+    companyActive: true,
+    groups: [{ groupId: "g1", groupName: "İzmir", groupActive: true, branches: [b("a", "Çiğli")] }],
   },
   {
     companyId: "c2",
     companyName: "Beta",
-    groups: [{ groupId: null, groupName: "Diğer", branches: [b("b", "Ostim", false)] }],
+    companyActive: true,
+    groups: [
+      { groupId: null, groupName: "Diğer", groupActive: true, branches: [b("b", "Ostim", false)] },
+    ],
   },
 ];
 
@@ -75,6 +88,7 @@ beforeEach(() => {
   branchTree.calls = [];
   setTree(singleFlat);
   useAuthStore.setState({ me: null });
+  useCompanyStore.setState({ activeCompanyId: null });
 });
 
 afterEach(cleanup);
@@ -129,6 +143,26 @@ describe("ZtoBranchSelect", () => {
     expect(Array.from(groups, (g) => g.textContent)).toEqual(["Acme › İzmir", "Beta › Diğer"]);
     const inactive = screen.getByText("Ostim (Pasif)", { selector: "li" });
     expect(inactive.classList.contains("select2-results__option--disabled")).toBe(true);
+  });
+
+  it("companyId: varsayılan aktif şirket; null tüm şirketler; kimlik yalnız o şirket", () => {
+    setTree(multiCompany);
+    useCompanyStore.setState({ activeCompanyId: "c1" });
+    render(<Harness />);
+    open();
+    // Tek şirket kalınca optgroup etiketi yalnız grup adıdır.
+    expect(
+      Array.from(document.querySelectorAll(".select2-results__group"), (g) => g.textContent),
+    ).toEqual(["İzmir"]);
+    cleanup();
+    render(<Harness companyId={null} />);
+    open();
+    expect(document.querySelectorAll(".select2-results__group")).toHaveLength(2);
+    cleanup();
+    render(<Harness companyId="c2" tree={multiCompany} />);
+    const values = Array.from(q<HTMLSelectElement>("select").options, (o) => o.value);
+    // "" yer tutucu seçeneğidir.
+    expect(values.filter((value) => value !== "")).toEqual(["b"]);
   });
 
   it("veri yüklenirken devre dışı; varsayılan kapsam 'mine', pasifler hariç", () => {

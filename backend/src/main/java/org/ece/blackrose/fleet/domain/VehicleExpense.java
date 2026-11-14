@@ -33,6 +33,7 @@ public class VehicleExpense extends AuditableEntity {
   private String currency;
   private BigDecimal tlAmount;
   private UUID branchId;
+  private UUID companyId;
   private UUID supplierAccountId;
   private UUID fundAccountId;
   private UUID settlementId;
@@ -44,7 +45,8 @@ public class VehicleExpense extends AuditableEntity {
 
   protected VehicleExpense() {}
 
-  public VehicleExpense(UUID vehicleId, SaveVehicleExpenseRequest request, BigDecimal tlAmount) {
+  public VehicleExpense(
+      UUID vehicleId, SaveVehicleExpenseRequest request, BigDecimal tlAmount, UUID companyId) {
     this.id = UUID.randomUUID();
     this.vehicleId = vehicleId;
     this.kind = request.kind();
@@ -55,6 +57,7 @@ public class VehicleExpense extends AuditableEntity {
     this.currency = request.money().currency();
     this.tlAmount = tlAmount;
     this.branchId = request.branchId();
+    this.companyId = companyId;
     this.supplierAccountId = request.supplierAccountId();
     this.fundAccountId = request.fundAccountId();
     this.liters = request.liters();
@@ -134,5 +137,9 @@ public class VehicleExpense extends AuditableEntity {
 
   public BigDecimal getNextDueKm() {
     return nextDueKm;
+  }
+
+  public UUID getCompanyId() {
+    return companyId;
   }
 }

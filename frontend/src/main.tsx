@@ -8,15 +8,14 @@ import "@fontsource/sora/500.css";
 import "@fontsource/sora/600.css";
 import "@fontsource/sora/700.css";
 import { CssBaseline, ThemeProvider } from "@mui/material";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+import { queryClient } from "./api/queryClient";
 import { App } from "./App";
 import "./i18n";
 import { theme } from "./theme";
-
-const queryClient = new QueryClient();
 
 // Yeni sürüm yayımlanınca eski sayfa dosyaları sunucudan kalkar; açık sekme bir sayfayı ilk kez
 // açarken yükleme başarısız olursa sayfa yeni sürümle yeniden yüklenir. Döngüye girmemesi için

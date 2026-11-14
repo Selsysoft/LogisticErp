@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { session } from "../auth/session";
-import { ApiError, apiGet, onSessionExpired } from "./client";
+import { ApiError, apiBlobUrl, apiGet, onSessionExpired } from "./client";
 
 const store = new Map<string, string>();
 
@@ -52,6 +52,31 @@ describe("apiGet", () => {
     const error = await apiGet("/ping").catch((e: unknown) => e);
 
     expect((error as ApiError).body.code).toBe("HTTP_502");
+  });
+});
+
+describe("apiBlobUrl", () => {
+  it("dosyayı token'la indirir ve blob: adresi verir", async () => {
+    session.setAccessToken("erisim");
+    const fetchMock = vi.fn().mockResolvedValue(new Response(new Blob(["png"]), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:logo");
+
+    await expect(apiBlobUrl("/files/f1/content")).resolves.toBe("blob:logo");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/files/f1/content");
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe("Bearer erisim");
+    expect(createObjectURL.mock.calls[0][0]).toBeInstanceOf(Blob);
+    createObjectURL.mockRestore();
+  });
+
+  it("hata yanıtında ApiError fırlatır, URL üretmez", async () => {
+    session.setAccessToken("erisim");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
+    const createObjectURL = vi.spyOn(URL, "createObjectURL");
+
+    await expect(apiBlobUrl("/files/yok/content")).rejects.toBeInstanceOf(ApiError);
+    expect(createObjectURL).not.toHaveBeenCalled();
+    createObjectURL.mockRestore();
   });
 });
 

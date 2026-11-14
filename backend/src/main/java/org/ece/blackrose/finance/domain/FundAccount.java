@@ -25,6 +25,7 @@ public class FundAccount extends AuditableEntity {
 
   private String currency;
   private UUID branchId;
+  private UUID companyId;
   private String bankName;
   private String iban;
   private boolean allowNegative;
@@ -37,6 +38,7 @@ public class FundAccount extends AuditableEntity {
       FundKind kind,
       String currency,
       UUID branchId,
+      UUID companyId,
       String bankName,
       String iban,
       boolean allowNegative) {
@@ -44,13 +46,19 @@ public class FundAccount extends AuditableEntity {
     this.code = code;
     this.kind = kind;
     this.currency = currency;
-    update(name, branchId, bankName, iban, allowNegative);
+    update(name, branchId, companyId, bankName, iban, allowNegative);
   }
 
   public final void update(
-      String name, UUID branchId, String bankName, String iban, boolean allowNegative) {
+      String name,
+      UUID branchId,
+      UUID companyId,
+      String bankName,
+      String iban,
+      boolean allowNegative) {
     this.name = name;
     this.branchId = branchId;
+    this.companyId = companyId;
     this.bankName = bankName;
     this.iban = iban;
     this.allowNegative = allowNegative;
@@ -90,5 +98,9 @@ public class FundAccount extends AuditableEntity {
 
   public boolean isAllowNegative() {
     return allowNegative;
+  }
+
+  public UUID getCompanyId() {
+    return companyId;
   }
 }

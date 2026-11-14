@@ -13,6 +13,8 @@ declare module "@tanstack/react-table" {
     className?: string;
     /** Yalnız th'ye eklenen sınıf. */
     headerClassName?: string;
+    /** Yalnız td'ye eklenen sınıf (ZTO introduction-details.js hücre sınıfları). */
+    cellClassName?: string;
     /** Arama dışı bırakmak için false (DataTables columns.searchable). */
     searchable?: boolean;
     /**

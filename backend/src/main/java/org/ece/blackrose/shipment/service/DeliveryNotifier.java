@@ -6,6 +6,7 @@ import org.ece.blackrose.crm.domain.Contact;
 import org.ece.blackrose.crm.repository.CrmRepositories.ContactRepository;
 import org.ece.blackrose.identity.security.SecurityProperties;
 import org.ece.blackrose.identity.service.AccountMailer;
+import org.ece.blackrose.organization.CompanyIdentityService;
 import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.domain.ShipmentEvent;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.EventType;
@@ -52,6 +53,7 @@ public class DeliveryNotifier {
   private final SecurityProperties properties;
   private final AccountMailer mailer;
   private final ApplicationEventPublisher publisher;
+  private final CompanyIdentityService identities;
 
   public DeliveryNotifier(
       ContactRepository contacts,
@@ -60,7 +62,9 @@ public class DeliveryNotifier {
       TenantRepository tenants,
       SecurityProperties properties,
       AccountMailer mailer,
-      ApplicationEventPublisher publisher) {
+      ApplicationEventPublisher publisher,
+      CompanyIdentityService identities) {
+    this.identities = identities;
     this.contacts = contacts;
     this.tracking = tracking;
     this.events = events;
@@ -100,7 +104,11 @@ public class DeliveryNotifier {
             kind.note + String.join(", ", recipients)));
     ShipmentNoticeEmail.Content content =
         ShipmentNoticeEmail.build(
-            kind, tenant.getName(), shipment, url, ZoneId.of(tenant.getTimeZone()));
+            kind,
+            identities.ofBranch(shipment.getBranchId()).title(),
+            shipment,
+            url,
+            ZoneId.of(tenant.getTimeZone()));
     publisher.publishEvent(
         new DeliveryNotice(
             recipients, kind.subject + shipment.getNumber(), content.text(), content.html()));

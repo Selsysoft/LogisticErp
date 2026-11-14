@@ -26,8 +26,13 @@ export class Owner {
     return (await this.request<{ id: string }>("POST", path, body)).id;
   }
 
-  branch() {
-    return this.create("/organization/branches", { code: unique("S"), name: "Merkez" });
+  /**
+   * Ortak kiracıda iş yeri. Seçim yapan testler benzersiz bir ad verip seçeneği adıyla seçer: başka
+   * spec'lerin (örn. zto-finans TEMEL TANIMLAR) iş yerleri ada göre önce sıralanabilir ve geçici olarak
+   * pasifleşebilir; "ilk seçenek" paralel koşuda başkasının iş yerini seçerdi.
+   */
+  branch(name = "Merkez") {
+    return this.create("/organization/branches", { code: unique("S"), name });
   }
 
   account(type: "CUSTOMER" | "SUPPLIER" | "CARRIER", name: string) {

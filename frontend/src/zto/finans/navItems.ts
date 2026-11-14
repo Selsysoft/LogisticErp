@@ -13,14 +13,19 @@ export type ZtoNavLabel = keyof typeof navTexts;
 
 export const ZTO_FINANS_BASE = "/zto-finans";
 
-export interface ZtoNavSource {
+export type ZtoNavSource = {
   controller: string;
   action: string;
-  /** _SideMenu_FinanceItems.cshtml satırı. */
+  /** `file` dosyasındaki satır (varsayılan _SideMenu_FinanceItems.cshtml). */
   line: number;
-}
+  /**
+   * Kaynak menü dosyası: yoksa _SideMenu_FinanceItems; "_Layout" ZTO ana menüsü (Temel Tanımlar);
+   * "blackrose" ZTO'da olmayan Blackrose eki.
+   */
+  file?: "_SideMenu_FinanceItems" | "_Layout" | "blackrose";
+};
 
-export interface ZtoNavItem {
+export type ZtoNavItem = {
   id: string;
   label: ZtoNavLabel;
   /** Font Awesome 5 sınıfı (ZTO'daki .zt-icon simgesi). */
@@ -37,14 +42,18 @@ export interface ZtoNavItem {
   action?: "add";
   /** Yalnız geliştirme ortamında görünür (bileşen vitrini). */
   devOnly?: boolean;
-}
+  /** Öğe yalnız bu izne sahip kullanıcıya görünür. */
+  permission?: string;
+  /** true: alt yollar da (…/yeni, …/:id) öğeyi etkin yapar. */
+  matchPrefix?: boolean;
+};
 
-export interface ZtoNavSection {
+export type ZtoNavSection = {
   id: string;
   label: ZtoNavLabel;
   icon: string;
   items: ZtoNavItem[];
-}
+};
 
 const FILE_LINE = (controller: string, action: string, line: number): ZtoNavSource => ({
   controller,
@@ -402,6 +411,51 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
     ],
   },
   {
+    // Blackrose eki (12.1a §6.6): ZTO'da bu ekranlar _Layout.cshtml:1263, 1284-1291 "Temel Tanımlar"
+    // altındadır (finans yan menüsünde yok); Şirketler ZTO'da hiç yok (kiracı = tek tüzel kişi).
+    id: "basic-definitions",
+    label: "sectionBasicDefinitions",
+    icon: "fas fa-sitemap",
+    items: [
+      {
+        id: "workPlaces",
+        label: "workPlaces",
+        icon: "fas fa-building",
+        slug: "tanimlar/is-yerleri",
+        kind: "page",
+        source: { controller: "WorkPlace", action: "Index", line: 1284, file: "_Layout" },
+        step: "12.1a",
+        implemented: true,
+        permission: "BRANCH_VIEW",
+        matchPrefix: true,
+      },
+      {
+        id: "branchGroups",
+        label: "branchGroups",
+        icon: "fas fa-code-branch",
+        slug: "tanimlar/subeler",
+        kind: "page",
+        source: { controller: "BranchProvince", action: "Index", line: 1288, file: "_Layout" },
+        step: "12.1a",
+        implemented: true,
+        permission: "BRANCH_VIEW",
+        matchPrefix: true,
+      },
+      {
+        id: "companies",
+        label: "companies",
+        icon: "fas fa-landmark",
+        slug: "tanimlar/sirketler",
+        kind: "page",
+        source: { controller: "—", action: "—", line: 0, file: "blackrose" },
+        step: "12.1a",
+        implemented: true,
+        permission: "BRANCH_VIEW",
+        matchPrefix: true,
+      },
+    ],
+  },
+  {
     // Yalnız Blackrose: geliştirme vitrini (ZTO'da yok).
     id: "dev",
     label: "sectionDev",
@@ -444,14 +498,28 @@ export const EXCLUDED_ZTO_ITEMS: ReadonlyArray<{ line: number; href: string; rea
   { line: 297, href: "/orderdefinitions/index", reason: "MX8 (tanım merkezi)" },
 ];
 
-/** Ortama göre görünen bölümler: devOnly öğeler yalnız geliştirmede; boş bölüm atılır. */
+/**
+ * Ortama ve izne göre görünen bölümler: devOnly öğeler yalnız geliştirmede; `permission`'ı olan öğe
+ * `can(permission)` ister; boş bölüm atılır.
+ */
 export function visibleSections(
   dev: boolean,
   sections: readonly ZtoNavSection[] = ZTO_NAV_SECTIONS,
+  can: (permission: string) => boolean = () => true,
 ): ZtoNavSection[] {
   return sections
-    .map((section) => ({ ...section, items: section.items.filter((i) => dev || !i.devOnly) }))
+    .map((section) => ({
+      ...section,
+      items: section.items.filter(
+        (i) => (dev || !i.devOnly) && (!i.permission || can(i.permission)),
+      ),
+    }))
     .filter((section) => section.items.length > 0);
+}
+
+/** Öğe ZTO finans yan menüsünden mi (_SideMenu_FinanceItems; Blackrose ve _Layout ekleri değil). */
+export function isFinanceMenuItem(item: ZtoNavItem): boolean {
+  return (item.source.file ?? "_SideMenu_FinanceItems") === "_SideMenu_FinanceItems";
 }
 
 /** Öğenin tam yolu (/zto-finans/…). */
@@ -467,10 +535,13 @@ export function isNavigable(item: ZtoNavItem): boolean {
 /**
  * Etkin öğeler (ZTO "zt-active"): yolu tam eşleşen sayfa öğeleri. ZTO'da Cari Kartlar ile Tüm
  * Planlamalar aynı adrese gittiği için ikisi birlikte etkin olabilir; sondaki "/" yok sayılır.
+ * `matchPrefix` öğelerde alt yollar (…/yeni, …/:id) da etkindir.
  */
 export function isActive(item: ZtoNavItem, pathname: string): boolean {
   const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
-  return item.kind === "page" && itemPath(item) === path;
+  if (item.kind !== "page") return false;
+  const own = itemPath(item);
+  return path === own || (item.matchPrefix === true && path.startsWith(`${own}/`));
 }
 
 /** Bir slug'ın Faz adımı; bilinmeyen slug için undefined. */
@@ -482,4 +553,7 @@ export function stepOf(slug: string, sections: readonly ZtoNavSection[] = ZTO_NA
 export const ZTO_SLUGS = {
   allTransactions: "cari-hareketler",
   showcase: "vitrin",
+  workPlaces: "tanimlar/is-yerleri",
+  branchGroups: "tanimlar/subeler",
+  companies: "tanimlar/sirketler",
 } as const;

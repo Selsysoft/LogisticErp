@@ -10,6 +10,7 @@ import org.ece.blackrose.finance.domain.FinanceTypes.PlanStatus;
 import org.ece.blackrose.finance.domain.PaymentPlan;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
 import org.ece.blackrose.finance.service.PlanDecisionEvent;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
@@ -24,10 +25,13 @@ public class PlanDecisionNotifier {
 
   private final InstantMail mail;
   private final AccountRepository accounts;
+  private final BranchScopeService scope;
 
-  public PlanDecisionNotifier(InstantMail mail, AccountRepository accounts) {
+  public PlanDecisionNotifier(
+      InstantMail mail, AccountRepository accounts, BranchScopeService scope) {
     this.mail = mail;
     this.accounts = accounts;
+    this.scope = scope;
   }
 
   @EventListener
@@ -38,7 +42,8 @@ public class PlanDecisionNotifier {
       mail.send(
           NotificationTopic.PAYMENT_APPROVAL,
           actor,
-          user -> true,
+          // Onaycı yalnız kapsamındaki iş yerinin planını duyar.
+          user -> scope.allows(user, plan.getBranchId()),
           "Onay bekleyen ödeme planı: " + summary(plan),
           details(plan)
               + "\nOnaya gönderen: "

@@ -70,6 +70,7 @@ public class FileService {
   @Transactional
   public StoredFile upload(String ownerType, UUID ownerId, MultipartFile upload) {
     FileOwnerPolicy policy = policy(ownerType);
+    requireNotManaged(policy);
     requirePermission(policy.editPermission());
     if (!policy.exists(ownerId)) {
       throw new BusinessException(
@@ -134,8 +135,26 @@ public class FileService {
   @Transactional
   public void delete(UUID id) {
     StoredFile file = find(id);
-    requirePermission(policy(file.getOwnerType()).editPermission());
+    FileOwnerPolicy policy = policy(file.getOwnerType());
+    requireNotManaged(policy);
+    requirePermission(policy.editPermission());
     file.markDeleted();
+  }
+
+  /**
+   * Sahibi modülün yönettiği dosyayı siler; izin kontrolünü çağıran iş kuralı yapar. Dosya zaten
+   * yoksa (silinmişse) bir şey yapılmaz.
+   */
+  @Transactional
+  public void deleteManaged(UUID id) {
+    files.findById(id).ifPresent(StoredFile::markDeleted);
+  }
+
+  private static void requireNotManaged(FileOwnerPolicy policy) {
+    if (policy.managedByOwner()) {
+      throw new BusinessException(
+          HttpStatus.CONFLICT, "FILE_MANAGED_BY_OWNER", "Bu dosya kendi ekranından yönetilir.");
+    }
   }
 
   private void requireClean(String name, InputStream content) throws IOException {

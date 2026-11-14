@@ -27,15 +27,24 @@ const tree: BranchTree = [
   {
     companyId: "c1",
     companyName: "Gül Lojistik",
+    companyActive: true,
     groups: [
-      { groupId: "g1", groupName: "İzmir", branches: [b("a", "Bornova"), b("b", "Kemalpaşa")] },
-      { groupId: null, groupName: "Diğer", branches: [b("c", "Isparta Depo")] },
+      {
+        groupId: "g1",
+        groupName: "İzmir",
+        groupActive: true,
+        branches: [b("a", "Bornova"), b("b", "Kemalpaşa")],
+      },
+      { groupId: null, groupName: "Diğer", groupActive: true, branches: [b("c", "Isparta Depo")] },
     ],
   },
   {
     companyId: null,
     companyName: "Lale Nakliyat",
-    groups: [{ groupId: "g2", groupName: "Ankara", branches: [b("d", "Sincan")] }],
+    companyActive: true,
+    groups: [
+      { groupId: "g2", groupName: "Ankara", groupActive: true, branches: [b("d", "Sincan")] },
+    ],
   },
 ];
 const all = ["a", "b", "c", "d"];
@@ -159,10 +168,12 @@ describe("arama", () => {
       {
         companyId: null,
         companyName: "",
+        companyActive: true,
         groups: [
           {
             groupId: "k",
             groupName: "KIRMIZI",
+            groupActive: true,
             branches: [{ id: "x", code: "X", name: "ISPARTA DEPO", active: true }],
           },
         ],

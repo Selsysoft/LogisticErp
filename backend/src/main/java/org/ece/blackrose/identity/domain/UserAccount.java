@@ -42,6 +42,11 @@ public class UserAccount extends AuditableEntity {
   private boolean totpEnabled;
   private Long totpLastStep;
 
+  @Enumerated(EnumType.STRING)
+  private BranchScope branchScope = BranchScope.ALL;
+
+  private UUID defaultBranchId;
+
   @ManyToMany(fetch = FetchType.EAGER)
   @JoinTable(
       name = "user_role",
@@ -121,6 +126,19 @@ public class UserAccount extends AuditableEntity {
     totpLastStep = step;
   }
 
+  /**
+   * İş yeri kapsamını değiştirir. {@code tokenVersion} artırılmaz: kapsam her istekte okunur,
+   * değişiklik bir sonraki istekte geçerlidir.
+   */
+  public void updateBranchScope(BranchScope scope, UUID defaultBranchId) {
+    this.branchScope = scope;
+    this.defaultBranchId = defaultBranchId;
+  }
+
+  public boolean isOwner() {
+    return roles.stream().anyMatch(Role::isOwner);
+  }
+
   public UUID getId() {
     return id;
   }
@@ -163,5 +181,13 @@ public class UserAccount extends AuditableEntity {
 
   public Set<Role> getRoles() {
     return roles;
+  }
+
+  public BranchScope getBranchScope() {
+    return branchScope;
+  }
+
+  public UUID getDefaultBranchId() {
+    return defaultBranchId;
   }
 }

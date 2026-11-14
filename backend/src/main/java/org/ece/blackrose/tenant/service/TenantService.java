@@ -22,6 +22,10 @@ import org.springframework.stereotype.Service;
 /**
  * Durum kaydı ve şema göçü ayrı adımlardır. Göç hata verse de {@code FAILED} durumu kalıcı
  * olmalıdır, bu yüzden servis tek bir transaction içinde çalışmaz.
+ *
+ * <p>{@link #create} işlemsiz kalmalıdır: tenant V23 göçü varsayılan şirketin adını {@code
+ * admin.tenant} satırından okur; satır göçten önce commit edilmezse şirket adı "Şirket" olarak
+ * kalır (docs/zto-finans/uygulama/12.1a_TASARIM.md §2.0).
  */
 @Service
 public class TenantService {

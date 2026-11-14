@@ -1,7 +1,9 @@
 package org.ece.blackrose.identity.security;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import org.ece.blackrose.identity.domain.BranchScope;
 import org.ece.blackrose.identity.domain.SaasAdmin;
 import org.ece.blackrose.identity.domain.UserAccount;
 import org.ece.blackrose.identity.domain.UserStatus;
@@ -9,6 +11,7 @@ import org.ece.blackrose.identity.repository.IdentityRepositories.RevokedAccessT
 import org.ece.blackrose.identity.repository.IdentityRepositories.SaasAdminRepository;
 import org.ece.blackrose.identity.repository.IdentityRepositories.SaasRevokedTokenRepository;
 import org.ece.blackrose.identity.repository.IdentityRepositories.UserAccountRepository;
+import org.ece.blackrose.identity.repository.IdentityRepositories.UserBranchRepository;
 import org.ece.blackrose.saas.service.PresenceTracker;
 import org.ece.blackrose.tenant.TenantContext;
 import org.springframework.core.convert.converter.Converter;
@@ -33,13 +36,16 @@ public class JwtPrincipalConverter implements Converter<Jwt, AbstractAuthenticat
   private final RevokedAccessTokenRepository revokedTokens;
   private final SaasRevokedTokenRepository saasRevokedTokens;
   private final PresenceTracker presence;
+  private final UserBranchRepository userBranches;
 
   public JwtPrincipalConverter(
       UserAccountRepository users,
       SaasAdminRepository admins,
       RevokedAccessTokenRepository revokedTokens,
       SaasRevokedTokenRepository saasRevokedTokens,
-      PresenceTracker presence) {
+      PresenceTracker presence,
+      UserBranchRepository userBranches) {
+    this.userBranches = userBranches;
     this.saasRevokedTokens = saasRevokedTokens;
     this.presence = presence;
     this.users = users;
@@ -92,8 +98,15 @@ public class JwtPrincipalConverter implements Converter<Jwt, AbstractAuthenticat
             .orElseThrow(JwtPrincipalConverter::invalid);
     presence.touch(claimedTenant, user.getId());
     List<String> authorities = user.getEffectivePermissions().stream().map(Enum::name).toList();
+    // İş yeri kapsamı istek başına bir kez okunur (ALL'da sorgu yok); değişiklik bir sonraki
+    // istekte geçerlidir, token geçersizleşmez.
+    Set<UUID> allowed =
+        user.getBranchScope() == BranchScope.LIMITED
+            ? Set.copyOf(userBranches.branchIdsOf(user.getId()))
+            : null;
     return authentication(
-        new AuthenticatedUser(user.getId(), user.getEmail(), jti, jwt.getExpiresAt()), authorities);
+        new AuthenticatedUser(user.getId(), user.getEmail(), jti, jwt.getExpiresAt(), allowed),
+        authorities);
   }
 
   private static int tokenVersion(Jwt jwt) {

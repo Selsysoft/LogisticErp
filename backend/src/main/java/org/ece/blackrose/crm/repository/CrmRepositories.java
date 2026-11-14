@@ -151,11 +151,17 @@ public final class CrmRepositories {
     @Query("select q from Quote q where q.id = :id")
     Optional<Quote> findForUpdate(@Param("id") UUID id);
 
+    /** {@code allCompanies} false ise yalnız {@code companyIds} (LIMITED kullanıcı). */
     @Query(
         "select q from Quote q where (:status is null or q.status = :status)"
-            + " and (:accountId is null or q.accountId = :accountId)")
+            + " and (:accountId is null or q.accountId = :accountId)"
+            + " and (:allCompanies = true or q.companyId in :companyIds)")
     Page<Quote> search(
-        @Param("status") QuoteStatus status, @Param("accountId") UUID accountId, Pageable pageable);
+        @Param("status") QuoteStatus status,
+        @Param("accountId") UUID accountId,
+        @Param("allCompanies") boolean allCompanies,
+        @Param("companyIds") Collection<UUID> companyIds,
+        Pageable pageable);
 
     List<Quote> findByNumberOrderByVersion(String number);
 
@@ -173,18 +179,26 @@ public final class CrmRepositories {
     @Query(
         """
         select c from Contract c
-        where c.accountId = :accountId and c.status = :status
+        where c.accountId = :accountId and c.companyId = :companyId and c.status = :status
           and c.startDate <= :end and c.endDate >= :start
         order by c.startDate desc, c.number
         """)
     List<Contract> overlapping(
         @Param("accountId") UUID accountId,
+        @Param("companyId") UUID companyId,
         @Param("status") ContractStatus status,
         @Param("start") LocalDate start,
         @Param("end") LocalDate end);
 
-    @Query("select c from Contract c where (:accountId is null or c.accountId = :accountId)")
-    Page<Contract> search(@Param("accountId") UUID accountId, Pageable pageable);
+    /** {@code allCompanies} false ise yalnız {@code companyIds} (LIMITED kullanıcı). */
+    @Query(
+        "select c from Contract c where (:accountId is null or c.accountId = :accountId)"
+            + " and (:allCompanies = true or c.companyId in :companyIds)")
+    Page<Contract> search(
+        @Param("accountId") UUID accountId,
+        @Param("allCompanies") boolean allCompanies,
+        @Param("companyIds") Collection<UUID> companyIds,
+        Pageable pageable);
 
     @Query(value = "select nextval('contract_number_seq')", nativeQuery = true)
     long nextNumber();

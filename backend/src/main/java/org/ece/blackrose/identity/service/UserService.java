@@ -8,13 +8,17 @@ import java.util.Set;
 import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.identity.domain.AuditEvent;
+import org.ece.blackrose.identity.domain.BranchScope;
 import org.ece.blackrose.identity.domain.Permission;
 import org.ece.blackrose.identity.domain.Role;
 import org.ece.blackrose.identity.domain.UserAccount;
+import org.ece.blackrose.identity.domain.UserBranch;
 import org.ece.blackrose.identity.domain.UserStatus;
 import org.ece.blackrose.identity.repository.IdentityRepositories.RefreshTokenRepository;
 import org.ece.blackrose.identity.repository.IdentityRepositories.RoleRepository;
 import org.ece.blackrose.identity.repository.IdentityRepositories.UserAccountRepository;
+import org.ece.blackrose.identity.repository.IdentityRepositories.UserBranchRepository;
+import org.ece.blackrose.identity.security.AuthenticatedUser;
 import org.ece.blackrose.identity.web.IdentityDtos.InviteUserRequest;
 import org.ece.blackrose.identity.web.IdentityDtos.UpdateUserRequest;
 import org.ece.blackrose.saas.domain.SaasTypes.LimitedResource;
@@ -30,12 +34,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class UserService {
 
+  private static final UUID NONE = new UUID(0, 0);
+
   private final UserAccountRepository users;
   private final RoleRepository roles;
   private final RefreshTokenRepository refreshTokens;
   private final AccountTokenService accountTokens;
   private final AuditService audit;
   private final PlanLimitService planLimits;
+  private final UserBranchRepository userBranches;
+  private final UserScopeGuard guard;
 
   public UserService(
       UserAccountRepository users,
@@ -43,7 +51,11 @@ public class UserService {
       RefreshTokenRepository refreshTokens,
       AccountTokenService accountTokens,
       AuditService audit,
-      PlanLimitService planLimits) {
+      PlanLimitService planLimits,
+      UserBranchRepository userBranches,
+      UserScopeGuard guard) {
+    this.userBranches = userBranches;
+    this.guard = guard;
     this.planLimits = planLimits;
     this.users = users;
     this.roles = roles;
@@ -52,14 +64,22 @@ public class UserService {
     this.audit = audit;
   }
 
+  /** LIMITED yönetici yalnız kendisini ve kapsamındaki LIMITED kullanıcıları görür. */
   @Transactional(readOnly = true)
   public Page<UserAccount> list(Pageable pageable) {
-    return users.findAll(pageable);
+    Set<UUID> scope = guard.actorScope();
+    if (scope == null) {
+      return users.findAll(pageable);
+    }
+    UUID self = AuthenticatedUser.require().id();
+    return users.findManageable(self, scope.isEmpty() ? Set.of(NONE) : scope, pageable);
   }
 
   @Transactional(readOnly = true)
   public UserAccount get(UUID id) {
-    return find(id);
+    UserAccount user = find(id);
+    guard.requireManageable(user);
+    return user;
   }
 
   @Transactional
@@ -72,7 +92,11 @@ public class UserService {
     planLimits.require(LimitedResource.USERS);
     List<Role> assigned = findRoles(request.roleIds());
     ensureActorHolds(permissionsOf(assigned));
+    if (guard.actorScope() != null && assigned.stream().anyMatch(Role::isOwner)) {
+      throw ownerScopeAll();
+    }
     UserAccount user = users.save(new UserAccount(email, request.fullName(), assigned));
+    inheritActorScope(user);
     accountTokens.sendInvite(user);
     audit.record(AuditEvent.USER_INVITED, email, roleCodes(assigned));
     return user;
@@ -93,8 +117,12 @@ public class UserService {
   public UserAccount update(UUID id, UpdateUserRequest request) {
     UserAccount user = find(id);
     ensureActorHolds(user.getEffectivePermissions());
+    guard.requireManageable(user);
     List<Role> assigned = findRoles(request.roleIds());
     ensureActorHolds(permissionsOf(assigned));
+    if (assigned.stream().anyMatch(Role::isOwner) && user.getBranchScope() == BranchScope.LIMITED) {
+      throw ownerScopeAll();
+    }
 
     boolean staysOwner = request.enabled() && assigned.stream().anyMatch(Role::isOwner);
     ensureAnotherOwnerRemains(user, staysOwner);
@@ -115,6 +143,7 @@ public class UserService {
   public void delete(UUID id) {
     UserAccount user = find(id);
     ensureActorHolds(user.getEffectivePermissions());
+    guard.requireManageable(user);
     ensureAnotherOwnerRemains(user, false);
     user.disable();
     user.markDeleted();
@@ -125,11 +154,37 @@ public class UserService {
   @Transactional
   public void resendInvite(UUID id) {
     UserAccount user = find(id);
+    guard.requireManageable(user);
     if (user.getStatus() != UserStatus.INVITED) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "USER_NOT_INVITED", "Kullanıcı daveti zaten kabul etmiş.");
     }
     accountTokens.sendInvite(user);
+  }
+
+  /**
+   * LIMITED yöneticinin davet ettiği kullanıcı aynı kapsamla başlar (yöneticinin iş yerleri ve
+   * varsayılan iş yeri); ALL yöneticinin davet ettiği kullanıcı ALL'dır.
+   */
+  private void inheritActorScope(UserAccount user) {
+    Set<UUID> scope = guard.actorScope();
+    if (scope == null) {
+      return;
+    }
+    UUID defaultBranch =
+        users
+            .findById(AuthenticatedUser.require().id())
+            .map(UserAccount::getDefaultBranchId)
+            .filter(scope::contains)
+            .orElse(null);
+    user.updateBranchScope(BranchScope.LIMITED, defaultBranch);
+    scope.forEach(branchId -> userBranches.save(new UserBranch(user.getId(), branchId)));
+  }
+
+  /** Patron rolü yalnız tüm iş yerlerini gören kullanıcıya verilir (§4.15). */
+  private static BusinessException ownerScopeAll() {
+    return new BusinessException(
+        HttpStatus.CONFLICT, "OWNER_SCOPE_ALL", "Patron kullanıcı tüm iş yerlerini görür.");
   }
 
   private void ensureAnotherOwnerRemains(UserAccount user, boolean staysOwner) {

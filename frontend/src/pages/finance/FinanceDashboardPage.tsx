@@ -2,6 +2,8 @@ import { Box, Card, CardContent, Typography } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { apiGet } from "../../api/client";
+import { useActiveCompanyId } from "../../auth/companyStore";
+import { withCompany } from "./companyQuery";
 import {
   DataTable,
   formatAmount,
@@ -36,9 +38,10 @@ function TotalCard({ title, totals }: { title: string; totals: CurrencyTotal[] }
 export function FinanceDashboardPage() {
   const { t } = useTranslation();
   const date = today();
+  const companyId = useActiveCompanyId();
   const dashboard = useQuery({
-    queryKey: ["finance", "dashboard", date],
-    queryFn: () => apiGet<Dashboard>(`/finance/dashboard?today=${date}`),
+    queryKey: ["finance", "dashboard", date, companyId],
+    queryFn: () => apiGet<Dashboard>(withCompany(`/finance/dashboard?today=${date}`, companyId)),
   });
   const accounts = useAccounts();
   const accountName = (id: string) => accounts.data?.find((a) => a.id === id)?.name ?? "—";

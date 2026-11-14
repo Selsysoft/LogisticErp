@@ -74,6 +74,18 @@ export function PlansConsolePage() {
       defaultValue: current?.maxShipmentsMonth?.toString() ?? "",
     },
     {
+      name: "maxCompanies",
+      label: t("saas.plan.maxCompanies"),
+      helperText: t("saas.emptyIsUnlimited"),
+      defaultValue: current?.maxCompanies?.toString() ?? "",
+    },
+    {
+      name: "maxBranches",
+      label: t("saas.plan.maxBranches"),
+      helperText: t("saas.emptyIsUnlimited"),
+      defaultValue: current?.maxBranches?.toString() ?? "",
+    },
+    {
       name: "active",
       label: t("saas.field.planActive"),
       type: "checkbox",
@@ -117,6 +129,16 @@ export function PlansConsolePage() {
               render: (row) => row.maxShipmentsMonth ?? UNLIMITED,
             },
             {
+              header: t("saas.resource.COMPANIES"),
+              align: "right",
+              render: (row) => row.maxCompanies ?? UNLIMITED,
+            },
+            {
+              header: t("saas.resource.BRANCHES"),
+              align: "right",
+              render: (row) => row.maxBranches ?? UNLIMITED,
+            },
+            {
               header: t("saas.field.planActive"),
               render: (row) => (row.active ? t("saas.yes") : t("saas.no")),
             },
@@ -149,6 +171,8 @@ export function PlansConsolePage() {
               maxUsers: limitValue(values.maxUsers),
               maxVehicles: limitValue(values.maxVehicles),
               maxShipmentsMonth: limitValue(values.maxShipmentsMonth),
+              maxCompanies: limitValue(values.maxCompanies),
+              maxBranches: limitValue(values.maxBranches),
               active: flags.active,
             };
             return current

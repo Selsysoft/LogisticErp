@@ -3,7 +3,9 @@ package org.ece.blackrose.reporting;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import org.ece.blackrose.reporting.service.DashboardCache;
@@ -38,6 +40,23 @@ class DashboardCacheTest {
 
     assertThat(cache.get("b", FINANCE, loader)).isNotSameAs(first);
     assertThat(cache.get("a", Set.of("FLEET_VIEW"), loader)).isNotSameAs(first);
+    assertThat(loads).hasValue(3);
+  }
+
+  @Test
+  void isYeriKapsamiAnahtaraGirer() {
+    DashboardCache cache = new DashboardCache(Duration.ofMinutes(1));
+    UUID a1 = UUID.randomUUID();
+    UUID a2 = UUID.randomUUID();
+
+    DashboardResponse all = cache.get("a", FINANCE, loader);
+    DashboardResponse limited = cache.get("a", FINANCE, Set.of(a1), loader);
+
+    assertThat(limited).isNotSameAs(all);
+    assertThat(cache.get("a", FINANCE, null, loader)).isSameAs(all);
+    assertThat(cache.get("a", FINANCE, List.of(a1), loader)).isSameAs(limited);
+    DashboardResponse both = cache.get("a", FINANCE, List.of(a2, a1), loader);
+    assertThat(cache.get("a", FINANCE, List.of(a1, a2), loader)).isSameAs(both);
     assertThat(loads).hasValue(3);
   }
 

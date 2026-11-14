@@ -11,7 +11,9 @@ public final class FinanceTypes {
     SUPPLIER,
     EMPLOYEE,
     BANK,
-    LEAD
+    LEAD,
+    /** Grup şirketi carisi; yalnız şirket kartından açılır (12.1a). */
+    INTERCOMPANY
   }
 
   /** Yön firmanın bakışıyla yazılır: pozitif bakiye "cari bize borçlu" demektir. */

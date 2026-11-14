@@ -20,14 +20,23 @@ import {
   Typography,
 } from "@mui/material";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { apiGet } from "../../api/client";
 import { hasPermission, useAuthStore } from "../../auth/authStore";
+import {
+  activeCompanies,
+  formDefaultCompanyId,
+  implicitCompanyId,
+  isMultiCompany,
+  useActiveCompanyId,
+} from "../../auth/companyStore";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
+import { branchOptions } from "./branchOptions";
+import { withCompany } from "./companyQuery";
 import { Account, Branch, Fund, Money, Page } from "./types";
 
 const AMOUNT_PATTERN = /^\d+([.,]\d{1,4})?$/;
@@ -80,6 +89,62 @@ export function useBranches() {
   });
 }
 
+/** Kiracıda ≥2 aktif şirket var mı (şirket sütunları ve "Şirket › İş yeri" etiketleri). */
+export function useMultiCompany() {
+  return useAuthStore((state) => isMultiCompany(state.me?.companies));
+}
+
+/**
+ * Form iş yeri seçenekleri (12.1a §6.13): yalnız aktifler ve aktif şirketinkiler; `optionsFor(keepId)`
+ * düzenlenen kaydın iş yerini korur. Ad çözümü için `branches.data` tüm iş yerlerini içerir.
+ */
+export function useBranchOptions() {
+  const branches = useBranches();
+  const companyId = useActiveCompanyId();
+  const multiCompany = useMultiCompany();
+  const optionsFor = useCallback(
+    (keepId?: string | null) =>
+      branchOptions(branches.data ?? [], { keepId, companyId, multiCompany }),
+    [branches.data, companyId, multiCompany],
+  );
+  return { branches, optionsFor, companyId, multiCompany };
+}
+
+/**
+ * Belgenin şirketi (teklif, sözleşme, iş yeri): yalnız ≥2 aktif şirkette "Şirket" seçimi; varsayılan
+ * aktif şirket, konsolidede varsayılan şirket (12.1a §6.13). Tek şirkette alan yoktur ve gövdeye
+ * `companyId` konmaz (`companyIdOf`).
+ */
+export function useCompanyField(label: string): FieldDef[] {
+  const companies = useAuthStore((state) => state.me?.companies);
+  const activeCompanyId = useActiveCompanyId();
+  if (!isMultiCompany(companies)) {
+    return [];
+  }
+  return [
+    {
+      name: "companyId",
+      label,
+      type: "select",
+      required: true,
+      defaultValue: formDefaultCompanyId(activeCompanyId, companies) ?? "",
+      options: activeCompanies(companies).map((company) => ({
+        value: company.id,
+        label: company.shortName,
+      })),
+    },
+  ];
+}
+
+/**
+ * `useCompanyField` değerini gövdeye taşır: seçildiyse `{ companyId }`; alan yoksa görünen tek şirket
+ * varsayılan değilse onun id'si (`implicitCompanyId`, LIMITED kullanıcı), gerçek tek şirkette `{}`.
+ */
+export function companyIdOf(values: Record<string, string>): { companyId?: string } {
+  const companyId = values.companyId || implicitCompanyId(useAuthStore.getState().me?.companies);
+  return companyId ? { companyId } : {};
+}
+
 export function useAccounts() {
   return useQuery({
     queryKey: ["finance", "accounts", "options"],
@@ -88,10 +153,14 @@ export function useAccounts() {
   });
 }
 
-export function useFunds() {
+/**
+ * Fon listesi. `companyId` verilirse (aktif şirket) yalnız o şirketin fonları; konsolidede tümü.
+ * Seçenek listeleri parametresiz çağırır ve şirkete göre istemcide süzer (`fund.companyId`).
+ */
+export function useFunds(companyId: string | null = null) {
   return useQuery({
-    queryKey: ["finance", "funds"],
-    queryFn: () => apiGet<Fund[]>("/finance/funds"),
+    queryKey: ["finance", "funds", companyId],
+    queryFn: () => apiGet<Fund[]>(withCompany("/finance/funds", companyId)),
   });
 }
 
@@ -112,6 +181,8 @@ export interface FieldDef {
   label: string;
   type?: "text" | "amount" | "date" | "datetime" | "select" | "checkbox" | "integer";
   options?: Option[];
+  /** Seçenekler formdaki diğer değerlere bağlıysa (örn. iş yerinin şirketine göre fonlar). */
+  optionsFrom?: (values: Record<string, string | boolean>) => Option[];
   required?: boolean;
   helperText?: string;
   defaultValue?: string | boolean;
@@ -173,8 +244,35 @@ export function FormDialog({
   const {
     control,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: defaults });
+  // Yalnız bağımlı seçenekli formlar değerleri izler; diğerlerinde yeniden çizim değişmez.
+  const dependent = fields.some((field) => field.optionsFrom);
+  const current = dependent ? watch() : defaults;
+  // Bağlı alan değişince (örn. iş yeri → fon, şirket → şube grubu, kaynak fon → hedef fon) seçeneklerden
+  // düşen eski seçim temizlenir; aksi hâlde görünmeyen değer gönderilir ve sunucu 422 COMPANY_MISMATCH
+  // döner. Bağımlılık dizisi bilerek yok: watch() her çizimde yeni nesne döndürür; setValue yalnız
+  // uyuşmazlıkta çalışır, temizlenen "" bir sonraki turda uyuşmazlık sayılmaz ve döngü durur.
+  useEffect(() => {
+    if (!dependent) {
+      return;
+    }
+    for (const field of fields) {
+      if (!field.optionsFrom) {
+        continue;
+      }
+      const value = current[field.name];
+      if (
+        typeof value === "string" &&
+        value !== "" &&
+        !field.optionsFrom(current).some((option) => option.value === value)
+      ) {
+        setValue(field.name, "", { shouldDirty: true });
+      }
+    }
+  });
 
   const save = useMutation({
     mutationFn: (values: FormValues) => {
@@ -245,7 +343,8 @@ export function FormDialog({
                       {field.type === "select" &&
                         [
                           ...(field.required ? [] : [{ value: "", label: "—" }]),
-                          ...(field.options ?? []),
+                          ...((field.optionsFrom ? field.optionsFrom(current) : field.options) ??
+                            []),
                         ].map((option) => (
                           <MenuItem key={option.value} value={option.value}>
                             {option.label}
@@ -341,6 +440,14 @@ export function DataTable<T>({
 export function usePaging(initialSize = 20) {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(initialSize);
+  const companyId = useActiveCompanyId();
+  const [pagedCompany, setPagedCompany] = useState(companyId);
+  if (pagedCompany !== companyId) {
+    // Aktif şirket değişince ilk sayfaya dönülür: sorgu anahtarı companyId içerir ve eski sayfa numarası
+    // yeni şirkette boş sayfa getirirdi. Çizim sırasında durum düzeltme deseni; eski numarayla istek atmaz.
+    setPagedCompany(companyId);
+    setPage(0);
+  }
   return { page, size, setPage, setSize };
 }
 

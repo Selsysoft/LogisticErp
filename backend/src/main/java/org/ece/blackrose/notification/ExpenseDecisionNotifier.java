@@ -7,6 +7,7 @@ import org.ece.blackrose.driverapp.domain.DriverExpense;
 import org.ece.blackrose.driverapp.service.DriverExpenseEvent;
 import org.ece.blackrose.fleet.domain.Driver;
 import org.ece.blackrose.fleet.repository.FleetRepositories.DriverRepository;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.CostKind;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentRepository;
 import org.springframework.context.event.EventListener;
@@ -31,12 +32,17 @@ public class ExpenseDecisionNotifier {
   private final InstantMail mail;
   private final DriverRepository drivers;
   private final ShipmentRepository shipments;
+  private final BranchScopeService scope;
 
   public ExpenseDecisionNotifier(
-      InstantMail mail, DriverRepository drivers, ShipmentRepository shipments) {
+      InstantMail mail,
+      DriverRepository drivers,
+      ShipmentRepository shipments,
+      BranchScopeService scope) {
     this.mail = mail;
     this.drivers = drivers;
     this.shipments = shipments;
+    this.scope = scope;
   }
 
   @EventListener
@@ -64,10 +70,13 @@ public class ExpenseDecisionNotifier {
             + (expense.getDescription() == null ? "" : "\nAçıklama: " + expense.getDescription());
 
     if (expense.getStatus() == DriverExpense.Status.PENDING) {
+      // Onaycı yalnız kapsamındaki iş yerinin seferine ait masrafı duyar.
+      UUID branchId =
+          shipments.findById(expense.getShipmentId()).map(s -> s.getBranchId()).orElse(null);
       mail.send(
           NotificationTopic.DRIVER_EXPENSE_APPROVAL,
           event.actorEmail(),
-          user -> true,
+          user -> scope.allows(user, branchId),
           "Onay bekleyen sürücü masrafı: " + driver.getFullName() + " — " + summary,
           details
               + "\n\nOnaylamak veya reddetmek için:\n"

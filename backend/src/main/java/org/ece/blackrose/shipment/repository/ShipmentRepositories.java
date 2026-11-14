@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.ece.blackrose.organization.BranchFilter;
 import org.ece.blackrose.shipment.domain.FreightInvoice;
 import org.ece.blackrose.shipment.domain.ProofOfDelivery;
 import org.ece.blackrose.shipment.domain.Shipment;
@@ -50,13 +51,25 @@ public final class ShipmentRepositories {
           and (:search = '' or lower(s.number) like concat('%', :search, '%')
                or lower(s.origin) like concat('%', :search, '%')
                or lower(s.destination) like concat('%', :search, '%'))
+          and (:allBranches = true or s.branchId in :branchIds)
         """)
     Page<Shipment> search(
-        @Param("status") ShipmentStatus status, @Param("search") String search, Pageable pageable);
+        @Param("status") ShipmentStatus status,
+        @Param("search") String search,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds,
+        Pageable pageable);
+
+    default Page<Shipment> search(
+        ShipmentStatus status, String search, BranchFilter filter, Pageable pageable) {
+      return search(status, search, filter.allBranches(), filter.branchIds(), pageable);
+    }
 
     List<Shipment> findByPlannedPickupBetweenOrderByPlannedPickup(Instant from, Instant to);
 
     long countByStatus(ShipmentStatus status);
+
+    long countByStatusAndBranchIdIn(ShipmentStatus status, Collection<UUID> branchIds);
 
     /** Sürücünün etabına atandığı etkin seferler ve yakın zamanda teslim edilenler. */
     @Query(
@@ -81,9 +94,6 @@ public final class ShipmentRepositories {
 
     @Query(value = "select nextval('waybill_number_seq')", nativeQuery = true)
     long nextWaybillNumber();
-
-    @Query(value = "select nextval('freight_invoice_number_seq')", nativeQuery = true)
-    long nextInvoiceNumber();
   }
 
   public interface ShipmentCargoRepository extends JpaRepository<ShipmentCargo, UUID> {

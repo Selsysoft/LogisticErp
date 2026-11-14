@@ -140,7 +140,7 @@ Faz 0 envanter promptları (A, B, C) ve ana promptun §4.1 sayfa listesi matrisl
 | Z03 | `company_scope_columns` | Para ve yasal belge tablolarına `company_id` + bileşik FK `(branch_id, company_id) → branch(id, company_id)` | MX5 V22c | 12.1a |
 | Z04 | `document_series` | Şirket başına belge serisi (önek + yıl + sıra), `UNIQUE(company_id, number)`; navlun/depo faturası numaraları buraya taşınır | MX5 V22d | 12.1a |
 | Z05 | `user_branch_scope` | `user_branch`, kullanıcı başına iş yeri kısıtı | MX5 V22e | 12.1a |
-| Z06 | `account_profile` | `account` +17 kolon (profil, limit, `sub_group`, `active`, **`represents_company_id`**); `account_group` + tohum; `account_bank_account` (IBAN **veya** hesap no zorunlu CHECK; aktif kartlarda IBAN tekil; son işlem tarihi hesaplanır); izin `FINANCE_EMPLOYEE_VIEW` | MX1 + MX2 + MX5 D-kararı + MX8 §1.9 | 12.1 |
+| Z06 | `account_profile` | `account` +17 kolon (profil, limit, `sub_group`, `active`; **`represents_company_id` ve `company_id` Z06'ya girmez, 12.1a'da V24'te (Z03) eklendi**, bkz. `uygulama/12.1a_TASARIM.md` §0.3 S-8); `account_group` + tohum; `account_bank_account` (IBAN **veya** hesap no zorunlu CHECK; aktif kartlarda IBAN tekil; son işlem tarihi hesaplanır); izin `FINANCE_EMPLOYEE_VIEW` | MX1 + MX2 + MX5 D-kararı + MX8 §1.9 | 12.1 |
 | Z07 | `fund_account_details` | `fund_account` ek alanlar, `fund_transaction.category`, `fund_opening` | MX2 | 12.2 |
 | Z08 | `instrument_extensions` | Çek/senet ek alanları, 4 yeni durum | MX3 | 12.3 |
 | Z09 | `check_book` | `check_book`, `check_leaf` | MX3 | 12.3 |

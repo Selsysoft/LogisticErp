@@ -27,7 +27,11 @@ public final class SaasTypes {
   public enum LimitedResource {
     USERS("kullanıcı"),
     VEHICLES("araç"),
-    SHIPMENTS_MONTH("aylık sefer");
+    SHIPMENTS_MONTH("aylık sefer"),
+    /** Aktif şirket (tüzel kişi) sayısı; pasifler sayılmaz. */
+    COMPANIES("şirket"),
+    /** Aktif iş yeri sayısı; pasifler sayılmaz. */
+    BRANCHES("iş yeri");
 
     private final String label;
 

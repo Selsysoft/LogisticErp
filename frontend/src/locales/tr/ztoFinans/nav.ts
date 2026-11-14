@@ -65,6 +65,11 @@ export default {
   cashTransactions: "Kasa Hareketleri",
   bankTransactions: "Banka Hareketleri",
   bankAccounts: "Banka Hesapları",
+  // TEMEL TANIMLAR (Blackrose eki; ZTO _Layout.cshtml:1263 "Temel Tanımlar", 12.1a §6.6)
+  sectionBasicDefinitions: "TEMEL TANIMLAR",
+  workPlaces: "İş Yerleri",
+  branchGroups: "Şubeler",
+  companies: "Şirketler",
   // Yalnız Blackrose: geliştirme vitrini
   sectionDev: "GELİŞTİRME",
   showcase: "Bileşen vitrini",

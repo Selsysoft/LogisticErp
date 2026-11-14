@@ -17,6 +17,7 @@ import org.ece.blackrose.crm.repository.CrmRepositories.TariffRepository;
 import org.ece.blackrose.crm.repository.CrmRepositories.TaxRateRepository;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.DocumentType;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.ShipmentStatus;
@@ -97,6 +98,7 @@ public class ShipmentController {
   private final QuoteRepository quotes;
   private final QuoteLineRepository quoteLines;
   private final LinkableExpenseService linkable;
+  private final BranchScopeService scope;
 
   public ShipmentController(
       ShipmentService shipments,
@@ -110,7 +112,9 @@ public class ShipmentController {
       TaxRateRepository taxRates,
       QuoteRepository quotes,
       QuoteLineRepository quoteLines,
-      LinkableExpenseService linkable) {
+      LinkableExpenseService linkable,
+      BranchScopeService scope) {
+    this.scope = scope;
     this.linkable = linkable;
     this.shipments = shipments;
     this.dispatch = dispatch;
@@ -149,6 +153,7 @@ public class ShipmentController {
   @ResponseStatus(HttpStatus.CREATED)
   @PreAuthorize(DISPATCH)
   ShipmentResponse create(@Valid @RequestBody CreateShipmentRequest request) {
+    scope.requireNew(request.branchId());
     return views.detail(shipments.create(request));
   }
 
@@ -356,9 +361,12 @@ public class ShipmentController {
     Set<AccountType> carrierTypes = Set.of(AccountType.CARRIER, AccountType.SUPPLIER);
     Set<AccountType> costTypes =
         Set.of(AccountType.CARRIER, AccountType.SUPPLIER, AccountType.EMPLOYEE);
+    // LIMITED kullanıcı yalnız görebildiği şirketlerin kabul edilmiş tekliflerini seçer.
+    Set<UUID> companies = scope.limited() ? Set.copyOf(scope.visibleCompanyIds()) : null;
     Map<UUID, Quote> accepted =
         quotes.findAll().stream()
             .filter(quote -> quote.getStatus() == QuoteStatus.ACCEPTED)
+            .filter(quote -> companies == null || companies.contains(quote.getCompanyId()))
             .collect(Collectors.toMap(Quote::getId, quote -> quote));
     List<QuoteLineOption> lines =
         accepted.isEmpty()

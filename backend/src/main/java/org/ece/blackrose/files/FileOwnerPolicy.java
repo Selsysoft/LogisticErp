@@ -12,4 +12,12 @@ public interface FileOwnerPolicy {
   String editPermission();
 
   boolean exists(UUID ownerId);
+
+  /**
+   * true ise dosya yalnız sahibi modülün kendi ucundan yönetilir (ör. şirket logosu); genel yükleme
+   * ve silme uçları 409 {@code FILE_MANAGED_BY_OWNER} verir.
+   */
+  default boolean managedByOwner() {
+    return false;
+  }
 }

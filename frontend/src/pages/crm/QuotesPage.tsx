@@ -27,7 +27,9 @@ import {
   SectionHeader,
   shiftDays,
   today,
+  companyIdOf,
   useCan,
+  useCompanyField,
   useCurrencies,
   usePaging,
 } from "../finance/common";
@@ -57,6 +59,7 @@ export function QuotesPage() {
   const paging = usePaging();
   const [status, setStatus] = useState("");
   const [adding, setAdding] = useState(false);
+  const companyField = useCompanyField(t("crm.field.company"));
 
   const list = useQuery({
     queryKey: ["crm", "quotes", status, paging.page, paging.size],
@@ -135,6 +138,7 @@ export function QuotesPage() {
         <FormDialog
           title={t("crm.action.newQuote")}
           fields={[
+            ...companyField,
             {
               name: "accountId",
               label: t("finance.field.account"),
@@ -183,6 +187,7 @@ export function QuotesPage() {
           onClose={() => setAdding(false)}
           onSubmit={async (values) => {
             const quote = await apiRequest<Quote>("POST", "/crm/quotes", {
+              ...companyIdOf(values),
               accountId: values.accountId,
               opportunityId: orNull(values.opportunityId),
               tariffId: orNull(values.tariffId),

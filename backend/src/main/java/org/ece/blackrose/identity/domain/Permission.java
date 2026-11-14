@@ -8,6 +8,7 @@ public enum Permission {
   AUDIT_VIEW("identity"),
   BRANCH_VIEW("organization"),
   BRANCH_MANAGE("organization"),
+  COMPANY_MANAGE("organization"),
   FINANCE_VIEW("finance"),
   FINANCE_MANAGE("finance"),
   FINANCE_PAYMENT_CREATE("finance"),

@@ -90,10 +90,13 @@ public class PlanLimitService {
         select
           (select count(*) from %1$s.app_user where deleted = false and status <> 'DISABLED'),
           (select count(*) from %1$s.vehicle where deleted = false),
-          (select count(*) from %1$s.shipment where deleted = false and created_at >= ?)
+          (select count(*) from %1$s.shipment where deleted = false and created_at >= ?),
+          (select count(*) from %1$s.company where deleted = false and active),
+          (select count(*) from %1$s.branch where deleted = false and active)
         """
             .formatted(schema),
-        (row, index) -> new Usage(row.getInt(1), row.getInt(2), row.getInt(3)),
+        (row, index) ->
+            new Usage(row.getInt(1), row.getInt(2), row.getInt(3), row.getInt(4), row.getInt(5)),
         monthStart);
   }
 
@@ -109,6 +112,8 @@ public class PlanLimitService {
       case USERS -> usage.users();
       case VEHICLES -> usage.vehicles();
       case SHIPMENTS_MONTH -> usage.shipmentsMonth();
+      case COMPANIES -> usage.companies();
+      case BRANCHES -> usage.branches();
     };
   }
 }

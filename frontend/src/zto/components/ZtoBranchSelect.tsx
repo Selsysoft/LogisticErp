@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../auth/authStore";
-import { BranchScope, BranchTree, findBranch, useBranchTree } from "../branch/branchTree";
+import { useActiveCompanyId } from "../../auth/companyStore";
+import {
+  BranchScope,
+  BranchTree,
+  filterTreeByCompany,
+  findBranch,
+  useBranchTree,
+} from "../branch/branchTree";
 import { branchTreeToSelectItems, readDefaultBranchId } from "./selectLogic";
 import { ZtoSelect } from "./ZtoSelect";
 
-export interface ZtoBranchSelectProps {
+export type ZtoBranchSelectProps = {
   /** Seçili şube (iş yeri) kimliği; "" = seçim yok ya da allowAll'da "Tüm İş Yerleri". */
   value: string;
   onChange: (branchId: string) => void;
@@ -26,9 +33,14 @@ export interface ZtoBranchSelectProps {
   /** allowAll yokken × ile temizleme; varsayılan zorunlu değilse açık. */
   allowClear?: boolean;
   minimumResultsForSearch?: number;
+  /**
+   * Ağacın şirket süzgeci (12.1a §6.5): "active" (varsayılan) = AppBar'daki aktif şirket
+   * (useActiveCompanyId; konsolidede tümü), null = tüm şirketler, kimlik = yalnız o şirket.
+   */
+  companyId?: string | null | "active";
   /** Verilirse useBranchTree yerine kullanılır (test, vitrin). */
   tree?: BranchTree;
-}
+};
 
 /**
  * Şube gruplu tekli iş yeri seçimi (MX5 §1.7 Varyant A, §5.2): optgroup = şube grubu, ≥2 şirkette
@@ -64,7 +76,8 @@ function BranchSelectView({
   placeholder,
   allowClear,
   minimumResultsForSearch,
-  tree,
+  companyId = "active",
+  tree: fullTree,
   loading,
   error,
 }: Omit<ZtoBranchSelectProps, "tree"> & {
@@ -75,6 +88,12 @@ function BranchSelectView({
 }) {
   const { t } = useTranslation("ztoFinans");
   const defaultBranchId = useAuthStore((state) => readDefaultBranchId(state.me));
+  const activeCompanyId = useActiveCompanyId();
+  const companyFilter = companyId === "active" ? activeCompanyId : companyId;
+  const tree = useMemo(
+    () => (fullTree ? filterTreeByCompany(fullTree, companyFilter) : undefined),
+    [fullTree, companyFilter],
+  );
 
   const allLabel = allowAll ? t("select.allWorkPlaces") : undefined;
   const inactiveSuffix = t("select.inactiveSuffix");

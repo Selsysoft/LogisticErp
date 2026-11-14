@@ -20,6 +20,7 @@ public class AccountTransaction extends AuditableEntity {
   @Id private UUID id;
   private UUID accountId;
   private UUID branchId;
+  private UUID companyId;
 
   @Enumerated(EnumType.STRING)
   private Direction direction;
@@ -39,6 +40,7 @@ public class AccountTransaction extends AuditableEntity {
   public AccountTransaction(
       UUID accountId,
       UUID branchId,
+      UUID companyId,
       Direction direction,
       Money money,
       BigDecimal exchangeRate,
@@ -51,6 +53,7 @@ public class AccountTransaction extends AuditableEntity {
     this.id = UUID.randomUUID();
     this.accountId = accountId;
     this.branchId = branchId;
+    this.companyId = companyId;
     this.direction = direction;
     this.amount = money.amount();
     this.currency = money.currency();
@@ -109,5 +112,9 @@ public class AccountTransaction extends AuditableEntity {
 
   public UUID getSourceId() {
     return sourceId;
+  }
+
+  public UUID getCompanyId() {
+    return companyId;
   }
 }

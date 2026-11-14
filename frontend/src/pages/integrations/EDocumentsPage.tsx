@@ -1,11 +1,20 @@
-import { Alert, Button, Chip, Stack, Typography } from "@mui/material";
+import { Alert, Button, Chip, Link, Stack, Typography } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link as RouterLink } from "react-router-dom";
 import { apiGet, apiRequest } from "../../api/client";
+import { useAuthStore } from "../../auth/authStore";
 import { ErrorState } from "../../components/ErrorState";
 import { orNull } from "../crm/common";
-import { DataTable, FormDialog, QueryState, SectionHeader, useCan } from "../finance/common";
+import {
+  DataTable,
+  FormDialog,
+  QueryState,
+  SectionHeader,
+  useCan,
+  useMultiCompany,
+} from "../finance/common";
 import { kindsFor } from "./common";
 import { EDocument, EDocumentCandidate, EDocumentSettings } from "./types";
 
@@ -19,7 +28,14 @@ const STATUS_COLORS = {
 export function EDocumentsPage() {
   const { t } = useTranslation();
   const client = useQueryClient();
+  // K-5 (12.1a §9.1): firma bilgisi diyaloğu bugünkü gibi SHIPMENT_INVOICE ile açılır; cephe ucu
+  // varsayılan şirketi CompanyService üzerinden günceller.
   const canSend = useCan("SHIPMENT_INVOICE");
+  const canOpenZto = useCan("FINANCE_VIEW");
+  const multiCompany = useMultiCompany();
+  const companies = useAuthStore((state) => state.me?.companies);
+  const companyName = (id: string | undefined) =>
+    companies?.find((company) => company.id === id)?.shortName ?? "—";
   const [editing, setEditing] = useState(false);
   const [sending, setSending] = useState<EDocumentCandidate | null>(null);
   const settings = useQuery({
@@ -54,6 +70,21 @@ export function EDocumentsPage() {
         <Alert severity="info">{t("integrations.notice.noProvider")}</Alert>
       )}
       <div>
+        {multiCompany && (
+          <Alert
+            severity="info"
+            sx={{ mb: 2 }}
+            action={
+              canOpenZto ? (
+                <Link component={RouterLink} to="/zto-finans/tanimlar/sirketler">
+                  {t("integrations.goToCompanies")}
+                </Link>
+              ) : undefined
+            }
+          >
+            {t("integrations.notice.defaultCompanyOnly")}
+          </Alert>
+        )}
         <SectionHeader title={t("integrations.sections.company")}>
           {canSend && (
             <Button variant="outlined" onClick={() => setEditing(true)}>
@@ -103,6 +134,14 @@ export function EDocumentsPage() {
             rows={documents.data}
             rowKey={(row) => row.id}
             columns={[
+              ...(multiCompany
+                ? [
+                    {
+                      header: t("integrations.field.company"),
+                      render: (r: EDocument) => companyName(r.companyId),
+                    },
+                  ]
+                : []),
               { header: t("finance.field.number"), render: (r) => r.sourceNo },
               {
                 header: t("integrations.field.kind"),

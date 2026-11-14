@@ -26,6 +26,7 @@ import org.ece.blackrose.crm.repository.CrmRepositories.TaxRateRepository;
 import org.ece.blackrose.crm.web.CrmDtos.PriceBreakdown;
 import org.ece.blackrose.crm.web.CrmDtos.PriceComponent;
 import org.ece.blackrose.crm.web.CrmDtos.PriceRequest;
+import org.ece.blackrose.organization.CompanyResolver;
 import org.ece.blackrose.tenant.TenantContext;
 import org.ece.blackrose.tenant.repository.TenantRepository;
 import org.springframework.http.HttpStatus;
@@ -49,13 +50,16 @@ public class PricingService {
   private final TaxRateRepository taxRates;
   private final ContractRepository contracts;
   private final TenantRepository tenants;
+  private final CompanyResolver companies;
 
   public PricingService(
       TariffRepository tariffs,
       TariffLineRepository lines,
       TaxRateRepository taxRates,
       ContractRepository contracts,
-      TenantRepository tenants) {
+      TenantRepository tenants,
+      CompanyResolver companies) {
+    this.companies = companies;
     this.tariffs = tariffs;
     this.lines = lines;
     this.taxRates = taxRates;
@@ -223,8 +227,12 @@ public class PricingService {
     if (request.accountId() == null) {
       return Optional.empty();
     }
+    // Sözleşme şirket bazındadır; şirket verilmezse varsayılan şirket.
+    UUID companyId =
+        request.companyId() != null ? request.companyId() : companies.defaultCompanyId();
     return contracts
-        .overlapping(request.accountId(), ContractStatus.ACTIVE, request.date(), request.date())
+        .overlapping(
+            request.accountId(), companyId, ContractStatus.ACTIVE, request.date(), request.date())
         .stream()
         .findFirst();
   }

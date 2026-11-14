@@ -10,6 +10,7 @@ export default {
     pricing: "Fiyat Hesapla",
   },
   field: {
+    company: "Şirket",
     segment: "Segment",
     tags: "Etiketler",
     tagsHint: "Virgülle ayırın.",

@@ -4,24 +4,22 @@ import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.common.web.PageResponse;
 import org.ece.blackrose.crm.repository.CrmRepositories.TaxRateRepository;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
-import org.ece.blackrose.organization.BranchRepository;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentRepository;
-import org.ece.blackrose.tenant.TenantContext;
-import org.ece.blackrose.tenant.repository.TenantRepository;
 import org.ece.blackrose.warehouse.domain.StockBalance;
 import org.ece.blackrose.warehouse.domain.StockCount;
 import org.ece.blackrose.warehouse.domain.StockItem;
 import org.ece.blackrose.warehouse.domain.StockMovement;
 import org.ece.blackrose.warehouse.domain.Warehouse;
 import org.ece.blackrose.warehouse.domain.WarehouseBin;
-import org.ece.blackrose.warehouse.domain.WarehouseInvoice;
 import org.ece.blackrose.warehouse.repository.WarehouseRepositories.HandlingChargeRepository;
 import org.ece.blackrose.warehouse.repository.WarehouseRepositories.HandlingRateRepository;
 import org.ece.blackrose.warehouse.repository.WarehouseRepositories.StockBalanceRepository;
@@ -35,7 +33,6 @@ import org.ece.blackrose.warehouse.repository.WarehouseRepositories.WarehouseRep
 import org.ece.blackrose.warehouse.service.StockCountService;
 import org.ece.blackrose.warehouse.service.StockService;
 import org.ece.blackrose.warehouse.service.WarehouseBillingService;
-import org.ece.blackrose.warehouse.service.WarehouseInvoicePdf;
 import org.ece.blackrose.warehouse.service.WarehouseViews;
 import org.ece.blackrose.warehouse.web.WarehouseDtos.AddCountLineRequest;
 import org.ece.blackrose.warehouse.web.WarehouseDtos.BalanceResponse;
@@ -109,11 +106,10 @@ public class WarehouseController {
   private final HandlingRateRepository rates;
   private final HandlingChargeRepository charges;
   private final WarehouseInvoiceRepository invoices;
-  private final BranchRepository branches;
+  private final BranchScopeService scope;
   private final AccountRepository accounts;
   private final TaxRateRepository taxRates;
   private final ShipmentRepository shipments;
-  private final TenantRepository tenants;
   private final StockService stock;
   private final StockCountService countService;
   private final WarehouseBillingService billing;
@@ -131,11 +127,10 @@ public class WarehouseController {
       HandlingRateRepository rates,
       HandlingChargeRepository charges,
       WarehouseInvoiceRepository invoices,
-      BranchRepository branches,
+      BranchScopeService scope,
       AccountRepository accounts,
       TaxRateRepository taxRates,
       ShipmentRepository shipments,
-      TenantRepository tenants,
       StockService stock,
       StockCountService countService,
       WarehouseBillingService billing,
@@ -151,11 +146,10 @@ public class WarehouseController {
     this.rates = rates;
     this.charges = charges;
     this.invoices = invoices;
-    this.branches = branches;
+    this.scope = scope;
     this.accounts = accounts;
     this.taxRates = taxRates;
     this.shipments = shipments;
-    this.tenants = tenants;
     this.stock = stock;
     this.countService = countService;
     this.billing = billing;
@@ -168,7 +162,11 @@ public class WarehouseController {
   @GetMapping("/warehouses")
   @PreAuthorize(VIEW)
   List<WarehouseResponse> listWarehouses() {
-    return warehouses.findAllByOrderByCode().stream().map(mapper::toResponse).toList();
+    Set<UUID> allowed = scope.allowedOrNull();
+    return warehouses.findAllByOrderByCode().stream()
+        .filter(warehouse -> allowed == null || allowed.contains(warehouse.getBranchId()))
+        .map(mapper::toResponse)
+        .toList();
   }
 
   @PostMapping("/warehouses")
@@ -182,7 +180,7 @@ public class WarehouseController {
     if (warehouses.existsByCode(request.code())) {
       throw new BusinessException(HttpStatus.CONFLICT, "CODE_TAKEN", "Bu depo kodu kullanılıyor.");
     }
-    ensureBranch(request.branchId());
+    scope.requireNew(request.branchId());
     return mapper.toResponse(warehouses.save(new Warehouse(request)));
   }
 
@@ -191,8 +189,9 @@ public class WarehouseController {
   @Transactional
   public WarehouseResponse updateWarehouse(
       @PathVariable UUID id, @Valid @RequestBody SaveWarehouseRequest request) {
-    ensureBranch(request.branchId());
     Warehouse warehouse = findWarehouse(id);
+    scope.requireVisible(warehouse.getBranchId());
+    scope.requireForUpdate(request.branchId(), warehouse.getBranchId());
     warehouse.update(request);
     return mapper.toResponse(warehouse);
   }
@@ -353,7 +352,9 @@ public class WarehouseController {
   @GetMapping("/contracts")
   @PreAuthorize(VIEW)
   List<ContractResponse> listContracts() {
+    Set<UUID> visible = billing.visibleWarehouseIdsOrNull();
     return contracts.findAll(Sort.by(Sort.Direction.DESC, "startDate")).stream()
+        .filter(contract -> visible == null || visible.contains(contract.getWarehouseId()))
         .map(views::contract)
         .toList();
   }
@@ -368,6 +369,7 @@ public class WarehouseController {
   @GetMapping("/contracts/{id}/rates")
   @PreAuthorize(VIEW)
   List<RateResponse> listRates(@PathVariable UUID id) {
+    billing.requireContractVisible(id);
     return rates.findByContractId(id).stream().map(mapper::toResponse).toList();
   }
 
@@ -380,6 +382,7 @@ public class WarehouseController {
   @GetMapping("/contracts/{id}/handling")
   @PreAuthorize(VIEW)
   List<HandlingResponse> listHandling(@PathVariable UUID id) {
+    billing.requireContractVisible(id);
     return charges.findByContractIdOrderByChargedOnDesc(id).stream()
         .map(mapper::toResponse)
         .toList();
@@ -412,6 +415,7 @@ public class WarehouseController {
   @GetMapping("/contracts/{id}/invoices")
   @PreAuthorize(VIEW)
   List<WarehouseInvoiceResponse> listInvoices(@PathVariable UUID id) {
+    billing.requireContractVisible(id);
     return invoices.findByContractIdOrderByPeriodFromDesc(id).stream()
         .map(mapper::toResponse)
         .toList();
@@ -435,27 +439,26 @@ public class WarehouseController {
   @GetMapping("/invoices/{id}/pdf")
   @PreAuthorize(VIEW)
   ResponseEntity<byte[]> invoicePdf(@PathVariable UUID id) {
-    WarehouseInvoice invoice = billing.findInvoice(id);
-    String company =
-        tenants.findByCode(TenantContext.currentCode().orElseThrow()).orElseThrow().getName();
-    byte[] content =
-        WarehouseInvoicePdf.render(invoice, company, views.accountName(invoice.getAccountId()));
+    WarehouseBillingService.InvoicePdf pdf = billing.invoicePdf(id);
     return ResponseEntity.ok()
         .header(
             HttpHeaders.CONTENT_DISPOSITION,
             ContentDisposition.attachment()
-                .filename(invoice.getNumber() + ".pdf", StandardCharsets.UTF_8)
+                .filename(pdf.fileName(), StandardCharsets.UTF_8)
                 .build()
                 .toString())
         .contentType(MediaType.APPLICATION_PDF)
-        .body(content);
+        .body(pdf.content());
   }
 
   @GetMapping("/options")
   @PreAuthorize(VIEW)
   WarehouseOptionsResponse options() {
     Page<Shipment> recent =
-        shipments.findAll(
+        shipments.search(
+            null,
+            "",
+            scope.filter(null, null),
             PageRequest.of(
                 0, SHIPMENT_OPTION_LIMIT, Sort.by(Sort.Direction.DESC, "plannedPickup")));
     return new WarehouseOptionsResponse(
@@ -475,12 +478,6 @@ public class WarehouseController {
                             + " - "
                             + shipment.getDestination()))
             .toList());
-  }
-
-  private void ensureBranch(UUID branchId) {
-    if (!branches.existsById(branchId)) {
-      throw new BusinessException(HttpStatus.BAD_REQUEST, "BRANCH_NOT_FOUND", "Şube bulunamadı.");
-    }
   }
 
   private Warehouse findWarehouse(UUID id) {

@@ -3,6 +3,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiGet, apiRequest } from "../../api/client";
+import { useActiveCompanyId } from "../../auth/companyStore";
 import { ErrorState } from "../../components/ErrorState";
 import {
   DataTable,
@@ -13,11 +14,12 @@ import {
   SectionHeader,
   today,
   useAccounts,
-  useBranches,
+  useBranchOptions,
   useCan,
   useCurrencies,
   usePaging,
 } from "./common";
+import { withCompany } from "./companyQuery";
 import { Invoice, Page } from "./types";
 
 export function InvoicesPage() {
@@ -25,16 +27,20 @@ export function InvoicesPage() {
   const client = useQueryClient();
   const canPost = useCan("FINANCE_PAYMENT_CREATE");
   const accounts = useAccounts();
-  const branches = useBranches();
+  const { optionsFor } = useBranchOptions();
+  const companyId = useActiveCompanyId();
   const currencies = useCurrencies();
   const paging = usePaging();
   const [adding, setAdding] = useState(false);
 
   const list = useQuery({
-    queryKey: ["finance", "invoices", paging.page, paging.size],
+    queryKey: ["finance", "invoices", paging.page, paging.size, companyId],
     queryFn: () =>
       apiGet<Page<Invoice>>(
-        `/finance/purchase-invoices?page=${paging.page}&size=${paging.size}&sort=invoiceDate,desc`,
+        withCompany(
+          `/finance/purchase-invoices?page=${paging.page}&size=${paging.size}&sort=invoiceDate,desc`,
+          companyId,
+        ),
       ),
     placeholderData: keepPreviousData,
   });
@@ -118,7 +124,7 @@ export function InvoicesPage() {
               label: t("finance.field.branch"),
               type: "select",
               required: true,
-              options: (branches.data ?? []).map((b) => ({ value: b.id, label: b.name })),
+              options: optionsFor(),
             },
             { name: "number", label: t("finance.field.number"), required: true },
             {

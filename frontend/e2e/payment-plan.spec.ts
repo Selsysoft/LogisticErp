@@ -8,7 +8,9 @@ test("finans ödeme planı girer, patron onaylar, finans bankadan öder", async 
   test.setTimeout(90_000);
   const state = tenantState();
   const owner = await Owner.login(state);
-  const branch = await owner.branch();
+  // Plan, bankanın iş yerinde açılır; seçenek adıyla seçilir (paralel spec'lerin iş yerleri araya girmez).
+  const branchName = `Merkez ${unique("")}`;
+  const branch = await owner.branch(branchName);
   const supplierName = `Tedarikçi ${unique("")}`;
   await owner.account("SUPPLIER", supplierName);
   const bankName = `Plan Bankası ${unique("")}`;
@@ -26,7 +28,7 @@ test("finans ödeme planı girer, patron onaylar, finans bankadan öder", async 
   await create.getByRole("combobox", { name: /^Cari/ }).click();
   await page.getByRole("option", { name: new RegExp(supplierName) }).click();
   await create.getByRole("combobox", { name: /^Şube/ }).click();
-  await page.getByRole("option").first().click();
+  await page.getByRole("option", { name: new RegExp(`${branchName}$`) }).click();
   await create.getByLabel(/^Tutar/).fill("12500");
   await create.getByLabel(/^Açıklama/).fill(description);
   await create.getByRole("button", { name: "Kaydet" }).click();

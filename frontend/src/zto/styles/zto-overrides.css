@@ -32,3 +32,27 @@
 .tooltip {
   z-index: 1420;
 }
+
+/*
+ * ZTO tanım ekranları (12.1a §6.7, Blackrose eki). Pasif kayıtlar ("Pasifleri göster") soluk görünür;
+ * ZTO kayıtları siliyordu, Blackrose pasifleştirir.
+ */
+.definition-row--inactive td {
+  opacity: 0.6;
+}
+
+/*
+ * definition-list.css:72-83 ZTO'da body.definition-list-page main > .container-fluid'e bağlıdır; ZTO
+ * kökü MUI <main>'in İÇİNDE olduğu için aynı kurallar kökün içerik alanına uygulanır.
+ */
+body.definition-list-page .zto-finans-content {
+  background: var(--definition-bg);
+}
+
+body.definition-list-page .zto-finans-content > .container-fluid {
+  padding: 10px 12px 0;
+}
+
+body.definition-list-page .zto-finans-content > .container-fluid > br {
+  display: none;
+}

@@ -1,6 +1,7 @@
 # MX-5 — İş Yeri / Şube Yapısı ve Çoklu Şirket (Faz 12, adım 12.1a): ZTO → Blackrose eşleme matrisi
 
 > Tarih: 2026-11-13 · Durum: **taslak, kullanıcı kararı bekleyen 6 soru var (§6)**
+> **12.1a uygulandı (2026-11-13); uygulama belgesi [`docs/zto-finans/uygulama/12.1a_TASARIM.md`](../../uygulama/12.1a_TASARIM.md).** §6 S1–S6 soruları (a) seçenekleriyle kapandı. Bu ekin uygulamada değişen noktaları (migration adları V22–V26 + admin V8, varsayılan şirket göçü, `represents_company_id`'nin V24'te eklenmesi, logo biçimi, `branch_group_id`'nin API'de isteğe bağlı olması, `branch-tree` izni, e-belge serileri, token sürümünün artırılmaması vb.) uygulama belgesi §0.3'te (S-1…S-14) listelidir; çelişkide uygulama belgesi geçerlidir.
 > Kapsam: ZTO `WorkPlace` (İş Yerleri), `BranchProvince` (Şubeler), finans sayfalarındaki "şube gruplu iş yeri seçimi" (`WorkPlaceGroups`), kullanıcı–iş yeri kısıtı ve **yeni gereksinim:** bir Blackrose kiracısının (lojistik firması) 2–3 ayrı tüzel kişi (şirket) adına alış, satış, navlun faturası, personel tanımı ve maaş ödemesi yapabilmesi.
 > Bağlam: [04 §0–§4](../04_UYARLAMA_KARAR_MATRISI.md) (tek finans motoru, `.zto-finans` kapsamlı ZTO görünümü, tenant V22–V34). Personel/bordro ekranları ayrı ektedir (MX6, adım 12.9); burada yalnız veri modeli kancaları verilir.
 > **Migration adları (V22a…V22g) geçicidir; son numarayı koordinatör verir.** Flyway sürümü sayısal olmalıdır (`V22a` geçersiz); öneri `V22_1__…`, `V22_2__…` ya da 04 §4 tablosunun yeniden numaralanması.

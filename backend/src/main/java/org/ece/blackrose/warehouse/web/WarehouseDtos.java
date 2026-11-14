@@ -228,6 +228,7 @@ public final class WarehouseDtos {
       String number,
       UUID contractId,
       UUID accountId,
+      UUID companyId,
       LocalDate periodFrom,
       LocalDate periodTo,
       LocalDate invoiceDate,

@@ -2,7 +2,7 @@ import { Box, Button } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "../../api/client";
-import { FormDialog, SectionHeader, today } from "../finance/common";
+import { companyIdOf, FormDialog, SectionHeader, today, useCompanyField } from "../finance/common";
 import { customerOptions, orNull, useCustomers, useTariffs, useTaxRates } from "./common";
 import { PriceBreakdownTable } from "./PriceBreakdownTable";
 import { PriceBreakdown } from "./types";
@@ -12,6 +12,8 @@ export function PriceCalculatorPage() {
   const customers = useCustomers();
   const tariffs = useTariffs();
   const taxRates = useTaxRates();
+  // Sözleşme fiyatı şirkete göre aranır (§5.5 PriceRequest.companyId): ≥2 şirkette "Şirket" seçimi.
+  const companyField = useCompanyField(t("crm.field.company"));
   const [open, setOpen] = useState(true);
   const [result, setResult] = useState<PriceBreakdown | null>(null);
 
@@ -28,6 +30,7 @@ export function PriceCalculatorPage() {
           title={t("crm.tabs.pricing")}
           submitLabel={t("crm.action.calculate")}
           fields={[
+            ...companyField,
             {
               name: "accountId",
               label: t("finance.field.account"),
@@ -82,6 +85,7 @@ export function PriceCalculatorPage() {
                 extraStops: orNull(values.extraStops),
                 tollAmount: orNull(values.tollAmount),
                 adr: flags.adr,
+                ...companyIdOf(values),
               }),
             );
           }}

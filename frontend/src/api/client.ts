@@ -171,6 +171,15 @@ export function apiUpload<T>(path: string, form: FormData) {
   return apiRequest<T>("POST", path, form);
 }
 
+/**
+ * Oturumla korunan dosyayı (ör. şirket logosu) `blob:` adresi olarak verir; `img src` için. Çağıran
+ * işi bitince (useEffect temizliğinde) URL.revokeObjectURL ile bırakır.
+ */
+export async function apiBlobUrl(path: string): Promise<string> {
+  const response = await authorizedFetch("GET", path);
+  return URL.createObjectURL(await response.blob());
+}
+
 /** Oturumla korunan dosyayı indirir. Dosya adı sunucunun verdiği addır. */
 export async function apiDownload(path: string, fallbackName: string) {
   const response = await authorizedFetch("GET", path);

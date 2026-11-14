@@ -14,7 +14,7 @@ import {
   formatDate,
   QueryState,
   SectionHeader,
-  useBranches,
+  useBranchOptions,
   useCan,
   usePaging,
 } from "../finance/common";
@@ -29,7 +29,7 @@ const STATUSES = ["ACTIVE", "MAINTENANCE", "OUT_OF_SERVICE"];
 
 function useVehicleFields(vehicle?: Vehicle): FieldDef[] {
   const { t } = useTranslation();
-  const branches = useBranches();
+  const { optionsFor } = useBranchOptions();
   return [
     {
       name: "plate",
@@ -91,7 +91,7 @@ function useVehicleFields(vehicle?: Vehicle): FieldDef[] {
       label: t("finance.field.branch"),
       type: "select",
       defaultValue: vehicle?.branchId ?? "",
-      options: (branches.data ?? []).map((branch) => ({ value: branch.id, label: branch.name })),
+      options: optionsFor(vehicle?.branchId),
     },
   ];
 }

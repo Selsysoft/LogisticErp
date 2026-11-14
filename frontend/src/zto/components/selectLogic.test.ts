@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { Me } from "../../auth/authStore";
 import type { BranchTree } from "../branch/branchTree";
 import {
   branchTreeToSelectItems,
@@ -288,7 +289,15 @@ describe("branchTreeToSelectItems (MX5 Varyant A)", () => {
       {
         companyId: null,
         companyName: "",
-        groups: [{ groupId: null, groupName: "Diğer", branches: [branch("a", "Merkez")] }],
+        companyActive: true,
+        groups: [
+          {
+            groupId: null,
+            groupName: "Diğer",
+            groupActive: true,
+            branches: [branch("a", "Merkez")],
+          },
+        ],
       },
     ];
     expect(branchTreeToSelectItems(tree, { ...opts, allLabel: "Tüm İş Yerleri" })).toEqual([
@@ -303,10 +312,21 @@ describe("branchTreeToSelectItems (MX5 Varyant A)", () => {
       {
         companyId: "c1",
         companyName: "Acme",
+        companyActive: true,
         groups: [
-          { groupId: "g1", groupName: "İzmir", branches: [branch("a", "Çiğli")] },
-          { groupId: "g2", groupName: "Boş", branches: [] },
-          { groupId: null, groupName: "Diğer", branches: [branch("b", "Merkez", false)] },
+          {
+            groupId: "g1",
+            groupName: "İzmir",
+            groupActive: true,
+            branches: [branch("a", "Çiğli")],
+          },
+          { groupId: "g2", groupName: "Boş", groupActive: true, branches: [] },
+          {
+            groupId: null,
+            groupName: "Diğer",
+            groupActive: true,
+            branches: [branch("b", "Merkez", false)],
+          },
         ],
       },
     ];
@@ -321,12 +341,18 @@ describe("branchTreeToSelectItems (MX5 Varyant A)", () => {
       {
         companyId: "c1",
         companyName: "Acme",
-        groups: [{ groupId: null, groupName: "Diğer", branches: [branch("a", "A")] }],
+        companyActive: true,
+        groups: [
+          { groupId: null, groupName: "Diğer", groupActive: true, branches: [branch("a", "A")] },
+        ],
       },
       {
         companyId: "c2",
         companyName: "Beta",
-        groups: [{ groupId: "g", groupName: "Ege", branches: [branch("b", "B")] }],
+        companyActive: true,
+        groups: [
+          { groupId: "g", groupName: "Ege", groupActive: true, branches: [branch("b", "B")] },
+        ],
       },
     ];
     expect(branchTreeToSelectItems(tree, opts).map((item) => item.label)).toEqual([
@@ -336,12 +362,51 @@ describe("branchTreeToSelectItems (MX5 Varyant A)", () => {
   });
 });
 
+describe("branchTreeToSelectItems — şubesiz şirket", () => {
+  it("şubesi olmayan ikinci şirket etiketi 'Şirket › Grup' yapmaz", () => {
+    const tree: BranchTree = [
+      {
+        companyId: "c1",
+        companyName: "Acme",
+        companyActive: true,
+        groups: [
+          {
+            groupId: "g",
+            groupName: "Ege",
+            groupActive: true,
+            branches: [{ id: "a", code: "A", name: "A", active: true }],
+          },
+        ],
+      },
+      { companyId: "c2", companyName: "Beta", companyActive: true, groups: [] },
+    ];
+    expect(
+      branchTreeToSelectItems(tree, { inactiveSuffix: "(Pasif)" }).map((item) => item.label),
+    ).toEqual(["Ege"]);
+  });
+});
+
 describe("readDefaultBranchId", () => {
-  it("alan yoksa ya da boşsa undefined", () => {
+  const me = (extra: Record<string, unknown>) =>
+    ({
+      id: "u",
+      email: "u@x.com",
+      fullName: "U",
+      tenant: "acme",
+      permissions: [],
+      roles: [],
+      landingPath: "/",
+      twoFactorEnabled: false,
+      ...extra,
+    }) as Me;
+
+  it("Me.defaultBranchId; alan yoksa, boşsa ya da bozuksa (eski önbellek) undefined", () => {
     expect(readDefaultBranchId(null)).toBeUndefined();
-    expect(readDefaultBranchId({ id: "u" })).toBeUndefined();
-    expect(readDefaultBranchId({ defaultBranchId: "" })).toBeUndefined();
-    expect(readDefaultBranchId({ defaultBranchId: 5 })).toBeUndefined();
-    expect(readDefaultBranchId({ defaultBranchId: "b1" })).toBe("b1");
+    expect(readDefaultBranchId(undefined)).toBeUndefined();
+    expect(readDefaultBranchId(me({}))).toBeUndefined();
+    expect(readDefaultBranchId(me({ defaultBranchId: null }))).toBeUndefined();
+    expect(readDefaultBranchId(me({ defaultBranchId: "" }))).toBeUndefined();
+    expect(readDefaultBranchId(me({ defaultBranchId: 5 }))).toBeUndefined();
+    expect(readDefaultBranchId(me({ defaultBranchId: "b1" }))).toBe("b1");
   });
 });

@@ -28,6 +28,8 @@ import org.ece.blackrose.integration.service.CsvRows;
 import org.ece.blackrose.integration.service.CsvRows.Line;
 import org.ece.blackrose.integration.service.CsvRows.RowException;
 import org.ece.blackrose.organization.BranchRepository;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyResolver;
 import org.ece.blackrose.tenant.TenantClock;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -92,6 +94,8 @@ public class OpeningBalanceImportService {
     TYPES.put("PERSONEL", AccountType.EMPLOYEE);
     TYPES.put("BANKA", AccountType.BANK);
     TYPES.remove(AccountType.LEAD.name());
+    // Grup şirketi carisi dosyadan açılamaz: "tanınmayan tür" satır hatası olur.
+    TYPES.remove(AccountType.INTERCOMPANY.name());
   }
 
   private final AccountRepository accounts;
@@ -103,6 +107,8 @@ public class OpeningBalanceImportService {
   private final LedgerService ledger;
   private final TenantClock clock;
   private final AuditService audit;
+  private final CompanyResolver companies;
+  private final BranchScopeService scope;
 
   public OpeningBalanceImportService(
       AccountRepository accounts,
@@ -113,7 +119,11 @@ public class OpeningBalanceImportService {
       ExchangeRateService rates,
       LedgerService ledger,
       TenantClock clock,
-      AuditService audit) {
+      AuditService audit,
+      CompanyResolver companies,
+      BranchScopeService scope) {
+    this.scope = scope;
+    this.companies = companies;
     this.accounts = accounts;
     this.transactions = transactions;
     this.currencies = currencies;
@@ -239,6 +249,10 @@ public class OpeningBalanceImportService {
     if (branchId == null || !branches.existsById(branchId)) {
       throw new BusinessException(HttpStatus.BAD_REQUEST, "BRANCH_INVALID", "Şube seçilmelidir.");
     }
+    // Kullanıcının seçtiği iş yeri: kapsamda (403) ve aktif (422) olmalı.
+    scope.requireNew(branchId);
+    // Açılış şirket bazındadır: A şirketinde açılmış cari B'de de açılabilir.
+    UUID companyId = companies.companyOf(branchId);
     if (date == null || date.isAfter(clock.today())) {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "OPENING_DATE_INVALID", "Açılış tarihi ileri bir gün olamaz.");
@@ -258,7 +272,7 @@ public class OpeningBalanceImportService {
       String code = line.text(columns.code());
       String name = line.text(columns.name());
       try {
-        Parsed row = parse(line, columns, date);
+        Parsed row = parse(line, columns, date, companyId);
         String key = row.code() + "|" + row.currency();
         Parsed sameCode = byCode.get(row.code());
         if (byCode.containsKey(key)) {
@@ -298,7 +312,7 @@ public class OpeningBalanceImportService {
     return new Checked(parsed, rows);
   }
 
-  private Parsed parse(Line line, Columns columns, LocalDate date) {
+  private Parsed parse(Line line, Columns columns, LocalDate date, UUID companyId) {
     String code = line.required(columns.code(), "Kod");
     if (code.length() > 50) {
       throw new RowException("Kod en çok 50 karakter olabilir.");
@@ -341,8 +355,8 @@ public class OpeningBalanceImportService {
       }
       name = existing.getName();
       if (balance.signum() != 0
-          && openingInvoices.existsByAccountIdAndCurrencyAndStatus(
-              existing.getId(), currency, OpeningInvoice.Status.OPEN)) {
+          && openingInvoices.existsByAccountIdAndCompanyIdAndCurrencyAndStatus(
+              existing.getId(), companyId, currency, OpeningInvoice.Status.OPEN)) {
         throw new RowException(
             code
                 + " için "
@@ -350,7 +364,8 @@ public class OpeningBalanceImportService {
                 + " açık fatura yüklenmiş; bakiyeyi faturalar oluşturur, ikisi birlikte"
                 + " yüklenemez.");
       }
-      if (balance.signum() != 0 && transactions.hasActiveOpening(existing.getId(), currency)) {
+      if (balance.signum() != 0
+          && transactions.hasActiveOpening(existing.getId(), companyId, currency)) {
         throw new RowException(
             code
                 + " için "

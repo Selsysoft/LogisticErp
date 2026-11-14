@@ -16,6 +16,13 @@ const baseMe: Me = {
   roles: ["Finans"],
   landingPath: "/finance",
   twoFactorEnabled: false,
+  // 12.1a /auth/me alanları; korumalar bunlara bakmaz.
+  branchScope: "LIMITED",
+  allowedBranchIds: ["b1"],
+  defaultBranchId: "b1",
+  companies: [
+    { id: "c1", code: "A", shortName: "A", title: "A AŞ", defaultCompany: true, active: true },
+  ],
 };
 
 function renderApp(initial: string) {

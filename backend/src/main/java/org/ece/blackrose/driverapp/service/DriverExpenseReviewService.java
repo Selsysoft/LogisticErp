@@ -12,6 +12,8 @@ import org.ece.blackrose.identity.domain.Permission;
 import org.ece.blackrose.identity.domain.UserAccount;
 import org.ece.blackrose.identity.repository.IdentityRepositories.UserAccountRepository;
 import org.ece.blackrose.identity.security.AuthenticatedUser;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentRepository;
 import org.ece.blackrose.shipment.service.TripFinanceService;
 import org.ece.blackrose.shipment.web.ShipmentDtos.SaveCostRequest;
 import org.springframework.context.ApplicationEventPublisher;
@@ -30,13 +32,19 @@ public class DriverExpenseReviewService {
   private final UserAccountRepository users;
   private final TripFinanceService tripFinance;
   private final ApplicationEventPublisher publisher;
+  private final ShipmentRepository shipments;
+  private final BranchScopeService scope;
 
   public DriverExpenseReviewService(
       DriverExpenseRepository expenses,
       DriverRepository drivers,
       UserAccountRepository users,
       TripFinanceService tripFinance,
-      ApplicationEventPublisher publisher) {
+      ApplicationEventPublisher publisher,
+      ShipmentRepository shipments,
+      BranchScopeService scope) {
+    this.shipments = shipments;
+    this.scope = scope;
     this.publisher = publisher;
     this.expenses = expenses;
     this.drivers = drivers;
@@ -46,7 +54,7 @@ public class DriverExpenseReviewService {
 
   @Transactional(readOnly = true)
   public Page<DriverExpense> list(DriverExpense.Status status, Pageable pageable) {
-    return expenses.findByStatusOrderByCreatedAtDesc(status, pageable);
+    return expenses.review(status, scope.filter(null, null), pageable);
   }
 
   /** Masraf sefer gideri olur; sürücü carisine alacak olarak sefer kapanışında yazılır. */
@@ -146,6 +154,9 @@ public class DriverExpenseReviewService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "EXPENSE_NOT_FOUND", "Masraf bulunamadı."));
+    shipments
+        .findById(expense.getShipmentId())
+        .ifPresent(shipment -> scope.requireVisible(shipment.getBranchId()));
     if (expense.getStatus() != DriverExpense.Status.PENDING) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "EXPENSE_ALREADY_REVIEWED", "Bu masraf zaten sonuçlandırıldı.");

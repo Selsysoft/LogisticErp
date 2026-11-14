@@ -22,6 +22,8 @@ import org.ece.blackrose.fleet.domain.VehicleExpense;
 import org.ece.blackrose.fleet.repository.FleetRepositories.VehicleExpenseRepository;
 import org.ece.blackrose.fleet.repository.FleetRepositories.VehicleRepository;
 import org.ece.blackrose.fleet.web.FleetDtos.SaveVehicleExpenseRequest;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyResolver;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -44,6 +46,8 @@ public class VehicleExpenseService {
   private final LedgerService ledger;
   private final SettlementService settlements;
   private final ExchangeRateService rates;
+  private final CompanyResolver companies;
+  private final BranchScopeService scope;
 
   public VehicleExpenseService(
       VehicleExpenseRepository expenses,
@@ -52,7 +56,11 @@ public class VehicleExpenseService {
       FundAccountRepository funds,
       LedgerService ledger,
       SettlementService settlements,
-      ExchangeRateService rates) {
+      ExchangeRateService rates,
+      CompanyResolver companies,
+      BranchScopeService scope) {
+    this.scope = scope;
+    this.companies = companies;
     this.expenses = expenses;
     this.vehicles = vehicles;
     this.expenseItems = expenseItems;
@@ -64,7 +72,7 @@ public class VehicleExpenseService {
 
   @Transactional(readOnly = true)
   public Page<VehicleExpense> list(UUID vehicleId, ExpenseKind kind, Pageable pageable) {
-    return expenses.search(vehicleId, kind, pageable);
+    return expenses.search(vehicleId, kind, scope.filter(null, null), pageable);
   }
 
   @Transactional
@@ -76,10 +84,26 @@ public class VehicleExpenseService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "VEHICLE_NOT_FOUND", "Araç bulunamadı."));
+    scope.requireVisible(vehicle.getBranchId());
     validate(request);
     var conversion = rates.convert(request.money(), request.date(), request.exchangeRate());
+    UUID companyId = companies.companyOf(request.branchId());
+    // Gider, fonuyla birlikte kaydedildiği için şirket uyumu kayıttan önce denetlenir (aksi halde
+    // vehicle_expense_fund_company_fk genel bir çakışma hatası verirdi).
+    if (request.fundAccountId() != null) {
+      funds
+          .findById(request.fundAccountId())
+          .filter(fund -> !fund.getCompanyId().equals(companyId))
+          .ifPresent(
+              fund -> {
+                throw new BusinessException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "COMPANY_MISMATCH",
+                    "Kasa/banka hesabı seçilen iş yerinin şirketine ait değil.");
+              });
+    }
     VehicleExpense expense =
-        expenses.save(new VehicleExpense(vehicleId, request, conversion.tlAmount()));
+        expenses.save(new VehicleExpense(vehicleId, request, conversion.tlAmount(), companyId));
     String description = describe(vehicle, request);
     if (request.supplierAccountId() != null) {
       ledger.post(
@@ -110,6 +134,7 @@ public class VehicleExpenseService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "EXPENSE_NOT_FOUND", "Gider bulunamadı."));
+    scope.requireVisible(expense.getBranchId());
     String description = "Araç gideri iptali";
     if (expense.getSettlementId() != null) {
       settlements.reverse(expense.getSettlementId(), date, description);

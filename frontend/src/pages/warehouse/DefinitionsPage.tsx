@@ -10,7 +10,7 @@ import {
   formatAmount,
   QueryState,
   SectionHeader,
-  useBranches,
+  useBranchOptions,
   useCan,
 } from "../finance/common";
 import { useBins, useStockItems, useWarehouseOptions, useWarehouses } from "./common";
@@ -23,7 +23,7 @@ export function DefinitionsPage() {
   const warehouses = useWarehouses();
   const bins = useBins();
   const items = useStockItems();
-  const branches = useBranches();
+  const { branches, optionsFor } = useBranchOptions();
   const options = useWarehouseOptions();
   const [dialog, setDialog] = useState<"warehouse" | "item" | null>(null);
   const [binFor, setBinFor] = useState<Warehouse | null>(null);
@@ -130,7 +130,7 @@ export function DefinitionsPage() {
               label: t("finance.field.branch"),
               type: "select",
               required: true,
-              options: branches.data.map((b) => ({ value: b.id, label: b.name })),
+              options: optionsFor(),
             },
             { name: "address", label: t("warehouse.field.address") },
             { name: "bonded", label: t("warehouse.field.bondedQuestion"), type: "checkbox" },

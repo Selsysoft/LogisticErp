@@ -1,67 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "../../api/client";
-import type { Branch, Page } from "../../pages/finance/types";
+import { useAuthStore } from "../../auth/authStore";
+import type {
+  BranchTree,
+  BranchTreeBranch,
+  BranchTreeCompany,
+  BranchTreeGroup,
+} from "../../pages/organization/types";
 
 /**
  * Şirket → şube grubu → iş yeri (Blackrose "branch") ağacı; ZTO'nun "WorkPlaceGroups" deseni
- * (MX5 §1.7, §5.2). Tüm şube seçim bileşenlerinin tek veri kaynağı.
+ * (MX5 §1.7, §5.2). Tüm şube seçim bileşenlerinin tek veri kaynağı: GET /organization/branch-tree
+ * (12.1a §5.1). Tipler API tipleri olarak pages/organization/types.ts'tedir.
  */
-export interface BranchTreeBranch {
-  id: string;
-  code: string;
-  name: string;
-  active: boolean;
-}
+export type { BranchTree, BranchTreeBranch, BranchTreeCompany, BranchTreeGroup };
 
-export interface BranchTreeGroup {
-  groupId: string | null;
-  groupName: string;
-  branches: BranchTreeBranch[];
-}
-
-export interface BranchTreeCompany {
-  companyId: string | null;
-  companyName: string;
-  groups: BranchTreeGroup[];
-}
-
-export type BranchTree = BranchTreeCompany[];
-
+/** Sunucu kapsamı uygular; iki değer de bugün çağıranın görebildiği iş yerlerini döndürür (§5.1). */
 export type BranchScope = "mine" | "all";
 
-/** Grubu olmayan şubelerin toplandığı grup adı (sunucu ağacıyla aynı). */
+/** Grubu olmayan şubelerin grup adı; yalnız sunucu adı boş gelirse yedek olarak kullanılır. */
 export const OTHER_GROUP_NAME = "Diğer";
-
-/** Şube listesi ucunun öğesi; "active" 12.1a'da gelecek, yoksa etkin sayılır. */
-export type BranchListItem = Branch & { active?: boolean };
-
-const byName = (a: BranchTreeBranch, b: BranchTreeBranch) => a.name.localeCompare(b.name, "tr");
-
-/**
- * Düz şube listesinden tek şirket + tek grup ("Diğer") ağacı türetir. GET /organization/branch-tree
- * gelene kadar kullanılır (12.1a). Şube yoksa boş ağaç döner.
- */
-export function branchesToTree(branches: BranchListItem[], includeInactive = false): BranchTree {
-  const items = branches
-    .map((branch) => ({
-      id: branch.id,
-      code: branch.code,
-      name: branch.name,
-      active: branch.active ?? true,
-    }))
-    .filter((branch) => includeInactive || branch.active)
-    .sort(byName);
-  if (items.length === 0) {
-    return [];
-  }
-  return [
-    {
-      companyId: null,
-      companyName: "",
-      groups: [{ groupId: null, groupName: OTHER_GROUP_NAME, branches: items }],
-    },
-  ];
-}
 
 /** Ağaçtaki tüm şubeler, ağaç sırasıyla. */
 export function flattenTree(tree: BranchTree): BranchTreeBranch[] {
@@ -80,24 +38,60 @@ export function findBranch(tree: BranchTree, id: string): BranchTreeBranch | und
   return flattenTree(tree).find((branch) => branch.id === id);
 }
 
-/** ≥2 şirkette seçim bileşenleri şirket başlığını gösterir (MX5 §4.4). */
+/** ≥2 şirkette seçim bileşenleri şirket başlığını gösterir (MX5 §4.4); şubesiz şirket sayılmaz. */
 export function isMultiCompany(tree: BranchTree): boolean {
-  return tree.length > 1;
+  return tree.filter((company) => branchIdsOfCompany(company).length > 0).length >= 2;
+}
+
+/** Yalnız verilen şirketin dalı; null = tüm ağaç. */
+export function filterTreeByCompany(tree: BranchTree, companyId: string | null): BranchTree {
+  return companyId === null ? tree : tree.filter((company) => company.companyId === companyId);
+}
+
+/** Yalnız verilen şubeler; boş kalan grup ve şirketler atılır. */
+export function subtree(tree: BranchTree, ids: string[]): BranchTree {
+  const wanted = new Set(ids);
+  return tree
+    .map((company) => ({
+      ...company,
+      groups: company.groups
+        .map((group) => ({
+          ...group,
+          branches: group.branches.filter((branch) => wanted.has(branch.id)),
+        }))
+        .filter((group) => group.branches.length > 0),
+    }))
+    .filter((company) => company.groups.length > 0);
+}
+
+/** Sunucu grupsuz iş yerlerinin adını boş gönderirse "Diğer" yazılır. */
+function withGroupNames(tree: BranchTree): BranchTree {
+  return tree.map((company) => ({
+    ...company,
+    groups: company.groups.map((group) =>
+      group.groupId === null && !group.groupName
+        ? { ...group, groupName: OTHER_GROUP_NAME }
+        : group,
+    ),
+  }));
+}
+
+export function branchTreePath(scope: BranchScope, includeInactive: boolean): string {
+  return `/organization/branch-tree?scope=${scope}&includeInactive=${includeInactive}`;
 }
 
 /**
- * Şube ağacı. scope sunucuda uygulanır (12.1a); o zamana kadar mevcut şube listesi ucu kullanıcının
- * görebildiği şubeleri döndürdüğü için scope yalnız sorgu anahtarındadır.
+ * Şube ağacı. Ağaç kullanıcıya özgüdür (LIMITED kapsam sunucuda uygulanır), bu yüzden anahtar kiracı
+ * ve kullanıcıyı içerir: aynı SPA'da başka kullanıcıyla girildiğinde önceki kullanıcının ağacı
+ * görünmez. Şube/şirket mutasyonları ["branch-tree"] önekini geçersizler.
  */
 export function useBranchTree(scope: BranchScope = "mine", includeInactive = false) {
+  const me = useAuthStore((state) => state.me);
   return useQuery({
-    queryKey: ["branch-tree", scope, includeInactive],
-    queryFn: async () => {
-      const page = await apiGet<Page<BranchListItem>>("/organization/branches?size=200&sort=name");
-      return branchesToTree(page.content, includeInactive);
-    },
-    // staleTime yok (useBranches gibi): şube MUI Tanımlar ekranında ["branches"] ile geçersizlenir;
-    // ağaç her açılışta yeniden çekilir. 12.1a'da şube/şirket mutasyonları ["branch-tree"]'yi geçersizleyince
-    // önbellek uzatılabilir.
+    queryKey: ["branch-tree", me?.tenant, me?.id, scope, includeInactive],
+    enabled: !!me,
+    queryFn: async () =>
+      withGroupNames(await apiGet<BranchTree>(branchTreePath(scope, includeInactive))),
+    staleTime: 60_000,
   });
 }

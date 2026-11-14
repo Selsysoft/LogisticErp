@@ -517,6 +517,69 @@ class SaasIT extends AbstractIntegrationTest {
     return mvc.perform(get("/api/v1/auth/me").with(asOwner(code)));
   }
 
+  @Test
+  void planCarriesCompanyAndBranchLimitsAndConsoleCountsActiveOnes() throws Exception {
+    createTenant("saas-org");
+    UUID id = tenantId("saas-org");
+    createBranch("saas-org", "S1");
+    createBranch("saas-org", "S2");
+    String passive =
+        body(mvc.perform(
+                    post("/api/v1/organization/branches")
+                        .with(asOwner("saas-org"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"S3\",\"name\":\"Pasif\"}"))
+                .andExpect(status().isCreated()))
+            .get("id")
+            .asText();
+    mvc.perform(
+            post("/api/v1/organization/branches/" + passive + "/deactivate")
+                .with(asOwner("saas-org")))
+        .andExpect(status().isOk());
+
+    Map<String, Object> wide = orgPlan("ORG-GENIS", 1, 2);
+    JsonNode saved = body(admin(post(ADMIN + "/plans"), wide).andExpect(status().isCreated()));
+    assertThat(saved.get("maxCompanies").asInt()).isEqualTo(1);
+    assertThat(saved.get("maxBranches").asInt()).isEqualTo(2);
+    admin(put(ADMIN + "/tenants/" + id + "/plan"), Map.of("planId", saved.get("id").asText()))
+        .andExpect(status().isNoContent());
+
+    JsonNode limits = overview("saas-org").get("limits");
+    assertThat(limit(limits, "COMPANIES").get("used").asInt()).isEqualTo(1);
+    assertThat(limit(limits, "COMPANIES").get("reached").asBoolean()).isTrue();
+    assertThat(limit(limits, "BRANCHES").get("used").asInt()).as("pasif sayılmaz").isEqualTo(2);
+    assertThat(limit(limits, "BRANCHES").get("limit").asInt()).isEqualTo(2);
+
+    wide.put("maxBranches", null);
+    admin(put(ADMIN + "/plans/" + saved.get("id").asText()), wide)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.maxBranches").isEmpty());
+
+    Map<String, Object> narrow = orgPlan("ORG-DAR", 1, 1);
+    String narrowId =
+        body(admin(post(ADMIN + "/plans"), narrow).andExpect(status().isCreated()))
+            .get("id")
+            .asText();
+    admin(put(ADMIN + "/tenants/" + id + "/plan"), Map.of("planId", narrowId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("PLAN_USAGE_EXCEEDED"));
+    narrow.put("maxCompanies", 0);
+    narrow.put("code", "ORG-SIFIR");
+    admin(post(ADMIN + "/plans"), narrow).andExpect(status().isBadRequest());
+  }
+
+  private static Map<String, Object> orgPlan(String code, int companies, int branches) {
+    Map<String, Object> body = new HashMap<>();
+    body.put("code", code);
+    body.put("name", code);
+    body.put("monthlyPrice", "0");
+    body.put("currency", "TRY");
+    body.put("maxCompanies", companies);
+    body.put("maxBranches", branches);
+    body.put("active", true);
+    return body;
+  }
+
   private String ownerToken(String code) throws Exception {
     return login(code, ownerEmail(code), PASSWORD, null).get("accessToken").asText();
   }

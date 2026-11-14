@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "../../i18n";
+import { useCompanyStore } from "../../auth/companyStore";
 import type { BranchTree } from "../branch/branchTree";
 import { useBranchTree } from "../branch/branchTree";
 import { ZtoBranchMultiSelect, type ZtoBranchMultiSelectProps } from "./ZtoBranchMultiSelect";
@@ -18,9 +19,15 @@ const singleCompany: BranchTree = [
   {
     companyId: null,
     companyName: "",
+    companyActive: true,
     groups: [
-      { groupId: "g1", groupName: "İzmir", branches: [b("a", "Bornova"), b("b", "Kemalpaşa")] },
-      { groupId: null, groupName: "Diğer", branches: [b("c", "Isparta Depo")] },
+      {
+        groupId: "g1",
+        groupName: "İzmir",
+        groupActive: true,
+        branches: [b("a", "Bornova"), b("b", "Kemalpaşa")],
+      },
+      { groupId: null, groupName: "Diğer", groupActive: true, branches: [b("c", "Isparta Depo")] },
     ],
   },
 ];
@@ -30,7 +37,10 @@ const twoCompanies: BranchTree = [
   {
     companyId: "c2",
     companyName: "Lale Nakliyat",
-    groups: [{ groupId: "g2", groupName: "Ankara", branches: [b("d", "Sincan")] }],
+    companyActive: true,
+    groups: [
+      { groupId: "g2", groupName: "Ankara", groupActive: true, branches: [b("d", "Sincan")] },
+    ],
   },
 ];
 
@@ -63,6 +73,7 @@ const groupCheck = (name: string) =>
 afterEach(() => {
   cleanup();
   vi.mocked(useBranchTree).mockReset();
+  useCompanyStore.setState({ activeCompanyId: null });
 });
 
 describe("ZtoBranchMultiSelect — list (Varyant B)", () => {
@@ -276,6 +287,26 @@ describe("ZtoBranchMultiSelect — list (Varyant B)", () => {
     expect(first.classList.contains("collapsed")).toBe(false);
     expect(groupOf("İzmir")).not.toBeNull();
     expect(companies[1].classList.contains("hidden")).toBe(true);
+  });
+
+  it("companyId: aktif şirket ağacı süzer; null ya da kimlik verilebilir", () => {
+    useCompanyStore.setState({ activeCompanyId: "c2" });
+    render(<Harness tree={twoCompanies} />);
+    // Tek şirket kalınca şirket başlığı yok, yalnız o şirketin iş yerleri.
+    expect(qa(".dpr-branch.dpr-company")).toHaveLength(0);
+    expect(qa("input.dpr-wp-check").map((input) => (input as HTMLInputElement).value)).toEqual([
+      "d",
+    ]);
+    cleanup();
+    render(<Harness tree={twoCompanies} companyId={null} />);
+    expect(qa(".dpr-branch.dpr-company")).toHaveLength(2);
+    cleanup();
+    render(<Harness tree={twoCompanies} companyId="c1" />);
+    expect(qa("input.dpr-wp-check").map((input) => (input as HTMLInputElement).value)).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
   });
 
   it("ağaç verilmezse useBranchTree kullanır; yükleniyor ve hata durumları", () => {

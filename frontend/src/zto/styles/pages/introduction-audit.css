@@ -1,0 +1,1002 @@
+/*
+ * Kaynak: ZtoFabrika/wwwroot/css/introduction-audit.css:1-575 — birebir kopya (12.1a §6.7).
+ * ZTO _Layout.cshtml:31-33 sırası: layout.css ve Bootstrap'tan önce.
+ * Blackrose sapması (tek satır): .definition-details__hero--vivid::after filigranındaki
+ * url("../logo.png") (ZTO Fabrika logosu) alınmadı — Blackrose'da bu dosya yok ve marka ZTO'nun;
+ * yerine "none" yazıldı (yalnız %10 opaklıklı arka plan resmi kaybolur).
+ */
+:root {
+  --intro-ink: #243247;
+  --intro-muted: #6b7a90;
+  --intro-line: #e4eaf2;
+  --intro-surface: #ffffff;
+  --intro-soft: #f5f8fc;
+  --intro-primary: #007bff;
+  --intro-primary-soft: #e8f2ff;
+  --intro-success: #3f8f74;
+}
+
+.intro-erp-shell {
+  color: var(--intro-ink);
+}
+
+.intro-erp-shell .card,
+.intro-erp-shell .intro-card {
+  background: var(--intro-surface);
+  border: 1px solid var(--intro-line) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 28px rgba(38, 55, 77, 0.06) !important;
+}
+
+.intro-erp-shell table thead th {
+  background: #f4f7fb !important;
+  color: #52647b !important;
+  border-bottom: 1px solid #dfe6ef !important;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.intro-erp-shell table tbody td {
+  border-color: #edf1f6 !important;
+  color: var(--intro-ink);
+  vertical-align: middle !important;
+}
+
+.intro-erp-shell table tbody tr:hover {
+  background: #f8fbfe !important;
+}
+
+.intro-audit {
+  display: grid;
+  gap: 7px;
+  min-width: 210px;
+  text-align: left;
+}
+
+.intro-audit__row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.intro-audit__row--updated {
+  padding-top: 7px;
+  border-top: 1px dashed var(--intro-line);
+}
+
+.intro-audit__icon {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--intro-primary-soft);
+  color: var(--intro-primary);
+  font-size: 10px;
+}
+
+.intro-audit__icon--created {
+  background: #eaf6f1;
+  color: var(--intro-success);
+}
+
+.intro-audit__content {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.intro-audit__content strong {
+  overflow: hidden;
+  color: var(--intro-ink);
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.intro-audit__label,
+.intro-audit__content time {
+  color: var(--intro-muted);
+  font-size: 9px;
+}
+
+.intro-audit__count {
+  display: inline-flex;
+  min-width: 25px;
+  height: 25px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px;
+  border: 1px solid #dbe4ee;
+  border-radius: 999px;
+  background: var(--intro-soft);
+  color: var(--intro-primary);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+/* ============================================================
+   Kayıt Geçmişi tetikleyicisi + popover (tüm tanım listeleri,
+   cari hesaplar ve kasa/banka kartlarında ortak kullanılır)
+   ============================================================ */
+.intro-audit-trigger {
+  position: relative;
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #cfe0f1;
+  border-radius: 9px;
+  background: #f2f7fc;
+  color: #0056b3;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.intro-audit-trigger:hover,
+.intro-audit-trigger:focus-visible,
+.intro-audit-trigger[aria-expanded="true"] {
+  border-color: #7cbaff;
+  background: #e8f3fd;
+  color: #1f6fae;
+  outline: 0;
+  transform: translateY(-1px);
+}
+
+.intro-audit-trigger__count {
+  position: absolute;
+  top: -6px;
+  right: -7px;
+  display: inline-flex;
+  min-width: 17px;
+  height: 17px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #007bff;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Kasa/banka kartlarında tetikleyici, sağdaki aksiyon şeridinde durur */
+.account-card .intro-audit-trigger,
+.cash-card .intro-audit-trigger {
+  flex: 0 0 auto;
+}
+
+.intro-audit-popover {
+  position: fixed;
+  z-index: 1085;
+  display: grid;
+  overflow: hidden;
+  border: 1px solid #d8e3ef;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 16px 38px rgba(31, 58, 87, 0.18);
+  color: #243247;
+  text-align: left;
+  animation: introAuditIn 0.16s ease-out;
+}
+
+.intro-audit-popover__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e7edf4;
+  background: #f5f8fc;
+  color: #334e68;
+  font-size: 12px;
+}
+
+.intro-audit-popover__total {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #e7f0f9;
+  color: #0056b3;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.intro-audit-popover__row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  padding: 9px 12px;
+}
+
+.intro-audit-popover__row + .intro-audit-popover__row {
+  border-top: 1px dashed #e5ebf2;
+}
+
+.intro-audit-popover__icon {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #eaf2fa;
+  color: #0056b3;
+  font-size: 11px;
+}
+
+.intro-audit-popover__content {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.intro-audit-popover__content small,
+.intro-audit-popover__content time {
+  color: #72839a;
+  font-size: 9px;
+}
+
+.intro-audit-popover__content strong {
+  overflow: hidden;
+  color: #243247;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[dir="rtl"] .intro-audit-popover {
+  text-align: right;
+}
+
+@keyframes introAuditIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.intro-audit-panel {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.7fr) minmax(280px, 1.3fr);
+  gap: 18px;
+  align-items: center;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--intro-line);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fbfe, #fff);
+}
+
+.intro-audit-panel__heading {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+}
+
+.intro-audit-panel__heading > span {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: var(--intro-primary);
+  color: #fff;
+}
+
+.intro-audit-panel__heading div {
+  display: grid;
+}
+
+.intro-audit-panel__heading strong {
+  font-size: 13px;
+}
+
+.intro-audit-panel__heading small {
+  color: var(--intro-muted);
+  font-size: 10px;
+}
+
+@media (max-width: 767.98px) {
+  .intro-audit-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .intro-audit {
+    min-width: 185px;
+  }
+}
+
+.definition-detail-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 3px;
+  border: 1px solid #c9d7e7;
+  border-radius: 8px;
+  background: #fff;
+  color: #315b82;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 3px 10px rgba(45, 73, 105, 0.06);
+}
+
+.definition-detail-button:hover {
+  border-color: #7cbaff;
+  background: #eef5fb;
+  color: #004c94;
+}
+
+.definition-list-audit {
+  display: inline-grid;
+  min-width: 188px;
+  gap: 5px;
+  margin: 4px 8px 4px 0;
+  vertical-align: middle;
+}
+
+.definition-list-audit > span {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 5px;
+  align-items: center;
+  color: #65758a;
+  font-size: 9px;
+}
+
+.definition-list-audit i {
+  color: #507596;
+  font-size: 9px;
+}
+.definition-list-audit b {
+  overflow: hidden;
+  color: #27364a;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.definition-list-audit small {
+  color: #8290a2;
+  font-size: 8px;
+}
+.definition-list-audit em {
+  min-width: 20px;
+  padding: 2px 5px;
+  border: 1px solid #dbe4ee;
+  border-radius: 999px;
+  background: #f5f8fc;
+  color: #41688d;
+  font-style: normal;
+  font-weight: 700;
+  text-align: center;
+}
+
+.definition-details-modal .modal-dialog {
+  max-width: 880px;
+}
+.definition-details-modal .modal-content {
+  overflow: hidden;
+  border: 0;
+  border-radius: 18px;
+  box-shadow: 0 26px 70px rgba(26, 45, 68, 0.22);
+}
+.definition-details-modal .modal-header {
+  align-items: flex-start;
+  padding: 18px 22px;
+  border-bottom: 1px solid #e8edf4;
+  background: linear-gradient(135deg, #f6f9fd, #fff);
+}
+.definition-details-modal .modal-title {
+  margin: 2px 0 0;
+  color: #243247;
+  font-size: 17px;
+  font-weight: 750;
+}
+.definition-details-modal__eyebrow {
+  color: #718197;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+}
+.definition-details-modal .modal-body {
+  max-height: calc(100vh - 140px);
+  padding: 0;
+  overflow-y: auto;
+  background: #f7f9fc;
+}
+.definition-details-loading,
+.definition-details-error {
+  display: flex;
+  min-height: 220px;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  color: #617188;
+}
+.definition-details-error {
+  color: #bd3d4d;
+}
+
+.definition-details {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  color: #243247;
+}
+.definition-details__hero {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 18px;
+  border: 1px solid #dfe7f1;
+  border-left: 4px solid #007bff;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f7fafd, #fff);
+  box-shadow: 0 8px 24px rgba(31, 62, 91, 0.06);
+}
+.definition-details__hero-icon {
+  display: inline-flex;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  background: #007bff;
+  color: #fff;
+}
+.definition-details__hero div {
+  display: grid;
+}
+.definition-details__hero small {
+  color: #718197;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.definition-details__hero h4 {
+  margin: 2px 0;
+  color: #203147;
+  font-size: 18px;
+  font-weight: 750;
+}
+.definition-details__hero div > span {
+  color: #8390a1;
+  font-size: 10px;
+}
+.definition-details--customer-account {
+  gap: 16px;
+  background: linear-gradient(180deg, #f5f9fd 0, #f8fafc 210px);
+}
+.definition-details__hero--customer-account {
+  position: relative;
+  min-height: 118px;
+  overflow: hidden;
+  border: 0;
+  background: linear-gradient(128deg, #00417a 0%, #0062cc 58%, #2b93ff 100%);
+  box-shadow: 0 14px 34px rgba(0, 92, 184, 0.24);
+  color: #fff;
+}
+.definition-details__hero--customer-account::after {
+  position: absolute;
+  top: -58px;
+  right: -30px;
+  width: 210px;
+  height: 210px;
+  border: 32px solid rgba(255, 255, 255, 0.07);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+.definition-details__hero--customer-account .definition-details__hero-icon {
+  position: relative;
+  z-index: 1;
+  width: 58px;
+  height: 58px;
+  flex-basis: 58px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.16);
+  font-size: 20px;
+}
+.definition-details__hero--customer-account .definition-details__hero-content {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+.definition-details__hero--customer-account small {
+  color: rgba(255, 255, 255, 0.72);
+  letter-spacing: 0.09em;
+}
+.definition-details__hero--customer-account h4 {
+  overflow: hidden;
+  margin: 3px 0 7px;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.definition-details__hero-meta {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.definition-details__hero-meta > span {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  min-height: 22px;
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(4, 39, 69, 0.2);
+  color: rgba(255, 255, 255, 0.88) !important;
+  font-size: 9px !important;
+}
+.definition-details__hero-meta .definition-details__status i {
+  color: #64e6b2;
+  font-size: 6px;
+}
+.definition-details__record-number {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1px;
+  min-width: 80px;
+  margin-left: auto;
+  padding: 8px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(4, 39, 69, 0.2);
+  color: rgba(255, 255, 255, 0.68) !important;
+  font-size: 8px !important;
+  text-align: right;
+  text-transform: uppercase;
+}
+.definition-details__record-number strong {
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+.definition-details__section {
+  padding: 16px 18px;
+  border: 1px solid #e1e8f1;
+  border-radius: 14px;
+  background: #fff;
+}
+.definition-details__section-title {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 13px;
+  color: #3d5f80;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.definition-details__section-title i {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #e8f2ff;
+  color: #0056b3;
+  font-size: 11px;
+}
+.definition-details__section--audit {
+  border-left: 4px solid #007bff;
+}
+.definition-details__field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px 18px;
+}
+.definition-details:not(.definition-details--customer-account) .definition-details__field-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.definition-details__field {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid #e8eef5;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #f8fafc, #f3f7fb);
+}
+.definition-details__field span {
+  color: #76869a;
+  font-size: 9px;
+}
+.definition-details__field strong {
+  overflow-wrap: anywhere;
+  color: #2b3a4f;
+  font-size: 12px;
+  font-weight: 650;
+}
+.definition-details--customer-account .definition-details__section {
+  border-color: #dce7f1;
+  box-shadow: 0 8px 24px rgba(31, 62, 91, 0.05);
+}
+.definition-details__field--icon {
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 64px;
+  padding: 9px 12px;
+  border: 1px solid #e8eef5;
+  background: linear-gradient(135deg, #f8fafc, #f3f7fb);
+}
+.definition-details__field--icon .definition-details__field-icon {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #e6f1fa;
+  color: #3275a8;
+  font-size: 12px;
+}
+.definition-details__field-content {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.definition-details__field--icon .definition-details__field-content > span {
+  color: #71849a;
+  font-size: 9px;
+}
+.definition-details__field--icon .definition-details__field-content > strong {
+  overflow: hidden;
+  color: #263a50;
+  font-size: 12px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+}
+.definition-details--customer-account .definition-audit-card {
+  border-top-width: 3px;
+}
+.definition-details--customer-account .definition-audit-card--created,
+.definition-details--vivid .definition-audit-card--created {
+  border-top-color: #58b99a;
+}
+.definition-details--customer-account .definition-audit-card--updated,
+.definition-details--vivid .definition-audit-card--updated {
+  border-top-color: #5a93c2;
+}
+.definition-details--customer-account .definition-audit-card--access,
+.definition-details--vivid .definition-audit-card--access {
+  border-top-color: #7786c4;
+}
+
+/* ============================================================
+   Canlı (vivid) tanım detayı — varlık grubuna göre vurgu teması.
+   Kasa=amber, banka=mavi, tedarik/müşteri=yeşil, lojistik=mor,
+   üretim=teal, kalite=gül, kişiler=indigo.
+   ============================================================ */
+.definition-details--vivid {
+  --dd-deep: #00417a;
+  --dd-mid: #2b93ff;
+  --dd-soft: #e8f2ff;
+  --dd-ink: #0062cc;
+}
+.dd-accent-amber {
+  --dd-deep: #92400e;
+  --dd-mid: #f59e0b;
+  --dd-soft: #fef3c7;
+  --dd-ink: #b45309;
+}
+.dd-accent-blue {
+  --dd-deep: #00417a;
+  --dd-mid: #2b93ff;
+  --dd-soft: #e8f2ff;
+  --dd-ink: #0062cc;
+}
+.dd-accent-green {
+  --dd-deep: #065f46;
+  --dd-mid: #10b981;
+  --dd-soft: #d1fae5;
+  --dd-ink: #047857;
+}
+.dd-accent-purple {
+  --dd-deep: #4c1d95;
+  --dd-mid: #8b5cf6;
+  --dd-soft: #ede9fe;
+  --dd-ink: #6d28d9;
+}
+.dd-accent-teal {
+  --dd-deep: #134e4a;
+  --dd-mid: #14b8a6;
+  --dd-soft: #ccfbf1;
+  --dd-ink: #0f766e;
+}
+.dd-accent-rose {
+  --dd-deep: #831843;
+  --dd-mid: #ec4899;
+  --dd-soft: #fce7f3;
+  --dd-ink: #be185d;
+}
+.dd-accent-indigo {
+  --dd-deep: #312e81;
+  --dd-mid: #6366f1;
+  --dd-soft: #e0e7ff;
+  --dd-ink: #4338ca;
+}
+
+.definition-details--vivid {
+  gap: 12px;
+  padding: 16px 18px;
+  background: linear-gradient(180deg, #f5f9fd 0, #f8fafc 200px);
+}
+
+/* Hero bandı her varlıkta ZTO kurumsal mavisi (logo renkleri); varlığa özgü
+   vurgu rengi bölüm çiplerinde ve kayıt/erişim şeridinde yaşamaya devam eder. */
+.definition-details__hero--vivid {
+  position: relative;
+  min-height: 100px;
+  overflow: hidden;
+  border: 0;
+  background: linear-gradient(128deg, #00417a 0%, #0062cc 58%, #2b93ff 100%);
+  box-shadow: 0 14px 32px rgba(11, 72, 124, 0.24);
+  color: #fff;
+}
+
+/* Arka planda ZTO Fabrika logosu filigranı (beyaz logo, düşük opaklık) */
+.definition-details__hero--vivid::after {
+  position: absolute;
+  top: 50%;
+  right: 110px;
+  width: 300px;
+  height: 100px;
+  background: none no-repeat center / contain; /* Blackrose: url("../logo.png") alınmadı */
+  content: "";
+  opacity: 0.1;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* Sağ üst köşede hafif halka dokusu logoya eşlik eder */
+.definition-details__hero--vivid::before {
+  position: absolute;
+  top: -64px;
+  right: -34px;
+  width: 190px;
+  height: 190px;
+  border: 26px solid rgba(255, 255, 255, 0.07);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+[dir="rtl"] .definition-details__hero--vivid::after {
+  right: auto;
+  left: 110px;
+}
+
+@media (max-width: 575.98px) {
+  .definition-details__hero--vivid::after {
+    display: none;
+  }
+}
+
+.definition-details__hero--vivid .definition-details__hero-icon {
+  position: relative;
+  z-index: 1;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 54px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.18);
+  font-size: 19px;
+}
+
+.definition-details__hero--vivid .definition-details__hero-content {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.definition-details__hero--vivid small {
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 0.09em;
+}
+
+.definition-details__hero--vivid h4 {
+  overflow: hidden;
+  margin: 3px 0 5px;
+  color: #fff;
+  font-size: 19px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.definition-details--vivid .definition-details__section {
+  padding: 13px 15px;
+  border-color: #dce7f1;
+  box-shadow: 0 8px 24px rgba(31, 62, 91, 0.05);
+}
+
+.definition-details--vivid .definition-details__section-title {
+  margin-bottom: 10px;
+}
+
+.definition-details--vivid .definition-details__section-title i {
+  background: var(--dd-soft);
+  color: var(--dd-ink);
+}
+
+.definition-details--vivid .definition-details__section--audit {
+  border-left-color: var(--dd-mid);
+}
+
+.definition-details--vivid .definition-details__field-grid {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px 12px;
+}
+
+.definition-details--vivid .definition-details__field--icon {
+  min-height: 56px;
+}
+
+.definition-details--vivid .definition-details__field--icon .definition-details__field-icon {
+  background: var(--dd-soft);
+  color: var(--dd-ink);
+}
+
+.definition-details--vivid .definition-audit-card {
+  min-height: 62px;
+  padding: 9px 11px;
+  border-top-width: 3px;
+}
+.definition-audit-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.definition-audit-card {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  min-height: 76px;
+  padding: 11px;
+  border: 1px solid #e3eaf2;
+  border-radius: 11px;
+  background: #fbfcfe;
+}
+.definition-audit-card > span {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #e8f2ff;
+  color: #0056b3;
+  font-size: 11px;
+}
+.definition-audit-card--created > span {
+  background: #e9f6f1;
+  color: #36876c;
+}
+.definition-audit-card--access > span {
+  background: #edf0fb;
+  color: #596aa5;
+}
+.definition-audit-card div {
+  display: grid;
+  min-width: 0;
+}
+.definition-audit-card small,
+.definition-audit-card time {
+  color: #7b899b;
+  font-size: 8px;
+}
+.definition-audit-card strong {
+  overflow: hidden;
+  color: #27364a;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.definition-audit-card b {
+  min-width: 23px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #eef3f8;
+  color: #426788;
+  font-size: 9px;
+  text-align: center;
+}
+.definition-details__financial {
+  border-color: #f1ddba;
+  background: linear-gradient(135deg, #fffaf0, #fff);
+}
+.definition-financial-action {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.definition-financial-action__icon {
+  display: inline-flex;
+  width: 39px;
+  height: 39px;
+  flex: 0 0 39px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: #f5a623;
+  color: #fff;
+}
+.definition-financial-action div {
+  display: grid;
+}
+.definition-financial-action small {
+  color: #a56b16;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.definition-financial-action strong {
+  color: #4b3820;
+  font-size: 12px;
+}
+.definition-financial-action div > span {
+  color: #8b765b;
+  font-size: 9px;
+}
+
+@media (max-width: 767.98px) {
+  .definition-details {
+    padding: 12px;
+  }
+  .definition-details__field-grid,
+  .definition-audit-cards {
+    grid-template-columns: 1fr;
+  }
+  .definition-details__hero--customer-account {
+    align-items: flex-start;
+    min-height: 0;
+  }
+  .definition-details__hero--customer-account h4 {
+    white-space: normal;
+  }
+  .definition-details__record-number {
+    display: none;
+  }
+  .definition-details-modal .modal-dialog {
+    margin: 8px;
+  }
+  .definition-list-audit {
+    min-width: 160px;
+  }
+}

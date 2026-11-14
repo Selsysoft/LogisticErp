@@ -24,9 +24,11 @@ import org.ece.blackrose.crm.web.CrmDtos.SaveQuoteRequest;
 import org.ece.blackrose.files.FileService;
 import org.ece.blackrose.files.FileService.Download;
 import org.ece.blackrose.files.StoredFile;
+import org.ece.blackrose.organization.BranchFilter;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyIdentityService;
+import org.ece.blackrose.organization.CompanyResolver;
 import org.ece.blackrose.tenant.TenantClock;
-import org.ece.blackrose.tenant.TenantContext;
-import org.ece.blackrose.tenant.repository.TenantRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -53,9 +55,11 @@ public class QuoteService {
   private final ContractService contracts;
   private final PricingService pricing;
   private final FileService files;
-  private final TenantRepository tenants;
+  private final CompanyIdentityService identities;
   private final ObjectMapper json;
   private final TenantClock clock;
+  private final CompanyResolver companies;
+  private final BranchScopeService scope;
 
   public QuoteService(
       QuoteRepository quotes,
@@ -66,9 +70,13 @@ public class QuoteService {
       ContractService contracts,
       PricingService pricing,
       FileService files,
-      TenantRepository tenants,
+      CompanyIdentityService identities,
       ObjectMapper json,
-      TenantClock clock) {
+      TenantClock clock,
+      CompanyResolver companies,
+      BranchScopeService scope) {
+    this.scope = scope;
+    this.companies = companies;
     this.clock = clock;
     this.quotes = quotes;
     this.lines = lines;
@@ -78,13 +86,21 @@ public class QuoteService {
     this.contracts = contracts;
     this.pricing = pricing;
     this.files = files;
-    this.tenants = tenants;
+    this.identities = identities;
     this.json = json;
   }
 
   @Transactional(readOnly = true)
   public Page<QuoteResponse> list(QuoteStatus status, UUID accountId, Pageable pageable) {
-    return quotes.search(status, accountId, pageable).map(this::toResponse);
+    List<UUID> visible = scope.limited() ? scope.visibleCompanyIds() : null;
+    return quotes
+        .search(
+            status,
+            accountId,
+            visible == null,
+            visible == null || visible.isEmpty() ? List.of(BranchFilter.NONE) : visible,
+            pageable)
+        .map(this::toResponse);
   }
 
   @Transactional(readOnly = true)
@@ -107,6 +123,12 @@ public class QuoteService {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "OPPORTUNITY_NOT_FOUND", "Fırsat bulunamadı.");
     }
+    UUID companyId =
+        companies.forNewDocument(
+            request.companyId() != null
+                ? request.companyId()
+                : scope.defaultCompanyForNew(companies.defaultCompanyId()));
+    scope.requireCompanyVisible(companyId);
     String number = "T-%d-%06d".formatted(clock.today().getYear(), quotes.nextNumber());
     return toResponse(
         quotes.save(
@@ -114,6 +136,7 @@ public class QuoteService {
                 number,
                 1,
                 request.accountId(),
+                companyId,
                 request.opportunityId(),
                 request.tariffId(),
                 request.taxRateId(),
@@ -203,6 +226,7 @@ public class QuoteService {
                 current.getNumber(),
                 current.getVersion() + 1,
                 current.getAccountId(),
+                current.getCompanyId(),
                 current.getOpportunityId(),
                 current.getTariffId(),
                 current.getTaxRateId(),
@@ -243,6 +267,7 @@ public class QuoteService {
     }
     return contracts.create(
         quote.getAccountId(),
+        quote.getCompanyId(),
         quote.getId(),
         request.tariffId() != null ? request.tariffId() : quote.getTariffId(),
         request.startDate(),
@@ -287,14 +312,16 @@ public class QuoteService {
             request.waitingHours(),
             request.extraStops(),
             request.adr(),
-            request.tollAmount()));
+            request.tollAmount(),
+            quote.getCompanyId()));
   }
 
   private byte[] render(Quote quote, List<QuoteLine> quoteLines) {
-    String company =
-        tenants.findByCode(TenantContext.currentCode().orElseThrow()).orElseThrow().getName();
     return QuotePdf.render(
-        quote, quoteLines, customers.find(quote.getAccountId()).getName(), company);
+        quote,
+        quoteLines,
+        customers.find(quote.getAccountId()).getName(),
+        identities.of(quote.getCompanyId()));
   }
 
   private static String fileName(Quote quote) {
@@ -326,11 +353,17 @@ public class QuoteService {
   }
 
   private Quote lock(UUID id) {
-    return quotes.findForUpdate(id).orElseThrow(QuoteService::notFound);
+    return visible(quotes.findForUpdate(id).orElseThrow(QuoteService::notFound));
   }
 
   private Quote find(UUID id) {
-    return quotes.findById(id).orElseThrow(QuoteService::notFound);
+    return visible(quotes.findById(id).orElseThrow(QuoteService::notFound));
+  }
+
+  /** Teklif PDF'i şirketin unvan ve logosunu taşır; LIMITED kullanıcıda şirket görünür olmalı. */
+  private Quote visible(Quote quote) {
+    scope.requireCompanyVisible(quote.getCompanyId());
+    return quote;
   }
 
   private static BusinessException notFound() {
@@ -362,6 +395,7 @@ public class QuoteService {
         quote.getNumber(),
         quote.getVersion(),
         quote.getAccountId(),
+        quote.getCompanyId(),
         quote.getOpportunityId(),
         quote.getTariffId(),
         quote.getTaxRateId(),

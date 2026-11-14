@@ -5,16 +5,23 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.common.money.Money;
 import org.ece.blackrose.crm.service.PricingService;
 import org.ece.blackrose.crm.web.CrmDtos.PriceBreakdown;
+import org.ece.blackrose.finance.domain.Account;
 import org.ece.blackrose.finance.domain.FinanceTypes.Direction;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
 import org.ece.blackrose.finance.service.LedgerService;
 import org.ece.blackrose.finance.service.LedgerService.Posting;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyIdentityService;
+import org.ece.blackrose.organization.CompanyResolver;
+import org.ece.blackrose.organization.DocumentNumberService;
+import org.ece.blackrose.organization.DocumentType;
 import org.ece.blackrose.tenant.TenantClock;
 import org.ece.blackrose.warehouse.domain.HandlingCharge;
 import org.ece.blackrose.warehouse.domain.HandlingRate;
@@ -59,7 +66,14 @@ public class WarehouseBillingService {
   private final StockService stock;
   private final PricingService pricing;
   private final LedgerService ledger;
+  private final CompanyResolver companies;
   private final TenantClock clock;
+  private final DocumentNumberService numbers;
+  private final CompanyIdentityService identities;
+  private final BranchScopeService scope;
+
+  /** Depo faturası belgesi (dosya adı ve içerik). */
+  public record InvoicePdf(String fileName, byte[] content) {}
 
   public WarehouseBillingService(
       WarehouseContractRepository contracts,
@@ -73,7 +87,15 @@ public class WarehouseBillingService {
       StockService stock,
       PricingService pricing,
       LedgerService ledger,
-      TenantClock clock) {
+      TenantClock clock,
+      CompanyResolver companies,
+      DocumentNumberService numbers,
+      CompanyIdentityService identities,
+      BranchScopeService scope) {
+    this.scope = scope;
+    this.identities = identities;
+    this.numbers = numbers;
+    this.companies = companies;
     this.clock = clock;
     this.contracts = contracts;
     this.rates = rates;
@@ -93,7 +115,8 @@ public class WarehouseBillingService {
     if (!accounts.existsById(request.accountId())) {
       throw new BusinessException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Cari bulunamadı.");
     }
-    lockWarehouse(request.warehouseId());
+    Warehouse warehouse = lockWarehouse(request.warehouseId());
+    scope.requireVisible(warehouse.getBranchId());
     if (request.endDate().isBefore(request.startDate())) {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "PERIOD_INVALID", "Bitiş tarihi başlangıçtan önce olamaz.");
@@ -165,6 +188,7 @@ public class WarehouseBillingService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "CHARGE_NOT_FOUND", "Elleçleme kaydı bulunamadı."));
+    requireContractVisible(charge.getContractId());
     if (charge.getInvoiceId() != null) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "CHARGE_BILLED", "Faturalanmış elleçleme silinemez.");
@@ -210,13 +234,15 @@ public class WarehouseBillingService {
           HttpStatus.CONFLICT, "NOTHING_TO_BILL", "Bu dönemde faturalanacak tutar yok.");
     }
     PriceBreakdown price = price(contract, amounts);
-    String number = "DF-%d-%06d".formatted(request.invoiceDate().getYear(), invoices.nextNumber());
+    UUID companyId = companies.companyOf(warehouse.getBranchId());
+    String number = numbers.next(companyId, DocumentType.WAREHOUSE_INVOICE, request.invoiceDate());
     WarehouseInvoice invoice =
         invoices.save(
             new WarehouseInvoice(
                 number,
                 contract,
                 warehouse.getBranchId(),
+                companyId,
                 request.from(),
                 request.to(),
                 request.invoiceDate(),
@@ -255,14 +281,55 @@ public class WarehouseBillingService {
     return invoice;
   }
 
+  /** Başlık faturanın şirketinden (unvan, vergi kimliği, logo); kiracı adından değil. */
+  @Transactional(readOnly = true)
+  public InvoicePdf invoicePdf(UUID id) {
+    WarehouseInvoice invoice = findInvoice(id);
+    String customer = accounts.findById(invoice.getAccountId()).map(Account::getName).orElse(null);
+    return new InvoicePdf(
+        invoice.getNumber() + ".pdf",
+        WarehouseInvoicePdf.render(invoice, identities.of(invoice.getCompanyId()), customer));
+  }
+
   @Transactional(readOnly = true)
   public WarehouseInvoice findInvoice(UUID id) {
-    return invoices
-        .findById(id)
-        .orElseThrow(
-            () ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Fatura bulunamadı."));
+    WarehouseInvoice invoice =
+        invoices
+            .findById(id)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Fatura bulunamadı."));
+    scope.requireVisible(invoice.getBranchId());
+    return invoice;
+  }
+
+  /**
+   * Sözleşme kapsamı deponun iş yerinden gelir. Sözleşme yoksa sessiz geçer (liste uçları eskisi
+   * gibi boş döner).
+   */
+  @Transactional(readOnly = true)
+  public void requireContractVisible(UUID contractId) {
+    contracts.findById(contractId).ifPresent(this::requireVisible);
+  }
+
+  /** LIMITED kullanıcıda görünür depolar; ALL için {@code null}. */
+  @Transactional(readOnly = true)
+  public Set<UUID> visibleWarehouseIdsOrNull() {
+    Set<UUID> allowed = scope.allowedOrNull();
+    if (allowed == null) {
+      return null;
+    }
+    return warehouses.findAll().stream()
+        .filter(warehouse -> allowed.contains(warehouse.getBranchId()))
+        .map(Warehouse::getId)
+        .collect(Collectors.toSet());
+  }
+
+  private void requireVisible(WarehouseContract contract) {
+    warehouses
+        .findById(contract.getWarehouseId())
+        .ifPresent(warehouse -> scope.requireVisible(warehouse.getBranchId()));
   }
 
   private Amounts calculate(WarehouseContract contract, LocalDate from, LocalDate to) {
@@ -308,12 +375,15 @@ public class WarehouseBillingService {
   }
 
   private WarehouseContract findContract(UUID id) {
-    return contracts
-        .findById(id)
-        .orElseThrow(
-            () ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "CONTRACT_NOT_FOUND", "Sözleşme bulunamadı."));
+    WarehouseContract contract =
+        contracts
+            .findById(id)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "CONTRACT_NOT_FOUND", "Sözleşme bulunamadı."));
+    requireVisible(contract);
+    return contract;
   }
 
   private Warehouse lockWarehouse(UUID id) {

@@ -136,6 +136,8 @@ export interface Quote {
   total: Money;
   notes: string | null;
   lines: QuoteLine[];
+  /** Teklifi veren şirket (12.1a §5.5). */
+  companyId: string;
 }
 
 export interface Contract {
@@ -151,6 +153,8 @@ export interface Contract {
   fuelSurchargePercent: number | null;
   waitingHourlyFee: number | null;
   specialTerms: string | null;
+  /** Sözleşmenin şirketi (12.1a §5.5). */
+  companyId: string;
 }
 
 export interface Dashboard {

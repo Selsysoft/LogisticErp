@@ -6,6 +6,7 @@ export default {
   AUDIT_VIEW: "Denetim günlüğü",
   BRANCH_VIEW: "Şubeleri görme",
   BRANCH_MANAGE: "Şube yönetimi",
+  COMPANY_MANAGE: "Şirket yönetimi",
   FINANCE_VIEW: "Finans görme",
   FINANCE_MANAGE: "Finans tanımları",
   FINANCE_PAYMENT_CREATE: "Ödeme oluşturma",

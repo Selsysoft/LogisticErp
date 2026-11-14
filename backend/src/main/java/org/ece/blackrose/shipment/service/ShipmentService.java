@@ -19,7 +19,8 @@ import org.ece.blackrose.crm.web.CrmDtos.PriceRequest;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
 import org.ece.blackrose.identity.domain.AuditEvent;
 import org.ece.blackrose.identity.service.AuditService;
-import org.ece.blackrose.organization.BranchRepository;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyResolver;
 import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.domain.ShipmentCargo;
 import org.ece.blackrose.shipment.domain.ShipmentEvent;
@@ -66,7 +67,6 @@ public class ShipmentService {
   private final QuoteRepository quotes;
   private final PricingService pricing;
   private final AccountRepository accounts;
-  private final BranchRepository branches;
   private final ShipmentViews views;
   private final TenantClock clock;
   private final AuditService audit;
@@ -74,6 +74,8 @@ public class ShipmentService {
 
   private final org.ece.blackrose.saas.service.PlanLimitService planLimits;
   private final DeliveryNotifier deliveryNotifier;
+  private final CompanyResolver companies;
+  private final BranchScopeService scope;
 
   public ShipmentService(
       ShipmentRepository shipments,
@@ -85,13 +87,16 @@ public class ShipmentService {
       QuoteRepository quotes,
       PricingService pricing,
       AccountRepository accounts,
-      BranchRepository branches,
       ShipmentViews views,
       TenantClock clock,
       AuditService audit,
       DistanceProvider distances,
       org.ece.blackrose.saas.service.PlanLimitService planLimits,
-      DeliveryNotifier deliveryNotifier) {
+      DeliveryNotifier deliveryNotifier,
+      CompanyResolver companies,
+      BranchScopeService scope) {
+    this.scope = scope;
+    this.companies = companies;
     this.deliveryNotifier = deliveryNotifier;
     this.planLimits = planLimits;
     this.distances = distances;
@@ -105,7 +110,6 @@ public class ShipmentService {
     this.quotes = quotes;
     this.pricing = pricing;
     this.accounts = accounts;
-    this.branches = branches;
     this.views = views;
     this.clock = clock;
   }
@@ -113,12 +117,15 @@ public class ShipmentService {
   @Transactional(readOnly = true)
   public Page<Shipment> list(ShipmentStatus status, String search, Pageable pageable) {
     String term = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
-    return shipments.search(status, term, pageable);
+    return shipments.search(status, term, scope.filter(null, null), pageable);
   }
 
+  /** Seferi kimlikle yükler; kullanıcının kapsamı dışındaki sefer 403 verir. */
   @Transactional(readOnly = true)
   public Shipment get(UUID id) {
-    return shipments.findById(id).orElseThrow(ShipmentService::notFound);
+    Shipment shipment = shipments.findById(id).orElseThrow(ShipmentService::notFound);
+    scope.requireVisible(shipment.getBranchId());
+    return shipment;
   }
 
   @Transactional
@@ -126,9 +133,6 @@ public class ShipmentService {
     planLimits.require(org.ece.blackrose.saas.domain.SaasTypes.LimitedResource.SHIPMENTS_MONTH);
     if (!accounts.existsById(request.accountId())) {
       throw new BusinessException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Cari bulunamadı.");
-    }
-    if (!branches.existsById(request.branchId())) {
-      throw new BusinessException(HttpStatus.BAD_REQUEST, "BRANCH_NOT_FOUND", "Şube bulunamadı.");
     }
     if (request.plannedDelivery().isBefore(request.plannedPickup())) {
       throw new BusinessException(
@@ -227,7 +231,9 @@ public class ShipmentService {
   }
 
   Shipment lock(UUID id) {
-    return shipments.findForUpdate(id).orElseThrow(ShipmentService::notFound);
+    Shipment shipment = shipments.findForUpdate(id).orElseThrow(ShipmentService::notFound);
+    scope.requireVisible(shipment.getBranchId());
+    return shipment;
   }
 
   private boolean allLegsAssigned(UUID shipmentId) {
@@ -262,7 +268,8 @@ public class ShipmentService {
             request.waitingHours(),
             request.extraStops(),
             request.adr(),
-            request.tollAmount()));
+            request.tollAmount(),
+            companies.companyOf(request.branchId())));
   }
 
   /**
@@ -286,6 +293,13 @@ public class ShipmentService {
     if (!quote.getAccountId().equals(request.accountId())) {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "QUOTE_ACCOUNT_MISMATCH", "Teklif başka bir müşteriye ait.");
+    }
+    // Teklifi veren şirket seferi faturalayacak şirketle aynı olmalı (§4.13 #7, K-2).
+    if (!quote.getCompanyId().equals(companies.companyOf(request.branchId()))) {
+      throw new BusinessException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          "COMPANY_MISMATCH",
+          "Teklif seçilen iş yerinin şirketine ait değil.");
     }
     return views.readBreakdown(line.getBreakdown());
   }

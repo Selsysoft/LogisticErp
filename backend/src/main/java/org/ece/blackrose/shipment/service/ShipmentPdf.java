@@ -19,6 +19,8 @@ import java.text.DecimalFormatSymbols;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import org.ece.blackrose.common.money.Money;
+import org.ece.blackrose.organization.CompanyIdentityService.CompanyIdentity;
+import org.ece.blackrose.organization.CompanyPdfHeader;
 import org.ece.blackrose.shipment.domain.FreightInvoice;
 import org.ece.blackrose.shipment.domain.ShipmentDocument;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.DocumentType;
@@ -70,9 +72,9 @@ final class ShipmentPdf {
     }
   }
 
-  static byte[] invoice(FreightInvoice invoice, String companyName, String customerName) {
+  static byte[] invoice(FreightInvoice invoice, CompanyIdentity company, String customerName) {
     try {
-      return new ShipmentPdf().renderInvoice(invoice, companyName, customerName);
+      return new ShipmentPdf().renderInvoice(invoice, company, customerName);
     } catch (DocumentException | IOException ex) {
       throw new IllegalStateException("Fatura belgesi oluşturulamadı", ex);
     }
@@ -213,11 +215,11 @@ final class ShipmentPdf {
     table.addCell(cell);
   }
 
-  private byte[] renderInvoice(FreightInvoice invoice, String companyName, String customerName)
+  private byte[] renderInvoice(FreightInvoice invoice, CompanyIdentity company, String customerName)
       throws DocumentException {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Document pdf = open(out);
-    pdf.add(new Paragraph(companyName, title));
+    pdf.add(CompanyPdfHeader.render(company));
     pdf.add(new Paragraph("Navlun Faturası " + invoice.getNumber(), strong));
     pdf.add(new Paragraph("Bu belge yasal e-Fatura yerine geçmez.", body));
     pdf.add(new Paragraph("Müşteri: " + customerName, body));

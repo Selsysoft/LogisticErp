@@ -117,6 +117,10 @@ describe("ztoFinans ad alanı", () => {
       "branch",
       "export",
       "pages",
+      "definitions",
+      "workPlaces",
+      "branchGroups",
+      "companies",
     ]);
     expect(i18n.options.ns).toEqual(["translation", "ztoFinans"]);
     expect(i18n.t("table.search", { ns: "ztoFinans" })).toBe("Ara:");
@@ -151,6 +155,9 @@ describe("ztoFinans ad alanı", () => {
       "nav.phase": ["step"],
       "nav.notReady": ["step"],
       "pages.placeholder.body": ["step"],
+      "definitions.updateCountValue": ["count"],
+      "definitions.errorPrefix": ["message"],
+      "companies.uyLastSync": ["value"],
     };
     const actual = Object.fromEntries(
       ztoLeaves.filter(([, v]) => variables(v).length > 0).map(([k, v]) => [k, variables(v)]),
@@ -160,6 +167,10 @@ describe("ztoFinans ad alanı", () => {
       "1.250 kayıttan 1 - 10 arasındaki kayıtlar gösteriliyor",
     );
     expect(i18n.t("ztoFinans:export.copySuccess", { count: 3 })).toBe("3 satır panoya kopyalandı");
+    expect(i18n.t("ztoFinans:definitions.updateCountValue", { count: 2 })).toBe(
+      "Güncelleme Sayısı: 2",
+    );
+    expect(i18n.t("ztoFinans:definitions.errorPrefix", { message: "x" })).toBe("Hata: x");
   });
 
   it("çift süslü parantezler her iki ad alanında da dengeli", () => {

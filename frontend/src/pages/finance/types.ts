@@ -11,10 +11,27 @@ export interface Page<T> {
   totalPages: number;
 }
 
+/** Şema `BranchResponse` (12.1a §5.1). MUI'de "Şube" etiketiyle gösterilir (iş yeri). */
 export interface Branch {
   id: string;
   code: string;
   name: string;
+  companyId: string;
+  companyName: string;
+  branchGroupId: string | null;
+  branchGroupName: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  district: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  active: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string;
+  updatedAt: string;
+  updateCount: number;
 }
 
 export interface Balance {
@@ -42,6 +59,7 @@ export interface Fund {
   kind: "BANK" | "CASH";
   currency: string;
   branchId: string;
+  companyId: string;
   bankName: string | null;
   iban: string | null;
   allowNegative: boolean;
@@ -79,6 +97,7 @@ export interface Instrument {
   accountId: string;
   endorsedAccountId: string | null;
   branchId: string;
+  companyId: string;
   fundAccountId: string | null;
   money: Money;
   dueDate: string;
@@ -135,6 +154,7 @@ export interface Plan {
   id: string;
   accountId: string;
   branchId: string;
+  companyId: string;
   money: Money;
   dueDate: string;
   status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "PAID" | "CANCELLED";

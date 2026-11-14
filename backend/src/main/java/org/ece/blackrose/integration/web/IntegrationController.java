@@ -19,7 +19,6 @@ import org.ece.blackrose.fleet.domain.Vehicle;
 import org.ece.blackrose.fleet.repository.FleetRepositories.VehicleRepository;
 import org.ece.blackrose.integration.domain.BankStatementLine;
 import org.ece.blackrose.integration.domain.EDocument;
-import org.ece.blackrose.integration.domain.EDocumentSettings;
 import org.ece.blackrose.integration.domain.Geofence;
 import org.ece.blackrose.integration.domain.ImportBatch;
 import org.ece.blackrose.integration.domain.ImportRow;
@@ -27,10 +26,8 @@ import org.ece.blackrose.integration.domain.IntegrationTypes.ImportKind;
 import org.ece.blackrose.integration.domain.RouteDistance;
 import org.ece.blackrose.integration.domain.VehiclePosition;
 import org.ece.blackrose.integration.repository.IntegrationRepositories.BankStatementLineRepository;
-import org.ece.blackrose.integration.repository.IntegrationRepositories.EDocumentRepository;
 import org.ece.blackrose.integration.repository.IntegrationRepositories.GeofenceEventRepository;
 import org.ece.blackrose.integration.repository.IntegrationRepositories.GeofenceRepository;
-import org.ece.blackrose.integration.repository.IntegrationRepositories.ImportBatchRepository;
 import org.ece.blackrose.integration.repository.IntegrationRepositories.RouteDistanceRepository;
 import org.ece.blackrose.integration.repository.IntegrationRepositories.VehiclePositionRepository;
 import org.ece.blackrose.integration.service.BankStatementService;
@@ -62,6 +59,8 @@ import org.ece.blackrose.integration.web.IntegrationDtos.SaveGeofenceRequest;
 import org.ece.blackrose.integration.web.IntegrationDtos.SendEDocumentRequest;
 import org.ece.blackrose.integration.web.IntegrationDtos.StatementImportResponse;
 import org.ece.blackrose.integration.web.IntegrationDtos.StatementLineResponse;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.Company;
 import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.domain.ShipmentLeg;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentLegRepository;
@@ -101,9 +100,7 @@ public class IntegrationController {
   private static final int OPEN_TX_WINDOW_DAYS = 45;
 
   private final EDocumentService edocuments;
-  private final EDocumentRepository edocumentRows;
   private final ExpenseImportService imports;
-  private final ImportBatchRepository batches;
   private final GpsService gps;
   private final VehiclePositionRepository positions;
   private final GeofenceRepository geofences;
@@ -117,12 +114,11 @@ public class IntegrationController {
   private final AccountRepository accounts;
   private final FundAccountRepository funds;
   private final FundTransactionRepository fundTransactions;
+  private final BranchScopeService scope;
 
   public IntegrationController(
       EDocumentService edocuments,
-      EDocumentRepository edocumentRows,
       ExpenseImportService imports,
-      ImportBatchRepository batches,
       GpsService gps,
       VehiclePositionRepository positions,
       GeofenceRepository geofences,
@@ -135,11 +131,11 @@ public class IntegrationController {
       ShipmentLegRepository legs,
       AccountRepository accounts,
       FundAccountRepository funds,
-      FundTransactionRepository fundTransactions) {
+      FundTransactionRepository fundTransactions,
+      BranchScopeService scope) {
+    this.scope = scope;
     this.edocuments = edocuments;
-    this.edocumentRows = edocumentRows;
     this.imports = imports;
-    this.batches = batches;
     this.gps = gps;
     this.positions = positions;
     this.geofences = geofences;
@@ -174,9 +170,7 @@ public class IntegrationController {
   @GetMapping("/e-documents")
   @PreAuthorize(SHIPMENT_VIEW)
   List<EDocumentResponse> listEdocuments() {
-    return edocumentRows.findAllByOrderByCreatedAtDesc().stream()
-        .map(IntegrationController::edocumentResponse)
-        .toList();
+    return edocuments.list().stream().map(IntegrationController::edocumentResponse).toList();
   }
 
   @GetMapping("/e-documents/candidates")
@@ -207,13 +201,7 @@ public class IntegrationController {
   @GetMapping("/e-documents/{id}/ubl")
   @PreAuthorize(SHIPMENT_VIEW)
   ResponseEntity<String> edocumentUbl(@PathVariable UUID id) {
-    EDocument document =
-        edocumentRows
-            .findById(id)
-            .orElseThrow(
-                () ->
-                    new BusinessException(
-                        HttpStatus.NOT_FOUND, "EDOCUMENT_NOT_FOUND", "e-Belge bulunamadı."));
+    EDocument document = edocuments.get(id);
     return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(document.getUbl());
   }
 
@@ -222,7 +210,7 @@ public class IntegrationController {
   @GetMapping("/imports")
   @PreAuthorize(FLEET_VIEW)
   List<ImportBatchResponse> listImports() {
-    return batches.findAllByOrderByCreatedAtDesc().stream().map(this::batchResponse).toList();
+    return imports.list().stream().map(this::batchResponse).toList();
   }
 
   @GetMapping("/imports/{id}")
@@ -357,6 +345,7 @@ public class IntegrationController {
   @GetMapping("/bank/{fundId}/lines")
   @PreAuthorize(FINANCE_VIEW)
   List<StatementLineResponse> statementLines(@PathVariable UUID fundId) {
+    bank.requireFundVisible(fundId);
     return statementLines.findByFundAccountIdOrderByLineDateDesc(fundId).stream()
         .map(this::lineResponse)
         .toList();
@@ -379,7 +368,7 @@ public class IntegrationController {
   @GetMapping("/bank/lines/{id}/candidates")
   @PreAuthorize(FINANCE_VIEW)
   List<OpenTransactionResponse> lineCandidates(@PathVariable UUID id) {
-    BankStatementLine line = statementLines.findById(id).orElseThrow();
+    BankStatementLine line = bank.line(id);
     return statementLines
         .openTransactions(
             line.getFundAccountId(),
@@ -460,7 +449,10 @@ public class IntegrationController {
     Set<AccountType> payees = Set.of(AccountType.SUPPLIER, AccountType.CARRIER);
     return new IntegrationOptionsResponse(
         shipments
-            .findAll(
+            .search(
+                null,
+                "",
+                scope.filter(null, null),
                 PageRequest.of(
                     0, SHIPMENT_OPTION_LIMIT, Sort.by(Sort.Direction.DESC, "plannedPickup")))
             .stream()
@@ -470,7 +462,7 @@ public class IntegrationController {
             .filter(account -> payees.contains(account.getType()))
             .map(account -> new Option(account.getId(), account.getName()))
             .toList(),
-        funds.findAll().stream()
+        funds.search(scope.filter(null, null)).stream()
             .filter(fund -> "BANK".equals(fund.getKind().name()))
             .map(fund -> new Option(fund.getId(), fund.getName()))
             .toList());
@@ -478,7 +470,7 @@ public class IntegrationController {
 
   // Yanıtlar
 
-  private EDocumentSettingsResponse settingsResponse(EDocumentSettings row) {
+  private EDocumentSettingsResponse settingsResponse(Company row) {
     return new EDocumentSettingsResponse(
         row.getTaxNumber(),
         row.getTaxOffice(),
@@ -494,6 +486,7 @@ public class IntegrationController {
         document.getSourceType(),
         document.getSourceId(),
         document.getSourceNo(),
+        document.getCompanyId(),
         document.getEttn(),
         document.getProvider(),
         document.getProviderRef(),
@@ -513,13 +506,7 @@ public class IntegrationController {
   }
 
   private ImportDetailResponse importDetail(UUID id) {
-    ImportBatch batch =
-        batches
-            .findById(id)
-            .orElseThrow(
-                () ->
-                    new BusinessException(
-                        HttpStatus.NOT_FOUND, "IMPORT_NOT_FOUND", "İçe aktarım bulunamadı."));
+    ImportBatch batch = imports.batch(id);
     List<ImportRow> rows = imports.rowsOf(id);
     Map<UUID, String> numbers =
         shipmentNumbers(

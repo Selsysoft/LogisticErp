@@ -29,7 +29,9 @@ import org.ece.blackrose.finance.web.FinanceDtos.DailyTotal;
 import org.ece.blackrose.finance.web.FinanceDtos.SettlementRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SettlementResponse;
 import org.ece.blackrose.finance.web.FinanceMapper;
-import org.ece.blackrose.organization.BranchRepository;
+import org.ece.blackrose.organization.BranchFilter;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyResolver;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -48,27 +50,30 @@ public class SettlementService {
   private final SettlementRepository settlements;
   private final AccountRepository accounts;
   private final ExpenseItemRepository expenseItems;
-  private final BranchRepository branches;
   private final FundService funds;
   private final LedgerService ledger;
   private final FundLedgerService fundLedger;
   private final InstrumentService instruments;
   private final FinanceMapper mapper;
+  private final CompanyResolver companies;
+  private final BranchScopeService scope;
 
   public SettlementService(
       SettlementRepository settlements,
       AccountRepository accounts,
       ExpenseItemRepository expenseItems,
-      BranchRepository branches,
       FundService funds,
       LedgerService ledger,
       FundLedgerService fundLedger,
       InstrumentService instruments,
-      FinanceMapper mapper) {
+      FinanceMapper mapper,
+      CompanyResolver companies,
+      BranchScopeService scope) {
+    this.scope = scope;
+    this.companies = companies;
     this.settlements = settlements;
     this.accounts = accounts;
     this.expenseItems = expenseItems;
-    this.branches = branches;
     this.funds = funds;
     this.ledger = ledger;
     this.fundLedger = fundLedger;
@@ -77,8 +82,8 @@ public class SettlementService {
   }
 
   @Transactional(readOnly = true)
-  public Page<Settlement> list(SettlementType type, Pageable pageable) {
-    return settlements.findByType(type, pageable);
+  public Page<Settlement> list(SettlementType type, UUID companyId, Pageable pageable) {
+    return settlements.search(type, scope.filter(companyId, null), pageable);
   }
 
   /** Aynı anahtarla gelen ikinci istek ilk kaydı döner. */
@@ -88,12 +93,14 @@ public class SettlementService {
     if (idempotencyKey != null) {
       var existing = settlements.findByIdempotencyKey(idempotencyKey);
       if (existing.isPresent()) {
+        // Aynı anahtarla başka iş yerinin kaydı kapsam dışındaki kullanıcıya dönmez.
+        scope.requireVisible(existing.get().getBranchId());
         return existing.get();
       }
     }
-    validate(type, request);
+    UUID companyId = validate(type, request);
     Money money = request.money();
-    UUID instrumentId = registerInstrument(type, request, money);
+    UUID instrumentId = registerInstrument(type, request, companyId, money);
     Settlement settlement =
         settlements.save(
             new Settlement(
@@ -101,6 +108,7 @@ public class SettlementService {
                 request.method(),
                 request.accountId(),
                 request.branchId(),
+                companyId,
                 request.method() == SettlementMethod.CHECK ? null : request.fundAccountId(),
                 instrumentId,
                 request.expenseItemId(),
@@ -147,6 +155,7 @@ public class SettlementService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "SETTLEMENT_NOT_FOUND", "Kayıt bulunamadı."));
+    scope.requireVisible(settlement.getBranchId());
     if (settlement.getStatus() == SettlementStatus.REVERSED) {
       return settlement;
     }
@@ -168,13 +177,15 @@ public class SettlementService {
     return settlement;
   }
 
-  /** Şube filtresi boşsa tüm şubeler raporlanır. */
+  /**
+   * Şube filtresi boşsa (şirketin ya da konsolidede) kullanıcının görebildiği tüm şubeler
+   * raporlanır; açıkça istenen kapsam dışı şube 403.
+   */
   @Transactional(readOnly = true)
-  public DailyReportResponse daily(SettlementType type, LocalDate date, List<UUID> branchIds) {
-    List<Settlement> rows =
-        branchIds == null || branchIds.isEmpty()
-            ? settlements.daily(type, date)
-            : settlements.dailyForBranches(type, date, branchIds);
+  public DailyReportResponse daily(
+      SettlementType type, LocalDate date, List<UUID> branchIds, UUID companyId) {
+    BranchFilter filter = scope.filter(companyId, branchIds);
+    List<Settlement> rows = settlements.daily(type, date, filter);
     record Key(String branch, String currency) {}
     Map<String, DailyTotal> totals = new TreeMap<>();
     for (Settlement row : rows) {
@@ -192,13 +203,14 @@ public class SettlementService {
     return new DailyReportResponse(type, date, responses, new ArrayList<>(totals.values()));
   }
 
-  private UUID registerInstrument(SettlementType type, SettlementRequest request, Money money) {
+  private UUID registerInstrument(
+      SettlementType type, SettlementRequest request, UUID companyId, Money money) {
     if (request.method() != SettlementMethod.CHECK) {
       return null;
     }
     if (request.instrumentId() != null) {
       return instruments
-          .endorse(request.instrumentId(), request.accountId(), money, request.date())
+          .endorse(request.instrumentId(), request.accountId(), companyId, money, request.date())
           .getId();
     }
     InstrumentDirection direction =
@@ -216,10 +228,9 @@ public class SettlementService {
     return instrument.getId();
   }
 
-  private void validate(SettlementType type, SettlementRequest request) {
-    if (!branches.existsById(request.branchId())) {
-      throw bad("BRANCH_NOT_FOUND", "Şube bulunamadı.");
-    }
+  /** Kaydın şirketini (iş yerinden) döndürür; fon ve ciro çeki bu şirkette olmalıdır. */
+  private UUID validate(SettlementType type, SettlementRequest request) {
+    UUID companyId = companies.companyOf(request.branchId());
     if (request.accountId() != null && !accounts.existsById(request.accountId())) {
       throw new BusinessException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Cari bulunamadı.");
     }
@@ -237,10 +248,11 @@ public class SettlementService {
       throw bad("AMOUNT_INVALID", "Tutar sıfırdan büyük olmalıdır.");
     }
     switch (request.method()) {
-      case CASH -> requireFund(request, FundKind.CASH);
-      case BANK -> requireFund(request, FundKind.BANK);
+      case CASH -> requireFund(request, FundKind.CASH, companyId);
+      case BANK -> requireFund(request, FundKind.BANK, companyId);
       case CHECK -> validateCheck(type, request);
     }
+    return companyId;
   }
 
   private void validateCheck(SettlementType type, SettlementRequest request) {
@@ -254,7 +266,7 @@ public class SettlementService {
     }
   }
 
-  private void requireFund(SettlementRequest request, FundKind kind) {
+  private void requireFund(SettlementRequest request, FundKind kind, UUID companyId) {
     if (request.fundAccountId() == null) {
       throw bad("FUND_REQUIRED", "Banka/kasa hesabı seçilmelidir.");
     }
@@ -264,6 +276,12 @@ public class SettlementService {
     }
     if (!fund.getCurrency().equals(request.money().currency())) {
       throw bad("CURRENCY_MISMATCH", "Tutarın para birimi hesabın para birimiyle aynı olmalıdır.");
+    }
+    if (!fund.getCompanyId().equals(companyId)) {
+      throw new BusinessException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          "COMPANY_MISMATCH",
+          "Kasa/banka hesabı seçilen iş yerinin şirketine ait değil.");
     }
   }
 

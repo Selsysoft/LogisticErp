@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { apiGet, apiRequest } from "../../api/client";
 import { orNull } from "../crm/common";
-import { FieldDef, FormDialog, today, useBranches, useCurrencies } from "../finance/common";
+import { FieldDef, FormDialog, today, useBranchOptions, useCurrencies } from "../finance/common";
 import { FleetOptions } from "./types";
 
 export const EXPENSE_KINDS = ["FUEL", "MAINTENANCE", "REPAIR", "TIRE"];
@@ -20,7 +20,7 @@ export function ExpenseDialog({
   onSaved: () => void;
 }) {
   const { t } = useTranslation();
-  const branches = useBranches();
+  const { branches, optionsFor } = useBranchOptions();
   const currencies = useCurrencies();
   const options = useQuery({
     queryKey: ["fleet", "options"],
@@ -45,7 +45,7 @@ export function ExpenseDialog({
       label: t("finance.field.branch"),
       type: "select",
       required: true,
-      options: branches.data.map((branch) => ({ value: branch.id, label: branch.name })),
+      options: optionsFor(),
     },
     {
       name: "date",

@@ -21,6 +21,7 @@ public class PaymentPlan extends AuditableEntity {
   @Id private UUID id;
   private UUID accountId;
   private UUID branchId;
+  private UUID companyId;
   private BigDecimal amount;
   private String currency;
   private LocalDate dueDate;
@@ -37,6 +38,7 @@ public class PaymentPlan extends AuditableEntity {
   public PaymentPlan(
       UUID accountId,
       UUID branchId,
+      UUID companyId,
       Money money,
       LocalDate dueDate,
       UUID purchaseInvoiceId,
@@ -44,6 +46,7 @@ public class PaymentPlan extends AuditableEntity {
     this.id = UUID.randomUUID();
     this.accountId = accountId;
     this.branchId = branchId;
+    this.companyId = companyId;
     this.amount = money.amount();
     this.currency = money.currency();
     this.dueDate = dueDate;
@@ -103,5 +106,9 @@ public class PaymentPlan extends AuditableEntity {
 
   public String getRejectNote() {
     return rejectNote;
+  }
+
+  public UUID getCompanyId() {
+    return companyId;
   }
 }

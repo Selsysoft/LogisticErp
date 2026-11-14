@@ -136,6 +136,7 @@ public final class FleetDtos {
       Money money,
       BigDecimal tlAmount,
       UUID branchId,
+      UUID companyId,
       UUID supplierAccountId,
       UUID fundAccountId,
       UUID settlementId,

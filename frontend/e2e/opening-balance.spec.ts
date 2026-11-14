@@ -14,7 +14,8 @@ test("açılış bakiyeleri önizlenir; hatalı dosya yazılmaz, düzeltilen dos
 }) => {
   test.setTimeout(90_000);
   const owner = await Owner.login(tenantState());
-  await owner.branch();
+  const branchName = `Merkez ${unique("")}`;
+  await owner.branch(branchName);
   const code = unique("A").slice(0, 20);
   const header = "Kod;Ad;Tür;Para birimi;Bakiye";
 
@@ -23,7 +24,7 @@ test("açılış bakiyeleri önizlenir; hatalı dosya yazılmaz, düzeltilen dos
   await page.getByRole("button", { name: "Açılış bakiyesi içe aktar" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("combobox", { name: "Şube" }).click();
-  await page.getByRole("option").first().click();
+  await page.getByRole("option", { name: new RegExp(`${branchName}$`) }).click();
 
   // Belirsiz tutar: 1.500 hem 1,5 hem 1500 okunabilir.
   await dialog

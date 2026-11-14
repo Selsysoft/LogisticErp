@@ -37,6 +37,9 @@ import org.ece.blackrose.finance.web.FinanceMapper;
 import org.ece.blackrose.identity.domain.AuditEvent;
 import org.ece.blackrose.identity.security.AuthenticatedUser;
 import org.ece.blackrose.identity.service.AuditService;
+import org.ece.blackrose.organization.BranchFilter;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyResolver;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -63,6 +66,8 @@ public class PaymentPlanService {
   private final FinanceSettingsRepository settingsRepository;
   private final AuditService audit;
   private final ApplicationEventPublisher publisher;
+  private final CompanyResolver companies;
+  private final BranchScopeService scope;
 
   public PaymentPlanService(
       PaymentPlanRepository plans,
@@ -73,7 +78,11 @@ public class PaymentPlanService {
       FinanceMapper mapper,
       FinanceSettingsRepository settingsRepository,
       AuditService audit,
-      ApplicationEventPublisher publisher) {
+      ApplicationEventPublisher publisher,
+      CompanyResolver companies,
+      BranchScopeService scope) {
+    this.scope = scope;
+    this.companies = companies;
     this.publisher = publisher;
     this.settingsRepository = settingsRepository;
     this.audit = audit;
@@ -86,12 +95,13 @@ public class PaymentPlanService {
   }
 
   @Transactional(readOnly = true)
-  public Page<PaymentPlan> list(PlanStatus status, Pageable pageable) {
-    return plans.search(status, pageable);
+  public Page<PaymentPlan> list(PlanStatus status, UUID companyId, Pageable pageable) {
+    return plans.search(status, scope.filter(companyId, null), pageable);
   }
 
   @Transactional(readOnly = true)
   public List<PaymentPlanEvent> history(UUID id) {
+    plans.findById(id).ifPresent(plan -> scope.requireVisible(plan.getBranchId()));
     return events.findByPlanIdOrderByCreatedAt(id);
   }
 
@@ -104,11 +114,13 @@ public class PaymentPlanService {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "AMOUNT_INVALID", "Tutar sıfırdan büyük olmalıdır.");
     }
+    UUID companyId = companies.companyOf(request.branchId());
     PaymentPlan plan =
         plans.save(
             new PaymentPlan(
                 request.accountId(),
                 request.branchId(),
+                companyId,
                 request.money(),
                 request.dueDate(),
                 purchaseInvoiceId,
@@ -224,10 +236,12 @@ public class PaymentPlanService {
   }
 
   @Transactional(readOnly = true)
-  public List<HeatmapCell> heatmap(LocalDate from, LocalDate to, HeatmapPeriod period) {
+  public List<HeatmapCell> heatmap(
+      LocalDate from, LocalDate to, HeatmapPeriod period, UUID companyId) {
     record Bucket(BigDecimal total, int count) {}
     Map<String, Bucket> buckets = new TreeMap<>();
-    for (PaymentPlan plan : plans.findByStatusInAndDueDateBetween(OPEN_STATUSES, from, to)) {
+    for (PaymentPlan plan :
+        plans.dueBetween(OPEN_STATUSES, from, to, scope.filter(companyId, null))) {
       String label =
           period == HeatmapPeriod.MONTH
               ? plan.getDueDate().format(MONTH)
@@ -255,18 +269,32 @@ public class PaymentPlanService {
     return cells;
   }
 
+  /**
+   * Kiracı geneli (konsolide) özet; ana panodan çağrılır. Kapsamsızdır: ana pano önbelleği kiracı
+   * başınadır, kapsam ve önbellek anahtarı ana pano adımında (B5) eklenir.
+   */
   @Transactional(readOnly = true)
   public DashboardResponse dashboard(LocalDate today) {
-    List<PaymentPlan> overdue = plans.findByStatusInAndDueDateBefore(OPEN_STATUSES, today);
+    return summary(today, BranchFilter.all(null));
+  }
+
+  /** Finans panosu: şirket süzgeci ve kullanıcının iş yeri kapsamı. */
+  @Transactional(readOnly = true)
+  public DashboardResponse dashboard(LocalDate today, UUID companyId) {
+    return summary(today, scope.filter(companyId, null));
+  }
+
+  private DashboardResponse summary(LocalDate today, BranchFilter filter) {
+    List<PaymentPlan> overdue = plans.dueBefore(OPEN_STATUSES, today, filter);
     List<PaymentPlan> week =
-        plans.findByStatusInAndDueDateBetween(OPEN_STATUSES, today, today.plusDays(WEEK_DAYS));
+        plans.dueBetween(OPEN_STATUSES, today, today.plusDays(WEEK_DAYS), filter);
     List<PaymentPlan> dueToday =
         week.stream().filter(plan -> plan.getDueDate().equals(today)).toList();
     return new DashboardResponse(
         totals(overdue),
         totals(dueToday),
         totals(week),
-        plans.countByStatus(PlanStatus.PENDING),
+        plans.countByStatus(PlanStatus.PENDING, filter),
         week.stream()
             .sorted(Comparator.comparing(PaymentPlan::getDueDate))
             .limit(UPCOMING_LIMIT)
@@ -356,12 +384,17 @@ public class PaymentPlanService {
     events.save(new PaymentPlanEvent(plan.getId(), type, note));
   }
 
+  /** Satır kilidiyle plan; iş yeri kullanıcının kapsamında olmalı (aktiflik denetlenmez). */
   private PaymentPlan lock(UUID id) {
-    return plans
-        .findForUpdate(id)
-        .orElseThrow(
-            () ->
-                new BusinessException(HttpStatus.NOT_FOUND, "PLAN_NOT_FOUND", "Plan bulunamadı."));
+    PaymentPlan plan =
+        plans
+            .findForUpdate(id)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "PLAN_NOT_FOUND", "Plan bulunamadı."));
+    scope.requireVisible(plan.getBranchId());
+    return plan;
   }
 
   private static BusinessException invalidState(PaymentPlan plan) {

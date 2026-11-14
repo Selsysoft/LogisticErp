@@ -7,11 +7,15 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  Typography,
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiGet } from "../../api/client";
+import { useActiveCompanyId } from "../../auth/companyStore";
+import { branchLabel } from "./branchOptions";
+import { withCompany } from "./companyQuery";
 import {
   DataTable,
   formatAmount,
@@ -21,6 +25,7 @@ import {
   today,
   useAccounts,
   useBranches,
+  useMultiCompany,
 } from "./common";
 import { Aging, DailyReport } from "./types";
 
@@ -41,12 +46,21 @@ function DailySection() {
   const [type, setType] = useState<"PAYMENT" | "COLLECTION">("PAYMENT");
   const [date, setDate] = useState(today());
   const [selected, setSelected] = useState<string[]>([]);
+  const companyId = useActiveCompanyId();
+  const multiCompany = useMultiCompany();
+  // Aktif şirketin iş yerleri (pasifler dahil: geçmiş hareketleri raporlanır); konsolidede tümü.
+  const visible = (branches.data ?? []).filter(
+    (branch) => !companyId || branch.companyId === companyId,
+  );
+  const branchIds = selected.filter((id) => visible.some((branch) => branch.id === id));
 
   const report = useQuery({
-    queryKey: ["finance", "daily", type, date, selected],
+    queryKey: ["finance", "daily", type, date, branchIds, companyId],
     queryFn: () => {
-      const branchParams = selected.map((id) => `&branchIds=${id}`).join("");
-      return apiGet<DailyReport>(`/finance/reports/daily?type=${type}&date=${date}${branchParams}`);
+      const branchParams = branchIds.map((id) => `&branchIds=${id}`).join("");
+      return apiGet<DailyReport>(
+        withCompany(`/finance/reports/daily?type=${type}&date=${date}${branchParams}`, companyId),
+      );
     },
     enabled: !!date,
   });
@@ -75,10 +89,10 @@ function DailySection() {
         />
       </SectionHeader>
       <FormGroup row sx={{ mb: 2 }}>
-        {branches.data?.map((branch) => (
+        {visible.map((branch) => (
           <FormControlLabel
             key={branch.id}
-            label={branch.name}
+            label={branchLabel(branch, multiCompany)}
             control={
               <Checkbox
                 size="small"
@@ -141,9 +155,12 @@ function AgingSection() {
   const { t } = useTranslation();
   const [type, setType] = useState<"RECEIVABLE" | "PAYABLE">("RECEIVABLE");
   const [asOf, setAsOf] = useState(today());
+  const companyId = useActiveCompanyId();
+  const multiCompany = useMultiCompany();
   const report = useQuery({
-    queryKey: ["finance", "aging", type, asOf],
-    queryFn: () => apiGet<Aging[]>(`/finance/reports/aging?type=${type}&asOf=${asOf}`),
+    queryKey: ["finance", "aging", type, asOf, companyId],
+    queryFn: () =>
+      apiGet<Aging[]>(withCompany(`/finance/reports/aging?type=${type}&asOf=${asOf}`, companyId)),
     enabled: !!asOf,
   });
   const amount = (value: number, currency: string) => `${formatAmount(value)} ${currency}`;
@@ -169,6 +186,12 @@ function AgingSection() {
           slotProps={{ inputLabel: { shrink: true } }}
         />
       </SectionHeader>
+      {multiCompany && !companyId && (
+        // Konsolide yaşlandırma şirket kırılımlı FIFO ile hesaplanır (12.1a §4.14 karar 2).
+        <Typography variant="caption" component="p" color="text.secondary" sx={{ mb: 1 }}>
+          {t("finance.aging.perCompanyNote")}
+        </Typography>
+      )}
       <QueryState isPending={report.isPending} error={report.error} />
       {report.data && (
         <DataTable

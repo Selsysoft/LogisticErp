@@ -233,6 +233,8 @@ public class AdminSaasController {
         plan.getMaxUsers(),
         plan.getMaxVehicles(),
         plan.getMaxShipmentsMonth(),
+        plan.getMaxCompanies(),
+        plan.getMaxBranches(),
         plan.isActive());
   }
 

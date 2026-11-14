@@ -2,6 +2,7 @@ package org.ece.blackrose.crm.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.crm.domain.Contract;
@@ -9,22 +10,35 @@ import org.ece.blackrose.crm.domain.CrmTypes.ContractStatus;
 import org.ece.blackrose.crm.repository.CrmRepositories.ContractRepository;
 import org.ece.blackrose.crm.repository.CrmRepositories.TariffRepository;
 import org.ece.blackrose.crm.web.CrmDtos.SaveContractRequest;
+import org.ece.blackrose.organization.BranchFilter;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyResolver;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Bir müşterinin aynı dönemde tek aktif sözleşmesi olur; fiyat buradan belirlenir. */
+/**
+ * Bir müşterinin aynı şirkette aynı dönemde tek aktif sözleşmesi olur; fiyat buradan belirlenir.
+ */
 @Service
 public class ContractService {
 
   private final ContractRepository contracts;
   private final TariffRepository tariffs;
   private final CustomerService customers;
+  private final CompanyResolver companies;
+  private final BranchScopeService scope;
 
   public ContractService(
-      ContractRepository contracts, TariffRepository tariffs, CustomerService customers) {
+      ContractRepository contracts,
+      TariffRepository tariffs,
+      CustomerService customers,
+      CompanyResolver companies,
+      BranchScopeService scope) {
+    this.scope = scope;
+    this.companies = companies;
     this.contracts = contracts;
     this.tariffs = tariffs;
     this.customers = customers;
@@ -32,13 +46,25 @@ public class ContractService {
 
   @Transactional(readOnly = true)
   public Page<Contract> list(UUID accountId, Pageable pageable) {
-    return contracts.search(accountId, pageable);
+    List<UUID> visible = scope.limited() ? scope.visibleCompanyIds() : null;
+    return contracts.search(
+        accountId,
+        visible == null,
+        visible == null || visible.isEmpty() ? List.of(BranchFilter.NONE) : visible,
+        pageable);
   }
 
   @Transactional
   public Contract create(SaveContractRequest request) {
+    UUID companyId =
+        companies.forNewDocument(
+            request.companyId() != null
+                ? request.companyId()
+                : scope.defaultCompanyForNew(companies.defaultCompanyId()));
+    scope.requireCompanyVisible(companyId);
     return create(
         request.accountId(),
+        companyId,
         null,
         request.tariffId(),
         request.startDate(),
@@ -52,6 +78,7 @@ public class ContractService {
   @Transactional
   public Contract create(
       UUID accountId,
+      UUID companyId,
       UUID quoteId,
       UUID tariffId,
       LocalDate start,
@@ -70,7 +97,7 @@ public class ContractService {
     if (tariffId != null && !tariffs.existsById(tariffId)) {
       throw new BusinessException(HttpStatus.BAD_REQUEST, "TARIFF_NOT_FOUND", "Tarife bulunamadı.");
     }
-    if (!contracts.overlapping(accountId, ContractStatus.ACTIVE, start, end).isEmpty()) {
+    if (!contracts.overlapping(accountId, companyId, ContractStatus.ACTIVE, start, end).isEmpty()) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "CONTRACT_OVERLAP", "Bu dönemde müşterinin aktif sözleşmesi var.");
     }
@@ -79,6 +106,7 @@ public class ContractService {
         new Contract(
             number,
             accountId,
+            companyId,
             quoteId,
             tariffId,
             start,
@@ -98,6 +126,7 @@ public class ContractService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "CONTRACT_NOT_FOUND", "Sözleşme bulunamadı."));
+    scope.requireCompanyVisible(contract.getCompanyId());
     if (contract.getStatus() != ContractStatus.ACTIVE || status == ContractStatus.ACTIVE) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "CONTRACT_INVALID_STATE", "Yalnız aktif sözleşme kapatılabilir.");

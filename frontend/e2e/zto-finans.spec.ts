@@ -2,7 +2,8 @@ import type { Page } from "@playwright/test";
 import { expect, login, tenantState, test } from "./support";
 
 /**
- * ZTO Finans (Faz 12.0): yönlendirme, kapsam kökü ve CSS sızma denetimi. ZTO CSS'i (Bootstrap 4,
+ * ZTO Finans (Faz 12.0, 12.1a tanım ekranları): yönlendirme, kapsam kökü, TEMEL TANIMLAR (Şubeler,
+ * İş Yerleri, Şirketler) akışları ve CSS sızma denetimi. ZTO CSS'i (Bootstrap 4,
  * SB Admin, DataTables, select2, Font Awesome) ayrı ve tembel bir parçada gelir; her seçicisi
  * .zto-finans altındadır. Parça yüklendikten sonra MUI ekranlarının hesaplanmış stilleri, ZTO hiç
  * açılmamışken ölçülen değerlerle birebir aynı kalmalıdır.
@@ -157,6 +158,8 @@ const MODULES = [
   { name: "Finans", url: /\/finance$/ },
   { name: "Operasyon", url: /\/operations$/ },
   { name: "Filo", url: /\/fleet$/ },
+  // 12.1a: kullanıcı diyaloğunun "İş Yeri Yetkisi" sekmesi ZTO bileşenini (ve CSS'ini) yükler.
+  { name: "Kullanıcılar", url: /\/users$/ },
 ];
 
 test("/zto-finans Cari Hareketler iskeletine yönlenir; ZTO kökü ve yan menü", async ({ page }) => {
@@ -332,4 +335,171 @@ test("ZTO CSS'i yüklendikten sonra MUI ekranlarının stilleri değişmez", asy
     const after = await snapshot(page);
     expect(after, `${module.name} ekranı`).toEqual(before[module.name]);
   }
+});
+
+/** ZtoSelect (select2 görünümü): kutuyu açıp metne göre seçer. */
+async function pickSelect2(page: Page, selectId: string, text: string) {
+  await page.locator(`#${selectId} ~ .select2-container .select2-selection`).click();
+  await page.locator(".select2-results__option", { hasText: text }).first().click();
+}
+
+test("TEMEL TANIMLAR: yan menü; Şube ve İş Yeri ekle, Sil (pasifleştir), Pasifleri göster, Aktifleştir", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const suffix = Date.now().toString(36);
+  const groupName = `E2E Şube ${suffix}`;
+  const placeName = `E2E İş Yeri ${suffix}`;
+  await login(page, tenantState());
+  await page.goto("/zto-finans/cari-hareketler");
+  const root = page.locator(".zto-finans");
+  const sidebar = root.locator("#ztSidebar");
+
+  // Yan menü: TEMEL TANIMLAR bölümü ve üç öğe.
+  await root.locator(".zt-sidebar-arrow").hover();
+  await expect(sidebar).toHaveClass(/open/);
+  await expect(sidebar.getByText("TEMEL TANIMLAR")).toBeVisible();
+  for (const name of ["İş Yerleri", "Şubeler", "Şirketler"]) {
+    await expect(sidebar.getByRole("link", { name })).toBeVisible();
+  }
+  await sidebar.getByRole("link", { name: "Şubeler" }).click();
+  await expect(page).toHaveURL(/\/zto-finans\/tanimlar\/subeler$/);
+  await expect(root).toHaveClass(/definition-list-page/);
+  await expect(root.locator("h5", { hasText: "Şube Listesi" })).toBeVisible();
+
+  // 1) Şube (ZTO BranchProvince): iş yeri formu bir şube ister.
+  await root.getByRole("link", { name: "Yeni Kayıt" }).click();
+  await expect(page).toHaveURL(/\/subeler\/yeni$/);
+  await expect(root).toHaveClass(/definition-form-page/);
+  await root.locator("#Name").fill(groupName);
+  await pickSelect2(page, "BranchType", "Ana Şube");
+  await root.getByRole("button", { name: "Yeni Şube Oluştur" }).click();
+  await expect(page).toHaveURL(/\/subeler$/);
+  await expect(root.getByText("Şube kaydedildi.")).toBeVisible();
+  await root.getByPlaceholder("Listede ara...").fill(groupName);
+  await expect(root.locator("#dataTable tbody tr", { hasText: groupName })).toBeVisible();
+
+  // 2) İş yeri ekle.
+  await page.goto("/zto-finans/tanimlar/is-yerleri");
+  await expect(root.locator("h5", { hasText: "İş Yerleri Listesi" })).toBeVisible();
+  await root.getByRole("link", { name: "Yeni Kayıt" }).click();
+  await expect(page).toHaveURL(/\/is-yerleri\/yeni$/);
+  await root.locator("#Name").fill(placeName);
+  await root.locator("#PhoneNumber").fill("0232 111 22 33");
+  await expect(root.locator("#PhoneNumber")).toHaveValue("02321112233");
+  await pickSelect2(page, "BranchProvinceID", groupName);
+  await root.locator("#Address").fill("Alsancak, İzmir");
+  await root.locator("#Location").fill("38.4237,27.1428");
+  await expect(root.getByRole("link", { name: "Haritada Göster" })).toHaveAttribute(
+    "href",
+    "https://www.google.com/maps/search/?api=1&query=38.4237,27.1428",
+  );
+  await root.getByRole("button", { name: "Yeni İş Yeri Oluştur" }).click();
+  await expect(page).toHaveURL(/\/is-yerleri$/);
+  await expect(root.getByText("İş yeri oluşturuldu.")).toBeVisible();
+  await root.getByPlaceholder("Listede ara...").fill(placeName);
+  const row = root.locator("#dataTable tbody tr", { hasText: placeName });
+  await expect(row).toBeVisible();
+  await expect(row.locator('td[data-label="Şube"]')).toHaveText(groupName);
+  await expect(row.locator('td[data-label="Ad"]')).toHaveText(placeName);
+
+  // Kayıt Bilgileri ve Detay.
+  await row.getByRole("button", { name: "Kayıt bilgilerini görüntüle" }).click();
+  await expect(root.locator("aside.intro-audit-popover")).toContainText("Kayıt Geçmişi");
+  await page.keyboard.press("Escape");
+  await expect(root.locator("aside.intro-audit-popover")).toHaveCount(0);
+  await row.getByRole("button", { name: "Kayıt detayını görüntüle" }).click();
+  const detail = root.locator(".modal.definition-details-modal");
+  await expect(detail.locator("h5.modal-title")).toHaveText("İş Yeri");
+  await expect(detail.locator(".definition-details__hero h4")).toHaveText(placeName);
+  await detail.getByRole("button", { name: "Kapat" }).click();
+  await expect(detail).toHaveCount(0);
+
+  // 3) Sil → onay (geri alınamaz notu yok) → pasifleştirildi, listeden kaybolur.
+  await row.getByRole("button", { name: "Sil" }).click();
+  const confirm = root.locator(".modal", { hasText: "Silmek istediğinize emin misiniz?" });
+  await expect(confirm).toBeVisible();
+  await expect(confirm.getByText(/geri alınamaz/)).toHaveCount(0);
+  await confirm.getByRole("button", { name: "Sil" }).click();
+  await expect(root.getByText("İş yeri pasifleştirildi.")).toBeVisible();
+  await expect(root.locator("#dataTable tbody tr", { hasText: placeName })).toHaveCount(0);
+
+  // 4) Pasifleri göster → görünür (soluk) → Aktifleştir.
+  await root.getByLabel("Pasifleri göster").check();
+  const passive = root.locator("#dataTable tbody tr", { hasText: placeName });
+  await expect(passive).toHaveClass(/definition-row--inactive/);
+  await passive.getByRole("button", { name: "Aktifleştir" }).click();
+  await expect(root.getByText("İş yeri aktifleştirildi.")).toBeVisible();
+  await expect(root.locator("#dataTable tbody tr", { hasText: placeName })).not.toHaveClass(
+    /definition-row--inactive/,
+  );
+
+  // 5) Düzenle: yan menü öğesi alt yolda da etkin; ZTO Edit düğmesi.
+  await root
+    .locator("#dataTable tbody tr", { hasText: placeName })
+    .getByRole("link", { name: "Düzenle" })
+    .click();
+  await expect(page).toHaveURL(/\/is-yerleri\/[0-9a-f-]+$/);
+  await expect(root.locator("h4.definition-form-title")).toHaveText("İş Yeri Düzenle");
+  await expect(sidebar.locator("a.zt-active")).toHaveAttribute(
+    "href",
+    "/zto-finans/tanimlar/is-yerleri",
+  );
+  await root.locator("#Name").fill(`${placeName} 2`);
+  await root.getByRole("button", { name: "Güncelle" }).click();
+  await expect(root.getByText("İş yeri güncellendi.")).toBeVisible();
+});
+
+test("Şirketler: varsayılan şirket listede; düzenle → e-Belge → kaydet mesajı; Seriler", async ({
+  page,
+}) => {
+  await login(page, tenantState());
+  await page.goto("/zto-finans/tanimlar/sirketler");
+  const root = page.locator(".zto-finans");
+  await expect(root.locator("h5", { hasText: "Şirket Listesi" })).toBeVisible();
+  const defaultRow = root.locator("#dataTable tbody tr", { hasText: "Varsayılan" });
+  await expect(defaultRow).toHaveCount(1);
+  await defaultRow.getByRole("link", { name: "Düzenle" }).click();
+  await expect(root.locator("h4.definition-form-title")).toHaveText("Şirket Düzenle");
+  await expect(root.locator("#Code")).not.toHaveValue("");
+
+  await root.getByRole("tab", { name: "e-Belge" }).click();
+  await expect(page).toHaveURL(/\?sekme=e-belge$/);
+  await expect(root.locator(".uy-head h1")).toHaveText("Uyumsoft e-Dönüşüm");
+  await expect(root.locator("#uyCheckBtn")).toBeDisabled();
+  await expect(root.locator("#uyTestBtn")).toBeDisabled();
+  await root.locator("#uySeries").fill("e2e");
+  await expect(root.locator("#uySeries")).toHaveValue("E2E");
+  await root.getByRole("button", { name: "Kaydet" }).click();
+  await expect(root.locator("#uyMsg")).toHaveText("Uyumsoft ayarları kaydedildi.");
+  await expect(root.locator("#uyMsg")).toHaveClass(/ok/);
+
+  await root.getByRole("tab", { name: "Seriler" }).click();
+  await expect(page).toHaveURL(/\?sekme=seriler$/);
+  await expect(root.locator("#seriesTable tbody tr")).toHaveCount(2);
+  await expect(root.getByText("Navlun Faturası")).toBeVisible();
+  await expect(root.getByText("Depo Faturası")).toBeVisible();
+});
+
+test("tanım CSS'i ZTO sırasıyla: Detay düğmesinde Bootstrap .btn-sm kazanır", async ({ page }) => {
+  await login(page, tenantState());
+  await page.goto("/zto-finans/tanimlar/sirketler");
+  const root = page.locator(".zto-finans");
+  await expect(root.locator("#dataTable tbody tr").first()).toBeVisible();
+  const styles = await page.evaluate(() => {
+    const css = (selector: string) => {
+      const el = document.querySelector(selector);
+      return el ? getComputedStyle(el) : null;
+    };
+    return {
+      surfaceRadius: css(".zto-finans .definition-list-surface")?.borderTopLeftRadius,
+      detailFont: css(".zto-finans .definition-detail-button")?.fontSize,
+      countDisplay: css(".zto-finans .definition-list-count")?.display,
+    };
+  });
+  expect(styles.surfaceRadius).not.toBe("0px");
+  // introduction-audit.css .definition-detail-button 11px; sonra yüklenen Bootstrap .btn-sm (.875rem)
+  // eşit özgüllükte kazanır (ZTO _Layout.cshtml:31-33 sırası).
+  expect(styles.detailFont).not.toBe("11px");
+  expect(styles.countDisplay).not.toBe("none");
 });

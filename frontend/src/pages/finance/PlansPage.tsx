@@ -17,6 +17,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiGet, apiRequest, ApiError } from "../../api/client";
+import { useActiveCompanyId } from "../../auth/companyStore";
 import { ErrorState } from "../../components/ErrorState";
 import { formatDateTime } from "../operations/common";
 import {
@@ -30,12 +31,14 @@ import {
   shiftDays,
   today,
   useAccounts,
-  useBranches,
+  useBranchOptions,
   useCan,
   useCurrencies,
   useFunds,
   usePaging,
 } from "./common";
+import { fundsOfCompany } from "./branchOptions";
+import { withCompany } from "./companyQuery";
 import { HeatmapCell, Page, Plan, PlanEvent } from "./types";
 
 const STATUSES = ["DRAFT", "PENDING", "APPROVED", "REJECTED", "PAID", "CANCELLED"];
@@ -54,7 +57,7 @@ export function PlansPage() {
   const canPost = useCan("FINANCE_PAYMENT_CREATE");
   const canApprove = useCan("FINANCE_APPROVE");
   const accounts = useAccounts();
-  const branches = useBranches();
+  const { optionsFor, companyId } = useBranchOptions();
   const funds = useFunds();
   const currencies = useCurrencies();
   const paging = usePaging();
@@ -67,10 +70,13 @@ export function PlansPage() {
   const [selected, setSelected] = useState<string[]>([]);
 
   const list = useQuery({
-    queryKey: ["finance", "plans", status, paging.page, paging.size],
+    queryKey: ["finance", "plans", status, paging.page, paging.size, companyId],
     queryFn: () =>
       apiGet<Page<Plan>>(
-        `/finance/payment-plans?page=${paging.page}&size=${paging.size}&sort=dueDate${status ? `&status=${status}` : ""}`,
+        withCompany(
+          `/finance/payment-plans?page=${paging.page}&size=${paging.size}&sort=dueDate${status ? `&status=${status}` : ""}`,
+          companyId,
+        ),
       ),
     placeholderData: keepPreviousData,
   });
@@ -285,7 +291,7 @@ export function PlansPage() {
               label: t("finance.field.branch"),
               type: "select",
               required: true,
-              options: (branches.data ?? []).map((b) => ({ value: b.id, label: b.name })),
+              options: optionsFor(),
             },
             { name: "amount", label: t("finance.field.amount"), type: "amount", required: true },
             {
@@ -381,7 +387,8 @@ export function PlansPage() {
               label: t("finance.field.fund"),
               type: "select",
               required: true,
-              options: (funds.data ?? [])
+              // Plan yalnız kendi şirketinin fonundan ödenir (12.1a §4.13).
+              options: fundsOfCompany(funds.data, paying.companyId)
                 .filter((fund) => fund.currency === paying.money.currency)
                 .map((fund) => ({
                   value: fund.id,
@@ -465,12 +472,16 @@ function Heatmap() {
   const [period, setPeriod] = useState<"DAY" | "MONTH">("DAY");
   const from = today();
   const to = shiftDays(from, period === "DAY" ? 30 : 365);
+  const companyId = useActiveCompanyId();
 
   const cells = useQuery({
-    queryKey: ["finance", "heatmap", period, from, to],
+    queryKey: ["finance", "heatmap", period, from, to, companyId],
     queryFn: () =>
       apiGet<HeatmapCell[]>(
-        `/finance/payment-plans/heatmap?from=${from}&to=${to}&period=${period}`,
+        withCompany(
+          `/finance/payment-plans/heatmap?from=${from}&to=${to}&period=${period}`,
+          companyId,
+        ),
       ),
   });
 

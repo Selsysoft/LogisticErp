@@ -18,6 +18,8 @@ export interface EDocument {
   provider: string;
   status: "SENT" | "ACCEPTED" | "REJECTED" | "CANCELLED";
   message: string | null;
+  /** Belgeyi kesen şirket (12.1a §5.5). */
+  companyId: string;
 }
 
 export interface EDocumentCandidate {

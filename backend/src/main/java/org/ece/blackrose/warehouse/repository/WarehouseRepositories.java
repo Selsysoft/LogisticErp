@@ -205,8 +205,5 @@ public final class WarehouseRepositories {
         @Param("accountId") UUID accountId,
         @Param("warehouseId") UUID warehouseId,
         @Param("date") LocalDate date);
-
-    @Query(value = "select nextval('warehouse_invoice_number_seq')", nativeQuery = true)
-    long nextNumber();
   }
 }

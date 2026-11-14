@@ -21,6 +21,11 @@ import org.ece.blackrose.finance.service.PaymentPlanService;
 import org.ece.blackrose.finance.web.FinanceDtos.CreatePlanRequest;
 import org.ece.blackrose.fleet.domain.VehicleExpense;
 import org.ece.blackrose.fleet.repository.FleetRepositories.VehicleExpenseRepository;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyIdentityService;
+import org.ece.blackrose.organization.CompanyResolver;
+import org.ece.blackrose.organization.DocumentNumberService;
+import org.ece.blackrose.organization.DocumentType;
 import org.ece.blackrose.shipment.domain.FreightInvoice;
 import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.CostKind;
@@ -35,8 +40,6 @@ import org.ece.blackrose.shipment.web.ShipmentDtos.IssueInvoiceRequest;
 import org.ece.blackrose.shipment.web.ShipmentDtos.ProfitResponse;
 import org.ece.blackrose.shipment.web.ShipmentDtos.SaveCostRequest;
 import org.ece.blackrose.tenant.TenantClock;
-import org.ece.blackrose.tenant.TenantContext;
-import org.ece.blackrose.tenant.repository.TenantRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,9 +67,12 @@ public class TripFinanceService {
   private final PaymentPlanService plans;
   private final ExchangeRateService rates;
   private final ShipmentViews views;
-  private final TenantRepository tenants;
+  private final CompanyIdentityService identities;
   private final TenantClock clock;
+  private final CompanyResolver companies;
   private final List<InvoiceCancelGuard> cancelGuards;
+  private final DocumentNumberService numbers;
+  private final BranchScopeService scope;
 
   public TripFinanceService(
       ShipmentRepository shipments,
@@ -78,9 +84,15 @@ public class TripFinanceService {
       PaymentPlanService plans,
       ExchangeRateService rates,
       ShipmentViews views,
-      TenantRepository tenants,
+      CompanyIdentityService identities,
       TenantClock clock,
-      List<InvoiceCancelGuard> cancelGuards) {
+      List<InvoiceCancelGuard> cancelGuards,
+      CompanyResolver companies,
+      DocumentNumberService numbers,
+      BranchScopeService scope) {
+    this.scope = scope;
+    this.numbers = numbers;
+    this.companies = companies;
     this.cancelGuards = cancelGuards;
     this.shipments = shipments;
     this.invoices = invoices;
@@ -91,7 +103,7 @@ public class TripFinanceService {
     this.plans = plans;
     this.rates = rates;
     this.views = views;
-    this.tenants = tenants;
+    this.identities = identities;
     this.clock = clock;
   }
 
@@ -108,12 +120,17 @@ public class TripFinanceService {
     }
     var conversion =
         rates.convert(shipment.getNet(), request.invoiceDate(), request.exchangeRate());
-    String number =
-        "NF-%d-%06d".formatted(request.invoiceDate().getYear(), shipments.nextInvoiceNumber());
+    UUID companyId = companies.companyOf(shipment.getBranchId());
+    String number = numbers.next(companyId, DocumentType.FREIGHT_INVOICE, request.invoiceDate());
     FreightInvoice invoice =
         invoices.save(
             new FreightInvoice(
-                number, shipment, request.invoiceDate(), request.dueDate(), conversion.tlAmount()));
+                number,
+                shipment,
+                companyId,
+                request.invoiceDate(),
+                request.dueDate(),
+                conversion.tlAmount()));
     ledger.post(
         new Posting(
             shipment.getAccountId(),
@@ -151,21 +168,24 @@ public class TripFinanceService {
 
   @Transactional(readOnly = true)
   public FreightInvoice invoiceOf(UUID shipmentId) {
+    requireVisible(shipmentId);
     return invoices.findByShipmentIdAndStatus(shipmentId, InvoiceStatus.ISSUED).orElse(null);
   }
 
   @Transactional(readOnly = true)
   public InvoicePdf invoicePdf(UUID invoiceId) {
     FreightInvoice invoice = findInvoice(invoiceId);
-    String company =
-        tenants.findByCode(TenantContext.currentCode().orElseThrow()).orElseThrow().getName();
     return new InvoicePdf(
         invoice.getNumber() + ".pdf",
-        ShipmentPdf.invoice(invoice, company, views.accountName(invoice.getAccountId())));
+        ShipmentPdf.invoice(
+            invoice,
+            identities.of(invoice.getCompanyId()),
+            views.accountName(invoice.getAccountId())));
   }
 
   @Transactional(readOnly = true)
   public List<TripCost> costsOf(UUID shipmentId) {
+    requireVisible(shipmentId);
     return live(costs.findByShipmentIdOrderByCreatedAt(shipmentId));
   }
 
@@ -218,6 +238,13 @@ public class TripFinanceService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "EXPENSE_NOT_FOUND", "Araç gideri bulunamadı."));
+    // Gider ve sefer aynı tüzel kişide olmalı (§4.13 #6, K-2).
+    if (!expense.getCompanyId().equals(companies.companyOf(shipment.getBranchId()))) {
+      throw new BusinessException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          "COMPANY_MISMATCH",
+          "Araç gideri seferin şirketine ait değil.");
+    }
     TripCost cost =
         new TripCost(
             shipment.getId(),
@@ -260,6 +287,7 @@ public class TripFinanceService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "COST_NOT_FOUND", "Gider bulunamadı."));
+    requireVisible(cost.getShipmentId());
     if (cost.getPostedAt() != null) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "COST_POSTED", "Finansa yazılmış gider silinemez.");
@@ -332,12 +360,14 @@ public class TripFinanceService {
 
   @Transactional(readOnly = true)
   public List<ProfitResponse> profitBetween(LocalDate from, LocalDate to) {
+    Set<UUID> allowed = scope.allowedOrNull();
     return profitRows(
         shipments
             .findByPlannedPickupBetweenOrderByPlannedPickup(
                 clock.startOf(from), clock.startOf(to.plusDays(1)))
             .stream()
             .filter(shipment -> shipment.getStatus() != ShipmentStatus.CANCELLED)
+            .filter(shipment -> allowed == null || allowed.contains(shipment.getBranchId()))
             .toList());
   }
 
@@ -392,11 +422,21 @@ public class TripFinanceService {
   }
 
   private FreightInvoice findInvoice(UUID id) {
-    return invoices
-        .findById(id)
-        .orElseThrow(
-            () ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Fatura bulunamadı."));
+    FreightInvoice invoice =
+        invoices
+            .findById(id)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Fatura bulunamadı."));
+    scope.requireVisible(invoice.getBranchId());
+    return invoice;
+  }
+
+  /** Sefer varsa kapsamı denetlenir; yoksa eski davranış (boş sonuç) korunur. */
+  private void requireVisible(UUID shipmentId) {
+    shipments
+        .findById(shipmentId)
+        .ifPresent(shipment -> scope.requireVisible(shipment.getBranchId()));
   }
 }

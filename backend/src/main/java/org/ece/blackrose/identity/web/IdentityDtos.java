@@ -10,8 +10,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.ece.blackrose.identity.domain.BranchScope;
 import org.ece.blackrose.identity.domain.Permission;
 import org.ece.blackrose.identity.domain.UserStatus;
+import org.ece.blackrose.organization.CompanyDtos.MeCompanyResponse;
 
 public final class IdentityDtos {
 
@@ -51,7 +53,11 @@ public final class IdentityDtos {
       Set<Permission> permissions,
       List<String> roles,
       String landingPath,
-      boolean twoFactorEnabled) {}
+      boolean twoFactorEnabled,
+      BranchScope branchScope,
+      List<UUID> allowedBranchIds,
+      UUID defaultBranchId,
+      List<MeCompanyResponse> companies) {}
 
   public record InviteUserRequest(
       @NotBlank @Email String email,
@@ -79,7 +85,16 @@ public final class IdentityDtos {
       UserStatus status,
       boolean twoFactorEnabled,
       Set<RoleResponse> roles,
-      MailIssueResponse mailIssue) {}
+      MailIssueResponse mailIssue,
+      BranchScope branchScope) {}
+
+  /** {@code branchIds} ALL'da yok sayılır. */
+  public record BranchScopeRequest(
+      @NotNull BranchScope scope, List<UUID> branchIds, UUID defaultBranchId) {}
+
+  /** {@code branchIds} ALL'da boştur. */
+  public record UserBranchScopeResponse(
+      BranchScope scope, List<UUID> branchIds, UUID defaultBranchId) {}
 
   /**
    * Bu adrese giden son e-posta teslim edilemedi (BOUNCED: adres yok veya kutu dolu; COMPLAINED:

@@ -12,6 +12,7 @@ import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.identity.domain.AuditEvent;
 import org.ece.blackrose.identity.service.AuditService;
 import org.ece.blackrose.identity.service.SecureTokens;
+import org.ece.blackrose.organization.CompanyIdentityService;
 import org.ece.blackrose.shipment.domain.ProofOfDelivery;
 import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.domain.ShipmentEvent;
@@ -22,8 +23,6 @@ import org.ece.blackrose.shipment.repository.ShipmentRepositories.ProofOfDeliver
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentEventRepository;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentRepository;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentTrackingLinkRepository;
-import org.ece.blackrose.tenant.TenantContext;
-import org.ece.blackrose.tenant.repository.TenantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -69,7 +68,7 @@ public class ShipmentTrackingService {
   private final ShipmentRepository shipments;
   private final ShipmentEventRepository events;
   private final ProofOfDeliveryRepository deliveries;
-  private final TenantRepository tenants;
+  private final CompanyIdentityService identities;
   private final AuditService audit;
   private final Clock clock;
 
@@ -79,9 +78,9 @@ public class ShipmentTrackingService {
       ShipmentRepository shipments,
       ShipmentEventRepository events,
       ProofOfDeliveryRepository deliveries,
-      TenantRepository tenants,
+      CompanyIdentityService identities,
       AuditService audit) {
-    this(links, shipments, events, deliveries, tenants, audit, Clock.systemUTC());
+    this(links, shipments, events, deliveries, identities, audit, Clock.systemUTC());
   }
 
   ShipmentTrackingService(
@@ -89,14 +88,14 @@ public class ShipmentTrackingService {
       ShipmentRepository shipments,
       ShipmentEventRepository events,
       ProofOfDeliveryRepository deliveries,
-      TenantRepository tenants,
+      CompanyIdentityService identities,
       AuditService audit,
       Clock clock) {
     this.links = links;
     this.shipments = shipments;
     this.events = events;
     this.deliveries = deliveries;
-    this.tenants = tenants;
+    this.identities = identities;
     this.audit = audit;
     this.clock = clock;
   }
@@ -195,7 +194,7 @@ public class ShipmentTrackingService {
             .toList();
     Optional<ProofOfDelivery> delivery = deliveries.findByShipmentId(shipment.getId());
     return new PublicView(
-        company(),
+        company(shipment),
         shipment.getNumber(),
         shipment.getStatus(),
         shipment.getOrigin(),
@@ -226,11 +225,9 @@ public class ShipmentTrackingService {
     return new Step(event.getToStatus(), event.getCreatedAt());
   }
 
-  private String company() {
-    return TenantContext.currentCode()
-        .flatMap(tenants::findByCode)
-        .map(tenant -> tenant.getName())
-        .orElse(null);
+  /** Herkese açık sayfa seferi taşıyan şirketin unvanını gösterir; logo açılmaz. */
+  private String company(Shipment shipment) {
+    return identities.ofBranch(shipment.getBranchId()).title();
   }
 
   private Shipment shipment(UUID id) {

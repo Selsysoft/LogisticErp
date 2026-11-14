@@ -35,6 +35,7 @@ import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import { SuspenseOutlet } from "./lazyPage";
 import { hasPermission, useAuthStore } from "../auth/authStore";
+import { ActiveCompanySwitcher } from "./ActiveCompanySwitcher";
 import { BrandLogo } from "./BrandLogo";
 
 const DRAWER_WIDTH = 240;
@@ -137,6 +138,7 @@ export function AppShell() {
           <Box sx={{ flexGrow: 1, display: "flex" }}>
             <BrandLogo onDark size={30} />
           </Box>
+          <ActiveCompanySwitcher />
           <Button color="inherit" component={RouterLink} to="/account" sx={{ minWidth: 0 }}>
             <Box
               component="span"

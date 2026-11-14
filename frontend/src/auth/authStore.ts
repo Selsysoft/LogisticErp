@@ -1,5 +1,8 @@
 import { create } from "zustand";
 import { apiGet, apiRequest, onSessionExpired, refreshSession, TokenResponse } from "../api/client";
+import { queryClient } from "../api/queryClient";
+import type { MeCompany } from "../pages/organization/types";
+import { useCompanyStore } from "./companyStore";
 import { session, tenantFromHost } from "./session";
 
 export interface Me {
@@ -11,6 +14,13 @@ export interface Me {
   roles: string[];
   landingPath: string;
   twoFactorEnabled: boolean;
+  // 12.1a (§5.3): önbellekteki eski "blackrose.me" kaydında bulunmayabilir, bu yüzden isteğe bağlı.
+  branchScope?: "ALL" | "LIMITED";
+  /** ALL kapsamda null. */
+  allowedBranchIds?: string[] | null;
+  defaultBranchId?: string | null;
+  /** Görünür şirketler; pasifler active=false ile, sıra: varsayılan, sonra shortName. */
+  companies?: MeCompany[];
 }
 
 export interface LoginInput {
@@ -52,6 +62,23 @@ function rememberMe(me: Me | null) {
   }
 }
 
+/** Oturum açık: aktif şirket seçimi kullanıcının saklı tercihine göre kurulur (12.1a §6.3). */
+function signedIn(me: Me) {
+  useCompanyStore.getState().hydrate(me);
+  return { status: "authenticated" as const, me };
+}
+
+/**
+ * Oturum kapandı: aktif şirket bellekten, sorgu önbelleği tümüyle silinir; önceki kullanıcının
+ * listeleri ve iş yeri ağacı aynı sekmede açılan yeni oturuma taşınmaz (12.1a §6.13).
+ */
+function signedOut() {
+  rememberMe(null);
+  useCompanyStore.getState().clear();
+  queryClient.clear();
+  return { status: "anonymous" as const, me: null };
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   status: "loading",
   me: null,
@@ -60,21 +87,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const refreshed = session.hasSession() ? await refreshSession() : "rejected";
     if (refreshed === "rejected") {
       session.clear();
-      rememberMe(null);
-      set({ status: "anonymous", me: null });
+      set(signedOut());
       return;
     }
     if (refreshed === "unreachable") {
       // Çevrimdışı açılış: son bilinen kullanıcıyla devam edilir, token silinmez.
       const me = cachedMe();
-      set(me ? { status: "authenticated", me } : { status: "anonymous", me: null });
+      set(me ? signedIn(me) : { status: "anonymous", me: null });
       return;
     }
     try {
       await get().reloadMe();
     } catch {
       const me = cachedMe();
-      set(me ? { status: "authenticated", me } : { status: "anonymous", me: null });
+      set(me ? signedIn(me) : { status: "anonymous", me: null });
     }
   },
 
@@ -96,21 +122,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await apiRequest("POST", "/auth/logout");
     } finally {
       session.clear();
-      rememberMe(null);
-      set({ status: "anonymous", me: null });
+      set(signedOut());
     }
   },
 
   async reloadMe() {
     const me = await apiGet<Me>("/auth/me");
     rememberMe(me);
-    set({ status: "authenticated", me });
+    set(signedIn(me));
   },
 }));
 
 onSessionExpired(() => {
-  rememberMe(null);
-  useAuthStore.setState({ status: "anonymous", me: null });
+  useAuthStore.setState(signedOut());
 });
 
 export function hasPermission(me: Me | null, permission?: string) {

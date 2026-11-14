@@ -17,6 +17,7 @@ import org.ece.blackrose.integration.domain.IntegrationTypes.StatementLineStatus
 import org.ece.blackrose.integration.repository.IntegrationRepositories.BankStatementLineRepository;
 import org.ece.blackrose.integration.web.IntegrationDtos.ReconciliationResponse;
 import org.ece.blackrose.integration.web.IntegrationDtos.StatementImportResponse;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,11 +34,14 @@ public class BankStatementService {
   private final BankStatementLineRepository lines;
   private final FundAccountRepository funds;
   private final FundTransactionRepository transactions;
+  private final BranchScopeService scope;
 
   public BankStatementService(
       BankStatementLineRepository lines,
       FundAccountRepository funds,
-      FundTransactionRepository transactions) {
+      FundTransactionRepository transactions,
+      BranchScopeService scope) {
+    this.scope = scope;
     this.lines = lines;
     this.funds = funds;
     this.transactions = transactions;
@@ -46,12 +50,14 @@ public class BankStatementService {
   /** tarih;tutar;aciklama;referans. Çıkan tutarlar eksi yazılır. */
   @Transactional
   public StatementImportResponse upload(UUID fundId, byte[] content) {
-    funds
-        .findForUpdate(fundId)
-        .orElseThrow(
-            () ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "FUND_NOT_FOUND", "Banka hesabı bulunamadı."));
+    var fund =
+        funds
+            .findForUpdate(fundId)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "FUND_NOT_FOUND", "Banka hesabı bulunamadı."));
+    scope.requireVisible(fund.getBranchId());
     int imported = 0;
     int duplicates = 0;
     int matched = 0;
@@ -159,6 +165,7 @@ public class BankStatementService {
 
   @Transactional(readOnly = true)
   public ReconciliationResponse summary(UUID fundId) {
+    requireFundVisible(fundId);
     List<BankStatementLine> all = lines.findByFundAccountIdOrderByLineDateDesc(fundId);
     return new ReconciliationResponse(
         count(all, StatementLineStatus.MATCHED),
@@ -184,12 +191,27 @@ public class BankStatementService {
     return Math.abs(ChronoUnit.DAYS.between(line.getLineDate(), transaction.getTransactionDate()));
   }
 
+  /** Fonun iş yeri kapsamı (fon yoksa sessiz geçer; liste uçları eskisi gibi boş döner). */
+  @Transactional(readOnly = true)
+  public void requireFundVisible(UUID fundId) {
+    funds.findById(fundId).ifPresent(fund -> scope.requireVisible(fund.getBranchId()));
+  }
+
+  /** Ekstre satırını yükler; fonu kapsam dışındaysa 403. */
+  @Transactional(readOnly = true)
+  public BankStatementLine line(UUID id) {
+    return find(id);
+  }
+
   private BankStatementLine find(UUID id) {
-    return lines
-        .findById(id)
-        .orElseThrow(
-            () ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "LINE_NOT_FOUND", "Ekstre satırı bulunamadı."));
+    BankStatementLine line =
+        lines
+            .findById(id)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "LINE_NOT_FOUND", "Ekstre satırı bulunamadı."));
+    requireFundVisible(line.getFundAccountId());
+    return line;
   }
 }

@@ -3,6 +3,7 @@ import nav from "../../locales/tr/ztoFinans/nav";
 import {
   EXCLUDED_ZTO_ITEMS,
   isActive,
+  isFinanceMenuItem,
   isNavigable,
   itemPath,
   stepOf,
@@ -14,9 +15,13 @@ import {
 } from "./navItems";
 
 const items = ZTO_NAV_SECTIONS.flatMap((s) => s.items);
-const ztoItems = items.filter((i) => !i.devOnly);
+// ZTO finans yan menüsünün (_SideMenu_FinanceItems) öğeleri; TEMEL TANIMLAR (_Layout + Blackrose eki)
+// ve vitrin bu sıra/sayım testlerine girmez.
+const ztoItems = items.filter((i) => !i.devOnly && isFinanceMenuItem(i));
+const definitionItems = items.filter((i) => !i.devOnly && !isFinanceMenuItem(i));
 const STEPS = [
   "12.1",
+  "12.1a",
   "12.2",
   "12.2a",
   "12.3",
@@ -83,12 +88,68 @@ describe("ZTO finans menü kaydı", () => {
     for (const item of ztoItems) expect(STEPS, item.id).toContain(item.step);
   });
 
-  it("12.0'da yalnız Cari Hareketler iskeleti ve vitrin uygulanmış", () => {
+  it("uygulanmış ekranlar: Cari Hareketler iskeleti, 12.1a tanım ekranları ve vitrin", () => {
     expect(items.filter((i) => i.implemented).map((i) => i.id)).toEqual([
       "allTransactions",
+      "workPlaces",
+      "branchGroups",
+      "companies",
       "showcase",
     ]);
-    expect(ZTO_SLUGS).toEqual({ allTransactions: "cari-hareketler", showcase: "vitrin" });
+    expect(ZTO_SLUGS).toEqual({
+      allTransactions: "cari-hareketler",
+      showcase: "vitrin",
+      workPlaces: "tanimlar/is-yerleri",
+      branchGroups: "tanimlar/subeler",
+      companies: "tanimlar/sirketler",
+    });
+  });
+
+  it("TEMEL TANIMLAR bölümü 'dev'den önce; kaynakları _Layout ve Blackrose eki", () => {
+    const ids = ZTO_NAV_SECTIONS.map((s) => s.id);
+    expect(ids.indexOf("basic-definitions")).toBe(ids.indexOf("dev") - 1);
+    const section = ZTO_NAV_SECTIONS.find((s) => s.id === "basic-definitions")!;
+    expect(section.label).toBe("sectionBasicDefinitions");
+    expect(section.icon).toBe("fas fa-sitemap");
+    expect(definitionItems.map((i) => [i.id, i.slug, i.source.file, i.source.line])).toEqual([
+      ["workPlaces", "tanimlar/is-yerleri", "_Layout", 1284],
+      ["branchGroups", "tanimlar/subeler", "_Layout", 1288],
+      ["companies", "tanimlar/sirketler", "blackrose", 0],
+    ]);
+    for (const item of definitionItems) {
+      expect(item.permission).toBe("BRANCH_VIEW");
+      expect(item.matchPrefix).toBe(true);
+      expect(item.step).toBe("12.1a");
+      expect(isNavigable(item)).toBe(true);
+    }
+    expect(isFinanceMenuItem(items.find((i) => i.id === "payments")!)).toBe(true);
+  });
+
+  it("izin süzgeci: izinsiz öğe gizli, boş kalan bölüm atılır", () => {
+    const withoutBranch = visibleSections(false, ZTO_NAV_SECTIONS, (p) => p !== "BRANCH_VIEW");
+    expect(withoutBranch.some((s) => s.id === "basic-definitions")).toBe(false);
+    const all = visibleSections(false, ZTO_NAV_SECTIONS, () => true);
+    expect(all.find((s) => s.id === "basic-definitions")?.items).toHaveLength(3);
+    // Varsayılan can: hepsi görünür.
+    expect(visibleSections(false)).toEqual(all);
+    const asked: string[] = [];
+    visibleSections(true, ZTO_NAV_SECTIONS, (p) => {
+      asked.push(p);
+      return true;
+    });
+    expect(new Set(asked)).toEqual(new Set(["BRANCH_VIEW"]));
+  });
+
+  it("matchPrefix: alt yollar (yeni, düzenle) öğeyi etkin yapar; benzer önek etkin yapmaz", () => {
+    const workPlaces = items.find((i) => i.id === "workPlaces")!;
+    expect(isActive(workPlaces, "/zto-finans/tanimlar/is-yerleri")).toBe(true);
+    expect(isActive(workPlaces, "/zto-finans/tanimlar/is-yerleri/yeni")).toBe(true);
+    expect(isActive(workPlaces, "/zto-finans/tanimlar/is-yerleri/abc/")).toBe(true);
+    expect(isActive(workPlaces, "/zto-finans/tanimlar/is-yerleri-x")).toBe(false);
+    expect(isActive(workPlaces, "/zto-finans/tanimlar/subeler")).toBe(false);
+    const all = items.find((i) => i.id === "allTransactions")!;
+    expect(isActive(all, "/zto-finans/cari-hareketler/alt")).toBe(false);
+    expect(stepOf("tanimlar/sirketler")).toBe("12.1a");
   });
 
   it("vitrin yalnız geliştirmede; boş kalan bölüm atılır", () => {

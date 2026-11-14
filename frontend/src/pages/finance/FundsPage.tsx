@@ -13,23 +13,32 @@ import {
   SectionHeader,
   shiftDays,
   today,
-  useBranches,
+  useBranchOptions,
   useCan,
   useCurrencies,
   useFunds,
   usePaging,
 } from "./common";
-import { Statement } from "./types";
+import { Fund, Statement } from "./types";
 
 type Dialog = "fund" | "transfer" | "manual" | null;
+
+/** Transfer hedefleri: kaynak fon hariç, kaynak seçiliyse yalnız onun şirketinin fonları. */
+export function transferTargets(funds: Fund[] | undefined, fromFundId: string) {
+  const from = funds?.find((fund) => fund.id === fromFundId);
+  return (funds ?? [])
+    .filter((fund) => fund.id !== from?.id && (!from || fund.companyId === from.companyId))
+    .map((fund) => ({ value: fund.id, label: `${fund.name} (${fund.currency})` }));
+}
 
 export function FundsPage() {
   const { t } = useTranslation();
   const client = useQueryClient();
   const canManage = useCan("FINANCE_MANAGE");
   const canPost = useCan("FINANCE_PAYMENT_CREATE");
-  const funds = useFunds();
-  const branches = useBranches();
+  const { branches, optionsFor, companyId } = useBranchOptions();
+  // Liste aktif şirketin fonları (konsolidede tümü); transfer seçenekleri de aynı listeden.
+  const funds = useFunds(companyId);
   const currencies = useCurrencies();
   const [dialog, setDialog] = useState<Dialog>(null);
   // Çift tıklama veya yeniden deneme ikinci transfer üretmesin diye pencere başına tek anahtar.
@@ -131,7 +140,7 @@ export function FundsPage() {
               label: t("finance.field.branch"),
               type: "select",
               required: true,
-              options: (branches.data ?? []).map((b) => ({ value: b.id, label: b.name })),
+              options: optionsFor(),
             },
             { name: "bankName", label: t("finance.field.bankName") },
             { name: "iban", label: t("finance.field.iban") },
@@ -169,7 +178,9 @@ export function FundsPage() {
               label: t("finance.field.toFund"),
               type: "select",
               required: true,
-              options: fundOptions,
+              // Şirketler arası transfer yok (aksi 422): hedef, kaynak fonun şirketinin diğer fonları.
+              // Kaynak değişince seçeneklerden düşen hedef FormDialog'da temizlenir.
+              optionsFrom: (values) => transferTargets(funds.data, String(values.fromFundId ?? "")),
             },
             { name: "amount", label: t("finance.field.amount"), type: "amount", required: true },
             {

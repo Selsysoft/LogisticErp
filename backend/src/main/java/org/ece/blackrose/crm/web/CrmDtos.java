@@ -180,7 +180,8 @@ public final class CrmDtos {
       @PositiveOrZero BigDecimal waitingHours,
       @PositiveOrZero Integer extraStops,
       boolean adr,
-      @PositiveOrZero BigDecimal tollAmount) {}
+      @PositiveOrZero BigDecimal tollAmount,
+      UUID companyId) {}
 
   public record PriceComponent(String code, String basis, BigDecimal amount) {}
 
@@ -205,7 +206,8 @@ public final class CrmDtos {
       UUID taxRateId,
       @NotBlank @Size(min = 3, max = 3) String currency,
       @NotNull LocalDate validUntil,
-      @Size(max = 1000) String notes) {}
+      @Size(max = 1000) String notes,
+      UUID companyId) {}
 
   public record AddQuoteLineRequest(
       @NotBlank @Size(max = 100) String origin,
@@ -241,6 +243,7 @@ public final class CrmDtos {
       String number,
       int version,
       UUID accountId,
+      UUID companyId,
       UUID opportunityId,
       UUID tariffId,
       UUID taxRateId,
@@ -271,12 +274,14 @@ public final class CrmDtos {
       @PositiveOrZero Integer paymentTermDays,
       @PositiveOrZero BigDecimal fuelSurchargePercent,
       @PositiveOrZero BigDecimal waitingHourlyFee,
-      @Size(max = 2000) String specialTerms) {}
+      @Size(max = 2000) String specialTerms,
+      UUID companyId) {}
 
   public record ContractResponse(
       UUID id,
       String number,
       UUID accountId,
+      UUID companyId,
       UUID quoteId,
       UUID tariffId,
       LocalDate startDate,

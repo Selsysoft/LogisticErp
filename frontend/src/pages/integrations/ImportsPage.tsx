@@ -21,7 +21,7 @@ import {
   formatMoney,
   QueryState,
   SectionHeader,
-  useBranches,
+  useBranchOptions,
   useCan,
 } from "../finance/common";
 import { formatDateTime } from "../operations/common";
@@ -41,7 +41,7 @@ export function ImportsPage() {
   const canEdit = useCan("FLEET_EDIT");
   const navigate = useNavigate();
   const options = useIntegrationOptions();
-  const branches = useBranches();
+  const { optionsFor } = useBranchOptions();
   const [kind, setKind] = useState("TOLL");
   const [accountId, setAccountId] = useState("");
   const [branchId, setBranchId] = useState("");
@@ -109,9 +109,9 @@ export function ImportsPage() {
               onChange={(event) => setBranchId(event.target.value)}
               sx={{ minWidth: 160 }}
             >
-              {(branches.data ?? []).map((branch) => (
-                <MenuItem key={branch.id} value={branch.id}>
-                  {branch.name}
+              {optionsFor().map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
                 </MenuItem>
               ))}
             </TextField>

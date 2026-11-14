@@ -17,6 +17,7 @@ import {
   FormLabel,
   Stack,
   Switch,
+  Tab,
   Table,
   TableBody,
   TableCell,
@@ -24,6 +25,7 @@ import {
   TableHead,
   TablePagination,
   TableRow,
+  Tabs,
   TextField,
   Tooltip,
   Typography,
@@ -38,6 +40,7 @@ import { hasPermission, useAuthStore } from "../../auth/authStore";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
 import { Page, Role, User } from "./types";
+import { UserBranchScopeTab } from "./UserBranchScopeTab";
 
 type Editing = { mode: "invite" } | { mode: "edit"; user: User } | null;
 
@@ -105,6 +108,7 @@ export function UsersPage() {
                 <TableCell>{t("users.email")}</TableCell>
                 <TableCell>{t("users.roles")}</TableCell>
                 <TableCell>{t("users.status")}</TableCell>
+                <TableCell>{t("users.scopeColumn")}</TableCell>
                 {canManage && <TableCell align="right">{t("common.actions")}</TableCell>}
               </TableRow>
             </TableHead>
@@ -137,6 +141,11 @@ export function UsersPage() {
                     </Box>
                   </TableCell>
                   <TableCell>{t(`users.statusValues.${user.status}`)}</TableCell>
+                  <TableCell>
+                    {user.branchScope === "LIMITED"
+                      ? t("users.scopeLimitedShort")
+                      : t("users.scopeAllShort")}
+                  </TableCell>
                   {canManage && (
                     <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
                       {user.status === "INVITED" && (
@@ -176,6 +185,7 @@ export function UsersPage() {
           key={editing.mode === "edit" ? editing.user.id : "invite"}
           editing={editing}
           roles={roles.data ?? []}
+          canManageScope={canManage}
           onClose={() => setEditing(null)}
           onSaved={(message) => {
             setEditing(null);
@@ -209,16 +219,21 @@ export function UsersPage() {
 function UserDialog({
   editing,
   roles,
+  canManageScope,
   onClose,
   onSaved,
 }: {
   editing: NonNullable<Editing>;
   roles: Role[];
+  canManageScope: boolean;
   onClose: () => void;
   onSaved: (message: string | null) => void;
 }) {
   const { t } = useTranslation();
   const user = editing.mode === "edit" ? editing.user : null;
+  // Düzenlemede iki sekme (12.1a §6.13); her sekme kendi düğmelerini çizer, ekranda tek "Kaydet".
+  const [tab, setTab] = useState<"general" | "branchScope">("general");
+  const showTabs = !!user && canManageScope;
 
   const schema = z.object({
     email: user ? z.string() : z.string().email(t("common.invalidEmail")),
@@ -261,81 +276,95 @@ function UserDialog({
 
   return (
     <Dialog open fullWidth maxWidth="sm" onClose={onClose}>
-      <form noValidate onSubmit={handleSubmit((values) => save.mutate(values))}>
-        <DialogTitle>{user ? t("users.edit") : t("users.invite")}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            {save.isError && <ErrorState error={save.error} />}
-            <TextField
-              label={t("users.email")}
-              type="email"
-              disabled={!!user}
-              error={!!errors.email}
-              helperText={errors.email?.message}
-              {...register("email")}
-            />
-            <TextField
-              label={t("users.fullName")}
-              error={!!errors.fullName}
-              helperText={errors.fullName?.message}
-              {...register("fullName")}
-            />
-            <Controller
-              name="roleIds"
-              control={control}
-              render={({ field }) => (
-                <FormControl error={!!errors.roleIds} component="fieldset">
-                  <FormLabel component="legend">{t("users.roles")}</FormLabel>
-                  <FormGroup>
-                    {roles.map((role) => (
-                      <FormControlLabel
-                        key={role.id}
-                        label={role.name}
-                        control={
-                          <Checkbox
-                            checked={field.value.includes(role.id)}
-                            onChange={(event) =>
-                              field.onChange(
-                                event.target.checked
-                                  ? [...field.value, role.id]
-                                  : field.value.filter((id) => id !== role.id),
-                              )
-                            }
-                          />
-                        }
-                      />
-                    ))}
-                  </FormGroup>
-                  {errors.roleIds && <FormHelperText>{errors.roleIds.message}</FormHelperText>}
-                </FormControl>
-              )}
-            />
-            {user && (
+      <DialogTitle>{user ? t("users.edit") : t("users.invite")}</DialogTitle>
+      {showTabs && (
+        <Tabs
+          value={tab}
+          onChange={(_, next: "general" | "branchScope") => setTab(next)}
+          sx={{ px: 3, borderBottom: 1, borderColor: "divider" }}
+        >
+          <Tab value="general" label={t("users.tabGeneral")} />
+          <Tab value="branchScope" label={t("users.tabBranchScope")} />
+        </Tabs>
+      )}
+      {showTabs && tab === "branchScope" && user ? (
+        <UserBranchScopeTab userId={user.id} onClose={onClose} />
+      ) : (
+        <form noValidate onSubmit={handleSubmit((values) => save.mutate(values))}>
+          <DialogContent>
+            <Stack spacing={2} sx={{ pt: 1 }}>
+              {save.isError && <ErrorState error={save.error} />}
+              <TextField
+                label={t("users.email")}
+                type="email"
+                disabled={!!user}
+                error={!!errors.email}
+                helperText={errors.email?.message}
+                {...register("email")}
+              />
+              <TextField
+                label={t("users.fullName")}
+                error={!!errors.fullName}
+                helperText={errors.fullName?.message}
+                {...register("fullName")}
+              />
               <Controller
-                name="enabled"
+                name="roleIds"
                 control={control}
                 render={({ field }) => (
-                  <FormControlLabel
-                    label={t("users.enabled")}
-                    control={
-                      <Switch
-                        checked={field.value}
-                        onChange={(event) => field.onChange(event.target.checked)}
-                      />
-                    }
-                  />
+                  <FormControl error={!!errors.roleIds} component="fieldset">
+                    <FormLabel component="legend">{t("users.roles")}</FormLabel>
+                    <FormGroup>
+                      {roles.map((role) => (
+                        <FormControlLabel
+                          key={role.id}
+                          label={role.name}
+                          control={
+                            <Checkbox
+                              checked={field.value.includes(role.id)}
+                              onChange={(event) =>
+                                field.onChange(
+                                  event.target.checked
+                                    ? [...field.value, role.id]
+                                    : field.value.filter((id) => id !== role.id),
+                                )
+                              }
+                            />
+                          }
+                        />
+                      ))}
+                    </FormGroup>
+                    {errors.roleIds && <FormHelperText>{errors.roleIds.message}</FormHelperText>}
+                  </FormControl>
                 )}
               />
-            )}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>{t("common.cancel")}</Button>
-          <Button type="submit" variant="contained" disabled={save.isPending}>
-            {t("common.save")}
-          </Button>
-        </DialogActions>
-      </form>
+              {user && (
+                <Controller
+                  name="enabled"
+                  control={control}
+                  render={({ field }) => (
+                    <FormControlLabel
+                      label={t("users.enabled")}
+                      control={
+                        <Switch
+                          checked={field.value}
+                          onChange={(event) => field.onChange(event.target.checked)}
+                        />
+                      }
+                    />
+                  )}
+                />
+              )}
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={onClose}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="contained" disabled={save.isPending}>
+              {t("common.save")}
+            </Button>
+          </DialogActions>
+        </form>
+      )}
     </Dialog>
   );
 }

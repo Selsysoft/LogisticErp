@@ -13,6 +13,7 @@ import org.ece.blackrose.customs.domain.CustomsTypes.TransitStatus;
 import org.ece.blackrose.customs.repository.CustomsRepositories.TransitDocumentRepository;
 import org.ece.blackrose.finance.service.PaymentPlanService;
 import org.ece.blackrose.fleet.service.FleetInsightService;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.reporting.service.DashboardCache;
 import org.ece.blackrose.reporting.service.ReportService;
 import org.ece.blackrose.reporting.service.TableExporter;
@@ -77,9 +78,11 @@ public class ReportController {
       Set.of("SHIPMENT_VIEW", "FINANCE_VIEW", "FLEET_VIEW", "CUSTOMS_VIEW");
 
   private final DashboardCache dashboardCache;
+  private final BranchScopeService scope;
 
   public ReportController(
       DashboardCache dashboardCache,
+      BranchScopeService scope,
       ReportService reports,
       PaymentPlanService plans,
       FleetInsightService fleet,
@@ -87,6 +90,7 @@ public class ReportController {
       ShipmentRepository shipments,
       TenantClock clock) {
     this.dashboardCache = dashboardCache;
+    this.scope = scope;
     this.reports = reports;
     this.plans = plans;
     this.fleet = fleet;
@@ -152,29 +156,37 @@ public class ReportController {
   public DashboardResponse dashboard() {
     Set<String> widgets = new HashSet<>(authorities());
     widgets.retainAll(DASHBOARD_PERMISSIONS);
+    Set<UUID> allowed = scope.allowedOrNull();
     return dashboardCache.get(
-        TenantContext.currentCode().orElseThrow(), widgets, () -> buildDashboard(widgets));
+        TenantContext.currentCode().orElseThrow(),
+        widgets,
+        allowed,
+        () -> buildDashboard(widgets, allowed));
   }
 
-  private DashboardResponse buildDashboard(Set<String> authorities) {
+  /**
+   * {@code allowed} null ise kiracı geneli; LIMITED kullanıcıda operasyon ve plan özeti kapsamla
+   * hesaplanır, döviz pozisyonu (kiracı geneli) verilmez.
+   */
+  private DashboardResponse buildDashboard(Set<String> authorities, Set<UUID> allowed) {
     LocalDate today = clock.today();
     OperationsWidget operations = null;
     if (authorities.contains("SHIPMENT_VIEW")) {
       operations =
           new OperationsWidget(
               reports.kpi(today.minusDays(DASHBOARD_DAYS), today, null),
-              shipments.countByStatus(ShipmentStatus.IN_TRANSIT),
-              shipments.countByStatus(ShipmentStatus.DELIVERED));
+              countShipments(ShipmentStatus.IN_TRANSIT, allowed),
+              countShipments(ShipmentStatus.DELIVERED, allowed));
     }
     FinanceWidget finance = null;
     if (authorities.contains("FINANCE_VIEW")) {
-      var summary = plans.dashboard(today);
+      var summary = allowed == null ? plans.dashboard(today) : plans.dashboard(today, null);
       finance =
           new FinanceWidget(
               summary.overdue(),
               summary.dueThisWeek(),
               summary.pendingApproval(),
-              reports.position());
+              allowed == null ? reports.position() : null);
     }
     FleetWidget fleetWidget = null;
     if (authorities.contains("FLEET_VIEW")) {
@@ -269,6 +281,7 @@ public class ReportController {
           }
           case POSITION -> {
             require("FINANCE_VIEW");
+            scope.requireAll("POSITION");
             List<List<Object>> rows = new ArrayList<>();
             reports
                 .position()
@@ -289,6 +302,7 @@ public class ReportController {
           }
           case FORECAST -> {
             require("FINANCE_VIEW");
+            scope.requireAll("FORECAST");
             List<List<Object>> rows = new ArrayList<>();
             reports
                 .forecast()
@@ -321,6 +335,13 @@ public class ReportController {
                 .toString())
         .contentType(excel ? XLSX : MediaType.APPLICATION_PDF)
         .body(content);
+  }
+
+  private long countShipments(ShipmentStatus status, Set<UUID> allowed) {
+    if (allowed == null) {
+      return shipments.countByStatus(status);
+    }
+    return allowed.isEmpty() ? 0 : shipments.countByStatusAndBranchIdIn(status, allowed);
   }
 
   private static List<Object> cells(Object... values) {

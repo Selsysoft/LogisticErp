@@ -15,6 +15,8 @@ import java.text.DecimalFormatSymbols;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import org.ece.blackrose.common.money.Money;
+import org.ece.blackrose.organization.CompanyIdentityService.CompanyIdentity;
+import org.ece.blackrose.organization.CompanyPdfHeader;
 import org.ece.blackrose.warehouse.domain.WarehouseInvoice;
 
 /** Depo faturası belgesi. Yasal e-Fatura değildir; o Faz 8'de gelir. */
@@ -27,7 +29,7 @@ public final class WarehouseInvoicePdf {
 
   private WarehouseInvoicePdf() {}
 
-  public static byte[] render(WarehouseInvoice invoice, String company, String customer) {
+  public static byte[] render(WarehouseInvoice invoice, CompanyIdentity company, String customer) {
     try {
       BaseFont regular = BaseFont.createFont(BaseFont.HELVETICA, ENCODING, BaseFont.NOT_EMBEDDED);
       BaseFont bold = BaseFont.createFont(BaseFont.HELVETICA_BOLD, ENCODING, BaseFont.NOT_EMBEDDED);
@@ -37,7 +39,7 @@ public final class WarehouseInvoicePdf {
       Document pdf = new Document(PageSize.A4);
       PdfWriter.getInstance(pdf, out);
       pdf.open();
-      pdf.add(new Paragraph(company, new Font(bold, TITLE_SIZE)));
+      pdf.add(CompanyPdfHeader.render(company));
       pdf.add(new Paragraph("Depo Faturası " + invoice.getNumber(), strong));
       pdf.add(new Paragraph("Bu belge yasal e-Fatura yerine geçmez.", body));
       pdf.add(new Paragraph("Müşteri: " + customer, body));

@@ -8,9 +8,11 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { useActiveCompanyId } from "../../auth/companyStore";
 import {
   branchIdsOfCompany,
   branchIdsOfGroup,
+  filterTreeByCompany,
   isMultiCompany,
   useBranchTree,
   type BranchScope,
@@ -44,7 +46,7 @@ import {
  * :6175-6220 (JS). Stiller styles/pages/branch-multiselect.css.
  */
 
-export interface ZtoBranchMultiSelectProps {
+export type ZtoBranchMultiSelectProps = {
   /** Seçili şube (iş yeri) kimlikleri; emptyMeansAll iken [] = tüm iş yerleri. */
   value: string[];
   onChange: (value: string[]) => void;
@@ -61,9 +63,14 @@ export interface ZtoBranchMultiSelectProps {
   helpText?: string | null;
   /** Açılır listedeki "Tabloyu Yenile" (applyWorkPlaceFilter, :6203-6207); liste kapanır. */
   onApply?: (value: string[]) => void;
+  /**
+   * Ağacın şirket süzgeci (12.1a §6.5): "active" (varsayılan) = AppBar'daki aktif şirket
+   * (useActiveCompanyId; konsolidede tümü), null = tüm şirketler, kimlik = yalnız o şirket.
+   */
+  companyId?: string | null | "active";
   /** Verilirse useBranchTree yerine kullanılır (test, vitrin). */
   tree?: BranchTree;
-}
+};
 
 type TreeStatus = "loading" | "error" | "ready";
 
@@ -87,8 +94,17 @@ interface ViewProps extends ZtoBranchMultiSelectProps {
   status: TreeStatus;
 }
 
-function BranchMultiSelectView(props: ViewProps) {
-  const { value, onChange, variant, tree, emptyMeansAll = true } = props;
+function BranchMultiSelectView({ tree: fullTree, ...rest }: ViewProps) {
+  const activeCompanyId = useActiveCompanyId();
+  // null açıkça "tüm şirketler" demektir; yalnız verilmemişse aktif şirket kullanılır.
+  const companyId = rest.companyId === undefined ? "active" : rest.companyId;
+  const companyFilter = companyId === "active" ? activeCompanyId : companyId;
+  const tree = useMemo(
+    () => filterTreeByCompany(fullTree, companyFilter),
+    [fullTree, companyFilter],
+  );
+  const props: ViewProps = { ...rest, tree };
+  const { value, onChange, variant, emptyMeansAll = true } = props;
   const allIds = useMemo(() => allBranchIds(tree), [tree]);
   // Ekrandaki kutular: "hepsi seçili" ile "hiçbiri" aynı değeri ([]) gönderdiğinden yerel tutulur;
   // üst bileşen başka bir değer verirse ondan türetilir.

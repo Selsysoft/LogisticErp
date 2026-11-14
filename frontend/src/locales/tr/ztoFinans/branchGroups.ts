@@ -1,0 +1,33 @@
+// ztoFinans ad alanı: Şubeler (ZTO BranchProvince/Index, Add, Edit; 12.1a §6.11).
+export default {
+  title: "Şubeler",
+  listTitle: "Şube Listesi",
+  crumb: "Şubeler",
+  addTitle: "Yeni Şube",
+  editTitle: "Şube Düzenle",
+  nameTypeStatus: "Şube Adı / Şube Tipi / Durum",
+  phoneEmail: "Telefon Numarası / E-posta",
+  taxTaxOffice: "Vergi Numarası / Vergi Dairesi",
+  name: "Şube Adı",
+  email: "E-posta",
+  type: "Şube Tipi",
+  typeMain: "Ana Şube",
+  // Yalnız form seçeneği; ZTO'da değeri "Şube" (Add.cshtml:47) ve liste ham değeri basar.
+  typeSub: "Yan Şube",
+  typeSubValue: "Şube",
+  typeField: "Şube Türü",
+  taxNumber: "Vergi Numarası",
+  taxOffice: "Vergi Dairesi",
+  create: "Yeni Şube Oluştur",
+  creating: "Yeni Şube Oluşturuluyor",
+  saved: "Şube kaydedildi.",
+  updated: "Şube güncellendi.",
+  deactivated: "Şube pasifleştirildi.",
+  activated: "Şube aktifleştirildi.",
+  hasBranches: "Önce iş yerlerini taşıyın.",
+  // Blackrose ekleri
+  entityTitle: "Şube",
+  phone: "Telefon Numarası",
+  address: "Adres",
+  emailInvalid: "Geçerli bir e-posta adresi girin.",
+} as const;

@@ -44,6 +44,7 @@ public final class IntegrationDtos {
       EDocumentSource sourceType,
       UUID sourceId,
       String sourceNo,
+      UUID companyId,
       UUID ettn,
       String provider,
       String providerRef,

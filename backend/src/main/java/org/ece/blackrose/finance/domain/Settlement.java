@@ -29,6 +29,7 @@ public class Settlement extends AuditableEntity {
 
   private UUID accountId;
   private UUID branchId;
+  private UUID companyId;
   private UUID fundAccountId;
   private UUID instrumentId;
   private UUID expenseItemId;
@@ -50,6 +51,7 @@ public class Settlement extends AuditableEntity {
       SettlementMethod method,
       UUID accountId,
       UUID branchId,
+      UUID companyId,
       UUID fundAccountId,
       UUID instrumentId,
       UUID expenseItemId,
@@ -63,6 +65,7 @@ public class Settlement extends AuditableEntity {
     this.method = method;
     this.accountId = accountId;
     this.branchId = branchId;
+    this.companyId = companyId;
     this.fundAccountId = fundAccountId;
     this.instrumentId = instrumentId;
     this.expenseItemId = expenseItemId;
@@ -129,5 +132,9 @@ public class Settlement extends AuditableEntity {
 
   public SettlementStatus getStatus() {
     return status;
+  }
+
+  public UUID getCompanyId() {
+    return companyId;
   }
 }

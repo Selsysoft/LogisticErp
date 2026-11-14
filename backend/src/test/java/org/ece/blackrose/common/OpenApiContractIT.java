@@ -47,7 +47,8 @@ class OpenApiContractIT extends AbstractIntegrationTest {
     assertThat(actual)
         .as(
             "API sözleşmesi değişti. Bilerek yapıldıysa -Dopenapi.update=true ile docs/api/openapi.json"
-                + " dosyasını yenileyin ve frontend'de 'npm run api:types' çalıştırın.")
+                + " dosyasını yenileyin ve frontend'de 'npm test' ile src/api/contract.test.ts'i"
+                + " çalıştırın.")
         .isEqualTo(expected);
   }
 

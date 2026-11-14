@@ -12,6 +12,7 @@ export default {
     definitions: "Tanımlar",
   },
   field: {
+    company: "Şirket",
     code: "Kod",
     name: "Ad",
     type: "Tür",
@@ -164,6 +165,13 @@ export default {
     thresholds: "Yoğunluk eşikleri",
     expenses: "Gider kalemleri",
     rates: "Son kurlar",
+    branchGroup: "Şube Grubu",
+    company: "Şirket",
+    status: "Durum",
+    active: "Aktif",
+    passive: "Pasif",
+    codeOptional: "Boş bırakılırsa otomatik verilir.",
+    manageInZto: "ZTO Finans › İş Yerleri'nde yönet",
   },
   accountType: {
     CUSTOMER: "Müşteri",
@@ -172,6 +180,7 @@ export default {
     EMPLOYEE: "Personel/Sürücü",
     BANK: "Banka",
     LEAD: "Aday",
+    INTERCOMPANY: "Grup Şirketi",
   },
   direction: { DEBIT: "Borç", CREDIT: "Alacak", IN: "Giriş", OUT: "Çıkış" },
   fundKind: { BANK: "Banka", CASH: "Kasa" },
@@ -207,6 +216,7 @@ export default {
     NONE: "Eşik yok",
   },
   period: { DAY: "Gün", MONTH: "Ay" },
+  aging: { perCompanyNote: "Şirket bazında eşleştirilir." },
   source: {
     MANUAL: "Elle",
     OPENING: "Açılış bakiyesi",

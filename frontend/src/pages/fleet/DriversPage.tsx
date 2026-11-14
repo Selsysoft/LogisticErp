@@ -13,7 +13,7 @@ import {
   QueryState,
   SectionHeader,
   today,
-  useBranches,
+  useBranchOptions,
   useCan,
   usePaging,
 } from "../finance/common";
@@ -26,7 +26,7 @@ const STATUSES = ["ACTIVE", "ON_LEAVE", "LEFT"];
 
 function useDriverFields(driver?: Driver): FieldDef[] {
   const { t } = useTranslation();
-  const branches = useBranches();
+  const { optionsFor } = useBranchOptions();
   const fields: FieldDef[] = [
     {
       name: "fullName",
@@ -53,7 +53,7 @@ function useDriverFields(driver?: Driver): FieldDef[] {
       label: t("finance.field.branch"),
       type: "select",
       defaultValue: driver?.branchId ?? "",
-      options: (branches.data ?? []).map((branch) => ({ value: branch.id, label: branch.name })),
+      options: optionsFor(driver?.branchId),
     },
   ];
   return driver
@@ -160,7 +160,7 @@ function AdvanceDialog({ driverId, onClose }: { driverId: string; onClose: () =>
   const { t } = useTranslation();
   const client = useQueryClient();
   const [idempotencyKey] = useState(() => crypto.randomUUID());
-  const branches = useBranches();
+  const { branches, optionsFor } = useBranchOptions();
   const options = useQuery({
     queryKey: ["fleet", "options"],
     queryFn: () => apiGet<FleetOptions>("/fleet/options"),
@@ -178,7 +178,7 @@ function AdvanceDialog({ driverId, onClose }: { driverId: string; onClose: () =>
           label: t("finance.field.branch"),
           type: "select",
           required: true,
-          options: branches.data.map((branch) => ({ value: branch.id, label: branch.name })),
+          options: optionsFor(),
         },
         {
           name: "fundAccountId",

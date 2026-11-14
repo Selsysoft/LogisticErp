@@ -24,7 +24,7 @@ import org.ece.blackrose.integration.domain.IntegrationTypes.ImportKind;
 import org.ece.blackrose.integration.domain.IntegrationTypes.ImportRowStatus;
 import org.ece.blackrose.integration.repository.IntegrationRepositories.ImportBatchRepository;
 import org.ece.blackrose.integration.repository.IntegrationRepositories.ImportRowRepository;
-import org.ece.blackrose.organization.BranchRepository;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.shipment.domain.ShipmentLeg;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.CostKind;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentLegRepository;
@@ -51,7 +51,7 @@ public class ExpenseImportService {
   private final ShipmentLegRepository legs;
   private final ShipmentRepository shipments;
   private final AccountRepository accounts;
-  private final BranchRepository branches;
+  private final BranchScopeService scope;
   private final TripFinanceService tripFinance;
   private final VehicleExpenseService vehicleExpenses;
   private final TenantClock clock;
@@ -63,7 +63,7 @@ public class ExpenseImportService {
       ShipmentLegRepository legs,
       ShipmentRepository shipments,
       AccountRepository accounts,
-      BranchRepository branches,
+      BranchScopeService scope,
       TripFinanceService tripFinance,
       VehicleExpenseService vehicleExpenses,
       TenantClock clock) {
@@ -73,7 +73,7 @@ public class ExpenseImportService {
     this.legs = legs;
     this.shipments = shipments;
     this.accounts = accounts;
-    this.branches = branches;
+    this.scope = scope;
     this.tripFinance = tripFinance;
     this.vehicleExpenses = vehicleExpenses;
     this.clock = clock;
@@ -85,9 +85,8 @@ public class ExpenseImportService {
     if (!accounts.existsById(accountId)) {
       throw new BusinessException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Cari bulunamadı.");
     }
-    if (!branches.existsById(branchId)) {
-      throw new BusinessException(HttpStatus.BAD_REQUEST, "BRANCH_NOT_FOUND", "Şube bulunamadı.");
-    }
+    // Yalnız controller'dan çağrılır: kullanıcının seçtiği iş yeri (var, kapsamda, aktif).
+    scope.requireNew(branchId);
     ImportBatch batch =
         batches.save(
             new ImportBatch(kind, fileName == null ? "dosya" : fileName, accountId, branchId));
@@ -168,9 +167,14 @@ public class ExpenseImportService {
   @Transactional
   public ImportRow assign(UUID rowId, UUID shipmentId) {
     ImportRow row = open(rowId);
-    if (!shipments.existsById(shipmentId)) {
-      throw new BusinessException(HttpStatus.NOT_FOUND, "SHIPMENT_NOT_FOUND", "Sefer bulunamadı.");
-    }
+    var shipment =
+        shipments
+            .findById(shipmentId)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "SHIPMENT_NOT_FOUND", "Sefer bulunamadı."));
+    scope.requireVisible(shipment.getBranchId());
     if (row.getKind() == ImportKind.FUEL && row.getVehicleId() == null) {
       throw new BusinessException(
           HttpStatus.CONFLICT,
@@ -194,13 +198,7 @@ public class ExpenseImportService {
    */
   @Transactional
   public int post(UUID batchId) {
-    ImportBatch batch =
-        batches
-            .findById(batchId)
-            .orElseThrow(
-                () ->
-                    new BusinessException(
-                        HttpStatus.NOT_FOUND, "IMPORT_NOT_FOUND", "İçe aktarım bulunamadı."));
+    ImportBatch batch = batch(batchId);
     int posted = 0;
     for (ImportRow row : rows.findByBatchIdOrderByLineNo(batchId)) {
       if (row.getStatus() != ImportRowStatus.MATCHED) {
@@ -273,6 +271,7 @@ public class ExpenseImportService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "IMPORT_ROW_NOT_FOUND", "Satır bulunamadı."));
+    batch(row.getBatchId());
     if (row.getStatus() == ImportRowStatus.POSTED || row.getStatus() == ImportRowStatus.ERROR) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "IMPORT_ROW_CLOSED", "Bu satır değiştirilemez.");
@@ -293,5 +292,28 @@ public class ExpenseImportService {
 
   public List<ImportRow> rowsOf(UUID batchId) {
     return rows.findByBatchIdOrderByLineNo(batchId);
+  }
+
+  /** İçe aktarımı yükler; iş yeri kullanıcının kapsamı dışındaysa 403. */
+  @Transactional(readOnly = true)
+  public ImportBatch batch(UUID batchId) {
+    ImportBatch batch =
+        batches
+            .findById(batchId)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "IMPORT_NOT_FOUND", "İçe aktarım bulunamadı."));
+    scope.requireVisible(batch.getBranchId());
+    return batch;
+  }
+
+  /** İçe aktarım listesi; LIMITED kullanıcıda yalnız kapsamdaki iş yerlerininkiler. */
+  @Transactional(readOnly = true)
+  public List<ImportBatch> list() {
+    var allowed = scope.allowedOrNull();
+    return batches.findAllByOrderByCreatedAtDesc().stream()
+        .filter(batch -> allowed == null || allowed.contains(batch.getBranchId()))
+        .toList();
   }
 }

@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.ece.blackrose.identity.domain.BranchScope;
 import org.ece.blackrose.identity.domain.Permission;
 import org.ece.blackrose.identity.domain.UserAccount;
 import org.ece.blackrose.identity.domain.UserStatus;
@@ -94,6 +95,11 @@ public class DailyDigestMailer {
                     Collectors.mapping(NotificationPreference::getTopic, Collectors.toSet())));
     int sent = 0;
     for (UserAccount user : users.findByStatus(UserStatus.ACTIVE)) {
+      // Özet içeriği tüm iş yerlerini kapsar; iş yeri kapsamlı kullanıcıya gönderilmez (kapsam
+      // başına içerik sonraki adımda).
+      if (user.getBranchScope() == BranchScope.LIMITED) {
+        continue;
+      }
       Set<Permission> permissions = user.getEffectivePermissions();
       Set<NotificationTopic> off = optedOut.getOrDefault(user.getId(), Set.of());
       List<Content> mine = new ArrayList<>();

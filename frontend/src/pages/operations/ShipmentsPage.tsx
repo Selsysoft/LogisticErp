@@ -12,7 +12,7 @@ import {
   formatMoney,
   QueryState,
   SectionHeader,
-  useBranches,
+  useBranchOptions,
   useCan,
   useCurrencies,
   usePaging,
@@ -34,7 +34,7 @@ function NewShipmentDialog({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const createdId = useRef("");
   const options = useShipmentOptions();
-  const branches = useBranches();
+  const { branches, optionsFor } = useBranchOptions();
   const currencies = useCurrencies();
   const field = (name: string) => t(`operations.field.${name}`);
 
@@ -56,7 +56,7 @@ function NewShipmentDialog({ onClose }: { onClose: () => void }) {
       label: t("finance.field.branch"),
       type: "select",
       required: true,
-      options: branches.data.map((branch) => ({ value: branch.id, label: branch.name })),
+      options: optionsFor(),
     },
     { name: "shipperName", label: field("shipperName") },
     { name: "shipperAddress", label: field("shipperAddress") },

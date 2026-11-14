@@ -3,6 +3,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiGet, apiRequest } from "../../api/client";
+import { useActiveCompanyId } from "../../auth/companyStore";
 import { ErrorState } from "../../components/ErrorState";
 import {
   DataTable,
@@ -14,12 +15,14 @@ import {
   SectionHeader,
   today,
   useAccounts,
-  useBranches,
+  useBranchOptions,
   useCan,
   useCurrencies,
   useFunds,
   usePaging,
 } from "./common";
+import { companyOfBranch, fundsOfCompany } from "./branchOptions";
+import { withCompany } from "./companyQuery";
 import { ExpenseItem, Instrument, Page, Settlement } from "./types";
 
 type Kind = "payments" | "collections";
@@ -32,12 +35,16 @@ export function SettlementsPage() {
   const [adding, setAdding] = useState<{ method: string; key: string } | null>(null);
   const paging = usePaging();
   const accounts = useAccounts();
+  const companyId = useActiveCompanyId();
 
   const list = useQuery({
-    queryKey: ["finance", kind, paging.page, paging.size],
+    queryKey: ["finance", kind, paging.page, paging.size, companyId],
     queryFn: () =>
       apiGet<Page<Settlement>>(
-        `/finance/${kind}?page=${paging.page}&size=${paging.size}&sort=settlementDate,desc`,
+        withCompany(
+          `/finance/${kind}?page=${paging.page}&size=${paging.size}&sort=settlementDate,desc`,
+          companyId,
+        ),
       ),
     placeholderData: keepPreviousData,
   });
@@ -160,7 +167,7 @@ function SettlementDialog({
 }) {
   const { t } = useTranslation();
   const accounts = useAccounts();
-  const branches = useBranches();
+  const { branches, optionsFor } = useBranchOptions();
   const funds = useFunds();
   const currencies = useCurrencies();
   const isPayment = kind === "payments";
@@ -190,7 +197,7 @@ function SettlementDialog({
       label: t("finance.field.branch"),
       type: "select",
       required: true,
-      options: (branches.data ?? []).map((b) => ({ value: b.id, label: b.name })),
+      options: optionsFor(),
     },
   ];
   if (!isCheck) {
@@ -199,9 +206,11 @@ function SettlementDialog({
       label: t("finance.field.fund"),
       type: "select",
       required: true,
-      options: (funds.data ?? [])
-        .filter((fund) => fund.kind === method)
-        .map((fund) => ({ value: fund.id, label: `${fund.name} (${fund.currency})` })),
+      // Yalnız seçili iş yerinin şirketinin fonları (başka şirketin fonu 422 COMPANY_MISMATCH).
+      optionsFrom: (values) =>
+        fundsOfCompany(funds.data, companyOfBranch(branches.data, String(values.branchId ?? "")))
+          .filter((fund) => fund.kind === method)
+          .map((fund) => ({ value: fund.id, label: `${fund.name} (${fund.currency})` })),
     });
   }
   fields.push(

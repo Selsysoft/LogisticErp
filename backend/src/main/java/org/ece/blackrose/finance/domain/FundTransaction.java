@@ -19,6 +19,7 @@ public class FundTransaction extends AuditableEntity {
 
   @Id private UUID id;
   private UUID fundAccountId;
+  private UUID companyId;
 
   @Enumerated(EnumType.STRING)
   private FundDirection direction;
@@ -37,6 +38,7 @@ public class FundTransaction extends AuditableEntity {
 
   public FundTransaction(
       UUID fundAccountId,
+      UUID companyId,
       FundDirection direction,
       Money money,
       BigDecimal exchangeRate,
@@ -48,6 +50,7 @@ public class FundTransaction extends AuditableEntity {
       UUID sourceId) {
     this.id = UUID.randomUUID();
     this.fundAccountId = fundAccountId;
+    this.companyId = companyId;
     this.direction = direction;
     this.amount = money.amount();
     this.currency = money.currency();
@@ -102,5 +105,9 @@ public class FundTransaction extends AuditableEntity {
 
   public UUID getSourceId() {
     return sourceId;
+  }
+
+  public UUID getCompanyId() {
+    return companyId;
   }
 }

@@ -205,4 +205,11 @@ describe("ZtoModal", () => {
     expect(container.innerHTML).toBe("");
     expect(document.querySelector(".modal")).toBeNull();
   });
+
+  it("titlePrefix: başlık div > önek + h5.modal-title olarak sarılır", () => {
+    renderModal({ titlePrefix: <span className="ust">ÜST</span>, title: "Ad" });
+    const wrapper = root().querySelector(".modal-header > div") as HTMLElement;
+    expect(wrapper.firstElementChild?.className).toBe("ust");
+    expect(wrapper.querySelector("h5.modal-title")?.textContent).toBe("Ad");
+  });
 });

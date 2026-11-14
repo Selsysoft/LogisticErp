@@ -1,0 +1,1246 @@
+/*
+ * Kaynak: ZtoFabrika/wwwroot/css/definition-list.css:1-1167 — birebir kopya (12.1a §6.7).
+ * ZTO _Layout.cshtml:31-33'te layout.css ve Bootstrap'tan ÖNCE yüklenir; zto-finans.css'te de öyle.
+ * body.definition-list-page / body.definition-admin-page seçicileri derlemede .zto-finans kökünün
+ * kendisine bağlanır (prefixTransform); kök sınıfı sayfalar useZtoRootClass ile verir.
+ */
+:root {
+  --definition-bg: #f4f7fb;
+  --definition-surface: #ffffff;
+  --definition-ink: #203047;
+  --definition-muted: #738299;
+  --definition-line: #e2e9f2;
+  --definition-primary: #007bff;
+  --definition-primary-soft: #e8f2ff;
+  --definition-primary-ink: #0056b3;
+  --definition-primary-line: #c3dfff;
+  --definition-danger-soft: #fff0f2;
+  --definition-success-soft: #edf8f3;
+}
+
+/* Kategori renkleri: Tanıtımlar hub kartları (kartın data-definition-tone'u) ve liste sayfaları
+   (introduction-details.js body'ye aynı niteliği yazar) AYNI paletten beslenir. Mavi = varsayılan.
+   --tone-ink 10px rozet metni için, --tone-icon simge için; her ink/soft çifti >= 4.5:1. */
+:root,
+[data-definition-tone="blue"] {
+  --tone-soft: #e8f2ff;
+  --tone-icon: #007bff;
+  --tone-ink: #0056b3;
+  --tone-line: #cfe3ff;
+}
+
+[data-definition-tone="amber"] {
+  --tone-soft: #fff6e6;
+  --tone-icon: #8a5a00;
+  --tone-ink: #8a5a00;
+  --tone-line: #f1d9a8;
+}
+
+[data-definition-tone="rose"] {
+  --tone-soft: #fdeef0;
+  --tone-icon: #a3304b;
+  --tone-ink: #a3304b;
+  --tone-line: #f0c4cd;
+}
+
+[data-definition-tone="green"] {
+  --tone-soft: #ebf6f1;
+  --tone-icon: #2b7357;
+  --tone-ink: #2b7357;
+  --tone-line: #bfe0d1;
+}
+
+[data-definition-tone="teal"] {
+  --tone-soft: #e9f7f7;
+  --tone-icon: #22707a;
+  --tone-ink: #22707a;
+  --tone-line: #bfe3e5;
+}
+
+[data-definition-tone="violet"] {
+  --tone-soft: #f1eef9;
+  --tone-icon: #5b4a8a;
+  --tone-ink: #5b4a8a;
+  --tone-line: #d5cdea;
+}
+
+/* Ürün sayfası kendi başlığını çizer (Views/Product/Index.cshtml satır içi stil); body niteliği varken ton uygulanır. */
+body[data-definition-tone] .product-list-heading__icon {
+  background: var(--tone-soft);
+  color: var(--tone-icon);
+}
+
+body[data-definition-tone] .product-count {
+  border-color: var(--tone-line);
+  color: var(--tone-ink);
+}
+
+body.definition-list-page main,
+body.definition-list-page #layoutSidenav_content {
+  background: var(--definition-bg);
+}
+
+body.definition-list-page main > .container-fluid {
+  padding: 10px 12px 0;
+}
+
+body.definition-list-page main > .container-fluid > br {
+  display: none;
+}
+
+/* The demo admin account uses a fixed icon rail on every main-layout page.
+   List density remains scoped separately to definition-list-page. */
+@media (min-width: 992px) {
+  body.definition-admin-page {
+    --definition-sidebar-open-width: 196px;
+    --definition-sidebar-rail-width: 72px;
+  }
+
+  body.zto-demo-admin-shell #sidebarToggle {
+    display: none !important;
+  }
+
+  body.definition-admin-page #layoutSidenav #layoutSidenav_nav,
+  body.definition-admin-page #layoutSidenav #layoutSidenav_nav .sb-sidenav,
+  body.definition-admin-page .sb-topnav .navbar-brand {
+    transition:
+      width 0.18s ease,
+      flex-basis 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+
+  body.definition-admin-page.definition-sidebar-open #layoutSidenav #layoutSidenav_nav {
+    width: var(--definition-sidebar-open-width) !important;
+    flex-basis: var(--definition-sidebar-open-width) !important;
+    transform: translateX(0) !important;
+  }
+
+  body.definition-admin-page.definition-sidebar-open #layoutSidenav #layoutSidenav_nav .sb-sidenav {
+    width: var(--definition-sidebar-open-width) !important;
+  }
+
+  body.definition-admin-page.definition-sidebar-open #layoutSidenav #layoutSidenav_content {
+    margin-left: 0 !important;
+    padding-left: var(--definition-sidebar-open-width) !important;
+    transition: padding-left 0.18s ease !important;
+  }
+
+  body.definition-admin-page.definition-sidebar-open .sb-topnav .navbar-brand {
+    width: var(--definition-sidebar-open-width) !important;
+    flex: 0 0 var(--definition-sidebar-open-width) !important;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav #layoutSidenav_nav {
+    width: var(--definition-sidebar-rail-width) !important;
+    flex-basis: var(--definition-sidebar-rail-width) !important;
+    transform: translateX(0) !important;
+    overflow: visible;
+  }
+
+  /* İkonlu rail aktifken eski oklu (flyout) yan menü tamamen gizlenir */
+  body.definition-admin-page.definition-sidebar-rail .zt-sidebar {
+    display: none !important;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav #layoutSidenav_nav .sb-sidenav {
+    width: var(--definition-sidebar-rail-width) !important;
+    overflow-x: hidden;
+    border-right: 1px solid #d9e5f1;
+    background: #f8fbff;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav #layoutSidenav_content {
+    margin-left: 0 !important;
+    padding-left: var(--definition-sidebar-rail-width) !important;
+    transition: padding-left 0.18s ease !important;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail .sb-topnav .navbar-brand {
+    display: flex;
+    width: var(--definition-sidebar-rail-width) !important;
+    flex: 0 0 var(--definition-sidebar-rail-width) !important;
+    align-items: center;
+    justify-content: center;
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail .sb-topnav .navbar-brand img {
+    width: 58px !important;
+    max-width: 58px !important;
+    object-fit: contain;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .sb-sidenav-menu {
+    overflow-x: hidden !important;
+    scrollbar-width: none;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail
+    #layoutSidenav_nav
+    .sb-sidenav-menu::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .sb-sidenav-menu .nav {
+    width: 100%;
+    align-items: center;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail
+    #layoutSidenav_nav
+    .sb-sidenav-menu
+    > .nav
+    > [id] {
+    width: 100%;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .sb-sidenav-menu-heading,
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .menu-group-title,
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .sb-sidenav-collapse-arrow,
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .sb-sidenav-footer {
+    display: none !important;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .nav-link {
+    display: flex;
+    width: 44px;
+    min-width: 44px;
+    height: 40px;
+    flex: 0 0 40px;
+    align-items: center;
+    justify-content: center;
+    margin: 3px auto !important;
+    padding: 0 !important;
+    overflow: hidden;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    color: transparent !important;
+    font-size: 0 !important;
+    white-space: nowrap;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .nav-link:hover,
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .nav-link.active {
+    border-color: #d6e5f4;
+    background: #eaf4fd;
+    box-shadow: 0 3px 9px rgba(0, 123, 255, 0.08);
+  }
+
+  body.definition-admin-page.definition-sidebar-rail
+    #layoutSidenav_nav
+    .nav-link
+    .sb-nav-link-icon {
+    display: flex;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    margin: 0 !important;
+    color: #007bff !important;
+    font-size: 14px !important;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail
+    #layoutSidenav_nav
+    .nav-link
+    .sb-nav-link-icon
+    i,
+  body.definition-admin-page.definition-sidebar-rail
+    #layoutSidenav_nav
+    .nav-link
+    .sb-nav-link-icon
+    svg {
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    font-size: 17px !important;
+    line-height: 1 !important;
+    text-align: center;
+  }
+
+  /* Older submenu links have a direct icon instead of an icon wrapper. */
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .nav-link > i,
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .nav-link > svg {
+    width: 20px !important;
+    flex: 0 0 20px;
+    margin: 0 !important;
+    color: #007bff !important;
+    font-size: 17px !important;
+    line-height: 1 !important;
+    text-align: center;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .sb-sidenav-menu-nested {
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .collapse,
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .collapsing {
+    width: 100%;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .collapse:not(.show) {
+    display: none !important;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .collapse.show {
+    display: block;
+    background: #eef5fc;
+    border-radius: 10px;
+  }
+
+  body.definition-admin-page.definition-sidebar-rail #layoutSidenav_nav .nav-link:focus-visible {
+    outline: 2px solid #007bff;
+    outline-offset: 1px;
+  }
+
+  html.ar-lang body.definition-admin-page #layoutSidenav_nav .nav-link {
+    text-align: right;
+  }
+
+  html.ar-lang body.definition-admin-page #layoutSidenav #layoutSidenav_nav {
+    right: 0 !important;
+    left: auto !important;
+  }
+
+  html.ar-lang
+    body.definition-admin-page.definition-sidebar-open
+    #layoutSidenav
+    #layoutSidenav_content {
+    padding-right: var(--definition-sidebar-open-width) !important;
+    padding-left: 0 !important;
+  }
+
+  html.ar-lang
+    body.definition-admin-page.definition-sidebar-rail
+    #layoutSidenav
+    #layoutSidenav_content {
+    padding-right: var(--definition-sidebar-rail-width) !important;
+    padding-left: 0 !important;
+  }
+}
+
+.definition-sidebar-tooltip {
+  position: fixed;
+  z-index: 10050;
+  max-width: 260px;
+  padding: 7px 10px;
+  border: 1px solid rgba(30, 64, 175, 0.15);
+  border-radius: 8px;
+  background: #163b63;
+  box-shadow: 0 8px 22px rgba(15, 42, 70, 0.22);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(2px) scale(0.98);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+  white-space: normal;
+}
+
+.definition-sidebar-tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.definition-list-page .definition-list-surface {
+  overflow: hidden;
+  border: 1px solid var(--definition-line) !important;
+  border-radius: 16px !important;
+  background: var(--definition-surface) !important;
+  box-shadow: 0 10px 30px rgba(35, 52, 73, 0.065) !important;
+}
+
+.definition-list-page .definition-list-header {
+  padding: 11px 15px !important;
+  border-bottom: 1px solid var(--definition-line) !important;
+  background: linear-gradient(135deg, #fbfdff 0%, #f2f6fb 100%) !important;
+}
+
+.definition-list-page .definition-list-header > div {
+  min-height: 38px;
+  gap: 14px;
+}
+
+.definition-list-title {
+  display: flex !important;
+  min-width: 0;
+  align-items: center !important;
+  gap: 11px;
+}
+
+.definition-list-title__icon {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--tone-line);
+  border-radius: 11px;
+  background: var(--tone-soft);
+  color: var(--tone-icon);
+  font-size: 14px;
+}
+
+.definition-list-title__copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.definition-list-title__copy h5 {
+  margin: 0 !important;
+  color: var(--definition-ink) !important;
+  font-size: 15px !important;
+  font-weight: 750 !important;
+  line-height: 1.2;
+}
+
+.definition-list-title__copy h5 > svg,
+.definition-list-title__copy h5 > i {
+  display: none;
+}
+
+.definition-list-title__copy small {
+  color: var(--definition-muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.definition-list-count {
+  display: inline-flex;
+  min-width: 26px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  margin-left: 7px;
+  padding: 0 8px;
+  border: 1px solid var(--tone-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--tone-ink);
+  font-size: 10px;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+.definition-list-page .definition-list-header a[href*="/Add" i],
+.definition-list-page .definition-list-header .btn-primary {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: 1px solid #007bff !important;
+  border-radius: 9px !important;
+  background: #007bff !important;
+  color: #fff !important;
+  font-size: 11px;
+  font-weight: 750;
+  box-shadow: 0 5px 12px rgba(0, 123, 255, 0.16);
+  text-decoration: none !important;
+}
+
+.definition-list-page .definition-list-header a[href*="/Add" i]:hover,
+.definition-list-page .definition-list-header .btn-primary:hover {
+  transform: translateY(-1px);
+  background: #0062cc !important;
+  box-shadow: 0 8px 18px rgba(0, 123, 255, 0.23);
+}
+
+/* Başlıktaki diğer aksiyonlar (aktar, dışa aktar vb.): kurumsal palete uygun
+   sakin ikincil stil — ana aksiyon (Yeni Kayıt) dolgulu mavi kalır. */
+.definition-list-page .definition-list-header .btn:not(.btn-primary):not([href*="/Add" i]) {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: 1px solid #c3dfff !important;
+  border-radius: 9px !important;
+  background: #fff !important;
+  color: #0056b3 !important;
+  font-size: 11px;
+  font-weight: 750;
+  box-shadow: 0 4px 10px rgba(45, 73, 105, 0.08);
+  text-decoration: none !important;
+}
+
+.definition-list-page .definition-list-header .btn:not(.btn-primary):not([href*="/Add" i]):hover {
+  transform: translateY(-1px);
+  border-color: #7cbaff !important;
+  background: #e8f2ff !important;
+  color: #004c94 !important;
+}
+
+/* Buton grubu sarmalayıcısı (.row vb.) düzgün hizalansın */
+.definition-list-page .definition-list-header .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+}
+
+.definition-list-page .definition-list-body {
+  padding: 10px 12px 12px !important;
+}
+
+.definition-list-page .definition-list-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--definition-line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.definition-list-page table.definition-list-table {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  color: var(--definition-ink);
+  font-size: 11px !important;
+}
+
+.definition-list-page table.definition-list-table[data-definition-density="grouped"] {
+  table-layout: auto;
+}
+
+.definition-list-page table.definition-list-table th,
+.definition-list-page table.definition-list-table td {
+  box-sizing: border-box !important;
+}
+
+.definition-list-page table.definition-list-table thead th {
+  height: 38px;
+  padding: 6px 9px !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid #dce5ef !important;
+  background: #f5f8fc !important;
+  color: #53677f !important;
+  font-size: 9.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.045em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  vertical-align: middle !important;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting,
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting_asc,
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting_desc,
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting_asc_disabled,
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting_desc_disabled {
+  padding-right: 7px !important;
+  background-image: none !important;
+}
+
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting::before,
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting_asc::before,
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting_desc::before,
+.definition-list-page
+  table.dataTable.definition-list-table
+  thead
+  > tr
+  > th.sorting_asc_disabled::before,
+.definition-list-page
+  table.dataTable.definition-list-table
+  thead
+  > tr
+  > th.sorting_desc_disabled::before {
+  display: none !important;
+}
+
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting::after,
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting_asc::after,
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting_desc::after {
+  position: static !important;
+  display: inline-flex !important;
+  margin-left: 4px;
+  opacity: 0.48;
+  font-size: 8px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting::after {
+  content: "↕" !important;
+}
+
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting_asc::after {
+  content: "↑" !important;
+  opacity: 0.9;
+}
+
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting_desc::after {
+  content: "↓" !important;
+  opacity: 0.9;
+}
+
+.definition-list-page table.dataTable.definition-list-table thead > tr > th.sorting_disabled::after,
+.definition-list-page
+  table.dataTable.definition-list-table
+  thead
+  > tr
+  > th.sorting_asc_disabled::after,
+.definition-list-page
+  table.dataTable.definition-list-table
+  thead
+  > tr
+  > th.sorting_desc_disabled::after {
+  display: none !important;
+}
+
+.definition-list-page table.definition-list-table tbody td {
+  height: 50px;
+  padding: 4px 8px !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid #edf1f5 !important;
+  background-clip: padding-box;
+  color: #33465c;
+  vertical-align: middle !important;
+}
+
+.definition-list-page
+  table.definition-list-table[data-definition-density="grouped"]
+  tbody
+  td:not(.definition-list-actions-cell) {
+  overflow: hidden;
+}
+
+/* Açık dropdown menüler kart/tablo sarmalayıcıları tarafından kırpılmasın
+   (introduction-details.js show/hidden.bs.dropdown ile bu sınıfı yönetir). */
+.definition-list-surface.definition-dropdown-open,
+.definition-list-table-wrap.definition-dropdown-open {
+  overflow: visible !important;
+}
+
+/* İşlem şeridindeki dropdown/btn-group hizası ve caret aralığı */
+.definition-list-page table.definition-list-table .definition-row-actions .dropdown,
+.definition-list-page table.definition-list-table .definition-row-actions .btn-group {
+  display: inline-flex;
+}
+
+.definition-list-page table.definition-list-table tbody tr:last-child td {
+  border-bottom: 0 !important;
+}
+
+.definition-list-page table.definition-list-table tbody tr {
+  transition:
+    background-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.definition-list-page table.definition-list-table tbody tr:hover td {
+  background-color: #f8fbfe !important;
+}
+
+.definition-list-page table.definition-list-table tbody tr:hover td:first-child {
+  box-shadow: inset 3px 0 0 #6489ac;
+}
+
+.definition-list-primary-cell {
+  min-width: 145px;
+  color: #21374d !important;
+  font-size: 11.5px;
+  font-weight: 720;
+}
+
+.definition-list-date-cell {
+  color: #6e7f94 !important;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+/* Kayıt Bilgileri sütunu artık yalnızca popover tetikleyicisini (32px ikon)
+   taşıdığı için dar ve ortalanmış durur; komşu kolonlarda boşluk bırakmaz. */
+.definition-list-audit-head {
+  width: 96px;
+  min-width: 76px;
+  text-align: center;
+}
+
+.definition-list-audit-cell {
+  text-align: center;
+}
+
+.definition-list-actions-head,
+.definition-list-actions-cell {
+  width: 1%;
+  min-width: 104px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.definition-row-actions {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+}
+
+.definition-list-page table.definition-list-table .definition-row-actions .btn,
+.definition-list-page table.definition-list-table .definition-row-actions > a,
+.definition-list-page table.definition-list-table .definition-row-actions > button {
+  display: inline-flex;
+  width: auto;
+  min-width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  border: 1px solid #d9e3ed !important;
+  border-radius: 9px !important;
+  background: #fff !important;
+  color: #526b83 !important;
+  box-shadow: none !important;
+  transition:
+    transform 0.14s ease,
+    border-color 0.14s ease,
+    background-color 0.14s ease;
+}
+
+.definition-list-page table.definition-list-table .definition-row-actions .btn:hover,
+.definition-list-page table.definition-list-table .definition-row-actions > a:hover,
+.definition-list-page table.definition-list-table .definition-row-actions > button:hover {
+  transform: translateY(-1px);
+  border-color: #afc2d5 !important;
+  background: #f3f7fb !important;
+}
+
+.definition-list-page table.definition-list-table .definition-row-actions .btn-success {
+  border-color: #cce7db !important;
+  background: var(--definition-success-soft) !important;
+  color: #2d8163 !important;
+}
+
+.definition-list-page table.definition-list-table .definition-row-actions .btn-danger,
+.definition-list-page table.definition-list-table .definition-row-actions a[href*="/Delete" i] {
+  border-color: #f0d5da !important;
+  background: var(--definition-danger-soft) !important;
+  color: #bd4657 !important;
+}
+
+.definition-list-page
+  table.definition-list-table
+  .definition-row-actions
+  .definition-detail-button {
+  width: 28px;
+  min-width: 28px;
+  padding: 0 !important;
+  border-color: #cadceb !important;
+  background: var(--definition-primary-soft) !important;
+  color: #315f87 !important;
+}
+
+.definition-list-page
+  table.definition-list-table
+  .definition-row-actions
+  .definition-detail-button
+  span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.definition-list-page table.definition-list-table .definition-row-actions .definition-icon-action {
+  width: 28px;
+  min-width: 28px;
+  padding: 0 !important;
+}
+
+/* Dişli (ayarlar) dropdown tetikleyicisi: ikon + caret birlikte tam ortalanır */
+.definition-list-page table.definition-list-table .definition-row-actions .dropdown-toggle {
+  display: inline-flex;
+  width: auto;
+  min-width: 36px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 7px !important;
+  line-height: 1;
+}
+
+.definition-list-page table.definition-list-table .definition-row-actions .dropdown-toggle i {
+  line-height: 1;
+}
+
+.definition-list-page table.definition-list-table .definition-row-actions .dropdown-toggle::after {
+  margin: 0;
+  vertical-align: 0;
+}
+
+html.ar-lang
+  .definition-list-page
+  table.dataTable.definition-list-table
+  thead
+  > tr
+  > th.sorting::after,
+html.ar-lang
+  .definition-list-page
+  table.dataTable.definition-list-table
+  thead
+  > tr
+  > th.sorting_asc::after,
+html.ar-lang
+  .definition-list-page
+  table.dataTable.definition-list-table
+  thead
+  > tr
+  > th.sorting_desc::after {
+  margin-right: 4px;
+  margin-left: 0;
+}
+
+.definition-list-page .intro-audit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 224px;
+  gap: 5px;
+  align-items: center;
+}
+
+.definition-list-page .intro-audit__row {
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 4px;
+  min-width: 0;
+}
+
+.definition-list-page .intro-audit__row--updated {
+  padding-top: 0;
+  padding-left: 5px;
+  border-top: 0;
+  border-left: 1px dashed var(--intro-line);
+}
+
+.definition-list-page .intro-audit__icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  font-size: 8px;
+}
+
+.definition-list-page .intro-audit__content {
+  line-height: 1.05;
+}
+
+.definition-list-page .intro-audit__content strong {
+  font-size: 9px;
+}
+
+.definition-list-page .intro-audit__label,
+.definition-list-page .intro-audit__content time {
+  overflow: hidden;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.definition-list-page .intro-audit__count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-size: 8px;
+}
+
+body.definition-admin-page .usr-page .intro-audit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  min-width: 0;
+}
+
+body.definition-admin-page .usr-page .intro-audit__row {
+  grid-template-columns: 21px minmax(0, 1fr) auto;
+  min-width: 0;
+  gap: 4px;
+}
+
+body.definition-admin-page .usr-page .intro-audit__row--updated {
+  padding-top: 0;
+  padding-left: 5px;
+  border-top: 0;
+  border-left: 1px dashed var(--intro-line);
+}
+
+body.definition-admin-page .usr-page .intro-audit__icon {
+  width: 21px;
+  height: 21px;
+  border-radius: 7px;
+}
+
+body.definition-admin-page .usr-page .intro-audit__content strong,
+body.definition-admin-page .usr-page .intro-audit__label,
+body.definition-admin-page .usr-page .intro-audit__content time {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.definition-admin-page .usr-page .intro-audit__content strong {
+  font-size: 9px;
+}
+
+body.definition-admin-page .usr-page .intro-audit__label,
+body.definition-admin-page .usr-page .intro-audit__content time {
+  font-size: 7px;
+}
+
+body.definition-admin-page .usr-page .intro-audit__count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-size: 8px;
+}
+
+@media (min-width: 1200px) {
+  body.definition-admin-page .usr-page #userGrid > .usr-item {
+    flex: 0 0 25%;
+    max-width: 25%;
+  }
+}
+
+.definition-cell-stack {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  line-height: 1.08;
+}
+
+.definition-cell-stack > span,
+.definition-cell-stack > small,
+.definition-cell-stack > strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.definition-cell-stack > strong {
+  color: #233b53;
+  font-size: 10.5px;
+}
+
+.definition-cell-stack > span {
+  color: #526b84;
+  font-size: 9px;
+}
+
+.definition-cell-stack > small {
+  color: #8290a1;
+  font-size: 7.5px;
+}
+
+.definition-cell-label {
+  margin-right: 3px;
+  color: #8996a6;
+  font-size: 7px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.definition-list-page .customer-traceability-button {
+  display: inline-flex !important;
+  width: 28px !important;
+  min-width: 28px !important;
+  height: 28px !important;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  padding: 0 !important;
+  border-radius: 7px !important;
+  font-size: 10px !important;
+  line-height: 1;
+}
+
+.definition-list-page .customer-traceability-button i {
+  margin: 0 !important;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.definition-list-page .dataTables_wrapper .row:first-child,
+.definition-list-page .dataTables_wrapper .row:last-child {
+  align-items: center;
+  margin: 0;
+  padding: 0 2px 12px;
+}
+
+.definition-list-page .dataTables_wrapper .row:last-child {
+  padding: 12px 2px 0;
+}
+
+.definition-list-page .dataTables_length label,
+.definition-list-page .dataTables_filter label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: #77879a;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.definition-list-page .dataTables_filter label {
+  justify-content: flex-end;
+}
+
+.definition-list-page .dataTables_filter input,
+.definition-list-page .dataTables_length select {
+  height: 32px;
+  border: 1px solid #d8e2ec !important;
+  border-radius: 9px !important;
+  background: #f8fafc !important;
+  color: #31475e;
+  font-size: 11px;
+  box-shadow: none !important;
+}
+
+.definition-list-page .dataTables_filter input {
+  min-width: 220px;
+  padding: 6px 12px;
+}
+
+.definition-list-page .dataTables_filter input:focus,
+.definition-list-page .dataTables_length select:focus {
+  border-color: #86a8c7 !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.16) !important;
+}
+
+.definition-list-page .dataTables_info {
+  color: #7a899b !important;
+  font-size: 10px;
+}
+
+.definition-list-page .pagination {
+  gap: 4px;
+  margin: 0 !important;
+}
+
+.definition-list-page .page-item .page-link {
+  min-width: 29px;
+  height: 29px;
+  padding: 5px 7px;
+  border: 1px solid #dce4ed;
+  border-radius: 8px !important;
+  color: #56718d;
+  font-size: 10px;
+  text-align: center;
+}
+
+.definition-list-page .definition-list-audit {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 224px;
+  gap: 5px;
+  margin: 0;
+}
+
+.definition-list-page .definition-list-audit > span {
+  grid-template-columns: 17px minmax(0, 1fr) auto;
+  gap: 4px;
+  line-height: 1.05;
+}
+
+.definition-list-page .definition-list-audit > span + span {
+  padding-left: 5px;
+  border-left: 1px dashed var(--definition-line);
+}
+
+.definition-list-page .definition-list-audit > span i {
+  grid-row: 1 / 3;
+}
+
+.definition-list-page .definition-list-audit > span b {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.definition-list-page .definition-list-audit > span small {
+  grid-column: 2;
+  grid-row: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.definition-list-page .definition-list-audit > span em {
+  grid-column: 3;
+  grid-row: 1 / 3;
+}
+
+.definition-list-page .definition-list-audit b {
+  font-size: 9px;
+}
+
+.definition-list-page .definition-list-audit small,
+.definition-list-page .definition-list-audit i {
+  font-size: 7.5px;
+}
+
+.definition-list-page .definition-list-audit em {
+  min-width: 18px;
+  padding: 1px 4px;
+  font-size: 8px;
+}
+
+.definition-list-page .page-item.active .page-link {
+  border-color: #007bff;
+  background: #007bff;
+  color: #fff;
+}
+
+.definition-list-page .dataTables_empty {
+  height: 150px !important;
+  color: #8291a3 !important;
+  font-size: 11px;
+  text-align: center !important;
+}
+
+@media (max-width: 767.98px) {
+  .definition-list-page .definition-list-header {
+    padding: 13px !important;
+  }
+
+  .definition-list-page .definition-list-header > div {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  .definition-list-page .definition-list-header a[href*="/Add" i],
+  .definition-list-page .definition-list-header .btn {
+    width: 100%;
+  }
+
+  .definition-list-page .definition-list-body {
+    padding: 10px !important;
+  }
+
+  .definition-list-page .dataTables_wrapper .row:first-child > div,
+  .definition-list-page .dataTables_wrapper .row:last-child > div {
+    margin-top: 8px;
+  }
+
+  .definition-list-page .dataTables_filter label,
+  .definition-list-page .dataTables_filter input {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .definition-list-page main > .container-fluid {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .definition-list-page .definition-list-table-wrap {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .definition-list-page table.definition-list-table,
+  .definition-list-page table.definition-list-table tbody {
+    display: block;
+    width: 100% !important;
+  }
+
+  .definition-list-page table.definition-list-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    border: 0;
+  }
+
+  .definition-list-page table.definition-list-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    margin-bottom: 8px;
+    overflow: hidden;
+    border: 1px solid var(--definition-line);
+    border-radius: 11px;
+    background: #fff;
+    box-shadow: 0 3px 12px rgba(35, 52, 73, 0.045);
+  }
+
+  .definition-list-page table.definition-list-table tbody td {
+    display: grid;
+    grid-template-columns: minmax(72px, 0.42fr) minmax(0, 1fr);
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto;
+    min-height: 38px;
+    gap: 7px;
+    align-items: center;
+    padding: 6px 8px !important;
+    border-right: 1px solid #edf1f5;
+    white-space: normal;
+  }
+
+  .definition-list-page table.definition-list-table tbody td::before {
+    content: attr(data-label);
+    color: #7c8b9d;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+  }
+
+  .definition-list-page table.definition-list-table tbody td.definition-list-audit-cell,
+  .definition-list-page table.definition-list-table tbody td.definition-list-actions-cell {
+    grid-column: 1 / -1;
+  }
+
+  .definition-list-page .intro-audit,
+  .definition-list-page .definition-list-audit {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .definition-list-page .definition-row-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .definition-list-page table.definition-list-table tbody tr {
+    grid-template-columns: 1fr;
+  }
+
+  .definition-list-page table.definition-list-table tbody td,
+  .definition-list-page table.definition-list-table tbody td.definition-list-audit-cell,
+  .definition-list-page table.definition-list-table tbody td.definition-list-actions-cell {
+    grid-column: 1;
+  }
+}

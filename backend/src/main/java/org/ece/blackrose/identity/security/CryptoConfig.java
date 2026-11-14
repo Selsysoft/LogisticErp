@@ -23,6 +23,7 @@ public class CryptoConfig {
 
   public static final String ISSUER = "blackrose";
   private static final String TOTP_SALT_HEX = "5c0744940b5c369b";
+  private static final String EDOC_SALT_HEX = "a3e19d0f6b2c7458";
 
   @Bean
   SecretKey jwtKey(SecurityProperties properties) {
@@ -51,5 +52,11 @@ public class CryptoConfig {
   @Bean
   TextEncryptor totpEncryptor(SecurityProperties properties) {
     return Encryptors.delux(properties.totpKey(), TOTP_SALT_HEX);
+  }
+
+  /** Şirket e-belge entegratörü şifresi (aynı anahtar, ayrı tuz). */
+  @Bean
+  TextEncryptor edocumentSecretEncryptor(SecurityProperties properties) {
+    return Encryptors.delux(properties.totpKey(), EDOC_SALT_HEX);
   }
 }

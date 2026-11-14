@@ -57,7 +57,7 @@ import {
 export type ZtoButtonKind = "copy" | "excel" | "pdf" | "print";
 
 /** DataTables Buttons yapılandırmasının karşılığı ({ extend, text, className, title }). */
-export interface ZtoButtonConfig {
+export type ZtoButtonConfig = {
   extend: ZtoButtonKind;
   /** ZTO: <><i className="fa fa-copy" /> Kopyala</>; verilmezse Türkçe varsayılan. */
   text?: ReactNode;
@@ -65,11 +65,11 @@ export interface ZtoButtonConfig {
   className?: string;
   /** Bu düğme için dışa aktarım başlığı. */
   title?: string;
-}
+};
 
 export type ZtoButton = ZtoButtonKind | ZtoButtonConfig;
 
-export interface ZtoDataTableProps<T> {
+export type ZtoDataTableProps<T> = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack sütun değer tipleri karışık
   columns: ColumnDef<T, any>[];
   data: T[];
@@ -133,7 +133,21 @@ export interface ZtoDataTableProps<T> {
   onStateChange?: (state: DataTableState) => void;
   /** Arama gecikmesi (ms); varsayılan istemci 0, sunucu 400 (DataTables searchDelay). */
   searchDelay?: number;
-}
+  /**
+   * Arama kutusunun placeholder'ı ve aria-label'ı (ZTO introduction-details.js:425-427 tanım
+   * listelerinde "Listede ara..." yazar). Verilmezse placeholder boş, aria-label yok.
+   */
+  searchPlaceholder?: string;
+  /** Sayfa uzunluğu select'inin aria-label'ı (introduction-details.js:429-431). */
+  lengthAriaLabel?: string;
+  /**
+   * true: her gövde td'sine sütun başlığının metni data-label olarak yazılır
+   * (introduction-details.js:398; definition-list.css dar ekranda td::before ile gösterir).
+   */
+  cellDataLabel?: boolean;
+  /** table öğesine data-* nitelikleri (ör. { "data-definition-density": "standard" }). */
+  tableDataAttributes?: Record<`data-${string}`, string>;
+};
 
 const BUTTON_CLASSES: Record<ZtoButtonKind, string> = {
   copy: "buttons-copy buttons-html5",
@@ -210,6 +224,10 @@ export function ZtoDataTable<T>({
   recordsFiltered,
   onStateChange,
   searchDelay,
+  searchPlaceholder,
+  lengthAriaLabel,
+  cellDataLabel = false,
+  tableDataAttributes,
 }: ZtoDataTableProps<T>) {
   const { t } = useTranslation("ztoFinans");
   const portal = useZtoOverlayContainer();
@@ -462,15 +480,18 @@ export function ZtoDataTable<T>({
       >
         {row.getVisibleCells().map((cell) => {
           const sortIndex = ordering ? cell.column.getSortIndex() : -1;
+          const meta = cell.column.columnDef.meta;
           return (
             <td
               key={cell.id}
               className={
                 cx(
-                  cell.column.columnDef.meta?.className,
+                  meta?.className,
+                  meta?.cellClassName,
                   sortIndex >= 0 && `sorting_${Math.min(sortIndex + 1, 3)}`,
                 ) || undefined
               }
+              data-label={cellDataLabel ? columnHeaderText(cell.column).trim() : undefined}
             >
               {flexRender(cell.column.columnDef.cell, cell.getContext())}
             </td>
@@ -489,6 +510,7 @@ export function ZtoDataTable<T>({
         role="grid"
         aria-describedby={info ? `${tableId}_info` : undefined}
         style={tableStyle}
+        {...tableDataAttributes}
       >
         <thead>
           {headerGroups.map((group) => (
@@ -564,6 +586,7 @@ export function ZtoDataTable<T>({
                 name={`${tableId}_length`}
                 aria-controls={tableId}
                 className="custom-select custom-select-sm form-control form-control-sm"
+                aria-label={lengthAriaLabel}
                 value={length}
                 onChange={(e) => changeLength(Number(e.target.value))}
               >
@@ -586,7 +609,8 @@ export function ZtoDataTable<T>({
               <input
                 type="search"
                 className="form-control form-control-sm"
-                placeholder=""
+                placeholder={searchPlaceholder ?? ""}
+                aria-label={searchPlaceholder}
                 aria-controls={tableId}
                 value={searchInput}
                 onChange={(e) => {

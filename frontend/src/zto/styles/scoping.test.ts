@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import postcss from "postcss";
@@ -109,6 +109,9 @@ describe("zto-finans.css giriş sırası (ZTO _ExpertLayout ile birebir)", () =>
       (m) => m[1],
     );
     expect(imports).toEqual([
+      "./pages/introduction-audit.css",
+      "./pages/definition-list.css",
+      "./pages/definition-form.css",
       "./vendor/layout.css",
       "./vendor/sb-admin-6.0.0-styles.css",
       "./vendor/dataTables.bootstrap4.min.css",
@@ -120,6 +123,38 @@ describe("zto-finans.css giriş sırası (ZTO _ExpertLayout ile birebir)", () =>
       "./vendor/select2-bootstrap.min.css",
       "./zto-overrides.css",
     ]);
+  });
+
+  it("tanım CSS'leri ZTO _Layout.cshtml:31-33 sırasıyla vendor/layout.css'ten önce", () => {
+    const imports = Array.from(
+      read("zto-finans.css").matchAll(/^@import "([^"]+)";/gm),
+      (m) => m[1],
+    );
+    const at = (name: string) => imports.findIndex((i) => i.includes(name));
+    expect(at("introduction-audit")).toBeGreaterThanOrEqual(0);
+    expect(at("introduction-audit")).toBeLessThan(at("definition-list"));
+    expect(at("definition-list")).toBeLessThan(at("definition-form"));
+    expect(at("definition-form")).toBeLessThan(at("vendor/layout.css"));
+    // Uyumsoft ayar stili ZTO'da gövde içi <style>: sayfa stilleriyle _index.css'te.
+    expect(read("pages/_index.css")).toContain('@import "./uyumsoft-settings.css";');
+    expect(read("pages/_index.css")).not.toMatch(/@import "[^"]*definition-/);
+  });
+
+  it("sayfa CSS'lerinde Razor kaçışı (@@) kalmadı", () => {
+    const files = readdirSync(join(STYLES_DIR, "pages")).filter((f) => f.endsWith(".css"));
+    expect(files).toEqual(expect.arrayContaining(["uyumsoft-settings.css", "definition-list.css"]));
+    const withEscape = files.filter((f) => read(`pages/${f}`).includes("@@"));
+    expect(withEscape).toEqual([]);
+    expect(read("pages/uyumsoft-settings.css")).toMatch(/@media \(max-width: 640px\)/);
+  });
+
+  it("tanım CSS'i kapsamlanır: body.definition-list-page kökün kendisine bağlanır", async () => {
+    const css = await scope(read("pages/definition-list.css"));
+    expect(css).toContain(".zto-finans.definition-list-page main");
+    expect(css).toContain(".zto-finans .definition-list-page table.definition-list-table");
+    const overrides = await scope(read("zto-overrides.css"));
+    expect(overrides).toContain(".zto-finans .definition-row--inactive td");
+    expect(overrides).toContain(".zto-finans.definition-list-page .zto-finans-content");
   });
 
   it("layout satır içi stili kapsamlanır: input-group içinde select2 ve kompakt nav-tabs", async () => {

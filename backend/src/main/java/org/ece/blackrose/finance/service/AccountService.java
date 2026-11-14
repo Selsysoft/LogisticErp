@@ -26,6 +26,8 @@ import org.ece.blackrose.finance.web.FinanceDtos.ManualAccountTransactionRequest
 import org.ece.blackrose.finance.web.FinanceDtos.SaveAccountRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.StatementLine;
 import org.ece.blackrose.finance.web.FinanceDtos.StatementResponse;
+import org.ece.blackrose.organization.BranchFilter;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -39,33 +41,40 @@ public class AccountService {
   private final AccountTransactionRepository transactions;
   private final LedgerService ledger;
   private final OpeningInvoiceImportService openingInvoices;
+  private final BranchScopeService scope;
 
   public AccountService(
       AccountRepository accounts,
       AccountTransactionRepository transactions,
       LedgerService ledger,
-      OpeningInvoiceImportService openingInvoices) {
+      OpeningInvoiceImportService openingInvoices,
+      BranchScopeService scope) {
+    this.scope = scope;
     this.openingInvoices = openingInvoices;
     this.accounts = accounts;
     this.transactions = transactions;
     this.ledger = ledger;
   }
 
-  /** Sayfa başına tek bakiye sorgusu çalışır; hesap başına sorgu yapılmaz. */
+  /**
+   * Sayfa başına tek bakiye sorgusu çalışır; hesap başına sorgu yapılmaz. Kart listesi ortaktır
+   * (süzülmez); bakiyeler şirkete göre (boş = konsolide).
+   */
   @Transactional(readOnly = true)
-  public PageResponse<AccountResponse> list(String search, Pageable pageable) {
+  public PageResponse<AccountResponse> list(String search, UUID companyId, Pageable pageable) {
     String term = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
     Page<Account> page = accounts.search(term, pageable);
     Map<UUID, List<BalanceResponse>> balances =
-        balancesOf(page.getContent().stream().map(Account::getId).toList());
+        balancesOf(page.getContent().stream().map(Account::getId).toList(), filter(companyId));
     return PageResponse.from(
         page, account -> toResponse(account, balances.getOrDefault(account.getId(), List.of())));
   }
 
   @Transactional(readOnly = true)
-  public AccountResponse get(UUID id) {
+  public AccountResponse get(UUID id, UUID companyId) {
     Account account = find(id);
-    return toResponse(account, balancesOf(List.of(id)).getOrDefault(id, List.of()));
+    return toResponse(
+        account, balancesOf(List.of(id), filter(companyId)).getOrDefault(id, List.of()));
   }
 
   @Transactional
@@ -88,8 +97,9 @@ public class AccountService {
   @Transactional
   public AccountResponse update(UUID id, SaveAccountRequest request) {
     Account account = find(id);
+    scope.requireForUpdate(request.branchId(), account.getBranchId());
     account.update(request.name(), request.type(), request.taxNumber(), request.branchId());
-    return toResponse(account, balancesOf(List.of(id)).getOrDefault(id, List.of()));
+    return toResponse(account, balancesOf(List.of(id), filter(null)).getOrDefault(id, List.of()));
   }
 
   @Transactional
@@ -128,6 +138,7 @@ public class AccountService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "TRANSACTION_NOT_FOUND", "Hareket bulunamadı."));
+    scope.requireVisible(original.getBranchId());
     // Açılış faturası geri alınınca bağlı ödeme planı da iptal olur.
     if (OpeningInvoiceImportService.SOURCE.equals(original.getSourceType())) {
       return openingInvoices.reverse(original, date, description);
@@ -145,11 +156,17 @@ public class AccountService {
 
   @Transactional(readOnly = true)
   public StatementResponse statement(
-      UUID accountId, String currency, LocalDate from, LocalDate to, Pageable pageable) {
+      UUID accountId,
+      String currency,
+      LocalDate from,
+      LocalDate to,
+      UUID companyId,
+      Pageable pageable) {
     find(accountId);
-    BigDecimal opening = transactions.balanceBefore(accountId, currency, from);
+    BranchFilter filter = filter(companyId);
+    BigDecimal opening = transactions.balanceBefore(accountId, currency, from, filter);
     Page<AccountStatementRow> page =
-        transactions.statement(accountId, currency, from, to, pageable);
+        transactions.statement(accountId, currency, from, to, filter, pageable);
     List<StatementLine> lines =
         page.getContent().stream()
             .map(
@@ -177,17 +194,24 @@ public class AccountService {
 
   /**
    * Açık bakiyeyi vadesiz eskitme: karşı yöndeki hareketler en eski açık kalemleri kapatır, kalan
-   * kalemler işlem tarihine göre dilimlere ayrılır.
+   * kalemler işlem tarihine göre dilimlere ayrılır. Eşleştirme şirket kırılımlıdır (konsolidede
+   * de); grup şirketi carileri konsolidede {@code excludeIntercompany} ile dışlanır, şirket
+   * seçiliyken her zaman görünür.
    */
   @Transactional(readOnly = true)
-  public List<AgingResponse> aging(AgingType type, LocalDate asOf) {
+  public List<AgingResponse> aging(
+      AgingType type, LocalDate asOf, UUID companyId, boolean excludeIntercompany) {
     String openDirection = type == AgingType.RECEIVABLE ? "DEBIT" : "CREDIT";
     Collection<String> types =
         type == AgingType.RECEIVABLE
-            ? List.of(AccountType.CUSTOMER.name())
-            : List.of(AccountType.SUPPLIER.name(), AccountType.CARRIER.name());
+            ? List.of(AccountType.CUSTOMER.name(), AccountType.INTERCOMPANY.name())
+            : List.of(
+                AccountType.SUPPLIER.name(),
+                AccountType.CARRIER.name(),
+                AccountType.INTERCOMPANY.name());
+    boolean exclude = companyId == null && excludeIntercompany;
 
-    return transactions.agingRows(asOf, openDirection, types).stream()
+    return transactions.agingRows(asOf, openDirection, types, filter(companyId), exclude).stream()
         .map(
             row ->
                 new AgingResponse(
@@ -205,11 +229,11 @@ public class AccountService {
         .toList();
   }
 
-  private Map<UUID, List<BalanceResponse>> balancesOf(Collection<UUID> ids) {
+  private Map<UUID, List<BalanceResponse>> balancesOf(Collection<UUID> ids, BranchFilter filter) {
     if (ids.isEmpty()) {
       return Map.of();
     }
-    return transactions.balances(ids).stream()
+    return transactions.balances(ids, filter).stream()
         .collect(
             Collectors.groupingBy(
                 BalanceRow::getAccountId,
@@ -222,6 +246,11 @@ public class AccountService {
                             row.getDebit().subtract(row.getCredit()),
                             row.getTlBalance()),
                     Collectors.toList())));
+  }
+
+  /** Şirket süzgeci (boş = konsolide) ve kullanıcının iş yeri kapsamı. */
+  private BranchFilter filter(UUID companyId) {
+    return scope.filter(companyId, null);
   }
 
   private Account find(UUID id) {
@@ -241,6 +270,8 @@ public class AccountService {
         account.getType(),
         account.getTaxNumber(),
         account.getBranchId(),
+        account.getCompanyId(),
+        account.getRepresentsCompanyId(),
         balances);
   }
 }

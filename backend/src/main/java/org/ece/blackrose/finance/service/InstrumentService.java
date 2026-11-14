@@ -21,6 +21,8 @@ import org.ece.blackrose.finance.service.FundLedgerService.FundPosting;
 import org.ece.blackrose.finance.service.LedgerService.Posting;
 import org.ece.blackrose.finance.web.FinanceDtos.InstrumentTransitionRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.NewInstrument;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyResolver;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -54,13 +56,19 @@ public class InstrumentService {
   private final LedgerService ledger;
   private final FundLedgerService fundLedger;
   private final FundService funds;
+  private final CompanyResolver companies;
+  private final BranchScopeService scope;
 
   public InstrumentService(
       InstrumentRepository instruments,
       InstrumentMovementRepository movements,
       LedgerService ledger,
       FundLedgerService fundLedger,
-      FundService funds) {
+      FundService funds,
+      CompanyResolver companies,
+      BranchScopeService scope) {
+    this.scope = scope;
+    this.companies = companies;
     this.instruments = instruments;
     this.movements = movements;
     this.ledger = ledger;
@@ -69,12 +77,13 @@ public class InstrumentService {
   }
 
   @Transactional(readOnly = true)
-  public Page<Instrument> list(InstrumentStatus status, Pageable pageable) {
-    return instruments.search(status, pageable);
+  public Page<Instrument> list(InstrumentStatus status, UUID companyId, Pageable pageable) {
+    return instruments.search(status, scope.filter(companyId, null), pageable);
   }
 
   @Transactional(readOnly = true)
   public List<InstrumentMovement> history(UUID id) {
+    instruments.findById(id).ifPresent(found -> scope.requireVisible(found.getBranchId()));
     return movements.findByInstrumentIdAndDeletedFalseOrderByCreatedAt(id);
   }
 
@@ -102,6 +111,7 @@ public class InstrumentService {
                 data.bankName(),
                 accountId,
                 branchId,
+                companies.companyOf(branchId),
                 money,
                 data.dueDate(),
                 initial));
@@ -109,10 +119,19 @@ public class InstrumentService {
     return instrument;
   }
 
-  /** Ciro yalnız ödeme kaydıyla olur; böylece çek ile tedarikçi ödemesi her zaman eşleşir. */
+  /**
+   * Ciro yalnız ödeme kaydıyla olur; böylece çek ile tedarikçi ödemesi her zaman eşleşir. Çek,
+   * ödemeyi yapan şirketin portföyünde olmalıdır.
+   */
   @Transactional
-  public Instrument endorse(UUID id, UUID supplierId, Money money, LocalDate date) {
+  public Instrument endorse(UUID id, UUID supplierId, UUID companyId, Money money, LocalDate date) {
     Instrument instrument = lock(id);
+    // Türetilmiş akış: yalnız kapsam (pasif iş yerindeki çek de cirolanabilir).
+    scope.requireVisible(instrument.getBranchId());
+    if (!instrument.getCompanyId().equals(companyId)) {
+      throw new BusinessException(
+          HttpStatus.UNPROCESSABLE_ENTITY, "COMPANY_MISMATCH", "Çek başka şirketin portföyünde.");
+    }
     ensureAllowed(instrument, InstrumentStatus.ENDORSED);
     if (!instrument.getMoney().equals(money)) {
       throw new BusinessException(
@@ -128,6 +147,7 @@ public class InstrumentService {
   @Transactional
   public Instrument transition(UUID id, InstrumentTransitionRequest request) {
     Instrument instrument = lock(id);
+    scope.requireVisible(instrument.getBranchId());
     InstrumentStatus target = request.toStatus();
     ensureAllowed(instrument, target);
     if (target == InstrumentStatus.ENDORSED) {
@@ -260,6 +280,12 @@ public class InstrumentService {
           HttpStatus.BAD_REQUEST,
           "CURRENCY_MISMATCH",
           "Hesabın para birimi çek/senetle aynı olmalıdır.");
+    }
+    if (!fund.getCompanyId().equals(instrument.getCompanyId())) {
+      throw new BusinessException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          "COMPANY_MISMATCH",
+          "Kasa/banka hesabı çekin şirketine ait değil.");
     }
     return fundId;
   }

@@ -23,6 +23,8 @@ public class Plan extends AuditableEntity {
   private Integer maxUsers;
   private Integer maxVehicles;
   private Integer maxShipmentsMonth;
+  private Integer maxCompanies;
+  private Integer maxBranches;
   private boolean active;
 
   protected Plan() {}
@@ -39,6 +41,8 @@ public class Plan extends AuditableEntity {
       Integer maxUsers,
       Integer maxVehicles,
       Integer maxShipmentsMonth,
+      Integer maxCompanies,
+      Integer maxBranches,
       boolean active) {
     this.name = name;
     this.monthlyPrice = monthlyPrice;
@@ -46,6 +50,8 @@ public class Plan extends AuditableEntity {
     this.maxUsers = maxUsers;
     this.maxVehicles = maxVehicles;
     this.maxShipmentsMonth = maxShipmentsMonth;
+    this.maxCompanies = maxCompanies;
+    this.maxBranches = maxBranches;
     this.active = active;
   }
 
@@ -54,6 +60,8 @@ public class Plan extends AuditableEntity {
       case USERS -> maxUsers;
       case VEHICLES -> maxVehicles;
       case SHIPMENTS_MONTH -> maxShipmentsMonth;
+      case COMPANIES -> maxCompanies;
+      case BRANCHES -> maxBranches;
     };
   }
 
@@ -91,6 +99,14 @@ public class Plan extends AuditableEntity {
 
   public Integer getMaxShipmentsMonth() {
     return maxShipmentsMonth;
+  }
+
+  public Integer getMaxCompanies() {
+    return maxCompanies;
+  }
+
+  public Integer getMaxBranches() {
+    return maxBranches;
   }
 
   public boolean isActive() {

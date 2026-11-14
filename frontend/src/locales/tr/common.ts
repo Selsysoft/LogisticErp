@@ -9,4 +9,6 @@ export default {
   required: "Bu alan zorunlu.",
   invalidEmail: "Geçerli bir e-posta girin.",
   invalidAmount: "Geçerli bir tutar girin. Örnek: 1250,50",
+  activeCompany: "Aktif şirket",
+  consolidated: "Tüm şirketler (konsolide)",
 };

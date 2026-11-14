@@ -30,7 +30,7 @@ public final class SaasDtos {
     CRITICAL
   }
 
-  public record Usage(int users, int vehicles, int shipmentsMonth) {}
+  public record Usage(int users, int vehicles, int shipmentsMonth, int companies, int branches) {}
 
   public record LimitUsage(
       LimitedResource resource, int used, Integer limit, boolean warning, boolean reached) {}
@@ -43,6 +43,8 @@ public final class SaasDtos {
       @Min(1) Integer maxUsers,
       @Min(1) Integer maxVehicles,
       @Min(1) Integer maxShipmentsMonth,
+      @Min(1) Integer maxCompanies,
+      @Min(1) Integer maxBranches,
       boolean active) {}
 
   @Schema(name = "SaasPlanResponse")
@@ -55,6 +57,8 @@ public final class SaasDtos {
       Integer maxUsers,
       Integer maxVehicles,
       Integer maxShipmentsMonth,
+      Integer maxCompanies,
+      Integer maxBranches,
       boolean active) {}
 
   public record ChangePlanRequest(@NotNull UUID planId) {}

@@ -13,6 +13,8 @@ import org.ece.blackrose.finance.repository.FinanceRepositories.PurchaseInvoiceR
 import org.ece.blackrose.finance.service.LedgerService.Posting;
 import org.ece.blackrose.finance.web.FinanceDtos.CreatePlanRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.CreatePurchaseInvoiceRequest;
+import org.ece.blackrose.organization.BranchScopeService;
+import org.ece.blackrose.organization.CompanyResolver;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -28,13 +30,19 @@ public class PurchaseInvoiceService {
   private final PurchaseInvoiceRepository invoices;
   private final PaymentPlanRepository planRepository;
   private final PaymentPlanService plans;
+  private final CompanyResolver companies;
   private final LedgerService ledger;
+  private final BranchScopeService scope;
 
   public PurchaseInvoiceService(
       PurchaseInvoiceRepository invoices,
       PaymentPlanRepository planRepository,
       PaymentPlanService plans,
-      LedgerService ledger) {
+      LedgerService ledger,
+      CompanyResolver companies,
+      BranchScopeService scope) {
+    this.scope = scope;
+    this.companies = companies;
     this.invoices = invoices;
     this.planRepository = planRepository;
     this.plans = plans;
@@ -42,8 +50,8 @@ public class PurchaseInvoiceService {
   }
 
   @Transactional(readOnly = true)
-  public Page<PurchaseInvoice> list(Pageable pageable) {
-    return invoices.findAll(pageable);
+  public Page<PurchaseInvoice> list(UUID companyId, Pageable pageable) {
+    return invoices.search(scope.filter(companyId, null), pageable);
   }
 
   @Transactional
@@ -56,11 +64,13 @@ public class PurchaseInvoiceService {
       throw new BusinessException(
           HttpStatus.CONFLICT, "INVOICE_NUMBER_TAKEN", "Bu fatura zaten kayıtlı.");
     }
+    UUID companyId = companies.companyOf(request.branchId());
     PurchaseInvoice invoice =
         invoices.save(
             new PurchaseInvoice(
                 request.accountId(),
                 request.branchId(),
+                companyId,
                 request.number(),
                 request.invoiceDate(),
                 request.dueDate(),
@@ -99,6 +109,7 @@ public class PurchaseInvoiceService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", "Fatura bulunamadı."));
+    scope.requireVisible(invoice.getBranchId());
     if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
       return invoice;
     }

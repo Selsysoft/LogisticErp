@@ -64,6 +64,7 @@ import org.ece.blackrose.finance.web.FinanceDtos.ThresholdResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.TransferRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.TransferResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.UpdateFundRequest;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -102,6 +103,7 @@ public class FinanceController {
   private final ExchangeRateRepository rates;
   private final RateRefresher rateRefresher;
   private final FinanceMapper mapper;
+  private final BranchScopeService scope;
 
   public FinanceController(
       AccountService accounts,
@@ -115,7 +117,9 @@ public class FinanceController {
       CurrencyRepository currencies,
       ExchangeRateRepository rates,
       RateRefresher rateRefresher,
-      FinanceMapper mapper) {
+      FinanceMapper mapper,
+      BranchScopeService scope) {
+    this.scope = scope;
     this.accounts = accounts;
     this.funds = funds;
     this.instruments = instruments;
@@ -135,20 +139,26 @@ public class FinanceController {
   @GetMapping("/accounts")
   @PreAuthorize(VIEW)
   PageResponse<AccountResponse> listAccounts(
-      @RequestParam(required = false) String search, Pageable pageable) {
-    return accounts.list(search, pageable);
+      @RequestParam(required = false) String search,
+      @RequestParam(required = false) UUID companyId,
+      Pageable pageable) {
+    return accounts.list(search, companyId, pageable);
   }
 
   @GetMapping("/accounts/{id}")
   @PreAuthorize(VIEW)
-  AccountResponse getAccount(@PathVariable UUID id) {
-    return accounts.get(id);
+  AccountResponse getAccount(
+      @PathVariable UUID id, @RequestParam(required = false) UUID companyId) {
+    return accounts.get(id, companyId);
   }
 
   @PostMapping("/accounts")
   @ResponseStatus(HttpStatus.CREATED)
   @PreAuthorize(MANAGE)
   AccountResponse createAccount(@Valid @RequestBody SaveAccountRequest request) {
+    if (request.branchId() != null) {
+      scope.requireNew(request.branchId());
+    }
     return accounts.create(request);
   }
 
@@ -171,6 +181,7 @@ public class FinanceController {
   @PreAuthorize(POST)
   AccountTransactionResponse postAccountTransaction(
       @PathVariable UUID id, @Valid @RequestBody ManualAccountTransactionRequest request) {
+    scope.requireNew(request.branchId());
     return mapper.toResponse(accounts.postManual(id, request));
   }
 
@@ -188,30 +199,35 @@ public class FinanceController {
       @RequestParam String currency,
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+      @RequestParam(required = false) UUID companyId,
       Pageable pageable) {
-    return accounts.statement(id, currency, from, to, unsorted(pageable));
+    return accounts.statement(id, currency, from, to, companyId, unsorted(pageable));
   }
 
+  /** {@code excludeIntercompany} yalnız konsolidede (companyId boş) uygulanır. */
   @GetMapping("/reports/aging")
   @PreAuthorize(VIEW)
   List<AgingResponse> aging(
       @RequestParam AgingType type,
-      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOf) {
-    return accounts.aging(type, asOf);
+      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOf,
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(defaultValue = "true") boolean excludeIntercompany) {
+    return accounts.aging(type, asOf, companyId, excludeIntercompany);
   }
 
   // Banka ve kasa
 
   @GetMapping("/funds")
   @PreAuthorize(VIEW)
-  List<FundResponse> listFunds() {
-    return funds.list();
+  List<FundResponse> listFunds(@RequestParam(required = false) UUID companyId) {
+    return funds.list(companyId);
   }
 
   @PostMapping("/funds")
   @ResponseStatus(HttpStatus.CREATED)
   @PreAuthorize(MANAGE)
   FundResponse createFund(@Valid @RequestBody CreateFundRequest request) {
+    scope.requireNew(request.branchId());
     return funds.create(request);
   }
 
@@ -267,8 +283,10 @@ public class FinanceController {
   @GetMapping("/instruments")
   @PreAuthorize(VIEW)
   PageResponse<InstrumentResponse> listInstruments(
-      @RequestParam(required = false) InstrumentStatus status, Pageable pageable) {
-    return PageResponse.from(instruments.list(status, pageable), mapper::toResponse);
+      @RequestParam(required = false) InstrumentStatus status,
+      @RequestParam(required = false) UUID companyId,
+      Pageable pageable) {
+    return PageResponse.from(instruments.list(status, companyId, pageable), mapper::toResponse);
   }
 
   @GetMapping("/instruments/{id}/movements")
@@ -288,9 +306,10 @@ public class FinanceController {
 
   @GetMapping("/payments")
   @PreAuthorize(VIEW)
-  PageResponse<SettlementResponse> listPayments(Pageable pageable) {
+  PageResponse<SettlementResponse> listPayments(
+      @RequestParam(required = false) UUID companyId, Pageable pageable) {
     return PageResponse.from(
-        settlements.list(SettlementType.PAYMENT, pageable), mapper::toResponse);
+        settlements.list(SettlementType.PAYMENT, companyId, pageable), mapper::toResponse);
   }
 
   @PostMapping("/payments")
@@ -299,15 +318,17 @@ public class FinanceController {
   SettlementResponse createPayment(
       @Valid @RequestBody SettlementRequest request,
       @RequestHeader(name = IDEMPOTENCY_HEADER, required = false) String idempotencyKey) {
+    scope.requireNew(request.branchId());
     return mapper.toResponse(
         settlements.create(SettlementType.PAYMENT, request, idempotencyKey, null));
   }
 
   @GetMapping("/collections")
   @PreAuthorize(VIEW)
-  PageResponse<SettlementResponse> listCollections(Pageable pageable) {
+  PageResponse<SettlementResponse> listCollections(
+      @RequestParam(required = false) UUID companyId, Pageable pageable) {
     return PageResponse.from(
-        settlements.list(SettlementType.COLLECTION, pageable), mapper::toResponse);
+        settlements.list(SettlementType.COLLECTION, companyId, pageable), mapper::toResponse);
   }
 
   @PostMapping("/collections")
@@ -316,6 +337,7 @@ public class FinanceController {
   SettlementResponse createCollection(
       @Valid @RequestBody SettlementRequest request,
       @RequestHeader(name = IDEMPOTENCY_HEADER, required = false) String idempotencyKey) {
+    scope.requireNew(request.branchId());
     return mapper.toResponse(
         settlements.create(SettlementType.COLLECTION, request, idempotencyKey, null));
   }
@@ -332,22 +354,25 @@ public class FinanceController {
   DailyReportResponse dailyReport(
       @RequestParam SettlementType type,
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-      @RequestParam(required = false) List<UUID> branchIds) {
-    return settlements.daily(type, date, branchIds);
+      @RequestParam(required = false) List<UUID> branchIds,
+      @RequestParam(required = false) UUID companyId) {
+    return settlements.daily(type, date, branchIds, companyId);
   }
 
   // Tedarikçi faturası
 
   @GetMapping("/purchase-invoices")
   @PreAuthorize(VIEW)
-  PageResponse<PurchaseInvoiceResponse> listInvoices(Pageable pageable) {
-    return PageResponse.from(invoices.list(pageable), mapper::toResponse);
+  PageResponse<PurchaseInvoiceResponse> listInvoices(
+      @RequestParam(required = false) UUID companyId, Pageable pageable) {
+    return PageResponse.from(invoices.list(companyId, pageable), mapper::toResponse);
   }
 
   @PostMapping("/purchase-invoices")
   @ResponseStatus(HttpStatus.CREATED)
   @PreAuthorize(POST)
   PurchaseInvoiceResponse createInvoice(@Valid @RequestBody CreatePurchaseInvoiceRequest request) {
+    scope.requireNew(request.branchId());
     return mapper.toResponse(invoices.create(request));
   }
 
@@ -363,14 +388,17 @@ public class FinanceController {
   @GetMapping("/payment-plans")
   @PreAuthorize(VIEW)
   PageResponse<PlanResponse> listPlans(
-      @RequestParam(required = false) PlanStatus status, Pageable pageable) {
-    return PageResponse.from(plans.list(status, pageable), mapper::toResponse);
+      @RequestParam(required = false) PlanStatus status,
+      @RequestParam(required = false) UUID companyId,
+      Pageable pageable) {
+    return PageResponse.from(plans.list(status, companyId, pageable), mapper::toResponse);
   }
 
   @PostMapping("/payment-plans")
   @ResponseStatus(HttpStatus.CREATED)
   @PreAuthorize(POST)
   PlanResponse createPlan(@Valid @RequestBody CreatePlanRequest request) {
+    scope.requireNew(request.branchId());
     return mapper.toResponse(plans.create(request, null));
   }
 
@@ -422,15 +450,17 @@ public class FinanceController {
   List<HeatmapCell> heatmap(
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-      @RequestParam(defaultValue = "DAY") HeatmapPeriod period) {
-    return plans.heatmap(from, to, period);
+      @RequestParam(defaultValue = "DAY") HeatmapPeriod period,
+      @RequestParam(required = false) UUID companyId) {
+    return plans.heatmap(from, to, period, companyId);
   }
 
   @GetMapping("/dashboard")
   @PreAuthorize(VIEW)
   DashboardResponse dashboard(
-      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate today) {
-    return plans.dashboard(today);
+      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate today,
+      @RequestParam(required = false) UUID companyId) {
+    return plans.dashboard(today, companyId);
   }
 
   @GetMapping("/density-thresholds")

@@ -24,6 +24,7 @@ public class Quote extends AuditableEntity {
   private String number;
   private int version;
   private UUID accountId;
+  private UUID companyId;
   private UUID opportunityId;
   private UUID tariffId;
   private UUID taxRateId;
@@ -46,6 +47,7 @@ public class Quote extends AuditableEntity {
       String number,
       int version,
       UUID accountId,
+      UUID companyId,
       UUID opportunityId,
       UUID tariffId,
       UUID taxRateId,
@@ -56,6 +58,7 @@ public class Quote extends AuditableEntity {
     this.number = number;
     this.version = version;
     this.accountId = accountId;
+    this.companyId = companyId;
     this.opportunityId = opportunityId;
     this.tariffId = tariffId;
     this.taxRateId = taxRateId;
@@ -152,5 +155,9 @@ public class Quote extends AuditableEntity {
 
   public UUID getPdfFileId() {
     return pdfFileId;
+  }
+
+  public UUID getCompanyId() {
+    return companyId;
   }
 }

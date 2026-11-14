@@ -20,6 +20,7 @@ public class Contract extends AuditableEntity {
   @Id private UUID id;
   private String number;
   private UUID accountId;
+  private UUID companyId;
   private UUID quoteId;
   private UUID tariffId;
   private LocalDate startDate;
@@ -38,6 +39,7 @@ public class Contract extends AuditableEntity {
   public Contract(
       String number,
       UUID accountId,
+      UUID companyId,
       UUID quoteId,
       UUID tariffId,
       LocalDate startDate,
@@ -49,6 +51,7 @@ public class Contract extends AuditableEntity {
     this.id = UUID.randomUUID();
     this.number = number;
     this.accountId = accountId;
+    this.companyId = companyId;
     this.quoteId = quoteId;
     this.tariffId = tariffId;
     this.startDate = startDate;
@@ -110,5 +113,9 @@ public class Contract extends AuditableEntity {
 
   public String getSpecialTerms() {
     return specialTerms;
+  }
+
+  public UUID getCompanyId() {
+    return companyId;
   }
 }

@@ -49,6 +49,10 @@
           "code" : {
             "type" : "string"
           },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "id" : {
             "format" : "uuid",
             "type" : "string"
@@ -56,11 +60,15 @@
           "name" : {
             "type" : "string"
           },
+          "representsCompanyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "taxNumber" : {
             "type" : "string"
           },
           "type" : {
-            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD" ],
+            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
             "type" : "string"
           }
         },
@@ -73,6 +81,10 @@
             "type" : "string"
           },
           "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
             "format" : "uuid",
             "type" : "string"
           },
@@ -467,8 +479,169 @@
         },
         "type" : "object"
       },
+      "BranchGroupResponse" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "address" : {
+            "type" : "string"
+          },
+          "branchCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyName" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "groupType" : {
+            "enum" : [ "MAIN", "SUB" ],
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "managerName" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "taxNumber" : {
+            "type" : "string"
+          },
+          "taxOffice" : {
+            "type" : "string"
+          },
+          "updateCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "updatedBy" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "BranchResponse" : {
         "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "address" : {
+            "type" : "string"
+          },
+          "branchGroupId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "branchGroupName" : {
+            "type" : "string"
+          },
+          "city" : {
+            "type" : "string"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyName" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "district" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "latitude" : {
+            "type" : "number"
+          },
+          "longitude" : {
+            "type" : "number"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "sgkWorkplaceNo" : {
+            "type" : "string"
+          },
+          "updateCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "updatedBy" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BranchScopeRequest" : {
+        "properties" : {
+          "branchIds" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "defaultBranchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "scope" : {
+            "enum" : [ "ALL", "LIMITED" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "scope" ],
+        "type" : "object"
+      },
+      "BranchTreeBranchResponse" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
           "code" : {
             "type" : "string"
           },
@@ -477,6 +650,48 @@
             "type" : "string"
           },
           "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BranchTreeCompanyResponse" : {
+        "properties" : {
+          "companyActive" : {
+            "type" : "boolean"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyName" : {
+            "type" : "string"
+          },
+          "groups" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BranchTreeGroupResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "BranchTreeGroupResponse" : {
+        "properties" : {
+          "branches" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BranchTreeBranchResponse"
+            },
+            "type" : "array"
+          },
+          "groupActive" : {
+            "type" : "boolean"
+          },
+          "groupId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "groupName" : {
             "type" : "string"
           }
         },
@@ -680,6 +895,164 @@
         "required" : [ "confirmCode" ],
         "type" : "object"
       },
+      "CompanyEDocumentSettingsResponse" : {
+        "properties" : {
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "defaultProfile" : {
+            "type" : "string"
+          },
+          "despatchEnabled" : {
+            "type" : "boolean"
+          },
+          "despatchSeries" : {
+            "type" : "string"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "inboxEnabled" : {
+            "type" : "boolean"
+          },
+          "inboxLastSync" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "invoiceSeries" : {
+            "type" : "string"
+          },
+          "passwordSet" : {
+            "type" : "boolean"
+          },
+          "provider" : {
+            "type" : "string"
+          },
+          "senderTaxNumber" : {
+            "type" : "string"
+          },
+          "senderTitle" : {
+            "type" : "string"
+          },
+          "serviceUrl" : {
+            "type" : "string"
+          },
+          "testMode" : {
+            "type" : "boolean"
+          },
+          "username" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CompanyResponse" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "address" : {
+            "type" : "string"
+          },
+          "branchCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "city" : {
+            "type" : "string"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "country" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "defaultCompany" : {
+            "type" : "boolean"
+          },
+          "defaultFundAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "district" : {
+            "type" : "string"
+          },
+          "edocumentEnabled" : {
+            "type" : "boolean"
+          },
+          "edocumentTestMode" : {
+            "type" : "boolean"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kepAddress" : {
+            "type" : "string"
+          },
+          "logoFileId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "mersisNo" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "postalCode" : {
+            "type" : "string"
+          },
+          "sgkWorkplaceNo" : {
+            "type" : "string"
+          },
+          "shortName" : {
+            "type" : "string"
+          },
+          "taxIdType" : {
+            "enum" : [ "VKN", "TCKN" ],
+            "type" : "string"
+          },
+          "taxNumber" : {
+            "type" : "string"
+          },
+          "taxOffice" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "tradeRegistryNo" : {
+            "type" : "string"
+          },
+          "updateCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "updatedBy" : {
+            "type" : "string"
+          },
+          "website" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ComplianceDocumentResponse" : {
         "properties" : {
           "docType" : {
@@ -746,6 +1119,10 @@
       "ContractResponse" : {
         "properties" : {
           "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
             "format" : "uuid",
             "type" : "string"
           },
@@ -919,22 +1296,6 @@
             "type" : "string"
           }
         },
-        "type" : "object"
-      },
-      "CreateBranchRequest" : {
-        "properties" : {
-          "code" : {
-            "maxLength" : 50,
-            "minLength" : 0,
-            "type" : "string"
-          },
-          "name" : {
-            "maxLength" : 200,
-            "minLength" : 0,
-            "type" : "string"
-          }
-        },
-        "required" : [ "code", "name" ],
         "type" : "object"
       },
       "CreateCountRequest" : {
@@ -1376,7 +1737,7 @@
             "type" : "string"
           },
           "type" : {
-            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD" ],
+            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
             "type" : "string"
           }
         },
@@ -1704,6 +2065,41 @@
         },
         "type" : "object"
       },
+      "DocumentSeriesResponse" : {
+        "properties" : {
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "docType" : {
+            "enum" : [ "FREIGHT_INVOICE", "WAREHOUSE_INVOICE" ],
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "nextValue" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "padding" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "prefix" : {
+            "type" : "string"
+          },
+          "sample" : {
+            "type" : "string"
+          },
+          "year" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "DriverAdvanceRequest" : {
         "properties" : {
           "branchId" : {
@@ -1850,6 +2246,10 @@
       },
       "EDocumentResponse" : {
         "properties" : {
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "ettn" : {
             "format" : "uuid",
             "type" : "string"
@@ -2154,6 +2554,10 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "dueDate" : {
             "format" : "date",
             "type" : "string"
@@ -2272,6 +2676,10 @@
             "type" : "string"
           },
           "code" : {
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
             "type" : "string"
           },
           "currency" : {
@@ -2691,6 +3099,10 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "direction" : {
             "enum" : [ "RECEIVED", "ISSUED" ],
             "type" : "string"
@@ -3004,7 +3416,7 @@
             "type" : "boolean"
           },
           "resource" : {
-            "enum" : [ "USERS", "VEHICLES", "SHIPMENTS_MONTH" ],
+            "enum" : [ "USERS", "VEHICLES", "SHIPMENTS_MONTH", "COMPANIES", "BRANCHES" ],
             "type" : "string"
           },
           "used" : {
@@ -3227,8 +3639,53 @@
         "required" : [ "transactionId" ],
         "type" : "object"
       },
+      "MeCompanyResponse" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "defaultCompany" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "shortName" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "MeResponse" : {
         "properties" : {
+          "allowedBranchIds" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "branchScope" : {
+            "enum" : [ "ALL", "LIMITED" ],
+            "type" : "string"
+          },
+          "companies" : {
+            "items" : {
+              "$ref" : "#/components/schemas/MeCompanyResponse"
+            },
+            "type" : "array"
+          },
+          "defaultBranchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "email" : {
             "type" : "string"
           },
@@ -3244,7 +3701,7 @@
           },
           "permissions" : {
             "items" : {
-              "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
+              "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "COMPANY_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
               "type" : "string"
             },
             "type" : "array",
@@ -3523,7 +3980,7 @@
             "type" : "string"
           },
           "type" : {
-            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD" ],
+            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
             "type" : "string"
           }
         },
@@ -3866,11 +4323,65 @@
         },
         "type" : "object"
       },
+      "PageResponseBranchGroupResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BranchGroupResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "PageResponseBranchResponse" : {
         "properties" : {
           "content" : {
             "items" : {
               "$ref" : "#/components/schemas/BranchResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseCompanyResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CompanyResponse"
             },
             "type" : "array"
           },
@@ -4381,7 +4892,7 @@
       "PermissionResponse" : {
         "properties" : {
           "code" : {
-            "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
+            "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "COMPANY_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
             "type" : "string"
           },
           "module" : {
@@ -4490,6 +5001,10 @@
             "type" : "string"
           },
           "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
             "format" : "uuid",
             "type" : "string"
           },
@@ -4749,6 +5264,10 @@
           "adr" : {
             "type" : "boolean"
           },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "date" : {
             "format" : "date",
             "type" : "string"
@@ -4940,6 +5459,10 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "description" : {
             "type" : "string"
           },
@@ -5039,6 +5562,10 @@
       "QuoteResponse" : {
         "properties" : {
           "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
             "format" : "uuid",
             "type" : "string"
           },
@@ -5352,7 +5879,7 @@
           },
           "permissions" : {
             "items" : {
-              "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
+              "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "COMPANY_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
               "type" : "string"
             },
             "type" : "array",
@@ -5456,6 +5983,14 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "maxBranches" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "maxCompanies" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "maxShipmentsMonth" : {
             "format" : "int32",
             "type" : "integer"
@@ -5533,7 +6068,7 @@
             "type" : "string"
           },
           "type" : {
-            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD" ],
+            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
             "type" : "string"
           }
         },
@@ -5602,6 +6137,262 @@
         "required" : [ "endDate", "startDate" ],
         "type" : "object"
       },
+      "SaveBranchGroupRequest" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "address" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "email" : {
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "groupType" : {
+            "enum" : [ "MAIN", "SUB" ],
+            "type" : "string"
+          },
+          "managerName" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "phone" : {
+            "pattern" : "^$|^[0-9]{1,11}$",
+            "type" : "string"
+          },
+          "taxNumber" : {
+            "pattern" : "^$|^[0-9]{1,11}$",
+            "type" : "string"
+          },
+          "taxOffice" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
+        "type" : "object"
+      },
+      "SaveBranchRequest" : {
+        "properties" : {
+          "address" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "branchGroupId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "city" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "code" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "pattern" : "(?s).*\\S.*",
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "district" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "latitude" : {
+            "maximum" : 90,
+            "minimum" : -90,
+            "type" : "number"
+          },
+          "longitude" : {
+            "maximum" : 180,
+            "minimum" : -180,
+            "type" : "number"
+          },
+          "name" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "phone" : {
+            "pattern" : "^$|^[0-9]{1,11}$",
+            "type" : "string"
+          },
+          "sgkWorkplaceNo" : {
+            "maxLength" : 26,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
+        "type" : "object"
+      },
+      "SaveCompanyEDocumentSettingsRequest" : {
+        "properties" : {
+          "defaultProfile" : {
+            "pattern" : "^(TICARIFATURA|TEMELFATURA|EARSIVFATURA)$",
+            "type" : "string"
+          },
+          "despatchEnabled" : {
+            "type" : "boolean"
+          },
+          "despatchSeries" : {
+            "pattern" : "^$|^[A-Z0-9]{3}$",
+            "type" : "string"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "inboxEnabled" : {
+            "type" : "boolean"
+          },
+          "invoiceSeries" : {
+            "pattern" : "^$|^[A-Z0-9]{3}$",
+            "type" : "string"
+          },
+          "password" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "serviceUrl" : {
+            "maxLength" : 300,
+            "minLength" : 0,
+            "pattern" : "^$|^https?://.+",
+            "type" : "string"
+          },
+          "testMode" : {
+            "type" : "boolean"
+          },
+          "username" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "defaultProfile", "despatchEnabled", "enabled", "inboxEnabled", "testMode" ],
+        "type" : "object"
+      },
+      "SaveCompanyRequest" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "address" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "city" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "code" : {
+            "minLength" : 1,
+            "pattern" : "^[A-Z0-9_-]{1,20}$",
+            "type" : "string"
+          },
+          "defaultCompany" : {
+            "type" : "boolean"
+          },
+          "defaultFundAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "district" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "email" : {
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "kepAddress" : {
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "mersisNo" : {
+            "pattern" : "^$|^[0-9]{16}$",
+            "type" : "string"
+          },
+          "phone" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "postalCode" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "sgkWorkplaceNo" : {
+            "maxLength" : 26,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "shortName" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "taxIdType" : {
+            "enum" : [ "VKN", "TCKN" ],
+            "type" : "string"
+          },
+          "taxNumber" : {
+            "pattern" : "^$|^[0-9]{10,11}$",
+            "type" : "string"
+          },
+          "taxOffice" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "title" : {
+            "maxLength" : 300,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "tradeRegistryNo" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "website" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "shortName", "taxIdType", "title" ],
+        "type" : "object"
+      },
       "SaveContactRequest" : {
         "properties" : {
           "email" : {
@@ -5638,6 +6429,10 @@
       "SaveContractRequest" : {
         "properties" : {
           "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
             "format" : "uuid",
             "type" : "string"
           },
@@ -5779,7 +6574,7 @@
             "type" : "string"
           },
           "type" : {
-            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD" ],
+            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
             "type" : "string"
           }
         },
@@ -6148,6 +6943,16 @@
             "pattern" : "^[A-Z]{3}$",
             "type" : "string"
           },
+          "maxBranches" : {
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "maxCompanies" : {
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          },
           "maxShipmentsMonth" : {
             "format" : "int32",
             "minimum" : 1,
@@ -6205,6 +7010,10 @@
       "SaveQuoteRequest" : {
         "properties" : {
           "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
             "format" : "uuid",
             "type" : "string"
           },
@@ -6282,7 +7091,7 @@
           },
           "permissions" : {
             "items" : {
-              "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
+              "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "COMPANY_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
               "type" : "string"
             },
             "type" : "array",
@@ -6800,6 +7609,10 @@
             "type" : "string"
           },
           "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
             "format" : "uuid",
             "type" : "string"
           },
@@ -7711,6 +8524,22 @@
         },
         "type" : "object"
       },
+      "UpdateDocumentSeriesRequest" : {
+        "properties" : {
+          "nextValue" : {
+            "format" : "int64",
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "prefix" : {
+            "minLength" : 1,
+            "pattern" : "^[A-Z0-9-]{1,10}$",
+            "type" : "string"
+          }
+        },
+        "required" : [ "nextValue", "prefix" ],
+        "type" : "object"
+      },
       "UpdateDriverRequest" : {
         "properties" : {
           "branchId" : {
@@ -7805,8 +8634,32 @@
         "required" : [ "date", "shipmentId" ],
         "type" : "object"
       },
+      "UserBranchScopeResponse" : {
+        "properties" : {
+          "branchIds" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "defaultBranchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "scope" : {
+            "enum" : [ "ALL", "LIMITED" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "UserResponse" : {
         "properties" : {
+          "branchScope" : {
+            "enum" : [ "ALL", "LIMITED" ],
+            "type" : "string"
+          },
           "email" : {
             "type" : "string"
           },
@@ -7879,6 +8732,10 @@
       "VehicleExpenseResponse" : {
         "properties" : {
           "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
             "format" : "uuid",
             "type" : "string"
           },
@@ -8100,6 +8957,10 @@
       "WarehouseInvoiceResponse" : {
         "properties" : {
           "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
             "format" : "uuid",
             "type" : "string"
           },
@@ -8594,7 +9455,7 @@
         "tags" : [ "admin-saas-controller" ]
       },
       "post" : {
-        "operationId" : "create_3",
+        "operationId" : "create_5",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -8622,7 +9483,7 @@
     },
     "/api/v1/admin/tenants/{id}/activate" : {
       "post" : {
-        "operationId" : "activate",
+        "operationId" : "activate_3",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -10974,7 +11835,7 @@
     },
     "/api/v1/files" : {
       "get" : {
-        "operationId" : "list_3",
+        "operationId" : "list_5",
         "parameters" : [ {
           "in" : "query",
           "name" : "ownerType",
@@ -11117,6 +11978,14 @@
           }
         }, {
           "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
           "name" : "pageable",
           "required" : true,
           "schema" : {
@@ -11230,6 +12099,14 @@
             "format" : "uuid",
             "type" : "string"
           }
+        }, {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -11317,6 +12194,14 @@
           }
         }, {
           "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
           "name" : "pageable",
           "required" : true,
           "schema" : {
@@ -11379,6 +12264,14 @@
       "get" : {
         "operationId" : "listCollections",
         "parameters" : [ {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
           "in" : "query",
           "name" : "pageable",
           "required" : true,
@@ -11465,6 +12358,14 @@
           "required" : true,
           "schema" : {
             "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
             "type" : "string"
           }
         } ],
@@ -11678,6 +12579,15 @@
     "/api/v1/finance/funds" : {
       "get" : {
         "operationId" : "listFunds",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
         "responses" : {
           "200" : {
             "content" : {
@@ -11946,6 +12856,14 @@
           "required" : false,
           "schema" : {
             "enum" : [ "PORTFOLIO", "AT_BANK", "COLLECTED", "ENDORSED", "COLLECTED_TO_CASH", "BOUNCED", "ISSUED", "PAID" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
             "type" : "string"
           }
         }, {
@@ -12239,6 +13157,14 @@
           }
         }, {
           "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
           "name" : "pageable",
           "required" : true,
           "schema" : {
@@ -12312,6 +13238,14 @@
           "schema" : {
             "default" : "DAY",
             "enum" : [ "DAY", "MONTH" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
             "type" : "string"
           }
         } ],
@@ -12580,6 +13514,14 @@
         "operationId" : "listPayments",
         "parameters" : [ {
           "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
           "name" : "pageable",
           "required" : true,
           "schema" : {
@@ -12639,6 +13581,14 @@
       "get" : {
         "operationId" : "listInvoices_1",
         "parameters" : [ {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
           "in" : "query",
           "name" : "pageable",
           "required" : true,
@@ -12743,6 +13693,22 @@
             "format" : "date",
             "type" : "string"
           }
+        }, {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "excludeIntercompany",
+          "required" : false,
+          "schema" : {
+            "default" : true,
+            "type" : "boolean"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -12791,6 +13757,14 @@
               "type" : "string"
             },
             "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
           }
         } ],
         "responses" : {
@@ -14039,6 +15013,68 @@
         "tags" : [ "identity-admin-controller" ]
       }
     },
+    "/api/v1/identity/users/{id}/branch-scope" : {
+      "get" : {
+        "operationId" : "getBranchScope",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserBranchScopeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "identity-admin-controller" ]
+      },
+      "put" : {
+        "operationId" : "updateBranchScope",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BranchScopeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserBranchScopeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "identity-admin-controller" ]
+      }
+    },
     "/api/v1/identity/users/{id}/resend-invite" : {
       "post" : {
         "operationId" : "resendInvite",
@@ -14349,7 +15385,7 @@
     },
     "/api/v1/integration/e-document-settings" : {
       "get" : {
-        "operationId" : "edocumentSettings",
+        "operationId" : "edocumentSettings_1",
         "responses" : {
           "200" : {
             "content" : {
@@ -14365,7 +15401,7 @@
         "tags" : [ "integration-controller" ]
       },
       "put" : {
-        "operationId" : "saveEdocumentSettings",
+        "operationId" : "saveEdocumentSettings_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -14969,10 +16005,268 @@
         "tags" : [ "notification-preference-controller" ]
       }
     },
+    "/api/v1/organization/branch-groups" : {
+      "get" : {
+        "operationId" : "list_4",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "active",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "pageable",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Pageable"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseBranchGroupResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "branch-group-controller" ]
+      },
+      "post" : {
+        "operationId" : "create_4",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveBranchGroupRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BranchGroupResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "branch-group-controller" ]
+      }
+    },
+    "/api/v1/organization/branch-groups/{id}" : {
+      "get" : {
+        "operationId" : "get_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BranchGroupResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "branch-group-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveBranchGroupRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BranchGroupResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "branch-group-controller" ]
+      }
+    },
+    "/api/v1/organization/branch-groups/{id}/activate" : {
+      "post" : {
+        "operationId" : "activate_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BranchGroupResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "branch-group-controller" ]
+      }
+    },
+    "/api/v1/organization/branch-groups/{id}/deactivate" : {
+      "post" : {
+        "operationId" : "deactivate_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BranchGroupResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "branch-group-controller" ]
+      }
+    },
+    "/api/v1/organization/branch-tree" : {
+      "get" : {
+        "operationId" : "tree",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "scope",
+          "required" : false,
+          "schema" : {
+            "default" : "mine",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "includeInactive",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/BranchTreeCompanyResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "branch-controller" ]
+      }
+    },
     "/api/v1/organization/branches" : {
       "get" : {
-        "operationId" : "list_2",
+        "operationId" : "list_3",
         "parameters" : [ {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "groupId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "active",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
           "in" : "query",
           "name" : "pageable",
           "required" : true,
@@ -14995,12 +16289,12 @@
         "tags" : [ "branch-controller" ]
       },
       "post" : {
-        "operationId" : "create_2",
+        "operationId" : "create_3",
         "requestBody" : {
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/CreateBranchRequest"
+                "$ref" : "#/components/schemas/SaveBranchRequest"
               }
             }
           },
@@ -15019,6 +16313,502 @@
           }
         },
         "tags" : [ "branch-controller" ]
+      }
+    },
+    "/api/v1/organization/branches/{id}" : {
+      "get" : {
+        "operationId" : "get_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BranchResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "branch-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveBranchRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BranchResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "branch-controller" ]
+      }
+    },
+    "/api/v1/organization/branches/{id}/activate" : {
+      "post" : {
+        "operationId" : "activate_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BranchResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "branch-controller" ]
+      }
+    },
+    "/api/v1/organization/branches/{id}/deactivate" : {
+      "post" : {
+        "operationId" : "deactivate_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BranchResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "branch-controller" ]
+      }
+    },
+    "/api/v1/organization/companies" : {
+      "get" : {
+        "operationId" : "list_2",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "active",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "pageable",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Pageable"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseCompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "company-controller" ]
+      },
+      "post" : {
+        "operationId" : "create_2",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveCompanyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "company-controller" ]
+      }
+    },
+    "/api/v1/organization/companies/{id}" : {
+      "get" : {
+        "operationId" : "get",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "company-controller" ]
+      },
+      "put" : {
+        "operationId" : "update",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveCompanyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "company-controller" ]
+      }
+    },
+    "/api/v1/organization/companies/{id}/activate" : {
+      "post" : {
+        "operationId" : "activate",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "company-controller" ]
+      }
+    },
+    "/api/v1/organization/companies/{id}/deactivate" : {
+      "post" : {
+        "operationId" : "deactivate",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "company-controller" ]
+      }
+    },
+    "/api/v1/organization/companies/{id}/document-series" : {
+      "get" : {
+        "operationId" : "documentSeries",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/DocumentSeriesResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "company-controller" ]
+      }
+    },
+    "/api/v1/organization/companies/{id}/document-series/{seriesId}" : {
+      "put" : {
+        "operationId" : "updateDocumentSeries",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "seriesId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateDocumentSeriesRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentSeriesResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "company-controller" ]
+      }
+    },
+    "/api/v1/organization/companies/{id}/edocument-settings" : {
+      "get" : {
+        "operationId" : "edocumentSettings",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyEDocumentSettingsResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "company-controller" ]
+      },
+      "put" : {
+        "operationId" : "saveEdocumentSettings",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveCompanyEDocumentSettingsRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyEDocumentSettingsResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "company-controller" ]
+      }
+    },
+    "/api/v1/organization/companies/{id}/logo" : {
+      "delete" : {
+        "operationId" : "deleteLogo",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "company-controller" ]
+      },
+      "post" : {
+        "operationId" : "uploadLogo",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "properties" : {
+                  "file" : {
+                    "format" : "binary",
+                    "type" : "string"
+                  }
+                },
+                "required" : [ "file" ],
+                "type" : "object"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "company-controller" ]
       }
     },
     "/api/v1/ping" : {
@@ -15885,7 +17675,7 @@
     },
     "/api/v1/shipment/shipments/{id}" : {
       "get" : {
-        "operationId" : "get",
+        "operationId" : "get_3",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",

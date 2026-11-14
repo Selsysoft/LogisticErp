@@ -245,6 +245,7 @@ public final class ShipmentDtos {
       String number,
       UUID shipmentId,
       UUID accountId,
+      UUID companyId,
       LocalDate invoiceDate,
       LocalDate dueDate,
       Money net,
