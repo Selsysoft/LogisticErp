@@ -493,8 +493,8 @@ class BranchScopeIT extends AbstractIntegrationTest {
     assertThat(sent(w.managerEmail()))
         .noneMatch(n -> n.subject().equals("Onay bekleyen ödeme planı: T1 — 222,00 TRY"));
 
-    // Günlük özet LIMITED kullanıcıya gitmez; patrona gider. (Zamanlanmış koşuyla çakışmasın diye
-    // yarının özeti.)
+    // Günlük özet LIMITED kullanıcıya yalnız kendi iş yerinin içeriğiyle gider (12.1 K-1); patron
+    // tümünü alır. (Zamanlanmış koşuyla çakışmasın diye yarının özeti.)
     int before = sent(w.managerEmail()).size();
     int ownerBefore = sent(ownerEmail(w.t())).size();
     TenantContext.set(w.t(), w.schema());
@@ -505,8 +505,12 @@ class BranchScopeIT extends AbstractIntegrationTest {
       TenantContext.clear();
     }
     assertThat(recipients).isPositive();
-    assertThat(sent(w.managerEmail())).hasSize(before);
-    assertThat(sent(ownerEmail(w.t())).size()).isGreaterThan(ownerBefore);
+    List<Notice> managerDigest = digests(w.managerEmail(), before);
+    assertThat(managerDigest).hasSize(1);
+    assertThat(managerDigest.get(0).text()).contains("— 111 TRY").doesNotContain("222 TRY");
+    List<Notice> ownerDigest = digests(ownerEmail(w.t()), ownerBefore);
+    assertThat(ownerDigest).hasSize(1);
+    assertThat(ownerDigest.get(0).text()).contains("— 111 TRY").contains("— 222 TRY");
 
     // A1 pasifleşir: onaylı planı ödenir, teslim edilmiş seferi faturalanıp kapatılır; aynı
     // iş yeriyle yeni ödeme 422.
@@ -920,6 +924,14 @@ class BranchScopeIT extends AbstractIntegrationTest {
   }
 
   /** Anlık e-posta işlem kaydedildikten sonra arka planda gider. */
+  /** {@code from} sırasından sonra gelen günlük özet e-postaları (anlık bildirimler hariç). */
+  private static List<Notice> digests(String email, int from) {
+    List<Notice> all = sent(email);
+    return all.subList(from, all.size()).stream()
+        .filter(n -> n.text() != null && n.text().contains("Ayrıntılar: "))
+        .toList();
+  }
+
   private static void awaitSubject(String email, String subject) throws InterruptedException {
     for (int i = 0; i < 100; i++) {
       if (sent(email).stream().anyMatch(n -> n.subject().equals(subject))) {

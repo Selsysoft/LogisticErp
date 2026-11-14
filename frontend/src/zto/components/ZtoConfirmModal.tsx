@@ -4,7 +4,7 @@ import { ZtoModal } from "./ZtoModal";
 
 export type ZtoConfirmVariant = "danger" | "primary" | "warning";
 
-export interface ZtoConfirmModalProps {
+export type ZtoConfirmModalProps = {
   show: boolean;
   /** Varsayılan: danger "Silme Onayı", warning "Uyarı", primary "Onay". */
   title?: ReactNode;
@@ -29,7 +29,12 @@ export interface ZtoConfirmModalProps {
   onError?: (error: unknown) => void;
   id?: string;
   animation?: boolean;
-}
+  /**
+   * Açılışta odaklanan düğme (MWG `dialog`: yıkıcı onayda güvenli eylem). Varsayılan: danger'da
+   * "cancel", diğerlerinde react-bootstrap davranışı (modalın kendisi). Kapanınca odak açan öğeye döner.
+   */
+  initialFocus?: "cancel" | "confirm";
+};
 
 const HEADER_CLASS: Record<ZtoConfirmVariant, string> = {
   danger: "bg-danger text-white",
@@ -69,10 +74,21 @@ export function ZtoConfirmModal({
   onError,
   id,
   animation,
+  initialFocus,
 }: ZtoConfirmModalProps) {
   const { t } = useTranslation("ztoFinans");
   const [busy, setBusy] = useState(false);
   const mounted = useRef(true);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  const focusTarget = initialFocus ?? (variant === "danger" ? "cancel" : undefined);
+
+  // react-bootstrap açılışta modalı odaklar ve açan öğeyi geri dönüş için kaydeder (alt bileşenin
+  // etkisi önce çalışır); ardından odak güvenli düğmeye taşınır.
+  useEffect(() => {
+    if (!show || !focusTarget) return;
+    (focusTarget === "cancel" ? cancelRef : confirmRef).current?.focus();
+  }, [show, focusTarget]);
 
   useEffect(() => {
     mounted.current = true;
@@ -152,6 +168,7 @@ export function ZtoConfirmModal({
       footer={
         <>
           <button
+            ref={cancelRef}
             type="button"
             className="btn btn-secondary"
             onClick={handleCancel}
@@ -160,6 +177,7 @@ export function ZtoConfirmModal({
             <i className="fas fa-times" /> {cancelText ?? t("modal.cancel")}
           </button>
           <button
+            ref={confirmRef}
             type="button"
             className={`btn btn-${variant}`}
             onClick={handleConfirm}
@@ -199,10 +217,10 @@ export type ZtoConfirmOptions = Omit<
   "show" | "onConfirm" | "onCancel" | "onError"
 >;
 
-interface PendingConfirm {
+type PendingConfirm = {
   options: ZtoConfirmOptions;
   resolve: (confirmed: boolean) => void;
-}
+};
 
 /**
  * Tarayıcının confirm()'i yerine: `if (await confirm({ message })) { … }`. Dönen confirmModal

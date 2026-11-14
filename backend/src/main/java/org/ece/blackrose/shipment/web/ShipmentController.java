@@ -368,23 +368,24 @@ public class ShipmentController {
             .filter(quote -> quote.getStatus() == QuoteStatus.ACCEPTED)
             .filter(quote -> companies == null || companies.contains(quote.getCompanyId()))
             .collect(Collectors.toMap(Quote::getId, quote -> quote));
+    // Satırlar tek sorguda yüklenir (teklif başına sorgu yok).
     List<QuoteLineOption> lines =
         accepted.isEmpty()
             ? List.of()
-            : accepted.values().stream()
-                .flatMap(
-                    quote ->
-                        quoteLines.findByQuoteIdOrderByCreatedAt(quote.getId()).stream()
-                            .map(
-                                line ->
-                                    new QuoteLineOption(
-                                        line.getId(),
-                                        quote.getNumber()
-                                            + " · "
-                                            + line.getOrigin()
-                                            + " - "
-                                            + line.getDestination(),
-                                        quote.getAccountId())))
+            : quoteLines.findByQuoteIdInOrderByCreatedAt(accepted.keySet()).stream()
+                .map(
+                    line -> {
+                      Quote quote = accepted.get(line.getQuoteId());
+                      return new QuoteLineOption(
+                          line.getId(),
+                          quote.getNumber()
+                              + " · "
+                              + line.getOrigin()
+                              + " - "
+                              + line.getDestination(),
+                          quote.getAccountId(),
+                          quote.getCompanyId());
+                    })
                 .toList();
     return new ShipmentOptionsResponse(
         all.stream()

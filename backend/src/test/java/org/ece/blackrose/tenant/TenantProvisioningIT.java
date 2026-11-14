@@ -62,6 +62,23 @@ class TenantProvisioningIT extends AbstractIntegrationTest {
                 "select count(*) from \"%s\".company_edocument_settings".formatted(schema),
                 Long.class))
         .isEqualTo(1);
+
+    // Faz 12.1 (M-4): hesap grupları, belge türleri ve personel carisi izni tohumlanır.
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from \"%s\".account_group".formatted(schema), Long.class))
+        .isEqualTo(14);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from \"%s\".account_document_type".formatted(schema), Long.class))
+        .isEqualTo(31);
+    assertThat(
+            jdbc.queryForList(
+                ("select r.code from \"%1$s\".role_permission p join \"%1$s\".role r"
+                        + " on r.id = p.role_id where p.permission = 'FINANCE_EMPLOYEE_VIEW'")
+                    .formatted(schema),
+                String.class))
+        .containsExactly("FINANCE_SUPER");
   }
 
   @Test

@@ -164,5 +164,6 @@ export interface ShipmentOptions {
   costAccounts: { id: string; label: string }[];
   tariffs: { id: string; label: string }[];
   taxRates: { id: string; label: string }[];
-  acceptedQuoteLines: { id: string; label: string; accountId: string }[];
+  /** Kabul edilmiş teklif satırları; şirketi (12.1 §3.13) seçili iş yerinin şirketine göre süzülür. */
+  acceptedQuoteLines: { id: string; label: string; accountId: string; companyId: string | null }[];
 }

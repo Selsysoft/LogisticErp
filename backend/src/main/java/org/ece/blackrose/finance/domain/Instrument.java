@@ -82,6 +82,32 @@ public class Instrument extends AuditableEntity {
     this.endorsedAccountId = accountId;
   }
 
+  /**
+   * Cari taşımada keşideci/veren cariyi değiştirir. Şirket, durum ve fon değişmez.
+   *
+   * @return kart {@code from} carisine bağlıydı ve taşındıysa true
+   */
+  public boolean reassignAccount(UUID from, UUID to) {
+    if (from == null || !from.equals(accountId)) {
+      return false;
+    }
+    this.accountId = to;
+    return true;
+  }
+
+  /**
+   * Cari taşımada ciro edilen (lehtar) cariyi değiştirir. Şirket, durum ve fon değişmez.
+   *
+   * @return ciro {@code from} carisineydi ve taşındıysa true
+   */
+  public boolean reassignEndorsee(UUID from, UUID to) {
+    if (from == null || !from.equals(endorsedAccountId)) {
+      return false;
+    }
+    this.endorsedAccountId = to;
+    return true;
+  }
+
   public Money getMoney() {
     return new Money(amount, currency);
   }

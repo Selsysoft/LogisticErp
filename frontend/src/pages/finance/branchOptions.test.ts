@@ -104,3 +104,48 @@ describe("fundsOfCompany", () => {
     expect(fundsOfCompany(undefined, "c1")).toEqual([]);
   });
 });
+
+describe("12.1 §5.13: filo, entegrasyon ve sefer seçenekleri şirkete göre", () => {
+  // FleetOptions.funds, IntegrationOptions.bankAccounts, ShipmentOptions.acceptedQuoteLines biçimleri.
+  const fleetFunds = [
+    { id: "kasaA", label: "Kasa A", kind: "CASH", currency: "TRY", companyId: "c1" },
+    { id: "bankaB", label: "Banka B", kind: "BANK", currency: "TRY", companyId: "c2" },
+  ];
+  const bankAccounts = [
+    { id: "ba1", label: "Acme Ziraat", companyId: "c1" },
+    { id: "ba2", label: "Beta Garanti", companyId: "c2" },
+  ];
+  const quoteLines = [
+    { id: "q1", label: "TK-1 / 1", accountId: "m1", companyId: "c2" },
+    { id: "q2", label: "TK-2 / 1", accountId: "m1", companyId: "c1" },
+  ];
+
+  it("sürücü avansı ve araç gideri: seçili iş yerinin şirketinin fonları", () => {
+    expect(fundsOfCompany(fleetFunds, companyOfBranch(BRANCHES, "a")).map((f) => f.id)).toEqual([
+      "kasaA",
+    ]);
+    expect(fundsOfCompany(fleetFunds, companyOfBranch(BRANCHES, "d")).map((f) => f.id)).toEqual([
+      "bankaB",
+    ]);
+    // İş yeri seçilmeden tüm fonlar.
+    expect(fundsOfCompany(fleetFunds, companyOfBranch(BRANCHES, ""))).toHaveLength(2);
+  });
+
+  it("banka ekstresi: aktif şirketin hesapları; konsolidede (null) tümü", () => {
+    expect(fundsOfCompany(bankAccounts, "c2").map((a) => a.id)).toEqual(["ba2"]);
+    expect(fundsOfCompany(bankAccounts, null)).toHaveLength(2);
+  });
+
+  it("yeni sefer: teklif satırı seçili iş yerinin şirketinden", () => {
+    expect(fundsOfCompany(quoteLines, companyOfBranch(BRANCHES, "a")).map((q) => q.id)).toEqual([
+      "q2",
+    ]);
+  });
+
+  it("eski yanıtta şirket alanı yoksa öğe her şirkette görünür", () => {
+    const legacy: { id: string; label: string; companyId?: string | null }[] = [
+      { id: "eski", label: "Eski" },
+    ];
+    expect(fundsOfCompany(legacy, "c1")).toEqual(legacy);
+  });
+});

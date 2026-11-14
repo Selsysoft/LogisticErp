@@ -5,6 +5,7 @@ import java.time.ZoneId;
 import java.util.Optional;
 import java.util.Set;
 import org.ece.blackrose.common.error.BusinessException;
+import org.ece.blackrose.finance.service.AccountTaxNumberBackfill;
 import org.ece.blackrose.identity.domain.AuditEvent;
 import org.ece.blackrose.identity.service.AuditService;
 import org.ece.blackrose.identity.service.UserService;
@@ -38,14 +39,17 @@ public class TenantService {
   private final UserService users;
   private final AuditService audit;
   private final SubscriptionService subscriptions;
+  private final AccountTaxNumberBackfill taxNumbers;
 
   public TenantService(
       TenantRepository tenants,
       TenantMigrator migrator,
       UserService users,
       AuditService audit,
-      SubscriptionService subscriptions) {
+      SubscriptionService subscriptions,
+      AccountTaxNumberBackfill taxNumbers) {
     this.subscriptions = subscriptions;
+    this.taxNumbers = taxNumbers;
     this.tenants = tenants;
     this.migrator = migrator;
     this.users = users;
@@ -78,6 +82,8 @@ public class TenantService {
     tenant = tenants.save(tenant);
     try {
       migrator.migrate(tenant.getSchemaName());
+      // Yeniden sağlanan (FAILED) kiracıda eski veri olabilir; hata sağlamayı bozmaz.
+      taxNumbers.backfillQuietly(tenant.getSchemaName());
       createOwner(tenant, request);
       subscriptions.startTrial(
           tenant, request.planCode(), request.trialDays(), request.ownerEmail());

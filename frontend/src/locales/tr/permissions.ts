@@ -11,6 +11,7 @@ export default {
   FINANCE_MANAGE: "Finans tanımları",
   FINANCE_PAYMENT_CREATE: "Ödeme oluşturma",
   FINANCE_APPROVE: "Ödeme onayı",
+  FINANCE_EMPLOYEE_VIEW: "Personel carilerini görme",
   CRM_VIEW: "CRM görme",
   CRM_EDIT: "CRM düzenleme",
   SHIPMENT_VIEW: "Sevkiyat görme",

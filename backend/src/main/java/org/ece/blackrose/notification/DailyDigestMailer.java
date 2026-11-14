@@ -3,6 +3,7 @@ package org.ece.blackrose.notification;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,11 +14,13 @@ import org.ece.blackrose.identity.domain.Permission;
 import org.ece.blackrose.identity.domain.UserAccount;
 import org.ece.blackrose.identity.domain.UserStatus;
 import org.ece.blackrose.identity.repository.IdentityRepositories.UserAccountRepository;
+import org.ece.blackrose.identity.repository.IdentityRepositories.UserBranchRepository;
 import org.ece.blackrose.identity.security.SecurityProperties;
 import org.ece.blackrose.identity.service.AccountMailer;
 import org.ece.blackrose.notification.DigestSection.Content;
 import org.ece.blackrose.notification.NotificationRepositories.DigestRunRepository;
 import org.ece.blackrose.notification.NotificationRepositories.NotificationPreferenceRepository;
+import org.ece.blackrose.organization.BranchFilter;
 import org.ece.blackrose.tenant.TenantClock;
 import org.ece.blackrose.tenant.TenantJobs;
 import org.slf4j.Logger;
@@ -29,6 +32,10 @@ import org.springframework.stereotype.Component;
  * Her sabah firmanın saatiyle 07:00'den sonra her etkin kullanıcıya, yetkisi olan ve kapatmadığı
  * konulardan tek bir özet e-postası gönderir. Gün önce üstlenilir: aynı gün ikinci kez gönderilmez,
  * gönderim başarısız olursa o gün tekrar denenmez (bilgiler uygulamada görünmeye devam eder).
+ *
+ * <p>İçerik alıcının iş yeri kapsamına göre kurulur: ALL alıcılar kiracı geneli içeriği, LIMITED
+ * alıcılar yalnız kendi iş yerlerinin içeriğini alır. Personel carisi izni olmayan alıcıya personel
+ * carisinin adı yazılmaz. Her kapsam anahtarı (kapsam + izin) için içerik bir kez kurulur.
  */
 @Component
 public class DailyDigestMailer {
@@ -41,6 +48,7 @@ public class DailyDigestMailer {
   private final DigestRunRepository runs;
   private final NotificationPreferenceRepository preferences;
   private final UserAccountRepository users;
+  private final UserBranchRepository userBranches;
   private final List<DigestSection> sections;
   private final AccountMailer mailer;
   private final SecurityProperties properties;
@@ -51,6 +59,7 @@ public class DailyDigestMailer {
       DigestRunRepository runs,
       NotificationPreferenceRepository preferences,
       UserAccountRepository users,
+      UserBranchRepository userBranches,
       List<DigestSection> sections,
       AccountMailer mailer,
       SecurityProperties properties) {
@@ -59,6 +68,7 @@ public class DailyDigestMailer {
     this.runs = runs;
     this.preferences = preferences;
     this.users = users;
+    this.userBranches = userBranches;
     this.sections = sections;
     this.mailer = mailer;
     this.properties = properties;
@@ -80,13 +90,7 @@ public class DailyDigestMailer {
     if (runs.claim(today) == 0) {
       return 0;
     }
-    Map<NotificationTopic, Content> contents = new EnumMap<>(NotificationTopic.class);
-    for (DigestSection section : sections) {
-      section.build(today).ifPresent(content -> contents.put(section.topic(), content));
-    }
-    if (contents.isEmpty()) {
-      return 0;
-    }
+    Map<String, Map<NotificationTopic, Content>> byScope = new HashMap<>();
     Map<UUID, Set<NotificationTopic>> optedOut =
         preferences.findByEmailFalse().stream()
             .collect(
@@ -95,9 +99,13 @@ public class DailyDigestMailer {
                     Collectors.mapping(NotificationPreference::getTopic, Collectors.toSet())));
     int sent = 0;
     for (UserAccount user : users.findByStatus(UserStatus.ACTIVE)) {
-      // Özet içeriği tüm iş yerlerini kapsar; iş yeri kapsamlı kullanıcıya gönderilmez (kapsam
-      // başına içerik sonraki adımda).
-      if (user.getBranchScope() == BranchScope.LIMITED) {
+      BranchFilter filter = filterOf(user);
+      boolean employeeVisible =
+          user.getEffectivePermissions().contains(Permission.FINANCE_EMPLOYEE_VIEW);
+      Map<NotificationTopic, Content> contents =
+          byScope.computeIfAbsent(
+              scopeKey(filter, employeeVisible), key -> build(today, filter, employeeVisible));
+      if (contents.isEmpty()) {
         continue;
       }
       Set<Permission> permissions = user.getEffectivePermissions();
@@ -114,8 +122,42 @@ public class DailyDigestMailer {
         sent++;
       }
     }
-    log.info("Günlük özet: {} konu, {} alıcı", contents.size(), sent);
+    log.info("Günlük özet: {} kapsam, {} alıcı", byScope.size(), sent);
     return sent;
+  }
+
+  private Map<NotificationTopic, Content> build(
+      LocalDate today, BranchFilter filter, boolean employeeVisible) {
+    Map<NotificationTopic, Content> contents = new EnumMap<>(NotificationTopic.class);
+    for (DigestSection section : sections) {
+      section
+          .build(today, filter, employeeVisible)
+          .ifPresent(content -> contents.put(section.topic(), content));
+    }
+    return contents;
+  }
+
+  /** ALL alıcı kiracı geneli; LIMITED alıcı yalnız kendi iş yerleri (hiç yoksa hiçbir kayıt). */
+  private BranchFilter filterOf(UserAccount user) {
+    return user.getBranchScope() == BranchScope.LIMITED
+        ? BranchFilter.limited(null, userBranches.branchIdsOf(user.getId()))
+        : BranchFilter.all(null);
+  }
+
+  /**
+   * Aynı kapsamlı ve aynı personel carisi izinli alıcılar aynı içeriği paylaşır: {@code "ALL"} ya
+   * da sıralı iş yeri kimlikleri, ardından {@code "|E"} (FINANCE_EMPLOYEE_VIEW var) ya da {@code
+   * "|-"} (yok; personel carisi adları gizlenir, SEC-12.1-03).
+   */
+  static String scopeKey(BranchFilter filter, boolean employeeVisible) {
+    String branches =
+        filter.allBranches()
+            ? "ALL"
+            : filter.branchIds().stream()
+                .map(UUID::toString)
+                .sorted()
+                .collect(Collectors.joining(","));
+    return branches + (employeeVisible ? "|E" : "|-");
   }
 
   static String subject(List<Content> contents) {

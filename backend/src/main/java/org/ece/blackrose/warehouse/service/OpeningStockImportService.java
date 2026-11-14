@@ -20,6 +20,7 @@ import org.ece.blackrose.identity.service.AuditService;
 import org.ece.blackrose.integration.service.CsvRows;
 import org.ece.blackrose.integration.service.CsvRows.Line;
 import org.ece.blackrose.integration.service.CsvRows.RowException;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.tenant.TenantClock;
 import org.ece.blackrose.warehouse.domain.StockItem;
 import org.ece.blackrose.warehouse.domain.Warehouse;
@@ -96,6 +97,7 @@ public class OpeningStockImportService {
   private final StockService stock;
   private final TenantClock clock;
   private final AuditService audit;
+  private final BranchScopeService scope;
 
   public OpeningStockImportService(
       WarehouseRepository warehouses,
@@ -107,7 +109,8 @@ public class OpeningStockImportService {
       AccountRepository accounts,
       StockService stock,
       TenantClock clock,
-      AuditService audit) {
+      AuditService audit,
+      BranchScopeService scope) {
     this.warehouses = warehouses;
     this.bins = bins;
     this.items = items;
@@ -118,6 +121,7 @@ public class OpeningStockImportService {
     this.stock = stock;
     this.clock = clock;
     this.audit = audit;
+    this.scope = scope;
   }
 
   @Transactional(readOnly = true)
@@ -189,12 +193,15 @@ public class OpeningStockImportService {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "WAREHOUSE_REQUIRED", "Depo seçilmelidir.");
     }
-    return warehouses
-        .findById(id)
-        .orElseThrow(
-            () ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "WAREHOUSE_NOT_FOUND", "Depo bulunamadı."));
+    Warehouse warehouse =
+        warehouses
+            .findById(id)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "WAREHOUSE_NOT_FOUND", "Depo bulunamadı."));
+    scope.requireVisible(warehouse.getBranchId());
+    return warehouse;
   }
 
   private List<Parsed> check(byte[] content, Warehouse warehouse, LocalDate date) {

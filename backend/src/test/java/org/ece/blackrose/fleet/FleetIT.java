@@ -588,6 +588,11 @@ class FleetIT extends AbstractIntegrationTest {
     assertThat(options.get("funds").size()).isEqualTo(1);
     assertThat(options.get("funds").get(0).get("kind").asText()).isEqualTo("CASH");
     assertThat(options.get("funds").get(0).get("currency").asText()).isEqualTo("TRY");
+    // Fonun şirketi (ön yüz seçilen iş yerinin şirketine göre süzer).
+    JsonNode fund = body(send(t, get("/api/v1/finance/funds")).andExpect(status().isOk())).get(0);
+    assertThat(options.get("funds").get(0).get("id").asText()).isEqualTo(fund.get("id").asText());
+    assertThat(options.get("funds").get(0).get("companyId").asText())
+        .isEqualTo(fund.get("companyId").asText());
   }
 
   // Yardımcılar

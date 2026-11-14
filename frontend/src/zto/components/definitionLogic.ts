@@ -126,18 +126,101 @@ export function fieldIcon(label: string | null | undefined): string {
   return "fa-info-circle";
 }
 
-export type DefinitionEntityKey = "workplace" | "branch" | "company";
+export type DefinitionEntityKey = "workplace" | "branch" | "company" | "customer-account";
 
-/** Hero simgesi (_Details.cshtml:46-75; şirket Blackrose eki, liste simgesiyle aynı). */
+/**
+ * Hero simgesi (_Details.cshtml:46-75; şirket Blackrose eki, liste simgesiyle aynı). Cari kart
+ * (DefinitionAuditRegistry.cs:58 "Cari Kart") ZTO'da kendi görünümüyle fa-file-invoice-dollar.
+ */
 export const ENTITY_ICONS: Record<DefinitionEntityKey, string> = {
   workplace: "fa-building",
   branch: "fa-city",
   company: "fa-landmark",
+  "customer-account": "fa-file-invoice-dollar",
 };
 
-/** Vurgu teması (_Details.cshtml:77-88): workplace/branch mavi, diğerleri (şirket) indigo. */
-export function entityAccent(key: DefinitionEntityKey): "blue" | "indigo" {
+/**
+ * Vurgu teması (_Details.cshtml:77-88): workplace/branch mavi, diğerleri (şirket) indigo. Cari kartın
+ * vurgusu yok; kendi `definition-details--customer-account` görünümü kullanılır (detailsVariant).
+ */
+export function entityAccent(key: DefinitionEntityKey): "blue" | "indigo" | null {
+  if (key === "customer-account") return null;
   return key === "company" ? "indigo" : "blue";
+}
+
+export type DetailsVariant = {
+  rootClass: string;
+  heroClass: string;
+  icon: string;
+  /** true: hero'da kod · grup · durum (ZTO _Details.cshtml:95-100). */
+  customerAccount: boolean;
+};
+
+/** _Details.cshtml:89-91 kök ve hero sınıfları. */
+export function detailsVariant(key: DefinitionEntityKey): DetailsVariant {
+  const accent = entityAccent(key);
+  if (accent === null) {
+    return {
+      rootClass: "definition-details definition-details--customer-account",
+      heroClass: "definition-details__hero definition-details__hero--customer-account",
+      icon: ENTITY_ICONS[key],
+      customerAccount: true,
+    };
+  }
+  return {
+    rootClass: `definition-details definition-details--vivid dd-accent-${accent}`,
+    heroClass: "definition-details__hero definition-details__hero--vivid",
+    icon: ENTITY_ICONS[key],
+    customerAccount: false,
+  };
+}
+
+/** ZTO `fieldValue(label)`: etiketi verilen alanın değeri, yoksa "-". */
+export function fieldValueOf(
+  fields: ReadonlyArray<{ label: string; value: unknown }>,
+  label: string,
+): unknown {
+  const value = fields.find((field) => field.label === label)?.value;
+  return value === undefined || value === null || value === "" ? "-" : value;
+}
+
+export type DefinitionHistoryEntry = {
+  at: string;
+  actor: string | null;
+  event: string;
+  details: string | null;
+};
+
+export type DefinitionHistoryRow = {
+  key: string;
+  at: string;
+  actor: string;
+  event: string;
+  details: string | null;
+};
+
+/**
+ * "Düzenleme Geçmişi" satırları (Blackrose eki; kart değişiklik kaydı): en yeni önce, tarih
+ * dd.MM.yyyy HH:mm, boş kişi "Sistem aktarımı", olay adı `eventLabel` ile (bilinmeyen kod aynen).
+ */
+export function historyRows(
+  entries: ReadonlyArray<DefinitionHistoryEntry>,
+  options: {
+    systemImport: string;
+    formatAt: (iso: string) => string;
+    eventLabel?: (event: string) => string;
+  },
+): DefinitionHistoryRow[] {
+  return [...entries]
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => b.entry.at.localeCompare(a.entry.at) || a.index - b.index)
+    .map(({ entry, index }) => ({
+      key: `${entry.at}-${index}`,
+      at: options.formatAt(entry.at) || "-",
+      actor: actorText(entry.actor, options.systemImport),
+      event: options.eventLabel?.(entry.event) ?? entry.event,
+      details: blankToNull(entry.details),
+    }));
 }
 
 /** Denetim "Son İşlem Yapan" (_IntroductionAuditCellCompact.cshtml:24-27; erişim kaydı yok). */

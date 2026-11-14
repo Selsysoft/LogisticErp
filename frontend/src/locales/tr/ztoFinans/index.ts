@@ -1,5 +1,7 @@
 // "ztoFinans" ad alanı: ZTO görünümlü finans ekranlarının metinleri. Kullanım:
 // const { t } = useTranslation("ztoFinans"); t("table.search")
+import accounts from "./accounts";
+import allTransactions from "./allTransactions";
 import branch from "./branch";
 import branchGroups from "./branchGroups";
 import common from "./common";
@@ -9,8 +11,10 @@ import exportTexts from "./export";
 import modal from "./modal";
 import nav from "./nav";
 import pages from "./pages";
+import quickCari from "./quickCari";
 import select from "./select";
 import table from "./table";
+import transactions from "./transactions";
 import workPlaces from "./workPlaces";
 
 export default {
@@ -26,4 +30,9 @@ export default {
   workPlaces,
   branchGroups,
   companies,
+  // 12.1 ekranları (§5.14): parçalar sahiplerince (FE1/FE2/FE3) doldurulur.
+  accounts,
+  transactions,
+  allTransactions,
+  quickCari,
 } as const;

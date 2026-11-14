@@ -96,7 +96,8 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "modal",
         source: FILE_LINE("AccountTransaction", "openQuickCariModal()", 24),
         step: "12.1",
-        implemented: false,
+        // Hızlı Cari İşlemi modalı (ZtoFinansLayout, quickCariContext).
+        implemented: true,
       },
       {
         id: "accounts",
@@ -106,7 +107,9 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("CustomerAccounts", "Index", 30),
         step: "12.1",
-        implemented: false,
+        implemented: true,
+        // Alt yollar (düzenle, hareketler, banka hesapları) Cari Kartlar'ı etkin yapar.
+        matchPrefix: true,
       },
       {
         id: "newAccount",
@@ -116,8 +119,9 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("CustomerAccounts", "Add", 36),
         step: "12.1",
-        implemented: false,
+        implemented: true,
         action: "add",
+        permission: "FINANCE_MANAGE",
       },
       {
         id: "personnel",
@@ -527,21 +531,49 @@ export function itemPath(item: Pick<ZtoNavItem, "slug">): string {
   return `${ZTO_FINANS_BASE}/${item.slug}`;
 }
 
-/** Bağlantı olarak çalışan öğe: ekranı yazılmış bir sayfa. Modal öğeleri ekranları gelene dek pasif. */
+/** Bağlantı olarak çalışan öğe: ekranı yazılmış bir sayfa. Modal öğesi bağlantı değildir (düğme). */
 export function isNavigable(item: ZtoNavItem): boolean {
   return item.implemented && item.kind === "page";
 }
 
+/** Menüden modal açan öğe (ZTO `onclick="openQuickCariModal()"`). */
+export function isModalAction(item: ZtoNavItem): boolean {
+  return item.implemented && item.kind === "modal";
+}
+
 /**
- * Etkin öğeler (ZTO "zt-active"): yolu tam eşleşen sayfa öğeleri. ZTO'da Cari Kartlar ile Tüm
- * Planlamalar aynı adrese gittiği için ikisi birlikte etkin olabilir; sondaki "/" yok sayılır.
- * `matchPrefix` öğelerde alt yollar (…/yeni, …/:id) da etkindir.
+ * Öğenin yolla eşleşme uzunluğu: tam eşleşmede yolun, `matchPrefix` önek eşleşmesinde önekin
+ * uzunluğu; eşleşmezse 0. Sondaki "/" yok sayılır; modal öğeleri eşleşmez.
+ */
+function matchLength(item: ZtoNavItem, pathname: string): number {
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  if (item.kind !== "page") return 0;
+  const own = itemPath(item);
+  if (path === own) return own.length;
+  return item.matchPrefix === true && path.startsWith(`${own}/`) ? own.length : 0;
+}
+
+/**
+ * Öğe yolla eşleşiyor mu (geriye uyum; menü `activeItemIds` kullanır). `matchPrefix` öğelerde alt
+ * yollar (…/yeni, …/:id) da eşleşir.
  */
 export function isActive(item: ZtoNavItem, pathname: string): boolean {
-  const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
-  if (item.kind !== "page") return false;
-  const own = itemPath(item);
-  return path === own || (item.matchPrefix === true && path.startsWith(`${own}/`));
+  return matchLength(item, pathname) > 0;
+}
+
+/**
+ * Etkin öğeler (ZTO "zt-active"): en uzun eşleşmeye sahip sayfa öğeleri. ZTO'da Cari Kartlar ile Tüm
+ * Planlamalar aynı adrese gittiği için ikisi birlikte etkin olur; `/cari-kartlar/yeni`'de yalnız Yeni
+ * Cari Kart (Cari Kartlar'ın öneki daha kısa), `/cari-kartlar/:id/hareketler`'de yalnız Cari Kartlar.
+ */
+export function activeItemIds(items: readonly ZtoNavItem[], pathname: string): Set<string> {
+  let best = 0;
+  const lengths = items.map((item) => {
+    const length = matchLength(item, pathname);
+    best = Math.max(best, length);
+    return length;
+  });
+  return new Set(best === 0 ? [] : items.filter((_, i) => lengths[i] === best).map((i) => i.id));
 }
 
 /** Bir slug'ın Faz adımı; bilinmeyen slug için undefined. */
@@ -556,4 +588,60 @@ export const ZTO_SLUGS = {
   workPlaces: "tanimlar/is-yerleri",
   branchGroups: "tanimlar/subeler",
   companies: "tanimlar/sirketler",
+  accounts: "cari-kartlar",
+  newAccount: "cari-kartlar/yeni",
 } as const;
+
+/** Uygulama kabuğu dışındaki yazdırma sayfaları (ZTO `Layout = null`, yeni sekme). */
+export const ZTO_PRINT_BASE = "/zto-finans-yazdir";
+
+const segment = encodeURIComponent;
+
+/** Cari Hareketler (ZTO AccountTransaction/Transactions/{id}); `?currency&rolloverId`. */
+export function accountTransactionsPath(
+  id: string,
+  query: { currency?: string; rolloverId?: string } = {},
+): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.accounts}/${segment(id)}/hareketler${queryOf(query)}`;
+}
+
+/** Cari kart düzenle (ZTO CustomerAccounts/Edit/{id}). */
+export function accountEditPath(id: string): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.accounts}/${segment(id)}/duzenle`;
+}
+
+/** Carinin banka hesapları (ZTO BankAccounts/Index?referenceID={id}). */
+export function accountBankAccountsPath(id: string): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.accounts}/${segment(id)}/banka-hesaplari`;
+}
+
+/** Yeni banka hesabı (ZTO BankAccounts/Add?referenceID={id}). */
+export function newBankAccountPath(accountId: string): string {
+  return `${accountBankAccountsPath(accountId)}/yeni`;
+}
+
+/** Banka hesabı düzenle (ZTO BankAccounts/Edit/{id}). */
+export function bankAccountEditPath(bankAccountId: string): string {
+  return `${ZTO_FINANS_BASE}/banka-hesaplari/${segment(bankAccountId)}/duzenle`;
+}
+
+export type StatementQuery = {
+  from?: string;
+  to?: string;
+  currency?: string;
+  branchId?: string;
+  companyId?: string;
+  dateBasis?: "TRANSACTION" | "DOCUMENT";
+};
+
+/** Ekstre yazdırma sayfası (ZTO AccountTransaction/Statement/{id}; `window.open(…, "_blank")`). */
+export function statementPath(id: string, query: StatementQuery = {}): string {
+  return `${ZTO_PRINT_BASE}/cari-ekstre/${segment(id)}${queryOf(query)}`;
+}
+
+function queryOf(query: Record<string, string | undefined>): string {
+  const parts = Object.entries(query)
+    .filter(([, value]) => value !== undefined && value !== "")
+    .map(([key, value]) => `${key}=${encodeURIComponent(value as string)}`);
+  return parts.length > 0 ? `?${parts.join("&")}` : "";
+}

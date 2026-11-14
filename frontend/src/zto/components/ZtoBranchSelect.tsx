@@ -40,6 +40,9 @@ export type ZtoBranchSelectProps = {
   companyId?: string | null | "active";
   /** Verilirse useBranchTree yerine kullanılır (test, vitrin). */
   tree?: BranchTree;
+  /** Hata bağlantısı; ZtoSelect odaklanan öğeye yazar (MWG accessible-error-announcement). */
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 };
 
 /**
@@ -80,6 +83,8 @@ function BranchSelectView({
   tree: fullTree,
   loading,
   error,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
 }: Omit<ZtoBranchSelectProps, "tree"> & {
   tree: BranchTree | undefined;
   loading: boolean;
@@ -131,6 +136,8 @@ function BranchSelectView({
         name={name}
         className={className}
         minimumResultsForSearch={minimumResultsForSearch}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
       />
       {error && (
         <div className="small text-danger" role="alert">

@@ -53,7 +53,17 @@ export interface ZtoSelectProps {
   /** Seçenek sayısı bunun altındaysa arama kutusu gizlenir; Infinity = hiç arama yok. */
   minimumResultsForSearch?: number;
   title?: string;
+  /**
+   * Hata bağlantısı (MWG accessible-error-announcement): select2'de odaklanan `role=combobox`
+   * öğesine, no-select2'de yerel select'e yazılır; gizli (aria-hidden) select'e yazılmaz.
+   */
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }
+
+/** Verilmişse "true"/"false" (MWG: hata yokken "false"), verilmemişse nitelik yazılmaz. */
+const ariaInvalidAttr = (value: boolean | undefined) =>
+  value === undefined ? undefined : value ? "true" : "false";
 
 const cx = (...parts: Array<string | false | null | undefined>) => parts.filter(Boolean).join(" ");
 
@@ -102,6 +112,8 @@ export function ZtoSelect(props: ZtoSelectProps) {
         disabled={disabled}
         required={required}
         title={title}
+        aria-invalid={ariaInvalidAttr(props["aria-invalid"])}
+        aria-describedby={props["aria-describedby"]}
       >
         {placeholder !== undefined && !hasEmptyOption(options) && (
           <option value="">{placeholder}</option>
@@ -145,6 +157,8 @@ function Select2({
   className,
   minimumResultsForSearch = 0,
   title,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
 }: ZtoSelectProps & { className: string }) {
   const { t } = useTranslation("ztoFinans");
   const placeholder =
@@ -462,6 +476,8 @@ function Select2({
             tabIndex={disabled ? -1 : 0}
             aria-disabled={disabled ? "true" : "false"}
             aria-labelledby={renderedId}
+            aria-describedby={ariaDescribedBy}
+            aria-invalid={ariaInvalidAttr(ariaInvalid)}
             aria-controls={renderedId}
             aria-owns={open ? resultsId : undefined}
             aria-activedescendant={open && highlighted !== null ? optionId(highlighted) : undefined}

@@ -228,4 +228,40 @@ describe("ZtoBranchSelect", () => {
       "Tüm İş Yerleri",
     );
   });
+
+  it("aria-invalid/aria-describedby select2'de odaklanan combobox'a yazılır, gizli select'e değil", () => {
+    render(<Harness required aria-invalid aria-describedby="err1" />);
+    const combo = q('[role="combobox"]');
+    expect(combo.getAttribute("aria-invalid")).toBe("true");
+    expect(combo.getAttribute("aria-describedby")).toBe("err1");
+    const hidden = q<HTMLSelectElement>("select#filterWorkPlace");
+    expect(hidden.hasAttribute("aria-invalid")).toBe(false);
+    expect(hidden.hasAttribute("aria-describedby")).toBe(false);
+    // × düğmesinin kendi aria-describedby'ı (seçili metin) değişmez.
+    cleanup();
+    render(<Harness value="a" aria-invalid aria-describedby="err1" />);
+    expect(q(".select2-selection__clear").getAttribute("aria-describedby")).not.toBe("err1");
+  });
+
+  it("aria-invalid/aria-describedby no-select2'de yerel select'e yazılır", () => {
+    render(<Harness className="no-select2" aria-invalid aria-describedby="err1" />);
+    const native = q<HTMLSelectElement>("select#filterWorkPlace");
+    expect(native.getAttribute("aria-invalid")).toBe("true");
+    expect(native.getAttribute("aria-describedby")).toBe("err1");
+  });
+
+  it("aria-invalid=false 'false' yazılır (MWG); nitelikler verilmezse hiçbiri yazılmaz", () => {
+    render(<Harness required aria-invalid={false} />);
+    const combo = q('[role="combobox"]');
+    expect(combo.getAttribute("aria-invalid")).toBe("false");
+    expect(combo.hasAttribute("aria-describedby")).toBe(false);
+    cleanup();
+    render(<Harness required />);
+    expect(q('[role="combobox"]').hasAttribute("aria-invalid")).toBe(false);
+    cleanup();
+    render(<Harness className="no-select2" />);
+    const native = q<HTMLSelectElement>("select#filterWorkPlace");
+    expect(native.hasAttribute("aria-invalid")).toBe(false);
+    expect(native.hasAttribute("aria-describedby")).toBe(false);
+  });
 });

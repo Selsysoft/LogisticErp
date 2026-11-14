@@ -1,0 +1,1048 @@
+/*
+ * Kaynak: ZtoFabrika/Views/AccountTransaction/Statement.cshtml:18-801 + :803-925 (yazdırma) — birebir kopya;
+ * değişiklikler: Razor "@@" kaçışı "@" yapıldı; @page kuralı CSS'e girmez (sayfa bağlıyken <style> ile eklenir,
+ * 12.1 §5.6); sonda Blackrose
+ * nötrleme bloğu (F9). Sayfa kapsamı .zto-finans.zto-page-account-statement.
+ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #000;
+  background: transparent;
+  padding: 15px;
+  position: relative;
+}
+
+.statement-container {
+  max-width: 900px;
+  margin: 0 auto;
+  background: transparent;
+  position: relative;
+  z-index: 1;
+}
+
+/* Header */
+.header {
+  border-bottom: 3px double #000;
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.company-name {
+  font-size: 20px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.statement-info {
+  text-align: right;
+  font-size: 11px;
+}
+
+.statement-title {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.statement-title h1 {
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 10px;
+  text-transform: uppercase;
+  border: 3px solid #000;
+  display: inline-block;
+  padding: 10px 40px;
+  margin-bottom: 8px;
+}
+
+.statement-subtitle {
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-top: 5px;
+}
+
+/* Account Info Box */
+.account-box {
+  border: 2px solid #000;
+  margin-bottom: 20px;
+}
+
+.account-box-header {
+  background: #000;
+  color: #fff;
+  padding: 8px 15px;
+  font-weight: bold;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.account-box-content {
+  padding: 15px;
+}
+
+.account-row {
+  display: flex;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.account-row:last-child {
+  margin-bottom: 0;
+}
+
+.account-label {
+  width: 140px;
+  font-weight: bold;
+}
+
+.account-value {
+  flex: 1;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* Workplace Section */
+.workplace-section {
+  margin-bottom: 50px;
+  page-break-after: always;
+}
+
+.workplace-section:last-of-type {
+  page-break-after: auto;
+}
+
+.workplace-header {
+  background: #000;
+  color: #fff;
+  padding: 15px 20px;
+  margin: 30px 0 20px 0;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 2px solid #000;
+}
+
+.workplace-header h2 {
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* Currency Section */
+.currency-section {
+  margin-bottom: 50px;
+  page-break-after: avoid;
+}
+
+.currency-header {
+  background: #000;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 2px solid #000;
+}
+
+.currency-header h2 {
+  font-size: 18px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.currency-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 6px 15px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: bold;
+  border: 1px solid #fff;
+}
+
+/* Grand Summary */
+.grand-summary {
+  margin-top: 40px;
+  border: 4px double #000;
+  page-break-before: avoid;
+}
+
+.grand-summary-header {
+  background: #000;
+  color: #fff;
+  padding: 15px 20px;
+  font-weight: bold;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  text-align: center;
+}
+
+.grand-summary-content {
+  padding: 25px;
+  background: #f8f9fa;
+}
+
+.grand-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.grand-summary-table thead th {
+  background: #343a40;
+  color: white;
+  padding: 12px;
+  text-align: center;
+  font-size: 12px;
+  text-transform: uppercase;
+  border: 1px solid #000;
+}
+
+.grand-summary-table tbody td {
+  padding: 12px;
+  border: 1px solid #ddd;
+  font-size: 13px;
+  text-align: right;
+}
+
+.grand-summary-table tbody td:first-child,
+.grand-summary-table tbody td:nth-child(2) {
+  text-align: center;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.grand-summary-table tbody tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+/* Transaction Table */
+.transactions-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  font-size: 11px;
+}
+
+.transactions-table thead th {
+  background: #000;
+  color: #fff;
+  padding: 10px 8px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid #000;
+}
+
+.transactions-table tbody td {
+  padding: 8px;
+  border: 1px solid #ccc;
+  vertical-align: middle;
+}
+
+.transactions-table tbody tr:nth-child(even) {
+  background: #f9f9f9;
+}
+
+.transactions-table .col-no {
+  width: 40px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.transactions-table .col-date {
+  width: 85px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.transactions-table .col-type {
+  width: 75px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.transactions-table .col-doc {
+  width: 100px;
+}
+
+.transactions-table .col-desc {
+  min-width: 150px;
+}
+
+.transactions-table .col-amount {
+  width: 110px;
+  text-align: right;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.transactions-table .col-balance {
+  width: 130px;
+  text-align: right;
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+/* Para birimi bazlı toplam satırı (tfoot) */
+.transactions-table tfoot .statement-total-row td {
+  background: #eef2ff;
+  border: 1px solid #c7cde0;
+  border-top: 2px solid #000;
+  padding: 9px 8px;
+  font-weight: bold;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.transactions-table tfoot .statement-total-row .stl-label {
+  text-align: right;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 11px;
+}
+
+/* Summary Section */
+.summary-section {
+  border: 3px solid #000;
+  margin-top: 25px;
+}
+
+.summary-header {
+  background: #000;
+  color: #fff;
+  padding: 10px 15px;
+  font-weight: bold;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-align: center;
+}
+
+.summary-content {
+  padding: 20px;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summary-table td {
+  padding: 12px 15px;
+  border-bottom: 1px dashed #ccc;
+  font-size: 13px;
+}
+
+.summary-table tr:last-child td {
+  border-bottom: none;
+  border-top: 3px solid #000;
+  padding-top: 15px;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.summary-table .label {
+  text-align: left;
+  font-weight: bold;
+}
+
+.summary-table .value {
+  text-align: right;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.summary-table .value.borc {
+  color: #c00;
+}
+
+.summary-table .value.alacak {
+  color: #060;
+}
+
+/* Print Actions */
+.print-actions {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  display: flex;
+  gap: 10px;
+  z-index: 1000;
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.currency-filter {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.workplace-filter {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.workplace-filter select {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  background: white;
+}
+
+.balance-calc-filter {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.balance-calc-filter select {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  background: white;
+}
+
+.currency-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.currency-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #000;
+}
+
+.detail-toggle-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f5f5f5;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.toggle-text {
+  font-size: 11px;
+  font-weight: bold;
+  color: #000;
+  font-family: "Courier New", monospace;
+}
+
+.toggle-text.inactive {
+  color: #999;
+}
+
+.toggle-switch-small {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+
+.toggle-switch-small input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider-small {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.3s;
+  border-radius: 20px;
+}
+
+.toggle-slider-small:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.toggle-switch-small input:checked + .toggle-slider-small {
+  background-color: #000;
+}
+
+.toggle-switch-small input:checked + .toggle-slider-small:before {
+  transform: translateX(16px);
+}
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background: #ccc;
+  margin: 0 5px;
+}
+
+.btn {
+  padding: 10px 20px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+}
+
+.btn-print {
+  background: #000;
+  color: #fff;
+}
+
+.btn-print:hover {
+  background: #333;
+}
+
+/* Detail Rows */
+.detail-row {
+  display: none;
+  background: #f8f9fa !important;
+}
+
+.detail-row.show {
+  display: table-row;
+}
+
+.detail-row td {
+  padding: 4px 8px !important;
+  border: none !important;
+  border-bottom: 1px dotted #ddd !important;
+  font-size: 9px;
+  color: #555;
+}
+
+.detail-container {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px;
+  margin: 4px 0;
+}
+
+.detail-header {
+  font-weight: bold;
+  font-size: 11px;
+  color: #333;
+  margin-bottom: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #ccc;
+}
+
+.detail-table {
+  width: 100%;
+  font-size: 10px;
+  border-collapse: collapse;
+}
+
+.detail-table th {
+  background: #e9ecef;
+  padding: 5px 8px;
+  text-align: left;
+  font-weight: bold;
+  font-size: 9px;
+  text-transform: uppercase;
+  border: 1px solid #ddd;
+}
+
+.detail-table td {
+  padding: 5px 8px;
+  border: 1px solid #ddd;
+  font-size: 10px;
+}
+
+.detail-table tr.total-row {
+  background: #e9ecef !important;
+  font-weight: bold;
+}
+
+.detail-table tr.total-row td {
+  font-weight: bold;
+  font-size: 11px;
+  border-top: 2px solid #000;
+}
+
+.detail-table .text-right {
+  text-align: right;
+}
+
+.detail-table .text-center {
+  text-align: center;
+}
+
+.detail-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #007bff;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+/* Watermark */
+.watermark {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  opacity: 0.1;
+  z-index: 100;
+  width: 40%;
+  pointer-events: none;
+}
+
+/* Legend */
+.legend {
+  margin-top: 15px;
+  padding: 10px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  font-size: 9px;
+}
+
+.legend-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+/* Footer */
+.footer {
+  margin-top: 30px;
+  padding-top: 15px;
+  border-top: 1px solid #000;
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #666;
+}
+
+/* Print Styles */
+@media print {
+  body {
+    padding: 0;
+  }
+
+  .print-actions {
+    display: none !important;
+  }
+
+  .statement-container {
+    max-width: 100%;
+  }
+
+  .transactions-table thead th {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .summary-header {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .account-box-header {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .currency-header {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .workplace-header {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .grand-summary-header {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .grand-summary-table thead th {
+    background: #343a40 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .workplace-section.hide-for-print,
+  .currency-section.hide-for-print {
+    display: none !important;
+  }
+
+  /* ✅ Yazdırmada Malzeme Detayları tablosu sayfa ortasından kesilmesin;
+               sığmıyorsa komple alt sayfaya geçsin */
+  .detail-row,
+  .detail-row > td,
+  .detail-container,
+  .detail-container table,
+  .detail-container thead,
+  .detail-container tbody,
+  .detail-container tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* İşlem satırları da satır ortasından bölünmesin */
+  .transactions-table tbody tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Tablo başlıkları yeni sayfada tekrar etsin */
+  .transactions-table thead,
+  .detail-container thead {
+    display: table-header-group;
+  }
+}
+
+/* @page — AccountStatementPage bağlıyken \3c style> ile eklenir */
+
+.statement-title h1 {
+  font-size: 18px !important;
+  letter-spacing: 1px;
+}
+.statement-title .statement-subtitle {
+  font-size: 11px !important;
+}
+.company-name {
+  font-size: 15px !important;
+}
+.statement-info {
+  font-size: 10px !important;
+}
+
+.account-box-header {
+  padding: 5px 10px !important;
+  font-size: 11px !important;
+}
+.account-box-content {
+  padding: 8px 10px !important;
+}
+.account-box .account-row {
+  font-size: 11px !important;
+}
+
+/* İş yeri ve para birimi başlıkları (siyah/renkli bantlar) — kompakt */
+.workplace-header {
+  padding: 5px 12px !important;
+}
+.workplace-header h2 {
+  font-size: 12.5px !important;
+}
+.currency-header {
+  padding: 4px 12px !important;
+}
+.currency-header h2 {
+  font-size: 11.5px !important;
+}
+.currency-badge {
+  font-size: 10px !important;
+  padding: 2px 7px !important;
+}
+.grand-summary-header {
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+}
+.summary-header {
+  padding: 5px 10px !important;
+  font-size: 11.5px !important;
+}
+
+/* Hareket tablosu — padding/font azalt */
+.transactions-table {
+  font-size: 10px !important;
+}
+.transactions-table thead th {
+  padding: 4px 6px !important;
+  font-size: 9.5px !important;
+}
+.transactions-table tbody td {
+  padding: 3px 6px !important;
+}
+.transactions-table .col-amount {
+  font-size: 10px !important;
+}
+.transactions-table .col-balance {
+  font-size: 10.5px !important;
+}
+.opening-balance-row td {
+  padding: 3px 6px !important;
+  font-size: 10.5px !important;
+}
+
+/* Özet tabloları — kompakt */
+.summary-content {
+  padding: 8px 10px !important;
+}
+.summary-table td {
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+}
+.grand-summary-content {
+  padding: 8px 10px !important;
+}
+.grand-summary-table th,
+.grand-summary-table td {
+  padding: 4px 8px !important;
+  font-size: 10.5px !important;
+}
+
+/* Detay tabloları */
+.detail-table th,
+.detail-table td {
+  padding: 3px 5px !important;
+  font-size: 9px !important;
+}
+.detail-header {
+  font-size: 10px !important;
+  padding: 4px 6px !important;
+}
+
+.workplace-section {
+  margin-bottom: 12px !important;
+}
+.currency-section {
+  margin-bottom: 10px !important;
+}
+
+/* EKSTRE altındaki dönem etiketi */
+.statement-period {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1d4ed8;
+  letter-spacing: 0.3px;
+}
+
+/* ===== Filtre çubuğu (print-actions) — kompakt & ortalı ===== */
+.print-actions {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  padding: 8px 10px !important;
+}
+.print-actions .divider {
+  display: none !important;
+}
+.print-actions > div,
+.print-actions .balance-date-filter,
+.print-actions .balance-calc-filter,
+.print-actions .workplace-filter,
+.print-actions .currency-filter,
+.print-actions .detail-toggle-inline {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 4px 10px !important;
+  margin: 0 !important;
+}
+.print-actions span {
+  font-size: 11px !important;
+}
+.print-actions select,
+.print-actions input[type="date"] {
+  font-size: 11px !important;
+  padding: 3px 6px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  color: #1e293b !important;
+  outline: none;
+}
+.print-actions input[type="date"]:focus,
+.print-actions select:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+.print-actions .balance-date-filter .btn {
+  border-radius: 6px !important;
+  padding: 3px 10px !important;
+  font-size: 11px !important;
+}
+.print-actions .btn-print {
+  background: #1d4ed8 !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 5px 14px !important;
+  font-size: 11px !important;
+  font-weight: 600;
+}
+
+/* Başlık (EKSTRE) — daha kompakt */
+.statement-title {
+  margin: 6px 0 !important;
+}
+.statement-title h1 {
+  font-size: 16px !important;
+  letter-spacing: 4px !important;
+  padding: 4px 20px !important;
+  border-width: 2px !important;
+  margin-bottom: 3px !important;
+}
+.statement-period {
+  margin-top: 2px !important;
+  font-size: 11px !important;
+}
+
+/* Filtre çubuğunu yatayda ORTALA (fixed) ve sayfa içeriğini çubuğun altından başlat */
+.print-actions {
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  top: 10px !important;
+  max-width: 96% !important;
+  width: 60%;
+}
+@media screen {
+  .statement-container {
+    margin-top: 96px !important;
+  }
+}
+
+/* Yazdırmada filtre çubuğu görünmesin (override sonrası garanti) */
+@media print {
+  .print-actions {
+    display: none !important;
+  }
+  .statement-container {
+    margin-top: 0 !important;
+  }
+}
+
+/*
+ * --- Blackrose: Bootstrap sızıntısının nötrlenmesi (12.1 §5.11 F9) ---
+ * ZTO Statement Layout = null (Bootstrap/SB Admin yok). Burada sayfa ZtoFinansRoot içinde açıldığı için
+ * zto-finans.css'in Bootstrap 4 reboot'u ve sb-nav-fixed (Open Sans 14px) kuralları gelir; aşağıdakiler ZTO
+ * görünümünü geri getirir (ZTO satır içi stilleri yine kazanır).
+ */
+/* sb-nav-fixed kuralı (_ExpertLayout satır içi stili) !important taşır; nötrleme de !important ister
+   (seçici .zto-finans.zto-page-account-statement.zto-print daha özgül olduğundan kazanır). */
+body.zto-print {
+  font-family: "Courier New", Courier, monospace !important;
+  font-size: 11px !important;
+  line-height: 1.4 !important; /* ZTO Statement body */
+}
+body.zto-print .btn {
+  line-height: normal;
+  font-weight: normal;
+  border: none;
+  transition: none;
+  vertical-align: baseline;
+  user-select: auto;
+}
+body.zto-print .btn.btn-print {
+  font-weight: bold;
+}
+body.zto-print h1,
+body.zto-print h2 {
+  margin: 0;
+  font-family: inherit;
+  font-weight: bold;
+  line-height: normal;
+}
+body.zto-print button,
+body.zto-print input,
+body.zto-print select {
+  font-family: inherit;
+}
+/* MWG (tablo erişilebilirliği): tutar hücreleri hizalı rakamlarla. */
+.transactions-table .col-amount,
+.transactions-table .col-balance,
+.grand-summary-table td,
+.summary-table td.value {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,5 +1,6 @@
 package org.ece.blackrose.tenant.service;
 
+import org.ece.blackrose.finance.service.AccountTaxNumberBackfill;
 import org.ece.blackrose.tenant.domain.Tenant;
 import org.ece.blackrose.tenant.domain.TenantStatus;
 import org.ece.blackrose.tenant.repository.TenantRepository;
@@ -19,10 +20,13 @@ public class TenantMigrationRunner implements ApplicationRunner {
 
   private final TenantRepository tenants;
   private final TenantMigrator migrator;
+  private final AccountTaxNumberBackfill taxNumbers;
 
-  public TenantMigrationRunner(TenantRepository tenants, TenantMigrator migrator) {
+  public TenantMigrationRunner(
+      TenantRepository tenants, TenantMigrator migrator, AccountTaxNumberBackfill taxNumbers) {
     this.tenants = tenants;
     this.migrator = migrator;
+    this.taxNumbers = taxNumbers;
   }
 
   @Override
@@ -40,7 +44,10 @@ public class TenantMigrationRunner implements ApplicationRunner {
         log.error("Tenant migration başarısız: {}", tenant.getCode(), ex);
         tenant.markFailed();
         tenants.save(tenant);
+        continue;
       }
+      // Uygulama içi veri göçü (12.1 §2.4); hatası kiracıyı kapatmaz.
+      taxNumbers.backfillQuietly(tenant.getSchemaName());
     }
   }
 }

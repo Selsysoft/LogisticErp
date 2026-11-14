@@ -151,6 +151,9 @@ public final class IntegrationDtos {
 
   public record Option(UUID id, String label) {}
 
+  /** Banka hesabı seçeneği; şirket, ön yüzün iş yerinin şirketine göre süzmesi içindir. */
+  public record FundOptionResponse(UUID id, String label, UUID companyId) {}
+
   public record IntegrationOptionsResponse(
-      List<Option> shipments, List<Option> accounts, List<Option> bankAccounts) {}
+      List<Option> shipments, List<Option> accounts, List<FundOptionResponse> bankAccounts) {}
 }

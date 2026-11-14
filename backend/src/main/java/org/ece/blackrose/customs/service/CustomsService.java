@@ -30,6 +30,7 @@ import org.ece.blackrose.customs.web.CustomsDtos.SaveLineRequest;
 import org.ece.blackrose.customs.web.CustomsDtos.SavePermitRequest;
 import org.ece.blackrose.customs.web.CustomsDtos.SaveTransitRequest;
 import org.ece.blackrose.customs.web.CustomsDtos.UsePermitRequest;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.CostKind;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.ShipmentStatus;
 import org.ece.blackrose.shipment.domain.TripCost;
@@ -43,6 +44,10 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Gümrük, transit, izin ve sınır kayıtları. Gümrük sistemleriyle bağlantı yoktur; belge kaydı
  * tutulur, otomatik gönderim Faz 8'dedir.
+ *
+ * <p>Beyan, transit, izin kullanımı ve sınır geçişi seferin iş yeri kapsamına bağlıdır (LIMITED
+ * kullanıcıda kapsam dışı sefer 403 {@code BRANCH_OUT_OF_SCOPE}); izin belgesinin kendisi kiracı
+ * geneli ana veridir.
  */
 @Service
 public class CustomsService {
@@ -61,6 +66,7 @@ public class CustomsService {
   private final BorderCrossingRepository crossings;
   private final ShipmentRepository shipments;
   private final TripFinanceService finance;
+  private final BranchScopeService scope;
 
   public CustomsService(
       CustomsDeclarationRepository declarations,
@@ -70,7 +76,8 @@ public class CustomsService {
       PermitUsageRepository usages,
       BorderCrossingRepository crossings,
       ShipmentRepository shipments,
-      TripFinanceService finance) {
+      TripFinanceService finance,
+      BranchScopeService scope) {
     this.declarations = declarations;
     this.lines = lines;
     this.transits = transits;
@@ -79,6 +86,7 @@ public class CustomsService {
     this.crossings = crossings;
     this.shipments = shipments;
     this.finance = finance;
+    this.scope = scope;
   }
 
   // Beyan
@@ -222,6 +230,7 @@ public class CustomsService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "USAGE_NOT_FOUND", "Kullanım kaydı bulunamadı."));
+    requireShipmentVisible(usage.getShipmentId());
     usage.markDeleted();
   }
 
@@ -271,6 +280,7 @@ public class CustomsService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "CROSSING_NOT_FOUND", "Geçiş kaydı bulunamadı."));
+    requireShipmentVisible(crossing.getShipmentId());
     if (crossing.getTripCostId() != null) {
       finance.removeCost(crossing.getTripCostId());
     }
@@ -301,10 +311,18 @@ public class CustomsService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "SHIPMENT_NOT_FOUND", "Sefer bulunamadı."));
+    scope.requireVisible(shipment.getBranchId());
     if (shipment.getStatus() == ShipmentStatus.CANCELLED) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "SHIPMENT_CANCELLED", "İptal edilmiş sefere kayıt eklenemez.");
     }
+  }
+
+  /** Kaydın seferi LIMITED kullanıcının kapsamında olmalı (403 {@code BRANCH_OUT_OF_SCOPE}). */
+  public void requireShipmentVisible(UUID shipmentId) {
+    shipments
+        .findById(shipmentId)
+        .ifPresent(shipment -> scope.requireVisible(shipment.getBranchId()));
   }
 
   private static void ensureDraft(CustomsDeclaration declaration) {
@@ -314,13 +332,17 @@ public class CustomsService {
     }
   }
 
-  private CustomsDeclaration findDeclaration(UUID id) {
-    return declarations
-        .findById(id)
-        .orElseThrow(
-            () ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "DECLARATION_NOT_FOUND", "Beyan bulunamadı."));
+  /** Beyan yoksa 404; seferi kapsam dışıysa 403. */
+  public CustomsDeclaration findDeclaration(UUID id) {
+    CustomsDeclaration declaration =
+        declarations
+            .findById(id)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "DECLARATION_NOT_FOUND", "Beyan bulunamadı."));
+    requireShipmentVisible(declaration.getShipmentId());
+    return declaration;
   }
 
   private TransitDocument findOpenTransit(UUID id) {
@@ -331,6 +353,7 @@ public class CustomsService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "TRANSIT_NOT_FOUND", "Transit belgesi bulunamadı."));
+    requireShipmentVisible(transit.getShipmentId());
     if (transit.getStatus() != TransitStatus.OPEN) {
       throw new BusinessException(HttpStatus.CONFLICT, "TRANSIT_CLOSED", "Transit belgesi kapalı.");
     }

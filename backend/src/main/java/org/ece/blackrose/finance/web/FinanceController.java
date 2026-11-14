@@ -8,7 +8,10 @@ import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.common.web.PageResponse;
 import org.ece.blackrose.finance.domain.ExpenseItem;
 import org.ece.blackrose.finance.domain.ExpenseType;
+import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.AgingType;
+import org.ece.blackrose.finance.domain.FinanceTypes.BalanceGroupBy;
+import org.ece.blackrose.finance.domain.FinanceTypes.DateBasis;
 import org.ece.blackrose.finance.domain.FinanceTypes.HeatmapPeriod;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.PlanStatus;
@@ -18,6 +21,8 @@ import org.ece.blackrose.finance.repository.FinanceRepositories.ExchangeRateRepo
 import org.ece.blackrose.finance.repository.FinanceRepositories.ExpenseItemRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.ExpenseTypeRepository;
 import org.ece.blackrose.finance.service.AccountService;
+import org.ece.blackrose.finance.service.AccountService.AccountListQuery;
+import org.ece.blackrose.finance.service.AccountService.StatementQuery;
 import org.ece.blackrose.finance.service.FundService;
 import org.ece.blackrose.finance.service.InstrumentService;
 import org.ece.blackrose.finance.service.PaymentPlanService;
@@ -65,6 +70,7 @@ import org.ece.blackrose.finance.web.FinanceDtos.TransferRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.TransferResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.UpdateFundRequest;
 import org.ece.blackrose.organization.BranchScopeService;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -90,6 +96,7 @@ public class FinanceController {
   private static final String POST = "hasAuthority('FINANCE_PAYMENT_CREATE')";
   private static final String APPROVE = "hasAuthority('FINANCE_APPROVE')";
   private static final String IDEMPOTENCY_HEADER = "Idempotency-Key";
+  private static final int ACCOUNT_PAGE_MAX = 2000;
 
   private final AccountService accounts;
   private final FundService funds;
@@ -105,6 +112,7 @@ public class FinanceController {
   private final FinanceMapper mapper;
   private final BranchScopeService scope;
 
+  @SuppressWarnings("java:S107")
   public FinanceController(
       AccountService accounts,
       FundService funds,
@@ -136,20 +144,50 @@ public class FinanceController {
 
   // Cari
 
+  /**
+   * Kart listesi. {@code branchIds} yalnız bakiyeleri süzer; {@code active} yoksa hepsi (MUI).
+   * Sayfa boyutu bu uçta en çok {@value #ACCOUNT_PAGE_MAX} (ZTO istemci modu tüm kartları çeker).
+   */
   @GetMapping("/accounts")
   @PreAuthorize(VIEW)
   PageResponse<AccountResponse> listAccounts(
       @RequestParam(required = false) String search,
       @RequestParam(required = false) UUID companyId,
+      @RequestParam(required = false) List<AccountType> types,
+      @RequestParam(required = false) List<String> subGroups,
+      @RequestParam(required = false) Boolean active,
+      @RequestParam(required = false) List<UUID> branchIds,
+      @RequestParam(required = false) BalanceGroupBy balanceGroupBy,
+      @RequestParam(defaultValue = "false") boolean includePlanSummary,
+      @RequestParam(name = "size", required = false) Integer size,
       Pageable pageable) {
-    return accounts.list(search, companyId, pageable);
+    Pageable page =
+        size == null
+            ? pageable
+            : PageRequest.of(
+                pageable.getPageNumber(),
+                Math.max(1, Math.min(size, ACCOUNT_PAGE_MAX)),
+                pageable.getSort());
+    return accounts.list(
+        new AccountListQuery(
+            search,
+            companyId,
+            types,
+            subGroups,
+            active,
+            branchIds,
+            balanceGroupBy,
+            includePlanSummary),
+        page);
   }
 
   @GetMapping("/accounts/{id}")
   @PreAuthorize(VIEW)
   AccountResponse getAccount(
-      @PathVariable UUID id, @RequestParam(required = false) UUID companyId) {
-    return accounts.get(id, companyId);
+      @PathVariable UUID id,
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(required = false) List<UUID> branchIds) {
+    return accounts.get(id, companyId, branchIds);
   }
 
   @PostMapping("/accounts")
@@ -192,16 +230,24 @@ public class FinanceController {
     return mapper.toResponse(accounts.reverseManual(id, request.date(), request.description()));
   }
 
+  /**
+   * Ekstre (12.1 §4.5): {@code currency} boşsa çok para birimli; {@code dateBasis=DOCUMENT} belge
+   * tarihine göre süzer ve sıralar. Sayfa boyutu en çok {@value AccountService#STATEMENT_PAGE_MAX}.
+   */
   @GetMapping("/accounts/{id}/statement")
   @PreAuthorize(VIEW)
   StatementResponse accountStatement(
       @PathVariable UUID id,
-      @RequestParam String currency,
+      @RequestParam(required = false) String currency,
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
       @RequestParam(required = false) UUID companyId,
-      Pageable pageable) {
-    return accounts.statement(id, currency, from, to, companyId, unsorted(pageable));
+      @RequestParam(required = false) List<UUID> branchIds,
+      @RequestParam(required = false) DateBasis dateBasis,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return accounts.statement(
+        id, new StatementQuery(currency, from, to, companyId, branchIds, dateBasis), page, size);
   }
 
   /** {@code excludeIntercompany} yalnız konsolidede (companyId boş) uygulanır. */
@@ -320,7 +366,7 @@ public class FinanceController {
       @RequestHeader(name = IDEMPOTENCY_HEADER, required = false) String idempotencyKey) {
     scope.requireNew(request.branchId());
     return mapper.toResponse(
-        settlements.create(SettlementType.PAYMENT, request, idempotencyKey, null));
+        settlements.createByUser(SettlementType.PAYMENT, request, idempotencyKey));
   }
 
   @GetMapping("/collections")
@@ -339,7 +385,7 @@ public class FinanceController {
       @RequestHeader(name = IDEMPOTENCY_HEADER, required = false) String idempotencyKey) {
     scope.requireNew(request.branchId());
     return mapper.toResponse(
-        settlements.create(SettlementType.COLLECTION, request, idempotencyKey, null));
+        settlements.createByUser(SettlementType.COLLECTION, request, idempotencyKey));
   }
 
   @PostMapping("/settlements/{id}/reverse")
@@ -399,7 +445,7 @@ public class FinanceController {
   @PreAuthorize(POST)
   PlanResponse createPlan(@Valid @RequestBody CreatePlanRequest request) {
     scope.requireNew(request.branchId());
-    return mapper.toResponse(plans.create(request, null));
+    return mapper.toResponse(plans.createManual(request));
   }
 
   @GetMapping("/payment-plans/{id}/events")
@@ -549,8 +595,11 @@ public class FinanceController {
     rateRefresher.refresh();
   }
 
+  /**
+   * Kullanıcı girişli ödeme/tahsilat: pasif cari 422, cari–şirket kimlik kuralı. Plan ödemesi,
+   * avans ve araç gideri türetilmiş akışlardır, bu kurala girmez (12.1 §3.1).
+   */
   private static Pageable unsorted(Pageable pageable) {
-    return org.springframework.data.domain.PageRequest.of(
-        pageable.getPageNumber(), pageable.getPageSize());
+    return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
   }
 }

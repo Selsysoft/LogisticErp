@@ -345,6 +345,15 @@ class IntegrationIT extends AbstractIntegrationTest {
                     "TRY",
                     "branchId",
                     s.branch())));
+    // Seçeneklerdeki banka hesabı şirketini taşır.
+    JsonNode bankOption =
+        body(send(s.tenant(), get(BASE + "/options")).andExpect(status().isOk()))
+            .get("bankAccounts")
+            .get(0);
+    assertThat(bankOption.get("id").asText()).isEqualTo(fund);
+    assertThat(bankOption.get("companyId").asText())
+        .isEqualTo(
+            body(send(s.tenant(), get("/api/v1/finance/funds"))).get(0).get("companyId").asText());
     String date = TODAY.toString();
     deposit(s, fund, "1000", TODAY);
     deposit(s, fund, "500", TODAY);

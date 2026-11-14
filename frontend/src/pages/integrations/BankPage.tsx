@@ -3,7 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChangeEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiGet, apiRequest, apiUpload } from "../../api/client";
+import { useActiveCompanyId } from "../../auth/companyStore";
 import { ErrorState } from "../../components/ErrorState";
+import { fundsOfCompany } from "../finance/branchOptions";
 import {
   DataTable,
   FormDialog,
@@ -62,6 +64,7 @@ export function BankPage() {
   const client = useQueryClient();
   const canManage = useCan("FINANCE_MANAGE");
   const options = useIntegrationOptions();
+  const activeCompanyId = useActiveCompanyId();
   const [fundId, setFundId] = useState("");
   const [matching, setMatching] = useState<StatementLine | null>(null);
   const [result, setResult] = useState<StatementImportResult | null>(null);
@@ -114,7 +117,8 @@ export function BankPage() {
           }}
           sx={{ minWidth: 200 }}
         >
-          {(options.data?.bankAccounts ?? []).map((account) => (
+          {/* Aktif şirketin banka hesapları (12.1 §3.13); konsolidede tümü. */}
+          {fundsOfCompany(options.data?.bankAccounts, activeCompanyId).map((account) => (
             <MenuItem key={account.id} value={account.id}>
               {account.label}
             </MenuItem>

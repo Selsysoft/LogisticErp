@@ -1,4 +1,15 @@
-import { ReactNode, useCallback, useId, useState } from "react";
+import {
+  createContext,
+  forwardRef,
+  ReactNode,
+  useCallback,
+  useContext,
+  useId,
+  useLayoutEffect,
+  useState,
+  type HTMLAttributes,
+  type Ref,
+} from "react";
 import Modal from "react-bootstrap/Modal";
 import { useTranslation } from "react-i18next";
 import { useZtoPortalContainer, ZtoOverlayContainerContext } from "../ZtoPortalContext";
@@ -44,6 +55,18 @@ export type ZtoModalProps = {
    * değil .modal-dialog'a geçirdiği için id de oradadır.
    */
   id?: string;
+  /**
+   * `.modal` kök öğesinin id'si (ZTO seçicileri `#cariTasimaModal .modal-dialog`,
+   * `#quickCariActionModal` köke bakar). `id`'den bağımsızdır; `id` `.modal-dialog`'da kalır.
+   */
+  rootId?: string;
+  /**
+   * Çıplak kip: başlık/gövde/altbilgi sarmalayıcıları yazılmaz, çocuklar doğrudan `.modal-content`
+   * içine çizilir (ZTO Hızlı Cari `.modal-content.qca-content > .qca-header + .qca-body`).
+   */
+  bare?: boolean;
+  /** `.modal`'ın aria-labelledby'ı; verilmezse başlığın id'si (çıplak kipte verilmeli). */
+  ariaLabelledBy?: string;
   animation?: boolean;
   autoFocus?: boolean;
   enforceFocus?: boolean;
@@ -59,6 +82,48 @@ export type ZtoModalProps = {
 const MODAL_STYLE = { overflowX: "hidden", overflowY: "auto" } as const;
 
 const preventEscape = (event: KeyboardEvent) => event.preventDefault();
+
+function cx(...parts: Array<string | false | null | undefined>): string {
+  return parts.filter(Boolean).join(" ");
+}
+
+/** Çıplak kipte `.modal-content` ref'i (react-bootstrap dialogAs bileşenine ref geçirmez). */
+const BareContentRefContext = createContext<Ref<HTMLDivElement> | null>(null);
+
+type BareDialogProps = HTMLAttributes<HTMLDivElement> & {
+  contentClassName?: string;
+  centered?: boolean;
+  size?: ZtoModalSize;
+  scrollable?: boolean;
+};
+
+/**
+ * react-bootstrap 1.6 ModalDialog ile aynı işaretleme (Modal bsPrefix'i dialogAs'a geçirmez) (div.modal-dialog[.modal-lg …] >
+ * div.modal-content); tek fark `.modal-content`'e ref bağlanması.
+ */
+const ZtoBareDialog = forwardRef<HTMLDivElement, BareDialogProps>(function ZtoBareDialog(
+  { className, contentClassName, centered, size, scrollable, children, ...rest },
+  ref,
+) {
+  const contentRef = useContext(BareContentRefContext);
+  return (
+    <div
+      {...rest}
+      ref={ref}
+      className={cx(
+        "modal-dialog",
+        className,
+        size && `modal-${size}`,
+        centered && "modal-dialog-centered",
+        scrollable && "modal-dialog-scrollable",
+      )}
+    >
+      <div className={cx("modal-content", contentClassName)} ref={contentRef}>
+        {children}
+      </div>
+    </div>
+  );
+});
 
 /**
  * ZTO/Bootstrap 4 modalı: div.modal.fade.show > div.modal-dialog > div.modal-content >
@@ -91,6 +156,9 @@ export function ZtoModal({
   footerClassName,
   className,
   id,
+  rootId,
+  bare = false,
+  ariaLabelledBy,
   animation = true,
   autoFocus,
   enforceFocus,
@@ -108,15 +176,25 @@ export function ZtoModal({
   const bodyRef = useCallback((node: HTMLDivElement | null) => {
     setModalElement(node?.closest<HTMLElement>(".modal") ?? null);
   }, []);
+  // rootId: react-bootstrap ek nitelikleri .modal-dialog'a geçirdiği için .modal'a elle yazılır;
+  // role/aria-* niteliklerine dokunulmaz. Öğe kapanışta zaten kalkar; prop değişirse eski id silinir.
+  useLayoutEffect(() => {
+    if (!modalElement || !rootId) return;
+    modalElement.id = rootId;
+    return () => {
+      if (modalElement.id === rootId) modalElement.removeAttribute("id");
+    };
+  }, [modalElement, rootId]);
   if (!container) {
     return null;
   }
   const titleId = `${id ?? generatedId}Label`;
-  const hasHeader = title !== undefined || closeButton;
+  const hasHeader = !bare && (title !== undefined || closeButton);
+  const labelledBy = ariaLabelledBy ?? (title !== undefined && !bare ? titleId : undefined);
   // react-bootstrap keyboard=false'u yalnız backdrop="static" iken uygular; diğer durumda ESC
   // onEscapeKeyDown'da engellenir (RB bu geri çağrıyı yalnız keyboard=true iken çağırır).
   const blockEscape = !keyboard && backdrop !== "static";
-  return (
+  const modal = (
     <Modal
       show={show}
       onHide={onHide}
@@ -140,48 +218,63 @@ export function ZtoModal({
       style={MODAL_STYLE}
       dialogClassName={dialogClassName}
       contentClassName={contentClassName}
-      aria-labelledby={title !== undefined ? titleId : undefined}
+      aria-labelledby={labelledBy}
       role="document"
+      dialogAs={bare ? ZtoBareDialog : undefined}
     >
       <ZtoOverlayContainerContext.Provider value={modalElement}>
-        {hasHeader && (
-          <div className={headerClassName ? `modal-header ${headerClassName}` : "modal-header"}>
-            {title !== undefined &&
-              (titlePrefix !== undefined ? (
-                <div>
-                  {titlePrefix}
-                  <TitleTag className="modal-title" id={titleId}>
-                    {title}
-                  </TitleTag>
-                </div>
-              ) : (
-                <TitleTag className="modal-title" id={titleId}>
-                  {title}
-                </TitleTag>
-              ))}
-            {closeButton && (
-              <button
-                type="button"
-                className={closeButtonClassName ? `close ${closeButtonClassName}` : "close"}
-                data-dismiss="modal"
-                aria-label={t("modal.close")}
-                onClick={onHide}
-                disabled={closeDisabled}
-              >
-                <span aria-hidden="true">&times;</span>
-              </button>
+        {bare ? (
+          children
+        ) : (
+          <>
+            {hasHeader && (
+              <div className={headerClassName ? `modal-header ${headerClassName}` : "modal-header"}>
+                {title !== undefined &&
+                  (titlePrefix !== undefined ? (
+                    <div>
+                      {titlePrefix}
+                      <TitleTag className="modal-title" id={titleId}>
+                        {title}
+                      </TitleTag>
+                    </div>
+                  ) : (
+                    <TitleTag className="modal-title" id={titleId}>
+                      {title}
+                    </TitleTag>
+                  ))}
+                {closeButton && (
+                  <button
+                    type="button"
+                    className={closeButtonClassName ? `close ${closeButtonClassName}` : "close"}
+                    data-dismiss="modal"
+                    aria-label={t("modal.close")}
+                    onClick={onHide}
+                    disabled={closeDisabled}
+                  >
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                )}
+              </div>
             )}
-          </div>
-        )}
-        <div ref={bodyRef} className={bodyClassName ? `modal-body ${bodyClassName}` : "modal-body"}>
-          {children}
-        </div>
-        {footer !== undefined && footer !== null && (
-          <div className={footerClassName ? `modal-footer ${footerClassName}` : "modal-footer"}>
-            {footer}
-          </div>
+            <div
+              ref={bodyRef}
+              className={bodyClassName ? `modal-body ${bodyClassName}` : "modal-body"}
+            >
+              {children}
+            </div>
+            {footer !== undefined && footer !== null && (
+              <div className={footerClassName ? `modal-footer ${footerClassName}` : "modal-footer"}>
+                {footer}
+              </div>
+            )}
+          </>
         )}
       </ZtoOverlayContainerContext.Provider>
     </Modal>
+  );
+  return bare ? (
+    <BareContentRefContext.Provider value={bodyRef}>{modal}</BareContentRefContext.Provider>
+  ) : (
+    modal
   );
 }

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentRepository;
 import org.ece.blackrose.tenant.TenantClock;
 import org.ece.blackrose.warehouse.domain.StockBalance;
@@ -47,6 +48,7 @@ public class StockService {
   private final WarehouseInvoiceRepository invoices;
   private final ShipmentRepository shipments;
   private final TenantClock clock;
+  private final BranchScopeService scope;
 
   public StockService(
       WarehouseRepository warehouses,
@@ -57,7 +59,8 @@ public class StockService {
       StockCountRepository counts,
       WarehouseInvoiceRepository invoices,
       ShipmentRepository shipments,
-      TenantClock clock) {
+      TenantClock clock,
+      BranchScopeService scope) {
     this.warehouses = warehouses;
     this.bins = bins;
     this.items = items;
@@ -67,6 +70,7 @@ public class StockService {
     this.invoices = invoices;
     this.shipments = shipments;
     this.clock = clock;
+    this.scope = scope;
   }
 
   @Transactional
@@ -240,6 +244,8 @@ public class StockService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "WAREHOUSE_NOT_FOUND", "Depo bulunamadı."));
+    // Giriş, çıkış, gümrük çıkışı ve ters kayıt bu tek noktadan geçer (K-1).
+    scope.requireVisible(warehouse.getBranchId());
     if (counts.existsByWarehouseIdAndStatus(warehouseId, CountStatus.OPEN)) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "COUNT_OPEN", "Depoda açık sayım var; hareket yapılamaz.");

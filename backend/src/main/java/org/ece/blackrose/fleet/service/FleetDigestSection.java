@@ -5,12 +5,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.ece.blackrose.fleet.domain.FleetSettings;
 import org.ece.blackrose.fleet.domain.FleetTypes.DocumentType;
 import org.ece.blackrose.fleet.repository.FleetRepositories.FleetSettingsRepository;
 import org.ece.blackrose.fleet.web.FleetDtos.ReminderResponse;
 import org.ece.blackrose.notification.DigestSection;
 import org.ece.blackrose.notification.NotificationTopic;
+import org.ece.blackrose.organization.BranchFilter;
 import org.springframework.stereotype.Component;
 
 /** Belge bitişi ve bakım hatırlatmaları. Firma filo ayarından kapatabilir. */
@@ -47,11 +49,13 @@ public class FleetDigestSection implements DigestSection {
   }
 
   @Override
-  public Optional<Content> build(LocalDate today) {
+  public Optional<Content> build(LocalDate today, BranchFilter filter) {
     if (!settings.findById(FleetSettings.SINGLETON_ID).orElseThrow().isReminderEmail()) {
       return Optional.empty();
     }
-    List<ReminderResponse> reminders = insights.reminders(today, null);
+    List<ReminderResponse> reminders =
+        insights.reminders(
+            today, null, filter.allBranches() ? null : Set.copyOf(filter.branchIds()));
     if (reminders.isEmpty()) {
       return Optional.empty();
     }

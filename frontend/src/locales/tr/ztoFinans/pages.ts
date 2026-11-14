@@ -1,16 +1,9 @@
-// ztoFinans ad alanı: sayfa başlıkları, iskelet ve vitrin metinleri.
+// ztoFinans ad alanı: iskelet ve vitrin metinleri. Günlük Tüm Cari İşlemleri başlık metinleri 12.1'de
+// "allTransactions" parçasına taşındı (§5.14).
 export default {
   placeholder: {
     title: "Yapım aşamasında",
     body: "Bu ekran Faz {{step}} ile gelecek.",
-  },
-  // ZTO AllTransactions.cshtml üst paneli ve başlık kartı
-  allTransactions: {
-    title: "Günlük Tüm Cari İşlemleri",
-    breadcrumbRoot: "Cari Kartlar",
-    breadcrumbCurrent: "Günlük Cari İşlemleri",
-    panelTitle: "Finans Paneli",
-    panelSubtitle: "Cari hesap işlemleri ve ödeme planlamalarını yönetin",
   },
   showcase: {
     title: "Bileşen vitrini",

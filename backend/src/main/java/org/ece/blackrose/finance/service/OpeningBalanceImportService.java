@@ -23,6 +23,8 @@ import org.ece.blackrose.finance.repository.FinanceRepositories.CurrencyReposito
 import org.ece.blackrose.finance.repository.FinanceRepositories.OpeningInvoiceRepository;
 import org.ece.blackrose.finance.service.LedgerService.Posting;
 import org.ece.blackrose.identity.domain.AuditEvent;
+import org.ece.blackrose.identity.security.PersonalDataProtector;
+import org.ece.blackrose.identity.security.PersonalDataProtector.TaxIdentity;
 import org.ece.blackrose.identity.service.AuditService;
 import org.ece.blackrose.integration.service.CsvRows;
 import org.ece.blackrose.integration.service.CsvRows.Line;
@@ -109,7 +111,9 @@ public class OpeningBalanceImportService {
   private final AuditService audit;
   private final CompanyResolver companies;
   private final BranchScopeService scope;
+  private final PersonalDataProtector protector;
 
+  @SuppressWarnings("java:S107")
   public OpeningBalanceImportService(
       AccountRepository accounts,
       AccountTransactionRepository transactions,
@@ -121,8 +125,10 @@ public class OpeningBalanceImportService {
       TenantClock clock,
       AuditService audit,
       CompanyResolver companies,
-      BranchScopeService scope) {
+      BranchScopeService scope,
+      PersonalDataProtector protector) {
     this.scope = scope;
+    this.protector = protector;
     this.companies = companies;
     this.accounts = accounts;
     this.transactions = transactions;
@@ -133,6 +139,14 @@ public class OpeningBalanceImportService {
     this.ledger = ledger;
     this.clock = clock;
     this.audit = audit;
+  }
+
+  /** Dosyadan yeni cari; TCKN şifreli + hash + maskeli yazılır (12.1 §2.4). */
+  private UUID createAccount(String code, Parsed parsed) {
+    TaxIdentity tax = protector.taxIdentity(parsed.taxNumber());
+    Account account = new Account(code, parsed.name(), parsed.type(), tax.plain(), null);
+    account.applyTaxIdentity(tax);
+    return accounts.save(account).getId();
   }
 
   /** Dosyayı denetler, hiçbir şey yazmaz. */
@@ -161,14 +175,7 @@ public class OpeningBalanceImportService {
       UUID accountId =
           parsed.existing() != null
               ? parsed.existing().getId()
-              : created.computeIfAbsent(
-                  parsed.code(),
-                  code ->
-                      accounts
-                          .save(
-                              new Account(
-                                  code, parsed.name(), parsed.type(), parsed.taxNumber(), null))
-                          .getId());
+              : created.computeIfAbsent(parsed.code(), code -> createAccount(code, parsed));
       if (parsed.balance().signum() == 0) {
         continue;
       }

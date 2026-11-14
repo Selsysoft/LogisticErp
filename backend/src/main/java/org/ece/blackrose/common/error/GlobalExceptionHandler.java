@@ -21,7 +21,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
   @ExceptionHandler(BusinessException.class)
   ResponseEntity<ApiError> handleBusiness(BusinessException ex) {
-    return ResponseEntity.status(ex.getStatus()).body(ApiError.of(ex.getCode(), ex.getMessage()));
+    return ResponseEntity.status(ex.getStatus())
+        .body(ApiError.of(ex.getCode(), ex.getMessage(), ex.getDetails()));
   }
 
   @ExceptionHandler(DataIntegrityViolationException.class)

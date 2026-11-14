@@ -55,7 +55,12 @@ export default {
   fieldEmail: "E-posta",
   fieldGroup: "Şube",
   fieldLocation: "Konum",
+  // Cari kart detayı (_Details.cshtml:40, :93; "ZTO Fabrika Cari Yönetimi" ürün adı olmadan)
+  customerAccountTitle: "Cari Hesap Detayı",
+  customerAccountCaption: "Cari Yönetimi",
   // Blackrose ekleri (ZTO'da karşılığı yok)
+  historySection: "Düzenleme Geçmişi",
+  historyEmpty: "Henüz değişiklik kaydı yok.",
   close: "Kapat",
   location: "Konum",
   notFound: "Kayıt bulunamadı.",

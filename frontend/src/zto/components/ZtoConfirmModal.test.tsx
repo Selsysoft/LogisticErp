@@ -201,6 +201,45 @@ describe("ZtoConfirmModal", () => {
   });
 });
 
+describe("ZtoConfirmModal ilk odak (MWG dialog)", () => {
+  function Opener({ props }: { props: Partial<ZtoConfirmModalProps> }) {
+    const [show, setShow] = useState(false);
+    return (
+      <ZtoFinansRoot>
+        <button onClick={() => setShow(true)}>Sil aç</button>
+        <ZtoConfirmModal
+          show={show}
+          animation={false}
+          {...props}
+          onConfirm={() => setShow(false)}
+          onCancel={() => setShow(false)}
+        />
+      </ZtoFinansRoot>
+    );
+  }
+
+  it("danger: açılışta güvenli düğme (İptal) odakta; kapanınca odak açan düğmeye döner", () => {
+    render(<Opener props={{}} />);
+    const opener = screen.getByText("Sil aç");
+    opener.focus();
+    fireEvent.click(opener);
+    expect(document.activeElement?.textContent?.trim()).toBe("İptal");
+    fireEvent.click(document.activeElement as HTMLElement);
+    expect(document.querySelector(".modal")).toBeNull();
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it("initialFocus='confirm' onay düğmesini; primary varsayılanı düğme odaklamaz", () => {
+    render(<Opener props={{ variant: "warning", initialFocus: "confirm" }} />);
+    fireEvent.click(screen.getByText("Sil aç"));
+    expect(document.activeElement?.textContent?.trim()).toBe("Onayla");
+    cleanup();
+    render(<Opener props={{ variant: "primary" }} />);
+    fireEvent.click(screen.getByText("Sil aç"));
+    expect(document.activeElement?.tagName).not.toBe("BUTTON");
+  });
+});
+
 describe("useZtoConfirm", () => {
   function Harness({
     options,

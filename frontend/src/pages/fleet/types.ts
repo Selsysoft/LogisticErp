@@ -108,7 +108,8 @@ export interface VehicleCost {
 
 export interface FleetOptions {
   suppliers: { id: string; label: string }[];
-  funds: { id: string; label: string; kind: string; currency: string }[];
+  /** Fonun şirketi (12.1 §3.13): seçenekler iş yerinin şirketine göre süzülür. */
+  funds: { id: string; label: string; kind: string; currency: string; companyId: string | null }[];
 }
 
 export interface FleetSettings {

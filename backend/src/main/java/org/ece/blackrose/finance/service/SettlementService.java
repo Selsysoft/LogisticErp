@@ -57,7 +57,10 @@ public class SettlementService {
   private final FinanceMapper mapper;
   private final CompanyResolver companies;
   private final BranchScopeService scope;
+  private final AccountAccess access;
+  private final CompanyIdentityRule identityRule;
 
+  @SuppressWarnings("java:S107")
   public SettlementService(
       SettlementRepository settlements,
       AccountRepository accounts,
@@ -68,8 +71,12 @@ public class SettlementService {
       InstrumentService instruments,
       FinanceMapper mapper,
       CompanyResolver companies,
-      BranchScopeService scope) {
+      BranchScopeService scope,
+      AccountAccess access,
+      CompanyIdentityRule identityRule) {
     this.scope = scope;
+    this.access = access;
+    this.identityRule = identityRule;
     this.companies = companies;
     this.settlements = settlements;
     this.accounts = accounts;
@@ -84,6 +91,22 @@ public class SettlementService {
   @Transactional(readOnly = true)
   public Page<Settlement> list(SettlementType type, UUID companyId, Pageable pageable) {
     return settlements.search(type, scope.filter(companyId, null), pageable);
+  }
+
+  /**
+   * Kullanıcı girişli ödeme/tahsilat (MUI uçları): carinin kartı {@code FOR SHARE} ile kilitlenir;
+   * pasif cari 422 {@code ACCOUNT_INACTIVE}, cari–şirket kimlik kuralı 422 {@code COMPANY_MISMATCH}
+   * kilit altında son durumla denetlenir (12.1 §3.1, SEC-12.1-04). Türetilmiş akışlar (plan
+   * ödemesi, araç gideri, sürücü avansı) doğrudan {@link #create} çağırır (OK-28).
+   */
+  @Transactional
+  public Settlement createByUser(
+      SettlementType type, SettlementRequest request, String idempotencyKey) {
+    if (request.accountId() != null) {
+      identityRule.require(
+          access.usableLocked(request.accountId()), companies.companyOf(request.branchId()));
+    }
+    return create(type, request, idempotencyKey, null);
   }
 
   /** Aynı anahtarla gelen ikinci istek ilk kaydı döner. */
@@ -270,7 +293,7 @@ public class SettlementService {
     if (request.fundAccountId() == null) {
       throw bad("FUND_REQUIRED", "Banka/kasa hesabı seçilmelidir.");
     }
-    FundAccount fund = funds.find(request.fundAccountId());
+    FundAccount fund = funds.findVisible(request.fundAccountId());
     if (fund.getKind() != kind) {
       throw bad("FUND_KIND_MISMATCH", "Seçilen hesap, ödeme yöntemine uygun değil.");
     }

@@ -10,7 +10,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.common.money.Money;
 import org.ece.blackrose.customs.domain.BorderCrossing;
 import org.ece.blackrose.customs.domain.CustomsDeclaration;
@@ -43,6 +42,7 @@ import org.ece.blackrose.customs.web.CustomsDtos.UsePermitRequest;
 import org.ece.blackrose.finance.domain.Account;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.domain.TripCost;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentRepository;
@@ -79,6 +79,7 @@ public class CustomsController {
   private final TripCostRepository costs;
   private final AccountRepository accounts;
   private final TenantClock clock;
+  private final BranchScopeService scope;
 
   public CustomsController(
       CustomsService customs,
@@ -90,7 +91,8 @@ public class CustomsController {
       ShipmentRepository shipments,
       TripCostRepository costs,
       AccountRepository accounts,
-      TenantClock clock) {
+      TenantClock clock,
+      BranchScopeService scope) {
     this.customs = customs;
     this.declarations = declarations;
     this.transits = transits;
@@ -101,6 +103,7 @@ public class CustomsController {
     this.costs = costs;
     this.accounts = accounts;
     this.clock = clock;
+    this.scope = scope;
   }
 
   // Beyan
@@ -108,7 +111,8 @@ public class CustomsController {
   @GetMapping("/declarations")
   @PreAuthorize(VIEW)
   List<DeclarationResponse> listDeclarations() {
-    return declarationResponses(declarations.findAllByOrderByDeclaredOnDesc());
+    return declarationResponses(
+        visible(declarations.findAllByOrderByDeclaredOnDesc(), CustomsDeclaration::getShipmentId));
   }
 
   @GetMapping("/declarations/{id}")
@@ -151,7 +155,8 @@ public class CustomsController {
   @GetMapping("/transits")
   @PreAuthorize(VIEW)
   List<TransitResponse> listTransits() {
-    return transitResponses(transits.findAllByOrderByDeadlineAsc());
+    return transitResponses(
+        visible(transits.findAllByOrderByDeadlineAsc(), TransitDocument::getShipmentId));
   }
 
   @PostMapping("/transits")
@@ -208,7 +213,8 @@ public class CustomsController {
   @GetMapping("/crossings")
   @PreAuthorize(VIEW)
   List<CrossingResponse> listCrossings() {
-    return crossingResponses(crossings.findAllByOrderByCrossedOnDesc());
+    return crossingResponses(
+        visible(crossings.findAllByOrderByCrossedOnDesc(), BorderCrossing::getShipmentId));
   }
 
   @PostMapping("/crossings")
@@ -231,7 +237,10 @@ public class CustomsController {
     Set<AccountType> feeTypes = Set.of(AccountType.SUPPLIER, AccountType.CARRIER);
     return new CustomsOptionsResponse(
         shipments
-            .findAll(
+            .search(
+                null,
+                "",
+                scope.filter(null, null),
                 PageRequest.of(
                     0, SHIPMENT_OPTION_LIMIT, Sort.by(Sort.Direction.DESC, "plannedPickup")))
             .stream()
@@ -254,14 +263,25 @@ public class CustomsController {
   // Yanıtlar
 
   private DeclarationResponse declarationResponse(UUID id) {
-    CustomsDeclaration declaration =
-        declarations
-            .findById(id)
-            .orElseThrow(
-                () ->
-                    new BusinessException(
-                        HttpStatus.NOT_FOUND, "DECLARATION_NOT_FOUND", "Beyan bulunamadı."));
-    return declarationResponses(List.of(declaration)).get(0);
+    return declarationResponses(List.of(customs.findDeclaration(id))).get(0);
+  }
+
+  /** LIMITED kullanıcıda yalnız kapsamdaki seferlerin kayıtları. */
+  private <T> List<T> visible(List<T> list, Function<T, UUID> shipmentOf) {
+    Set<UUID> allowed = scope.allowedOrNull();
+    if (allowed == null) {
+      return list;
+    }
+    Set<UUID> ids = visibleShipments(list.stream().map(shipmentOf).collect(Collectors.toSet()));
+    return list.stream().filter(row -> ids.contains(shipmentOf.apply(row))).toList();
+  }
+
+  private Set<UUID> visibleShipments(Collection<UUID> ids) {
+    Set<UUID> allowed = scope.allowedOrNull();
+    return shipments.findAllById(ids).stream()
+        .filter(shipment -> allowed == null || allowed.contains(shipment.getBranchId()))
+        .map(Shipment::getId)
+        .collect(Collectors.toSet());
   }
 
   private List<DeclarationResponse> declarationResponses(List<CustomsDeclaration> list) {
@@ -383,8 +403,14 @@ public class CustomsController {
         .toList();
   }
 
+  /**
+   * Sefer numaraları; LIMITED kullanıcıda kapsam dışı seferin numarası yoktur (izin kullanım
+   * listesinde {@code null}).
+   */
   private Map<UUID, String> shipmentNumbers(Collection<UUID> ids) {
+    Set<UUID> allowed = scope.allowedOrNull();
     return shipments.findAllById(ids).stream()
+        .filter(shipment -> allowed == null || allowed.contains(shipment.getBranchId()))
         .collect(Collectors.toMap(Shipment::getId, Shipment::getNumber));
   }
 }

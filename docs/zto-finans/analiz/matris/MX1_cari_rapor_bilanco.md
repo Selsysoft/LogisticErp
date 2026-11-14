@@ -1,5 +1,7 @@
 # MX-1 — Cari grubu: ZTO → Blackrose eşleme matrisi
 
+> **12.1 uygulandı (2026-11-14); uygulama belgesi [`docs/zto-finans/uygulama/12.1_TASARIM.md`](../../uygulama/12.1_TASARIM.md).** CustomerAccounts (liste/yeni/düzenle), AccountTransaction (Transactions, AllTransactions, Statement) ve cari IBAN'ları bu ekin tamamı üzerinden yazıldı. Bu ekin uygulamada değişen noktaları (migration adları tenant V27–V30, `MUSTERI`+`ACENTE` alt grupları, `sub_group NOT NULL`, adres/IBAN/TCKN şifreli + hash + maskeli, `account_document_type` tohum tablosu, taşımada virman çifti + çeklerin taşınması (K3), limit etiketleri, sekme tablolarında dışa aktarım yok, "Sil" = pasifleştir vb.) uygulama belgesi §0.4'te (S-1…S-24) listelidir; çelişkide uygulama belgesi geçerlidir. CustomerAccountReport, FinanceReport ve FinancialBalanceSheet bölümleri 12.8'de uygulanacak.
+
 Kapsam: AccountTransaction, CustomerAccounts, CustomerAccountReport, FinanceReport (Services/FinanceReport), FinancialBalanceSheet.
 Yöntem: View'lar betikle tarandı (modal başlangıcı `class="modal`, içindeki input/select/textarea/label/button, `Url.Action`/`url:`/`$.get|post`/`fetch`), kritik JS akışları ve Blackrose kaynakları satır satır okundu. Mevcut envanter (`analiz/envanter/A_cari.md`, `B_banka_kasa.md`, `01_FINANS_ENVANTER.md`) tekrar üretilmedi; controller action satırları oradan alındı ve örnekleme ile doğrulandı. Gizli değer yazılmadı.
 

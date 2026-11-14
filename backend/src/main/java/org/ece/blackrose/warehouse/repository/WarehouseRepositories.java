@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.ece.blackrose.organization.BranchFilter;
 import org.ece.blackrose.warehouse.domain.HandlingCharge;
 import org.ece.blackrose.warehouse.domain.HandlingRate;
 import org.ece.blackrose.warehouse.domain.StockBalance;
@@ -76,6 +77,7 @@ public final class WarehouseRepositories {
     boolean existsByBinIdAndItemIdAndLotNoAndQuantityGreaterThan(
         UUID binId, UUID itemId, String lotNo, java.math.BigDecimal quantity);
 
+    /** LIMITED kullanıcıda yalnız izinli iş yerlerinin depoları ({@code allBranches=false}). */
     @Query(
         """
         select b from StockBalance b
@@ -83,12 +85,26 @@ public final class WarehouseRepositories {
           and (:warehouseId is null or b.warehouseId = :warehouseId)
           and (:accountId is null or b.accountId = :accountId)
           and (cast(:expiresBy as date) is null or b.expiryDate <= :expiresBy)
+          and (:allBranches = true or b.warehouseId in
+               (select w.id from Warehouse w where w.branchId in :branchIds))
         """)
     Page<StockBalance> search(
         @Param("warehouseId") UUID warehouseId,
         @Param("accountId") UUID accountId,
         @Param("expiresBy") LocalDate expiresBy,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") List<UUID> branchIds,
         Pageable pageable);
+
+    default Page<StockBalance> search(
+        UUID warehouseId,
+        UUID accountId,
+        LocalDate expiresBy,
+        BranchFilter filter,
+        Pageable pageable) {
+      return search(
+          warehouseId, accountId, expiresBy, filter.allBranches(), filter.branchIds(), pageable);
+    }
   }
 
   public interface DailyQuantity {
@@ -103,18 +119,29 @@ public final class WarehouseRepositories {
 
     boolean existsByReversesId(UUID reversesId);
 
+    /** LIMITED kullanıcıda yalnız izinli iş yerlerinin depoları ({@code allBranches=false}). */
     @Query(
         """
         select m from StockMovement m
         where (:warehouseId is null or m.warehouseId = :warehouseId)
           and (:accountId is null or m.accountId = :accountId)
           and (:itemId is null or m.itemId = :itemId)
+          and (:allBranches = true or m.warehouseId in
+               (select w.id from Warehouse w where w.branchId in :branchIds))
         """)
     Page<StockMovement> search(
         @Param("warehouseId") UUID warehouseId,
         @Param("accountId") UUID accountId,
         @Param("itemId") UUID itemId,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") List<UUID> branchIds,
         Pageable pageable);
+
+    default Page<StockMovement> search(
+        UUID warehouseId, UUID accountId, UUID itemId, BranchFilter filter, Pageable pageable) {
+      return search(
+          warehouseId, accountId, itemId, filter.allBranches(), filter.branchIds(), pageable);
+    }
 
     @Query(
         """

@@ -60,7 +60,9 @@ export function defaultBranchValue(
 /**
  * Fonlar iş yerinin şirketine göre (12.1a §6.13): başka şirketin kasasına/bankasına kayıt sunucuda
  * 422 COMPANY_MISMATCH'tir, bu yüzden seçenek olarak da sunulmaz. Şirket bilinmiyorsa (iş yeri henüz
- * seçilmedi) tüm fonlar.
+ * seçilmedi) tüm fonlar. Şirketi olan her seçenek için de kullanılır (12.1 §5.13): filo seçeneklerinin
+ * fonları, entegrasyon banka hesapları (aktif şirket), sefer formunun kabul edilmiş teklif satırları.
+ * Şirketi yazılmamış öğe (eski yanıt) her şirkette görünür.
  */
 export function fundsOfCompany<T extends { companyId?: string | null }>(
   funds: T[] | undefined,

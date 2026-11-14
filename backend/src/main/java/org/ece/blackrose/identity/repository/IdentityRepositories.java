@@ -142,5 +142,9 @@ public final class IdentityRepositories {
     void deleteExpired(@Param("now") Instant now);
   }
 
-  public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {}
+  public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
+
+    /** Bir kaydın olay geçmişi, yeniden eskiye (ör. {@code ACCOUNT:<id>}; 12.1 §3.2). */
+    Page<AuditLog> findAllByTargetOrderByCreatedAtDesc(String target, Pageable pageable);
+  }
 }

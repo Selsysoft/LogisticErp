@@ -32,6 +32,7 @@ import org.ece.blackrose.reporting.web.ReportDtos.PositionRow;
 import org.ece.blackrose.reporting.web.ReportDtos.ProfitGroup;
 import org.ece.blackrose.reporting.web.ReportDtos.ProfitReport;
 import org.ece.blackrose.reporting.web.ReportDtos.SettlementPerformanceRow;
+import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.ShipmentStatus;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentRepository;
 import org.ece.blackrose.tenant.TenantClock;
@@ -190,7 +191,7 @@ public class ReportController {
     }
     FleetWidget fleetWidget = null;
     if (authorities.contains("FLEET_VIEW")) {
-      var reminders = fleet.reminders(today, null);
+      var reminders = fleet.reminders(today, null, allowed);
       long overdue = reminders.stream().filter(reminder -> reminder.overdue()).count();
       fleetWidget = new FleetWidget(overdue, reminders.size() - overdue);
     }
@@ -200,6 +201,20 @@ public class ReportController {
           transits.findAllByOrderByDeadlineAsc().stream()
               .filter(transit -> transit.getStatus() == TransitStatus.OPEN)
               .toList();
+      if (allowed != null) {
+        // LIMITED: yalnız kapsamdaki seferlerin transitleri.
+        Set<UUID> visible =
+            shipments
+                .findAllById(
+                    open.stream()
+                        .map(transit -> transit.getShipmentId())
+                        .collect(Collectors.toSet()))
+                .stream()
+                .filter(shipment -> allowed.contains(shipment.getBranchId()))
+                .map(Shipment::getId)
+                .collect(Collectors.toSet());
+        open = open.stream().filter(transit -> visible.contains(transit.getShipmentId())).toList();
+      }
       customs =
           new CustomsWidget(
               open.size(),

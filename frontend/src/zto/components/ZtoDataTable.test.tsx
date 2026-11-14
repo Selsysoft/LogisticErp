@@ -863,3 +863,104 @@ describe("ZtoDataTable tanım listesi seçenekleri (12.1a)", () => {
     expect(td.classList.contains("yalniz-th")).toBe(false);
   });
 });
+
+describe("ZtoDataTable 12.1 eklemeleri", () => {
+  it("language: uzunluk, arama, bilgi ve boş tablo metinleri sayfanınki", () => {
+    const language = {
+      lengthMenu: "Göster _MENU_ kayıt",
+      info: "_TOTAL_ kayıttan _START_ - _END_ arası gösteriliyor",
+      infoEmpty: "0 kayıt gösteriliyor",
+      infoFiltered: "(_MAX_ kayıt içinden filtrelendi)",
+      search: "Ara:",
+      emptyTable: "Tabloda veri bulunmuyor",
+      zeroRecords: "Eşleşen yok",
+    };
+    const { container, rerender } = render(
+      <ZtoFinansRoot>
+        <ZtoDataTable columns={columns} data={makeRows(30)} pageLength={25} language={language} />
+      </ZtoFinansRoot>,
+    );
+    const label = container.querySelector(".dataTables_length label") as HTMLElement;
+    expect(label.textContent).toBe("Göster 102550100 kayıt");
+    expect(infoText(container)).toBe("30 kayıttan 1 - 25 arası gösteriliyor");
+    fireEvent.change(container.querySelector(".dataTables_filter input") as HTMLInputElement, {
+      target: { value: "Cari 001" },
+    });
+    expect(infoText(container)).toBe(
+      "1 kayıttan 1 - 1 arası gösteriliyor (30 kayıt içinden filtrelendi)",
+    );
+    fireEvent.change(container.querySelector(".dataTables_filter input") as HTMLInputElement, {
+      target: { value: "yokyok" },
+    });
+    expect(container.querySelector(".dataTables_empty")?.textContent).toBe("Eşleşen yok");
+    rerender(
+      <ZtoFinansRoot>
+        <ZtoDataTable columns={columns} data={[]} language={language} />
+      </ZtoFinansRoot>,
+    );
+    expect(container.querySelector(".dataTables_empty")?.textContent).toBe(
+      "Tabloda veri bulunmuyor",
+    );
+    expect(infoText(container)).toBe("0 kayıt gösteriliyor");
+  });
+
+  it("domSlots: içerik eşleşen dom kabına yazılır", () => {
+    const { container } = render(
+      <ZtoFinansRoot>
+        <ZtoDataTable
+          columns={columns}
+          data={makeRows(3)}
+          dom={
+            '<"row align-items-center mb-2"<"col-12 col-md dt-length-col"l><"col-12 col-md-auto dt-filter-center"f><"col d-none d-md-block dt-toggle-col text-right">>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+          }
+          domSlots={{ "dt-toggle-col": <div id="totalsModeToggle">mod</div> }}
+        />
+      </ZtoFinansRoot>,
+    );
+    const slot = container.querySelector(".dt-toggle-col") as HTMLElement;
+    expect(slot.className).toBe("col d-none d-md-block dt-toggle-col text-right");
+    expect(slot.querySelector("#totalsModeToggle")?.textContent).toBe("mod");
+    expect(container.querySelectorAll("#totalsModeToggle")).toHaveLength(1);
+  });
+
+  it("pageDecorator: süs satırları sayılmaz, sayfa değişince yeniden hesaplanır", () => {
+    const decorator = vi.fn((rows: Tx[], ctx: { columnsCount: number }) =>
+      rows
+        .filter((row) => row.id % 4 === 0)
+        .map((row) => ({
+          beforeIndex: rows.indexOf(row),
+          key: `s${row.id}`,
+          node: (
+            <tr className="season-marker">
+              <td colSpan={ctx.columnsCount}>Sezon {row.id}</td>
+            </tr>
+          ),
+        })),
+    );
+    const { container } = render(
+      <ZtoFinansRoot>
+        <ZtoDataTable
+          columns={columns}
+          data={makeRows(12)}
+          pageLength={10}
+          order={[{ id: "id", desc: false }]}
+          pageDecorator={decorator}
+        />
+      </ZtoFinansRoot>,
+    );
+    const markers = () =>
+      [...container.querySelectorAll("tbody tr.season-marker")].map((tr) => tr.textContent);
+    expect(markers()).toEqual(["Sezon 4", "Sezon 8"]);
+    const marker = container.querySelector("tbody tr.season-marker td") as HTMLTableCellElement;
+    expect(marker.colSpan).toBe(5);
+    expect(container.querySelector("tbody tr.season-marker + tr")?.children[0].textContent).toBe(
+      "4",
+    );
+    expect(container.querySelectorAll("tbody tr:not(.season-marker)")).toHaveLength(10);
+    expect(infoText(container)).toContain("12 kayıttan 1 - 10");
+    expect(decorator.mock.lastCall?.[0]).toHaveLength(10);
+    fireEvent.click(screen.getByText("Sonraki"));
+    expect(markers()).toEqual(["Sezon 12"]);
+    expect(decorator.mock.lastCall?.[0].map((row: Tx) => row.id)).toEqual([11, 12]);
+  });
+});

@@ -36,12 +36,17 @@ public final class CrmDtos {
       @Size(max = 50) String segment,
       Set<@NotBlank @Size(max = 50) String> tags) {}
 
+  /**
+   * {@code taxNumber}: VKN düz; bireysel carinin TCKN'si listede maskeli, detayda yalnız CRM_EDIT
+   * sahibine açık ({@code taxNumberMasked}).
+   */
   public record CustomerResponse(
       UUID id,
       String code,
       String name,
       AccountType type,
       String taxNumber,
+      boolean taxNumberMasked,
       String segment,
       Set<String> tags) {}
 

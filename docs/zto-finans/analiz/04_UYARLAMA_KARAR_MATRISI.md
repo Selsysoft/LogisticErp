@@ -135,18 +135,18 @@ Faz 0 envanter promptları (A, B, C) ve ana promptun §4.1 sayfa listesi matrisl
 
 | Z | Ad | İçerik | Kaynak | Adım |
 |---|---|---|---|---|
-| Z01 | `company` | Tüzel kişi: unvan, kısa ad, VKN/TCKN, vergi dairesi, MERSİS, SGK işyeri sicili, adres, iletişim, logo, varsayılan IBAN | MX5 §3.3 V22a | 12.1a |
-| Z02 | `branch_group_and_branch_details` | `branch_group` (ZTO Şube/il), `branch` +`company_id`, il, telefon, adres, konum, aktif; **varsayılan şirket göçü** (mevcut kiracı bilgisinden) | MX5 V22b | 12.1a |
-| Z03 | `company_scope_columns` | Para ve yasal belge tablolarına `company_id` + bileşik FK `(branch_id, company_id) → branch(id, company_id)` | MX5 V22c | 12.1a |
-| Z04 | `document_series` | Şirket başına belge serisi (önek + yıl + sıra), `UNIQUE(company_id, number)`; navlun/depo faturası numaraları buraya taşınır | MX5 V22d | 12.1a |
-| Z05 | `user_branch_scope` | `user_branch`, kullanıcı başına iş yeri kısıtı | MX5 V22e | 12.1a |
-| Z06 | `account_profile` | `account` +17 kolon (profil, limit, `sub_group`, `active`; **`represents_company_id` ve `company_id` Z06'ya girmez, 12.1a'da V24'te (Z03) eklendi**, bkz. `uygulama/12.1a_TASARIM.md` §0.3 S-8); `account_group` + tohum; `account_bank_account` (IBAN **veya** hesap no zorunlu CHECK; aktif kartlarda IBAN tekil; son işlem tarihi hesaplanır); izin `FINANCE_EMPLOYEE_VIEW` | MX1 + MX2 + MX5 D-kararı + MX8 §1.9 | 12.1 |
+| Z01 | `company` | Tüzel kişi: unvan, kısa ad, VKN/TCKN, vergi dairesi, MERSİS, SGK işyeri sicili, adres, iletişim, logo, varsayılan IBAN | MX5 §3.3 V22a | 12.1a — **uygulandı: `V22__company`** |
+| Z02 | `branch_group_and_branch_details` | `branch_group` (ZTO Şube/il), `branch` +`company_id`, il, telefon, adres, konum, aktif; **varsayılan şirket göçü** (mevcut kiracı bilgisinden) | MX5 V22b | 12.1a — **uygulandı: `V23__branch_group_and_branch_details`** |
+| Z03 | `company_scope_columns` | Para ve yasal belge tablolarına `company_id` + bileşik FK `(branch_id, company_id) → branch(id, company_id)` | MX5 V22c | 12.1a — **uygulandı: `V24__company_scope_columns`** |
+| Z04 | `document_series` | Şirket başına belge serisi (önek + yıl + sıra), `UNIQUE(company_id, number)`; navlun/depo faturası numaraları buraya taşınır | MX5 V22d | 12.1a — **uygulandı: `V25__document_series`** |
+| Z05 | `user_branch_scope` | `user_branch`, kullanıcı başına iş yeri kısıtı | MX5 V22e | 12.1a — **uygulandı: `V26__user_branch_scope`** |
+| Z06 | `account_profile` | `account` +17 kolon (profil, limit, `sub_group`, `active`; **`represents_company_id` ve `company_id` Z06'ya girmez, 12.1a'da V24'te (Z03) eklendi**, bkz. `uygulama/12.1a_TASARIM.md` §0.3 S-8); `account_group` + tohum; `account_bank_account` (IBAN **veya** hesap no zorunlu CHECK; aktif kartlarda IBAN tekil; son işlem tarihi hesaplanır); izin `FINANCE_EMPLOYEE_VIEW` | MX1 + MX2 + MX5 D-kararı + MX8 §1.9 | 12.1 — **uygulandı: tenant `V27__account_profile`** (bireysel carinin TCKN'si şifreli kolonlar dahil; `uygulama/12.1_TASARIM.md` §1.1) |
 | Z07 | `fund_account_details` | `fund_account` ek alanlar, `fund_transaction.category`, `fund_opening` | MX2 | 12.2 |
 | Z08 | `instrument_extensions` | Çek/senet ek alanları, 4 yeni durum | MX3 | 12.3 |
 | Z09 | `check_book` | `check_book`, `check_leaf` | MX3 | 12.3 |
-| Z10 | `account_document` | Borç/Alacak Ekle belgesi + vergi satırı; belge türlerine "Ceza (bize kesilen)", "Ceza / Kesinti (karşı tarafa kesilen)", **"Kur Farkı"** (§6.2-Y8'e bağlı) | MX1 + §6.1-K2 | 12.1 |
-| Z11 | `account_rollover` | Sezon devri | MX1 | 12.1 |
-| Z12 | `account_transfer` | Cari transfer + `account_transfer_instrument` | MX1 + §6.1-K3 | 12.1 |
+| Z10 | `account_document` | Borç/Alacak Ekle belgesi + vergi satırı; belge türlerine "Ceza (bize kesilen)", "Ceza / Kesinti (karşı tarafa kesilen)", **"Kur Farkı"** (§6.2-Y8'e bağlı) | MX1 + §6.1-K2 | 12.1 — **uygulandı: `V28__account_document`** ("Kur Farkı" tohumlu, 12.8'e kadar seçilemez) |
+| Z11 | `account_rollover` | Sezon devri | MX1 | 12.1 — **uygulandı: `V29__account_rollover`** |
+| Z12 | `account_transfer` | Cari transfer + `account_transfer_instrument` | MX1 + §6.1-K3 | 12.1 — **uygulandı: `V30__account_transfer`** (+ `account_transfer_line`, `instrument_movement.movement_type`) |
 | Z13 | `fund_transfer` | Transfer merkezi, döviz bozumu, maliyet, kaynak; **yalnız aynı şirket içinde** (MX5) | MX2 | 12.2 |
 | Z14 | `fin_income_expense` | Faiz geliri, kur farkı, banka masrafı defteri | MX2 | 12.2 |
 | Z15 | `settlement_details` | Belge no, kanal (`CREDIT_CARD` dahil), karşı tarafın IBAN'ı (`account_bank_account` FK), düzeltme zinciri, iptal gerekçesi | MX7 V2xQ1 | 12.2a |
@@ -174,6 +174,7 @@ Faz 0 envanter promptları (A, B, C) ve ana promptun §4.1 sayfa listesi matrisl
 | Z37 | `integration_outbox` | Giden olaylar (transactional outbox) | MX9 S3 | 12.11 |
 | Z38 | `partner_vehicle` | Ortağa atanan araç/dorse/sürücü | MX9 S4 | 12.11 |
 | Z39 | `driver_identity` | Sürücü kimlik no (şifreli), uyruk — yalnız izinli ortağa ve e-İrsaliye UBL'ine | MX9 S5 | 12.11 |
+| Z40 | `legacy_edocument_cleanup` | `edocument_settings` tablosu ve `freight_invoice_number_seq` / `warehouse_invoice_number_seq` DROP (SQL `uygulama/12.1_TASARIM.md` §1.6'da hazır) | 12.1a §1.2 | **Ertelendi** (12.1 OK-21): 12.1a + 12.1 üretime çıktıktan sonraki ilk backend adımında (12.2+), o adımın sıradaki boş V numarasıyla. 12.1'de yalnız ölü `EDocumentSettings` entity/repository silindi |
 
 ### 4.2 Admin şeması
 
@@ -181,7 +182,7 @@ Faz 0 envanter promptları (A, B, C) ve ana promptun §4.1 sayfa listesi matrisl
 
 | Z | Ad | İçerik | Kaynak | Adım |
 |---|---|---|---|---|
-| ZA1 | `plan_company_limits` | `plan.max_companies`, `plan.max_branches` (NULL = sınırsız) | MX5 A8 | 12.1a |
+| ZA1 | `plan_company_limits` | `plan.max_companies`, `plan.max_branches` (NULL = sınırsız) | MX5 A8 | 12.1a — **uygulandı: admin `V8__plan_company_limits`** |
 | ZA2 | `payroll_parameters` | Yıllık yasal parametreler (gelir vergisi dilimleri, SGK oran/tavan, asgari ücret, istisnalar, damga) | MX6 P3 | 12.9 |
 | ZA3 | `integration_client` | ZTO → Blackrose OAuth2 istemci kaydı (gizli değer hash'li, döndürme) | MX9 A-xS1 | 12.11 |
 

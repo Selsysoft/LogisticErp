@@ -568,6 +568,51 @@ class SaasIT extends AbstractIntegrationTest {
     admin(post(ADMIN + "/plans"), narrow).andExpect(status().isBadRequest());
   }
 
+  @Test
+  void companyLimitAppliesToPlanChangeAndToReactivation() throws Exception {
+    createTenant("saas-co");
+    UUID id = tenantId("saas-co");
+    Map<String, Object> company = new HashMap<>();
+    company.put("code", "SIR2");
+    company.put("title", "Beta Lojistik AS");
+    company.put("shortName", "Beta");
+    company.put("taxIdType", "VKN");
+    String second =
+        body(mvc.perform(
+                    post("/api/v1/organization/companies")
+                        .with(asOwner("saas-co"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(company)))
+                .andExpect(status().isCreated()))
+            .get("id")
+            .asText();
+    String single =
+        body(admin(post(ADMIN + "/plans"), orgPlan("ORG-TEK-SIRKET", 1, 10))
+                .andExpect(status().isCreated()))
+            .get("id")
+            .asText();
+
+    // İki aktif şirket varken tek şirketlik plana geçilemez.
+    admin(put(ADMIN + "/tenants/" + id + "/plan"), Map.of("planId", single))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("PLAN_USAGE_EXCEEDED"));
+
+    // Biri pasifleşince geçiş olur; pasif şirket sınır doluyken aktifleştirilemez.
+    mvc.perform(
+            post("/api/v1/organization/companies/" + second + "/deactivate")
+                .with(asOwner("saas-co")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.active").value(false));
+    admin(put(ADMIN + "/tenants/" + id + "/plan"), Map.of("planId", single))
+        .andExpect(status().isNoContent());
+    mvc.perform(
+            post("/api/v1/organization/companies/" + second + "/activate").with(asOwner("saas-co")))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("PLAN_LIMIT_EXCEEDED"));
+    assertThat(limit(overview("saas-co").get("limits"), "COMPANIES").get("used").asInt())
+        .isEqualTo(1);
+  }
+
   private static Map<String, Object> orgPlan(String code, int companies, int branches) {
     Map<String, Object> body = new HashMap<>();
     body.put("code", code);

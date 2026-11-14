@@ -1,5 +1,7 @@
 # MX-8 — Kalan finans sayfaları: SalesTruckExpenses, MaterialStockAll, BankAccounts, Finance*, AmountType/TransactionType, kapsanmayan controller'lar
 
+> **§3 (BankAccounts — cari IBAN'ları) 12.1 uygulandı (2026-11-14); uygulama belgesi [`docs/zto-finans/uygulama/12.1_TASARIM.md`](../../uygulama/12.1_TASARIM.md)** (§0.4 S-6, S-17; §3.3; §4.2; §5.9). IBAN/hesap no şifreli + hash + maskeli, aktif kartlarda IBAN tekil (mod-97), tam IBAN yalnız `FINANCE_MANAGE` sahibine; "Hesap İşlemleri" paneli 12.2a'ya kadar bilgi notu. Bu ekin diğer bölümleri sonraki adımlarda.
+
 > Tarih: 2026-11-13 · Durum: öneri (koordinatör onayı bekliyor)
 > Kaynak (salt okunur): `f:\visual studio zto\ZtoFabrika2026\ZtoFabrika` (kısaltma **ZTO**). Hedef: `F:\visual studio zto\LogisticErp` (kısaltma **BR**).
 > Dayanak belgeler: `04_UYARLAMA_KARAR_MATRISI.md` (tek finans motoru, V22–V34), `MX1` (V22 `account_bank_account`), `MX4` (V34 `expense`), `MX5` (şirket→şube, `user_branch`), envanter `B_banka_kasa.md`, `D_stok_masraf_kur_sube.md`.

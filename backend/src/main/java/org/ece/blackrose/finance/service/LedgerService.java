@@ -8,6 +8,7 @@ import org.ece.blackrose.common.money.Money;
 import org.ece.blackrose.finance.domain.Account;
 import org.ece.blackrose.finance.domain.AccountTransaction;
 import org.ece.blackrose.finance.domain.FinanceTypes.Direction;
+import org.ece.blackrose.finance.repository.AccountRepositories.AccountTransferLineRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountTransactionRepository;
 import org.ece.blackrose.finance.service.ExchangeRateService.Conversion;
@@ -23,6 +24,14 @@ public class LedgerService {
   public static final String SOURCE_MANUAL = "MANUAL";
   public static final String SOURCE_REVERSAL = "REVERSAL";
 
+  /** Borç/Alacak Ekle belgesi (12.1 §3.4). */
+  public static final String SOURCE_ACCOUNT_DOCUMENT = "ACCOUNT_DOCUMENT";
+
+  /** Cari taşıma virman çifti (12.1 §3.11); {@code source_id} = taşıma satırı. */
+  public static final String SOURCE_TRANSFER_OUT = "ACCOUNT_TRANSFER_OUT";
+
+  public static final String SOURCE_TRANSFER_IN = "ACCOUNT_TRANSFER_IN";
+
   public record Posting(
       UUID accountId,
       UUID branchId,
@@ -36,16 +45,19 @@ public class LedgerService {
 
   private final AccountTransactionRepository transactions;
   private final AccountRepository accounts;
+  private final AccountTransferLineRepository transferLines;
   private final ExchangeRateService rates;
   private final CompanyResolver companies;
 
   public LedgerService(
       AccountTransactionRepository transactions,
       AccountRepository accounts,
+      AccountTransferLineRepository transferLines,
       ExchangeRateService rates,
       CompanyResolver companies) {
     this.transactions = transactions;
     this.accounts = accounts;
+    this.transferLines = transferLines;
     this.rates = rates;
     this.companies = companies;
   }
@@ -57,27 +69,19 @@ public class LedgerService {
         .orElseGet(() -> insert(posting));
   }
 
+  /**
+   * Kart–şirket kuralı burada uygulanmaz (12.1 §3.11, OK-28): türetilmiş akışlar (sefer kapanışı,
+   * fatura, plan ödemesi) takılmaz; kullanıcı girişli yollar {@link CompanyIdentityRule}'u kendisi
+   * çağırır. Yalnız grup carisi kuralı (§4.13 #14) kalır.
+   */
   private AccountTransaction insert(Posting posting) {
-    Account account =
-        accounts
-            .findById(posting.accountId())
-            .orElseThrow(
-                () ->
-                    new BusinessException(
-                        HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Cari bulunamadı."));
+    Account account = account(posting.accountId());
     if (posting.money().amount().signum() <= 0) {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "AMOUNT_INVALID", "Tutar sıfırdan büyük olmalıdır.");
     }
     UUID companyId = companies.companyOf(posting.branchId());
-    // Kimlik kuralı (§4.13 #14): şirket kendi grup carisine hareket yazamaz. Ters kayıt reverse
-    // yolundan geçer ve denetlenmez.
-    if (companyId.equals(account.getRepresentsCompanyId())) {
-      throw new BusinessException(
-          HttpStatus.UNPROCESSABLE_ENTITY,
-          "COMPANY_MISMATCH",
-          "Şirket kendi grup carisine hareket yazamaz.");
-    }
+    requireNotOwnGroupAccount(account, companyId);
     Conversion conversion = rates.convert(posting.money(), posting.date(), posting.manualRate());
     return transactions.save(
         new AccountTransaction(
@@ -95,6 +99,43 @@ public class LedgerService {
             posting.sourceId()));
   }
 
+  /**
+   * Cari taşıma virman satırı: orijinal hareketin tutarı, kuru, kur tarihi, TL karşılığı, iş yeri
+   * ve şirketiyle verilen cariye verilen yönde yazılır; yeniden kur çevrimi yoktur. Aynı kaynakla
+   * ikinci çağrı ilk satırı döner. Hedef carinin şirket kuralı çağıranda ({@code
+   * AccountTransferService}) denetlenir.
+   */
+  @Transactional
+  public AccountTransaction mirror(
+      AccountTransaction original,
+      UUID accountId,
+      Direction direction,
+      LocalDate date,
+      String description,
+      String sourceType,
+      UUID sourceId) {
+    return transactions
+        .findBySourceTypeAndSourceId(sourceType, sourceId)
+        .orElseGet(
+            () -> {
+              requireNotOwnGroupAccount(account(accountId), original.getCompanyId());
+              return transactions.save(
+                  new AccountTransaction(
+                      accountId,
+                      original.getBranchId(),
+                      original.getCompanyId(),
+                      direction,
+                      original.getMoney(),
+                      original.getExchangeRate(),
+                      original.getRateDate(),
+                      original.getTlAmount(),
+                      date,
+                      LedgerDescriptions.fit(description),
+                      sourceType,
+                      sourceId));
+            });
+  }
+
   /** Kaynak belgenin cari hareketini aynı kur ve TL karşılığıyla ters çevirir. */
   @Transactional
   public void reverseSource(String sourceType, UUID sourceId, LocalDate date, String description) {
@@ -103,12 +144,25 @@ public class LedgerService {
         .ifPresent(original -> reverse(original, date, description));
   }
 
+  /**
+   * Ters kayıt. Orijinal satır kilitlenir (12.1 §3.11 F1; cari taşıma aynı satırı kilitler) ve
+   * kilit altında taşınmışlık ile ters çevrilmişlik yeniden okunur: taşınmış hareketin kaynağı
+   * iptal edilemez (409 {@code TRANSACTION_TRANSFERRED}), mevcut ters kayıt yeniden döner. Belge
+   * iptali, ödeme/tahsilat ters kaydı, fatura iptali ve açılış geri alma bu tek noktadan geçer.
+   */
   @Transactional
   public AccountTransaction reverse(
       AccountTransaction original, LocalDate date, String description) {
     if (SOURCE_REVERSAL.equals(original.getSourceType())) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "ALREADY_REVERSAL", "Ters hareket yeniden ters çevrilemez.");
+    }
+    transactions.findForUpdate(original.getId());
+    if (transferLines.existsByAccountTransactionIdAndActiveTrue(original.getId())) {
+      throw new BusinessException(
+          HttpStatus.CONFLICT,
+          "TRANSACTION_TRANSFERRED",
+          "Bu hareket başka cariye taşınmış; önce cari taşımayı geri alın.");
     }
     return transactions
         .findBySourceTypeAndSourceId(SOURCE_REVERSAL, original.getId())
@@ -125,8 +179,27 @@ public class LedgerService {
                         original.getRateDate(),
                         original.getTlAmount(),
                         date,
-                        description,
+                        LedgerDescriptions.fit(description),
                         SOURCE_REVERSAL,
                         original.getId())));
+  }
+
+  private Account account(UUID id) {
+    return accounts
+        .findById(id)
+        .orElseThrow(
+            () ->
+                new BusinessException(
+                    HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Cari bulunamadı."));
+  }
+
+  /** Kimlik kuralı (§4.13 #14): şirket kendi grup carisine hareket yazamaz. */
+  private static void requireNotOwnGroupAccount(Account account, UUID companyId) {
+    if (companyId.equals(account.getRepresentsCompanyId())) {
+      throw new BusinessException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          "COMPANY_MISMATCH",
+          "Şirket kendi grup carisine hareket yazamaz.");
+    }
   }
 }

@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.ece.blackrose.finance.domain.Account;
+import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.PlanStatus;
 import org.ece.blackrose.finance.domain.PaymentPlan;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
@@ -15,6 +16,7 @@ import org.ece.blackrose.finance.repository.FinanceRepositories.PaymentPlanRepos
 import org.ece.blackrose.notification.DigestLines;
 import org.ece.blackrose.notification.DigestSection;
 import org.ece.blackrose.notification.NotificationTopic;
+import org.ece.blackrose.organization.BranchFilter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -47,15 +49,22 @@ public final class PaymentDigestSections {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<Content> build(LocalDate today) {
+    public Optional<Content> build(LocalDate today, BranchFilter filter) {
+      return build(today, filter, true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Content> build(LocalDate today, BranchFilter filter, boolean employeeVisible) {
       Page<PaymentPlan> pending =
           plans.search(
               PlanStatus.PENDING,
+              filter,
               PageRequest.of(0, DigestLines.MAX_LINES, Sort.by("dueDate", "id")));
       if (pending.isEmpty()) {
         return Optional.empty();
       }
-      List<String> lines = lines(pending.getContent(), accounts, today);
+      List<String> lines = lines(pending.getContent(), accounts, today, employeeVisible);
       return Optional.of(
           new Content(
               "Onay bekleyen ödeme planı: %d".formatted(pending.getTotalElements()),
@@ -82,11 +91,16 @@ public final class PaymentDigestSections {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<Content> build(LocalDate today) {
+    public Optional<Content> build(LocalDate today, BranchFilter filter) {
+      return build(today, filter, true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Content> build(LocalDate today, BranchFilter filter, boolean employeeVisible) {
       List<PaymentPlan> due =
           plans
-              .findByStatusInAndDueDateBefore(
-                  List.of(PlanStatus.APPROVED), today.plusDays(DUE_WINDOW_DAYS + 1L))
+              .dueBefore(List.of(PlanStatus.APPROVED), today.plusDays(DUE_WINDOW_DAYS + 1L), filter)
               .stream()
               .sorted(Comparator.comparing(PaymentPlan::getDueDate))
               .toList();
@@ -102,17 +116,25 @@ public final class PaymentDigestSections {
       return Optional.of(
           new Content(
               title,
-              DigestLines.limited(lines(shown, accounts, today), due.size()),
+              DigestLines.limited(lines(shown, accounts, today, employeeVisible), due.size()),
               "/finance/plans"));
     }
   }
 
+  /**
+   * Personel carisi izni olmayan alıcıya personel carisinin adı yerine genel "Cari" yazılır (tür de
+   * sızdırılmaz; SEC-12.1-03). Sayılar ve tutarlar değişmez (plan listesi de gösterir, OK-7).
+   */
   private static List<String> lines(
-      List<PaymentPlan> plans, AccountRepository accounts, LocalDate today) {
+      List<PaymentPlan> plans,
+      AccountRepository accounts,
+      LocalDate today,
+      boolean employeeVisible) {
     Map<UUID, String> names =
         accounts
             .findAllById(plans.stream().map(PaymentPlan::getAccountId).distinct().toList())
             .stream()
+            .filter(account -> employeeVisible || account.getType() != AccountType.EMPLOYEE)
             .collect(Collectors.toMap(Account::getId, Account::getName, (a, b) -> a));
     return plans.stream()
         .map(

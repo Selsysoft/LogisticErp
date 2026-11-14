@@ -5,6 +5,7 @@ import {
   blankToNull,
   companyCodeInput,
   dateTimeLocalValue,
+  detailsVariant,
   digitsOnly,
   eDocumentSeriesInput,
   entityAccent,
@@ -12,7 +13,9 @@ import {
   errorCode,
   errorMessage,
   fieldIcon,
+  fieldValueOf,
   flashFromState,
+  historyRows,
   formatLocation,
   isAcceptableLogo,
   isValidTaxNumber,
@@ -205,10 +208,12 @@ describe("Detay modalı yardımcıları", () => {
       workplace: "fa-building",
       branch: "fa-city",
       company: "fa-landmark",
+      "customer-account": "fa-file-invoice-dollar",
     });
     expect(entityAccent("workplace")).toBe("blue");
     expect(entityAccent("branch")).toBe("blue");
     expect(entityAccent("company")).toBe("indigo");
+    expect(entityAccent("customer-account")).toBeNull();
   });
 
   it("lastActor ve actorText", () => {
@@ -250,5 +255,59 @@ describe("Detay modalı yardımcıları", () => {
     expect(
       auditPopoverPlacement({ left: 0, top: 0, bottom: 0 }, 0, { width: 200, height: 100 }),
     ).toMatchObject({ width: 180 });
+  });
+});
+
+describe("cari kart detayı (customer-account)", () => {
+  it("kendi kök/hero sınıfı ve simgesi; diğerleri vurgu sınıfı", () => {
+    expect(detailsVariant("customer-account")).toEqual({
+      rootClass: "definition-details definition-details--customer-account",
+      heroClass: "definition-details__hero definition-details__hero--customer-account",
+      icon: "fa-file-invoice-dollar",
+      customerAccount: true,
+    });
+    expect(detailsVariant("company")).toEqual({
+      rootClass: "definition-details definition-details--vivid dd-accent-indigo",
+      heroClass: "definition-details__hero definition-details__hero--vivid",
+      icon: "fa-landmark",
+      customerAccount: false,
+    });
+  });
+
+  it("fieldValueOf: etiketli alan, yoksa ya da boşsa '-'", () => {
+    const fields = [
+      { label: "Cari Kodu", value: "MUS-0001" },
+      { label: "Durum", value: "" },
+    ];
+    expect(fieldValueOf(fields, "Cari Kodu")).toBe("MUS-0001");
+    expect(fieldValueOf(fields, "Durum")).toBe("-");
+    expect(fieldValueOf(fields, "Cari Grubu")).toBe("-");
+  });
+
+  it("geçmiş satırları: en yeni önce, biçimli tarih, sistem aktarımı, olay adı", () => {
+    const rows = historyRows(
+      [
+        { at: "2026-11-01T08:00:00Z", actor: "a@x.com", event: "ACCOUNT_CREATED", details: null },
+        { at: "2026-11-03T09:30:00Z", actor: null, event: "ACCOUNT_UPDATED", details: " Ad " },
+        { at: "2026-11-03T09:30:00Z", actor: "b@x.com", event: "X", details: "" },
+      ],
+      {
+        systemImport: "Sistem aktarımı",
+        formatAt: (iso) => iso.slice(0, 10),
+        eventLabel: (event) => (event === "ACCOUNT_UPDATED" ? "Güncellendi" : event),
+      },
+    );
+    expect(rows.map((r) => [r.at, r.actor, r.event, r.details])).toEqual([
+      ["2026-11-03", "Sistem aktarımı", "Güncellendi", "Ad"],
+      ["2026-11-03", "b@x.com", "X", null],
+      ["2026-11-01", "a@x.com", "ACCOUNT_CREATED", null],
+    ]);
+    expect(new Set(rows.map((r) => r.key)).size).toBe(3);
+    expect(
+      historyRows([{ at: "", actor: "a", event: "E", details: null }], {
+        systemImport: "S",
+        formatAt: () => "",
+      })[0].at,
+    ).toBe("-");
   });
 });

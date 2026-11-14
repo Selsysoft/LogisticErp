@@ -199,11 +199,17 @@ public class WarehouseController {
   @GetMapping("/bins")
   @PreAuthorize(VIEW)
   List<BinResponse> listBins(@RequestParam(required = false) UUID warehouseId) {
-    List<WarehouseBin> list =
-        warehouseId == null
-            ? bins.findAll(Sort.by("code"))
-            : bins.findByWarehouseIdOrderByCode(warehouseId);
-    return list.stream().map(mapper::toResponse).toList();
+    if (warehouseId != null) {
+      requireWarehouseVisible(warehouseId);
+      return bins.findByWarehouseIdOrderByCode(warehouseId).stream()
+          .map(mapper::toResponse)
+          .toList();
+    }
+    Set<UUID> visible = billing.visibleWarehouseIdsOrNull();
+    return bins.findAll(Sort.by("code")).stream()
+        .filter(bin -> visible == null || visible.contains(bin.getWarehouseId()))
+        .map(mapper::toResponse)
+        .toList();
   }
 
   @PostMapping("/warehouses/{id}/bins")
@@ -211,7 +217,7 @@ public class WarehouseController {
   @PreAuthorize(EDIT)
   @Transactional
   public BinResponse createBin(@PathVariable UUID id, @Valid @RequestBody SaveBinRequest request) {
-    findWarehouse(id);
+    requireWarehouseVisible(id);
     if (bins.existsByWarehouseIdAndCode(id, request.code())) {
       throw new BusinessException(HttpStatus.CONFLICT, "CODE_TAKEN", "Bu göz kodu kullanılıyor.");
     }
@@ -253,7 +259,11 @@ public class WarehouseController {
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
           LocalDate expiresBy,
       Pageable pageable) {
-    Page<StockBalance> page = balances.search(warehouseId, accountId, expiresBy, pageable);
+    if (warehouseId != null) {
+      requireWarehouseVisible(warehouseId);
+    }
+    Page<StockBalance> page =
+        balances.search(warehouseId, accountId, expiresBy, scope.filter(null, null), pageable);
     return PageResponse.from(
         new PageImpl<>(views.balances(page.getContent()), pageable, page.getTotalElements()),
         row -> row);
@@ -267,7 +277,11 @@ public class WarehouseController {
       @RequestParam(required = false) UUID accountId,
       @RequestParam(required = false) UUID itemId,
       Pageable pageable) {
-    Page<StockMovement> page = movements.search(warehouseId, accountId, itemId, pageable);
+    if (warehouseId != null) {
+      requireWarehouseVisible(warehouseId);
+    }
+    Page<StockMovement> page =
+        movements.search(warehouseId, accountId, itemId, scope.filter(null, null), pageable);
     return PageResponse.from(
         new PageImpl<>(views.movements(page.getContent()), pageable, page.getTotalElements()),
         row -> row);
@@ -307,7 +321,9 @@ public class WarehouseController {
   @GetMapping("/counts")
   @PreAuthorize(VIEW)
   List<CountSummary> listCounts() {
+    Set<UUID> visible = billing.visibleWarehouseIdsOrNull();
     return counts.findAll(Sort.by(Sort.Direction.DESC, "countDate", "createdAt")).stream()
+        .filter(count -> visible == null || visible.contains(count.getWarehouseId()))
         .map(views::countSummary)
         .toList();
   }
@@ -315,7 +331,9 @@ public class WarehouseController {
   @GetMapping("/counts/{id}")
   @PreAuthorize(VIEW)
   CountResponse getCount(@PathVariable UUID id) {
-    return views.count(findCount(id));
+    StockCount count = findCount(id);
+    requireWarehouseVisible(count.getWarehouseId());
+    return views.count(count);
   }
 
   @PostMapping("/counts")
@@ -487,6 +505,11 @@ public class WarehouseController {
             () ->
                 new BusinessException(
                     HttpStatus.NOT_FOUND, "WAREHOUSE_NOT_FOUND", "Depo bulunamadı."));
+  }
+
+  /** Depo yoksa 404; LIMITED kullanıcıda deposu kapsam dışıysa 403 {@code BRANCH_OUT_OF_SCOPE}. */
+  private void requireWarehouseVisible(UUID warehouseId) {
+    scope.requireVisible(findWarehouse(warehouseId).getBranchId());
   }
 
   private StockCount findCount(UUID id) {

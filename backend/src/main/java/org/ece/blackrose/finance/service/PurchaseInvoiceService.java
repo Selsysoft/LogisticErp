@@ -33,6 +33,8 @@ public class PurchaseInvoiceService {
   private final CompanyResolver companies;
   private final LedgerService ledger;
   private final BranchScopeService scope;
+  private final AccountAccess access;
+  private final CompanyIdentityRule identityRule;
 
   public PurchaseInvoiceService(
       PurchaseInvoiceRepository invoices,
@@ -40,8 +42,12 @@ public class PurchaseInvoiceService {
       PaymentPlanService plans,
       LedgerService ledger,
       CompanyResolver companies,
-      BranchScopeService scope) {
+      BranchScopeService scope,
+      AccountAccess access,
+      CompanyIdentityRule identityRule) {
     this.scope = scope;
+    this.access = access;
+    this.identityRule = identityRule;
     this.companies = companies;
     this.invoices = invoices;
     this.planRepository = planRepository;
@@ -65,6 +71,8 @@ public class PurchaseInvoiceService {
           HttpStatus.CONFLICT, "INVOICE_NUMBER_TAKEN", "Bu fatura zaten kayıtlı.");
     }
     UUID companyId = companies.companyOf(request.branchId());
+    // Kullanıcı girişli belge: pasif cari 422, cari–şirket kimlik kuralı (12.1 §3.1).
+    identityRule.require(access.usableLocked(request.accountId()), companyId);
     PurchaseInvoice invoice =
         invoices.save(
             new PurchaseInvoice(

@@ -8,6 +8,7 @@ import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.util.UUID;
 import org.ece.blackrose.common.audit.AuditableEntity;
+import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentMovementType;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentStatus;
 
 @Entity
@@ -26,6 +27,14 @@ public class InstrumentMovement extends AuditableEntity {
   private LocalDate movementDate;
   private String note;
 
+  /** STATUS = durum geçişi; TRANSFERRED = cari taşıma (durum değişmez, from = to). */
+  @Enumerated(EnumType.STRING)
+  private InstrumentMovementType movementType = InstrumentMovementType.STATUS;
+
+  private UUID fromAccountId;
+  private UUID toAccountId;
+  private UUID accountTransferId;
+
   protected InstrumentMovement() {}
 
   public InstrumentMovement(
@@ -40,6 +49,24 @@ public class InstrumentMovement extends AuditableEntity {
     this.toStatus = toStatus;
     this.movementDate = movementDate;
     this.note = note;
+  }
+
+  /** Cari taşıma hareketi: çekin durumu değişmez, yalnız bağlı cari {@code from → to} olur. */
+  public static InstrumentMovement transferred(
+      UUID instrumentId,
+      InstrumentStatus current,
+      LocalDate date,
+      UUID from,
+      UUID to,
+      UUID transferId,
+      String note) {
+    InstrumentMovement movement =
+        new InstrumentMovement(instrumentId, current, current, date, note);
+    movement.movementType = InstrumentMovementType.TRANSFERRED;
+    movement.fromAccountId = from;
+    movement.toAccountId = to;
+    movement.accountTransferId = transferId;
+    return movement;
   }
 
   public UUID getId() {
@@ -64,5 +91,21 @@ public class InstrumentMovement extends AuditableEntity {
 
   public String getNote() {
     return note;
+  }
+
+  public InstrumentMovementType getMovementType() {
+    return movementType;
+  }
+
+  public UUID getFromAccountId() {
+    return fromAccountId;
+  }
+
+  public UUID getToAccountId() {
+    return toAccountId;
+  }
+
+  public UUID getAccountTransferId() {
+    return accountTransferId;
   }
 }

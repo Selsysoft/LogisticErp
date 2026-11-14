@@ -17,6 +17,7 @@ import {
   useCurrencies,
   usePaging,
 } from "../finance/common";
+import { companyOfBranch, fundsOfCompany } from "../finance/branchOptions";
 import { Page } from "../finance/types";
 import {
   formatDateTime,
@@ -90,7 +91,14 @@ function NewShipmentDialog({ onClose }: { onClose: () => void }) {
       name: "quoteLineId",
       label: field("quoteLine"),
       type: "select",
-      options: toOptions(options.data.acceptedQuoteLines),
+      // Teklif satırı seçili iş yerinin şirketinin olmalı (başka şirketin teklifi 422 COMPANY_MISMATCH).
+      optionsFrom: (values) =>
+        toOptions(
+          fundsOfCompany(
+            options.data.acceptedQuoteLines,
+            companyOfBranch(branches.data, String(values.branchId ?? "")),
+          ),
+        ),
       helperText: field("priceHelp"),
     },
     { name: "manualNet", label: field("manualNet"), type: "amount" },

@@ -1,11 +1,19 @@
 import { describe, expect, it } from "vitest";
 import nav from "../../locales/tr/ztoFinans/nav";
 import {
+  accountBankAccountsPath,
+  accountEditPath,
+  accountTransactionsPath,
+  activeItemIds,
+  bankAccountEditPath,
   EXCLUDED_ZTO_ITEMS,
   isActive,
   isFinanceMenuItem,
+  isModalAction,
   isNavigable,
   itemPath,
+  newBankAccountPath,
+  statementPath,
   stepOf,
   visibleSections,
   ZTO_FINANS_BASE,
@@ -88,9 +96,12 @@ describe("ZTO finans menü kaydı", () => {
     for (const item of ztoItems) expect(STEPS, item.id).toContain(item.step);
   });
 
-  it("uygulanmış ekranlar: Cari Hareketler iskeleti, 12.1a tanım ekranları ve vitrin", () => {
+  it("uygulanmış ekranlar: 12.1 cari ekranları, 12.1a tanım ekranları ve vitrin", () => {
     expect(items.filter((i) => i.implemented).map((i) => i.id)).toEqual([
       "allTransactions",
+      "quickTransaction",
+      "accounts",
+      "newAccount",
       "workPlaces",
       "branchGroups",
       "companies",
@@ -102,7 +113,16 @@ describe("ZTO finans menü kaydı", () => {
       workPlaces: "tanimlar/is-yerleri",
       branchGroups: "tanimlar/subeler",
       companies: "tanimlar/sirketler",
+      accounts: "cari-kartlar",
+      newAccount: "cari-kartlar/yeni",
     });
+    const accounts = items.find((i) => i.id === "accounts")!;
+    expect(accounts.matchPrefix).toBe(true);
+    const add = items.find((i) => i.id === "newAccount")!;
+    expect(add.permission).toBe("FINANCE_MANAGE");
+    expect(add.action).toBe("add");
+    // Tüm Planlamalar 12.4'te (plan modalları).
+    expect(items.find((i) => i.id === "allPlans")!.implemented).toBe(false);
   });
 
   it("TEMEL TANIMLAR bölümü 'dev'den önce; kaynakları _Layout ve Blackrose eki", () => {
@@ -137,7 +157,9 @@ describe("ZTO finans menü kaydı", () => {
       asked.push(p);
       return true;
     });
-    expect(new Set(asked)).toEqual(new Set(["BRANCH_VIEW"]));
+    expect(new Set(asked)).toEqual(new Set(["BRANCH_VIEW", "FINANCE_MANAGE"]));
+    const withoutManage = visibleSections(false, ZTO_NAV_SECTIONS, (p) => p !== "FINANCE_MANAGE");
+    expect(withoutManage.flatMap((s) => s.items).some((i) => i.id === "newAccount")).toBe(false);
   });
 
   it("matchPrefix: alt yollar (yeni, düzenle) öğeyi etkin yapar; benzer önek etkin yapmaz", () => {
@@ -170,7 +192,9 @@ describe("ZTO finans menü kaydı", () => {
     expect(isActive(quick, "/zto-finans/cari-hareketler")).toBe(false);
     expect(isNavigable(all)).toBe(true);
     expect(isNavigable(quick)).toBe(false);
-    expect(isNavigable({ ...quick, implemented: true })).toBe(false);
+    expect(isModalAction(quick)).toBe(true);
+    expect(isModalAction({ ...quick, implemented: false })).toBe(false);
+    expect(isModalAction(all)).toBe(false);
   });
 
   it("ZTO'daki gibi Cari Kartlar ve Tüm Planlamalar aynı sayfada birlikte etkin", () => {
@@ -179,5 +203,57 @@ describe("ZTO finans menü kaydı", () => {
     expect(stepOf("cari-kartlar")).toBe("12.1");
     expect(stepOf("odemeler")).toBe("12.2a");
     expect(stepOf("yok")).toBeUndefined();
+  });
+});
+
+describe("activeItemIds (en uzun eşleşme, 12.1 §5.4 F12)", () => {
+  const ids = (path: string) => [...activeItemIds(items, path)].sort();
+
+  it("Cari Kartlar ve Tüm Planlamalar aynı yolda birlikte", () => {
+    expect(ids("/zto-finans/cari-kartlar")).toEqual(["accounts", "allPlans"]);
+    expect(ids("/zto-finans/cari-kartlar/")).toEqual(["accounts", "allPlans"]);
+  });
+
+  it("alt yollar: yeni → yalnız Yeni Cari Kart; hareketler → yalnız Cari Kartlar", () => {
+    expect(ids("/zto-finans/cari-kartlar/yeni")).toEqual(["newAccount"]);
+    expect(ids("/zto-finans/cari-kartlar/abc/hareketler")).toEqual(["accounts"]);
+    expect(ids("/zto-finans/cari-kartlar/abc/duzenle")).toEqual(["accounts"]);
+    expect(ids("/zto-finans/cari-kartlar/abc/banka-hesaplari/yeni")).toEqual(["accounts"]);
+  });
+
+  it("modal öğesi etkin olmaz; eşleşme yoksa boş", () => {
+    expect(ids("/zto-finans/cari-hareketler")).toEqual(["allTransactions"]);
+    expect(ids("/zto-finans/tanimlar/is-yerleri/yeni")).toEqual(["workPlaces"]);
+    expect(ids("/zto-finans/yok")).toEqual([]);
+    expect(ids("/")).toEqual([]);
+  });
+});
+
+describe("yol yardımcıları", () => {
+  it("cari ve banka hesabı yolları", () => {
+    expect(accountTransactionsPath("a1")).toBe("/zto-finans/cari-kartlar/a1/hareketler");
+    expect(accountTransactionsPath("a1", { currency: "EUR", rolloverId: "" })).toBe(
+      "/zto-finans/cari-kartlar/a1/hareketler?currency=EUR",
+    );
+    expect(accountEditPath("a 1")).toBe("/zto-finans/cari-kartlar/a%201/duzenle");
+    expect(accountBankAccountsPath("a1")).toBe("/zto-finans/cari-kartlar/a1/banka-hesaplari");
+    expect(newBankAccountPath("a1")).toBe("/zto-finans/cari-kartlar/a1/banka-hesaplari/yeni");
+    expect(bankAccountEditPath("b1")).toBe("/zto-finans/banka-hesaplari/b1/duzenle");
+  });
+
+  it("ekstre yazdırma yolu (kabuk dışı)", () => {
+    expect(statementPath("a1")).toBe("/zto-finans-yazdir/cari-ekstre/a1");
+    expect(
+      statementPath("a1", {
+        from: "2026-01-01",
+        to: "2026-12-31",
+        currency: "TRY",
+        branchId: "b1",
+        companyId: "c1",
+        dateBasis: "DOCUMENT",
+      }),
+    ).toBe(
+      "/zto-finans-yazdir/cari-ekstre/a1?from=2026-01-01&to=2026-12-31&currency=TRY&branchId=b1&companyId=c1&dateBasis=DOCUMENT",
+    );
   });
 });

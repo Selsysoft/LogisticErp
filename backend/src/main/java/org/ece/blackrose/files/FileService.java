@@ -76,6 +76,7 @@ public class FileService {
       throw new BusinessException(
           HttpStatus.NOT_FOUND, "FILE_OWNER_NOT_FOUND", "Dosyanın bağlanacağı kayıt bulunamadı.");
     }
+    policy.requireAccess(ownerId);
     if (upload.isEmpty()) {
       throw new BusinessException(HttpStatus.BAD_REQUEST, "FILE_EMPTY", "Dosya boş.");
     }
@@ -115,14 +116,18 @@ public class FileService {
 
   @Transactional(readOnly = true)
   public List<StoredFile> list(String ownerType, UUID ownerId) {
-    requirePermission(policy(ownerType).viewPermission());
+    FileOwnerPolicy policy = policy(ownerType);
+    requirePermission(policy.viewPermission());
+    policy.requireAccess(ownerId);
     return files.findByOwnerTypeAndOwnerIdOrderByCreatedAtDesc(ownerType, ownerId);
   }
 
   @Transactional(readOnly = true)
   public Download download(UUID id) {
     StoredFile file = find(id);
-    requirePermission(policy(file.getOwnerType()).viewPermission());
+    FileOwnerPolicy policy = policy(file.getOwnerType());
+    requirePermission(policy.viewPermission());
+    policy.requireAccess(file.getOwnerId());
     return open(file);
   }
 
@@ -138,6 +143,7 @@ public class FileService {
     FileOwnerPolicy policy = policy(file.getOwnerType());
     requireNotManaged(policy);
     requirePermission(policy.editPermission());
+    policy.requireAccess(file.getOwnerId());
     file.markDeleted();
   }
 

@@ -823,6 +823,11 @@ class ShipmentIT extends AbstractIntegrationTest {
             "/api/v1/crm/quotes/" + quote + "/lines",
             Map.of("origin", "İzmir", "destination", "Bursa", "manualNet", "8000"))
         .andExpect(status().isCreated());
+    post(
+            s.tenant(),
+            "/api/v1/crm/quotes/" + quote + "/lines",
+            Map.of("origin", "Bursa", "destination", "Ankara", "manualNet", "6000"))
+        .andExpect(status().isCreated());
     post(s.tenant(), "/api/v1/crm/quotes/" + quote + "/send", null).andExpect(status().isOk());
     post(
             s.tenant(),
@@ -840,11 +845,16 @@ class ShipmentIT extends AbstractIntegrationTest {
         .containsExactlyInAnyOrder(carrier, s.supplier());
     assertThat(options.get("costAccounts").findValuesAsText("id"))
         .containsExactlyInAnyOrder(carrier, s.supplier(), employee);
-    assertThat(options.get("acceptedQuoteLines")).hasSize(1);
-    assertThat(options.get("acceptedQuoteLines").get(0).get("label").asText())
-        .endsWith(" · İzmir - Bursa");
-    assertThat(options.get("acceptedQuoteLines").get(0).get("accountId").asText())
-        .isEqualTo(s.customer());
+    // Teklifin satırları tek sorguyla yüklenir; her satır teklifin carisini ve şirketini taşır.
+    JsonNode quoteLines = options.get("acceptedQuoteLines");
+    assertThat(quoteLines).hasSize(2);
+    assertThat(quoteLines.findValuesAsText("label"))
+        .anyMatch(label -> label.endsWith(" · İzmir - Bursa"))
+        .anyMatch(label -> label.endsWith(" · Bursa - Ankara"));
+    assertThat(quoteLines.findValuesAsText("accountId")).containsOnly(s.customer());
+    String quoteCompany =
+        body(send(s.tenant(), get("/api/v1/crm/quotes/" + quote))).get("companyId").asText();
+    assertThat(quoteLines.findValuesAsText("companyId")).containsOnly(quoteCompany);
 
     // Liste durum ve aramayla süzülür.
     JsonNode first = create(s.tenant(), shipmentBody(s, "1000"));

@@ -375,6 +375,11 @@ public class DispatchService implements ResourceBusyProvider {
     for (AvailabilityResponse listed : insights.availability(SubjectType.VEHICLE, from, to, null)) {
       AvailabilityResponse row = dangerous ? withAdr(listed, DocumentType.VEHICLE_ADR, to) : listed;
       Vehicle vehicle = all.get(row.subjectId());
+      if (vehicle == null) {
+        // Uygunluk sorgusu araç listesinden sonra okunur (ayrı anlık görüntü): arada eklenen araç
+        // bir sonraki istekte gelir; NPE ile 500 dönülmez (12.1 son kapı, paralel e2e).
+        continue;
+      }
       boolean fits =
           vehicle.getKind() == VehicleKind.TRACTOR
               || vehicle.getCapacityTon() == null

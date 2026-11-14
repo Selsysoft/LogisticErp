@@ -34,8 +34,713 @@
         "required" : [ "endDate", "startDate" ],
         "type" : "object"
       },
+      "AccountActiveRequest" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "active" ],
+        "type" : "object"
+      },
+      "AccountBalanceBreakdownResponse" : {
+        "properties" : {
+          "groupBy" : {
+            "enum" : [ "CURRENCY", "COMPANY", "BRANCH" ],
+            "type" : "string"
+          },
+          "payableInvoiceTotals" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CurrencyAmountResponse"
+            },
+            "type" : "array"
+          },
+          "rows" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BalanceBreakdownRowResponse"
+            },
+            "type" : "array"
+          },
+          "splitDate" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountBankAccountResponse" : {
+        "properties" : {
+          "accountCode" : {
+            "type" : "string"
+          },
+          "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "accountKind" : {
+            "enum" : [ "TIME", "DEMAND", "SAVINGS", "CORPORATE" ],
+            "type" : "string"
+          },
+          "accountName" : {
+            "type" : "string"
+          },
+          "accountNumber" : {
+            "type" : "string"
+          },
+          "accountNumberMasked" : {
+            "type" : "string"
+          },
+          "accountType" : {
+            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
+            "type" : "string"
+          },
+          "active" : {
+            "type" : "boolean"
+          },
+          "bankName" : {
+            "type" : "string"
+          },
+          "branchName" : {
+            "type" : "string"
+          },
+          "category" : {
+            "enum" : [ "MAIN", "SUB" ],
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "holderName" : {
+            "type" : "string"
+          },
+          "iban" : {
+            "type" : "string"
+          },
+          "ibanMasked" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "lastTransactionOn" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "openedOn" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "updateCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "updatedBy" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountCompanyLimitResponse" : {
+        "properties" : {
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "creditLimit" : {
+            "type" : "number"
+          },
+          "riskLimit" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountDocumentCancelRequest" : {
+        "properties" : {
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountDocumentRequest" : {
+        "properties" : {
+          "amount" : {
+            "type" : "number"
+          },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "currency" : {
+            "minLength" : 1,
+            "pattern" : "^[A-Z]{3}$",
+            "type" : "string"
+          },
+          "description" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "documentDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "documentNo" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "documentType" : {
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "dueDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "exchangeRate" : {
+            "type" : "number"
+          },
+          "paymentMethod" : {
+            "enum" : [ "CASH", "BANK", "CHECK", "NOTE", "CREDIT_CARD", "OTHER" ],
+            "type" : "string"
+          },
+          "reflectToLedger" : {
+            "type" : "boolean"
+          },
+          "side" : {
+            "enum" : [ "RECEIVABLE", "PAYABLE" ],
+            "type" : "string"
+          },
+          "tax" : {
+            "$ref" : "#/components/schemas/AccountDocumentTaxRequest"
+          }
+        },
+        "required" : [ "amount", "branchId", "currency", "documentDate", "documentNo", "documentType", "paymentMethod", "side" ],
+        "type" : "object"
+      },
+      "AccountDocumentResponse" : {
+        "properties" : {
+          "accountCode" : {
+            "type" : "string"
+          },
+          "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "accountName" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "cancelDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "cancelReason" : {
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "documentDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "documentNo" : {
+            "type" : "string"
+          },
+          "documentType" : {
+            "type" : "string"
+          },
+          "documentTypeName" : {
+            "type" : "string"
+          },
+          "dueDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "exchangeRate" : {
+            "type" : "number"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "ledgerAmount" : {
+            "type" : "number"
+          },
+          "paymentMethod" : {
+            "enum" : [ "CASH", "BANK", "CHECK", "NOTE", "CREDIT_CARD", "OTHER" ],
+            "type" : "string"
+          },
+          "reflectToLedger" : {
+            "type" : "boolean"
+          },
+          "revisedById" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "revisedFromId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "side" : {
+            "enum" : [ "RECEIVABLE", "PAYABLE" ],
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "OPEN", "CANCELLED" ],
+            "type" : "string"
+          },
+          "tax" : {
+            "$ref" : "#/components/schemas/AccountDocumentTaxResponse"
+          },
+          "transactionId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "updatedBy" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountDocumentTaxRequest" : {
+        "properties" : {
+          "discountRate" : {
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "number"
+          },
+          "otherTaxesAmount" : {
+            "type" : "number"
+          },
+          "vatRate" : {
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "number"
+          },
+          "withholdingAmount" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountDocumentTaxResponse" : {
+        "properties" : {
+          "discountAmount" : {
+            "type" : "number"
+          },
+          "discountRate" : {
+            "type" : "number"
+          },
+          "grossAmount" : {
+            "type" : "number"
+          },
+          "netExclVat" : {
+            "type" : "number"
+          },
+          "netPayable" : {
+            "type" : "number"
+          },
+          "otherTaxesAmount" : {
+            "type" : "number"
+          },
+          "totalInclVat" : {
+            "type" : "number"
+          },
+          "vatAmount" : {
+            "type" : "number"
+          },
+          "vatRate" : {
+            "type" : "number"
+          },
+          "withholdingAmount" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountDocumentTypeResponse" : {
+        "properties" : {
+          "audience" : {
+            "enum" : [ "ALL", "CUSTOMER", "OTHER" ],
+            "type" : "string"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "invoiceSection" : {
+            "type" : "boolean"
+          },
+          "isDefault" : {
+            "type" : "boolean"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "penalty" : {
+            "type" : "boolean"
+          },
+          "selectable" : {
+            "type" : "boolean"
+          },
+          "side" : {
+            "enum" : [ "RECEIVABLE", "PAYABLE" ],
+            "type" : "string"
+          },
+          "sortOrder" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountGroupResponse" : {
+        "properties" : {
+          "accountType" : {
+            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
+            "type" : "string"
+          },
+          "active" : {
+            "type" : "boolean"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "codePrefix" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "reportType" : {
+            "type" : "string"
+          },
+          "selectable" : {
+            "type" : "boolean"
+          },
+          "sortOrder" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "typeDefault" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountHistoryResponse" : {
+        "properties" : {
+          "actorEmail" : {
+            "type" : "string"
+          },
+          "at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "details" : {
+            "type" : "string"
+          },
+          "event" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountInvoiceRowResponse" : {
+        "properties" : {
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "documentType" : {
+            "type" : "string"
+          },
+          "documentTypeName" : {
+            "type" : "string"
+          },
+          "dueDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "invoiceDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "netAmount" : {
+            "type" : "number"
+          },
+          "number" : {
+            "type" : "string"
+          },
+          "reflected" : {
+            "type" : "boolean"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "totalAmount" : {
+            "type" : "number"
+          },
+          "vatAmount" : {
+            "type" : "number"
+          },
+          "withholdingAmount" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountLimitRequest" : {
+        "properties" : {
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "creditLimit" : {
+            "type" : "number"
+          },
+          "riskLimit" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountPlanSummaryResponse" : {
+        "properties" : {
+          "approvedCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "draftCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "dueTodayCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nextDueDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "overdueCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "pendingCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "planned" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CurrencyAmountResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountProfileRequest" : {
+        "properties" : {
+          "address" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "bankAccounts" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ProfileBankAccountRequest"
+            },
+            "type" : "array"
+          },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "city" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "code" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyType" : {
+            "enum" : [ "INDIVIDUAL", "CORPORATE" ],
+            "type" : "string"
+          },
+          "contactMobile" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "contactName" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "contactTitle" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "country" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "deactivatedBankAccountIds" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "defaultCurrency" : {
+            "pattern" : "^[A-Z]{3}$",
+            "type" : "string"
+          },
+          "district" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "email" : {
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "notes" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "paymentTerms" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "phone" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "postalCode" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "subGroup" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "taxNumber" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "taxOffice" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
+            "type" : "string"
+          },
+          "website" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "name", "subGroup", "type" ],
+        "type" : "object"
+      },
       "AccountResponse" : {
         "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "address" : {
+            "type" : "string"
+          },
           "balances" : {
             "items" : {
               "$ref" : "#/components/schemas/BalanceResponse"
@@ -46,11 +751,55 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "city" : {
+            "type" : "string"
+          },
           "code" : {
             "type" : "string"
           },
           "companyId" : {
             "format" : "uuid",
+            "type" : "string"
+          },
+          "companyLimits" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AccountCompanyLimitResponse"
+            },
+            "type" : "array"
+          },
+          "companyType" : {
+            "enum" : [ "INDIVIDUAL", "CORPORATE" ],
+            "type" : "string"
+          },
+          "contactMobile" : {
+            "type" : "string"
+          },
+          "contactName" : {
+            "type" : "string"
+          },
+          "contactTitle" : {
+            "type" : "string"
+          },
+          "country" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "creditLimit" : {
+            "type" : "number"
+          },
+          "defaultCurrency" : {
+            "type" : "string"
+          },
+          "district" : {
+            "type" : "string"
+          },
+          "email" : {
             "type" : "string"
           },
           "id" : {
@@ -60,16 +809,179 @@
           "name" : {
             "type" : "string"
           },
+          "notes" : {
+            "type" : "string"
+          },
+          "paymentTerms" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "planSummary" : {
+            "$ref" : "#/components/schemas/AccountPlanSummaryResponse"
+          },
+          "postalCode" : {
+            "type" : "string"
+          },
           "representsCompanyId" : {
             "format" : "uuid",
+            "type" : "string"
+          },
+          "riskLimit" : {
+            "type" : "number"
+          },
+          "subGroup" : {
+            "type" : "string"
+          },
+          "subGroupName" : {
             "type" : "string"
           },
           "taxNumber" : {
             "type" : "string"
           },
+          "taxNumberMasked" : {
+            "type" : "boolean"
+          },
+          "taxOffice" : {
+            "type" : "string"
+          },
           "type" : {
             "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
             "type" : "string"
+          },
+          "updateCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "updatedBy" : {
+            "type" : "string"
+          },
+          "website" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountRolloverResponse" : {
+        "properties" : {
+          "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "active" : {
+            "type" : "boolean"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "deletedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "deletedBy" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "rolloverDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "seasonName" : {
+            "type" : "string"
+          },
+          "updateCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "updatedBy" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountTransactionDetailResponse" : {
+        "properties" : {
+          "document" : {
+            "$ref" : "#/components/schemas/AccountDocumentResponse"
+          },
+          "reversedById" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "row" : {
+            "$ref" : "#/components/schemas/AccountTransactionRowResponse"
+          },
+          "transfer" : {
+            "$ref" : "#/components/schemas/TransactionTransferResponse"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountTransactionFacetsResponse" : {
+        "properties" : {
+          "branches" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BranchFacetResponse"
+            },
+            "type" : "array"
+          },
+          "groups" : {
+            "items" : {
+              "$ref" : "#/components/schemas/GroupFacetResponse"
+            },
+            "type" : "array"
+          },
+          "kinds" : {
+            "items" : {
+              "$ref" : "#/components/schemas/KindFacetResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountTransactionPageResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AccountTransactionRowResponse"
+            },
+            "type" : "array"
+          },
+          "facets" : {
+            "$ref" : "#/components/schemas/AccountTransactionFacetsResponse"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -121,6 +1033,362 @@
           },
           "transactionDate" : {
             "format" : "date",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountTransactionRowResponse" : {
+        "properties" : {
+          "accountCode" : {
+            "type" : "string"
+          },
+          "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "accountName" : {
+            "type" : "string"
+          },
+          "accountType" : {
+            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "branchName" : {
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "direction" : {
+            "enum" : [ "DEBIT", "CREDIT" ],
+            "type" : "string"
+          },
+          "documentDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "documentNo" : {
+            "type" : "string"
+          },
+          "documentType" : {
+            "type" : "string"
+          },
+          "dueDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "exchangeRate" : {
+            "type" : "number"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "DEBT", "PAYMENT", "RECEIVABLE", "COLLECTION" ],
+            "type" : "string"
+          },
+          "paymentMethod" : {
+            "type" : "string"
+          },
+          "reversal" : {
+            "type" : "boolean"
+          },
+          "reversed" : {
+            "type" : "boolean"
+          },
+          "sign" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sourceId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "sourceType" : {
+            "type" : "string"
+          },
+          "subGroup" : {
+            "type" : "string"
+          },
+          "subGroupName" : {
+            "type" : "string"
+          },
+          "tlAmount" : {
+            "type" : "number"
+          },
+          "transactionDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "transferRole" : {
+            "type" : "string"
+          },
+          "transferredOut" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountTransactionVoidRequest" : {
+        "properties" : {
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "description" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountTransferHistoryRowResponse" : {
+        "properties" : {
+          "amount" : {
+            "type" : "number"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "fromAccountCode" : {
+            "type" : "string"
+          },
+          "fromAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "fromAccountName" : {
+            "type" : "string"
+          },
+          "instrumentNumbers" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "lineId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "toAccountCode" : {
+            "type" : "string"
+          },
+          "toAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "toAccountName" : {
+            "type" : "string"
+          },
+          "transferDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "transferId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountTransferInstrumentResponse" : {
+        "properties" : {
+          "instrumentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "CHECK", "NOTE" ],
+            "type" : "string"
+          },
+          "movedDrawer" : {
+            "type" : "boolean"
+          },
+          "movedEndorsee" : {
+            "type" : "boolean"
+          },
+          "number" : {
+            "type" : "string"
+          },
+          "reverted" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountTransferLineResponse" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "direction" : {
+            "enum" : [ "DEBIT", "CREDIT" ],
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "transactionId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountTransferRequest" : {
+        "properties" : {
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "description" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "fromAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "toAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "transactionIds" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "maxItems" : 500,
+            "minItems" : 0,
+            "type" : "array"
+          }
+        },
+        "required" : [ "fromAccountId", "toAccountId" ],
+        "type" : "object"
+      },
+      "AccountTransferResponse" : {
+        "properties" : {
+          "checkCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "fromAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "instruments" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AccountTransferInstrumentResponse"
+            },
+            "type" : "array"
+          },
+          "lines" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AccountTransferLineResponse"
+            },
+            "type" : "array"
+          },
+          "noteCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "reverseDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "skippedInstruments" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "status" : {
+            "enum" : [ "POSTED", "REVERSED" ],
+            "type" : "string"
+          },
+          "toAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "transferDate" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountTransferReverseRequest" : {
+        "properties" : {
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "description" : {
+            "maxLength" : 500,
+            "minLength" : 0,
             "type" : "string"
           }
         },
@@ -393,10 +1661,21 @@
         },
         "type" : "object"
       },
-      "BalanceResponse" : {
+      "BalanceBreakdownRowResponse" : {
         "properties" : {
           "balance" : {
             "type" : "number"
+          },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "collection" : {
+            "type" : "number"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
           },
           "credit" : {
             "type" : "number"
@@ -405,6 +1684,58 @@
             "type" : "string"
           },
           "debit" : {
+            "type" : "number"
+          },
+          "debt" : {
+            "type" : "number"
+          },
+          "payment" : {
+            "type" : "number"
+          },
+          "receivable" : {
+            "type" : "number"
+          },
+          "segment" : {
+            "type" : "string"
+          },
+          "tlBalance" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "BalanceResponse" : {
+        "properties" : {
+          "balance" : {
+            "type" : "number"
+          },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "collection" : {
+            "type" : "number"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "credit" : {
+            "type" : "number"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "debit" : {
+            "type" : "number"
+          },
+          "debt" : {
+            "type" : "number"
+          },
+          "payment" : {
+            "type" : "number"
+          },
+          "receivable" : {
             "type" : "number"
           },
           "tlBalance" : {
@@ -474,6 +1805,22 @@
           },
           "status" : {
             "enum" : [ "QUOTED", "PLANNED", "LOADED", "IN_TRANSIT", "DELIVERED", "INVOICED", "CLOSED", "CANCELLED" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BranchFacetResponse" : {
+        "properties" : {
+          "count" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
             "type" : "string"
           }
         },
@@ -1685,6 +3032,17 @@
         },
         "type" : "object"
       },
+      "CurrencyAmountResponse" : {
+        "properties" : {
+          "amount" : {
+            "type" : "number"
+          },
+          "currency" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "CurrencyResponse" : {
         "properties" : {
           "code" : {
@@ -1735,6 +3093,9 @@
           },
           "taxNumber" : {
             "type" : "string"
+          },
+          "taxNumberMasked" : {
+            "type" : "boolean"
           },
           "type" : {
             "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
@@ -2644,6 +4005,10 @@
       },
       "FundOption" : {
         "properties" : {
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "currency" : {
             "type" : "string"
           },
@@ -2652,6 +4017,23 @@
             "type" : "string"
           },
           "kind" : {
+            "enum" : [ "BANK", "CASH" ],
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "FundOptionResponse" : {
+        "properties" : {
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
             "type" : "string"
           },
           "label" : {
@@ -2802,6 +4184,21 @@
           "radiusM" : {
             "format" : "int32",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "GroupFacetResponse" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "count" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -3061,7 +4458,15 @@
       },
       "InstrumentMovementResponse" : {
         "properties" : {
+          "accountTransferId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "createdBy" : {
+            "type" : "string"
+          },
+          "fromAccountId" : {
+            "format" : "uuid",
             "type" : "string"
           },
           "fromStatus" : {
@@ -3076,7 +4481,15 @@
             "format" : "date",
             "type" : "string"
           },
+          "movementType" : {
+            "enum" : [ "STATUS", "TRANSFERRED" ],
+            "type" : "string"
+          },
           "note" : {
+            "type" : "string"
+          },
+          "toAccountId" : {
+            "format" : "uuid",
             "type" : "string"
           },
           "toStatus" : {
@@ -3176,7 +4589,7 @@
           },
           "bankAccounts" : {
             "items" : {
-              "$ref" : "#/components/schemas/Option"
+              "$ref" : "#/components/schemas/FundOptionResponse"
             },
             "type" : "array"
           },
@@ -3319,6 +4732,18 @@
           }
         },
         "required" : [ "dueDate", "from", "invoiceDate", "to" ],
+        "type" : "object"
+      },
+      "KindFacetResponse" : {
+        "properties" : {
+          "count" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "kind" : {
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "KpiReport" : {
@@ -3701,7 +5126,7 @@
           },
           "permissions" : {
             "items" : {
-              "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "COMPANY_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
+              "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "COMPANY_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "FINANCE_EMPLOYEE_VIEW", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
               "type" : "string"
             },
             "type" : "array",
@@ -4242,11 +5667,119 @@
         },
         "type" : "object"
       },
+      "PageResponseAccountBankAccountResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AccountBankAccountResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseAccountDocumentResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AccountDocumentResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseAccountHistoryResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AccountHistoryResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "PageResponseAccountResponse" : {
         "properties" : {
           "content" : {
             "items" : {
               "$ref" : "#/components/schemas/AccountResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseAccountTransferHistoryRowResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AccountTransferHistoryRowResponse"
             },
             "type" : "array"
           },
@@ -4892,7 +6425,7 @@
       "PermissionResponse" : {
         "properties" : {
           "code" : {
-            "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "COMPANY_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
+            "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "COMPANY_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "FINANCE_EMPLOYEE_VIEW", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
             "type" : "string"
           },
           "module" : {
@@ -5319,6 +6852,64 @@
         "required" : [ "date", "destination", "origin" ],
         "type" : "object"
       },
+      "ProfileBankAccountRequest" : {
+        "properties" : {
+          "accountKind" : {
+            "enum" : [ "TIME", "DEMAND", "SAVINGS", "CORPORATE" ],
+            "type" : "string"
+          },
+          "accountNumber" : {
+            "maxLength" : 34,
+            "minLength" : 0,
+            "pattern" : "^[A-Za-z0-9-]*$",
+            "type" : "string"
+          },
+          "bankName" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "branchName" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "category" : {
+            "enum" : [ "MAIN", "SUB" ],
+            "type" : "string"
+          },
+          "currency" : {
+            "minLength" : 1,
+            "pattern" : "^[A-Z]{3}$",
+            "type" : "string"
+          },
+          "description" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "holderName" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "iban" : {
+            "maxLength" : 42,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "openedOn" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "required" : [ "bankName", "category", "currency" ],
+        "type" : "object"
+      },
       "ProfitReport" : {
         "properties" : {
           "costTl" : {
@@ -5500,6 +7091,10 @@
       "QuoteLineOption" : {
         "properties" : {
           "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
             "format" : "uuid",
             "type" : "string"
           },
@@ -5879,7 +7474,7 @@
           },
           "permissions" : {
             "items" : {
-              "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "COMPANY_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
+              "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "COMPANY_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "FINANCE_EMPLOYEE_VIEW", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
               "type" : "string"
             },
             "type" : "array",
@@ -5888,6 +7483,20 @@
           "priority" : {
             "format" : "int32",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "RolloverRequest" : {
+        "properties" : {
+          "rolloverDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "seasonName" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -6048,12 +7657,74 @@
       },
       "SaveAccountRequest" : {
         "properties" : {
+          "address" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "bankAccounts" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SaveBankAccountRequest"
+            },
+            "type" : "array"
+          },
           "branchId" : {
             "format" : "uuid",
             "type" : "string"
           },
+          "city" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
           "code" : {
             "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyType" : {
+            "enum" : [ "INDIVIDUAL", "CORPORATE" ],
+            "type" : "string"
+          },
+          "contactMobile" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "contactName" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "contactTitle" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "country" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "creditLimit" : {
+            "type" : "number"
+          },
+          "defaultCurrency" : {
+            "pattern" : "^[A-Z]{3}$",
+            "type" : "string"
+          },
+          "district" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "email" : {
+            "format" : "email",
+            "maxLength" : 254,
             "minLength" : 0,
             "type" : "string"
           },
@@ -6062,17 +7733,55 @@
             "minLength" : 0,
             "type" : "string"
           },
+          "notes" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "paymentTerms" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "phone" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "postalCode" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "riskLimit" : {
+            "type" : "number"
+          },
+          "subGroup" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          },
           "taxNumber" : {
             "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "taxOffice" : {
+            "maxLength" : 100,
             "minLength" : 0,
             "type" : "string"
           },
           "type" : {
             "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
             "type" : "string"
+          },
+          "website" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
           }
         },
-        "required" : [ "code", "name", "type" ],
+        "required" : [ "name", "type" ],
         "type" : "object"
       },
       "SaveActivityRequest" : {
@@ -6100,6 +7809,60 @@
           }
         },
         "required" : [ "accountId", "subject", "type" ],
+        "type" : "object"
+      },
+      "SaveBankAccountRequest" : {
+        "properties" : {
+          "accountKind" : {
+            "enum" : [ "TIME", "DEMAND", "SAVINGS", "CORPORATE" ],
+            "type" : "string"
+          },
+          "accountNumber" : {
+            "maxLength" : 34,
+            "minLength" : 0,
+            "pattern" : "^[A-Za-z0-9-]*$",
+            "type" : "string"
+          },
+          "bankName" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "branchName" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "category" : {
+            "enum" : [ "MAIN", "SUB" ],
+            "type" : "string"
+          },
+          "currency" : {
+            "minLength" : 1,
+            "pattern" : "^[A-Z]{3}$",
+            "type" : "string"
+          },
+          "description" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "holderName" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "iban" : {
+            "maxLength" : 42,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "openedOn" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "required" : [ "bankName", "category", "currency" ],
         "type" : "object"
       },
       "SaveBinRequest" : {
@@ -7091,7 +8854,7 @@
           },
           "permissions" : {
             "items" : {
-              "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "COMPANY_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
+              "enum" : [ "USER_VIEW", "USER_MANAGE", "ROLE_MANAGE", "AUDIT_VIEW", "BRANCH_VIEW", "BRANCH_MANAGE", "COMPANY_MANAGE", "FINANCE_VIEW", "FINANCE_MANAGE", "FINANCE_PAYMENT_CREATE", "FINANCE_APPROVE", "FINANCE_EMPLOYEE_VIEW", "CRM_VIEW", "CRM_EDIT", "SHIPMENT_VIEW", "SHIPMENT_DISPATCH", "SHIPMENT_INVOICE", "FLEET_VIEW", "FLEET_EDIT", "WAREHOUSE_VIEW", "WAREHOUSE_EDIT", "WAREHOUSE_INVOICE", "CUSTOMS_VIEW", "CUSTOMS_EDIT", "DRIVER_APP", "INTEGRATION_VIEW", "REPORT_VIEW", "SUBSCRIPTION_VIEW" ],
               "type" : "string"
             },
             "type" : "array",
@@ -7933,6 +9696,24 @@
           "balance" : {
             "type" : "number"
           },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
           "date" : {
             "format" : "date",
             "type" : "string"
@@ -7943,10 +9724,44 @@
           "direction" : {
             "type" : "string"
           },
+          "documentDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "documentNo" : {
+            "type" : "string"
+          },
+          "documentType" : {
+            "type" : "string"
+          },
+          "dueDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
           "exchangeRate" : {
             "type" : "number"
           },
           "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "paymentMethod" : {
+            "type" : "string"
+          },
+          "reversal" : {
+            "type" : "boolean"
+          },
+          "reversed" : {
+            "type" : "boolean"
+          },
+          "sign" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sourceId" : {
             "format" : "uuid",
             "type" : "string"
           },
@@ -7955,6 +9770,9 @@
           },
           "tlAmount" : {
             "type" : "number"
+          },
+          "transferRole" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -8009,6 +9827,12 @@
           },
           "openingBalance" : {
             "type" : "number"
+          },
+          "openingBalances" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CurrencyAmountResponse"
+            },
+            "type" : "array"
           },
           "page" : {
             "format" : "int32",
@@ -8296,6 +10120,44 @@
         },
         "type" : "object"
       },
+      "TransactionSourceResponse" : {
+        "properties" : {
+          "label" : {
+            "type" : "string"
+          },
+          "route" : {
+            "type" : "string"
+          },
+          "sourceId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "sourceType" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "TransactionTransferResponse" : {
+        "properties" : {
+          "fromAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "toAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "transferId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "TransferRequest" : {
         "properties" : {
           "date" : {
@@ -8328,6 +10190,93 @@
       "TransferResponse" : {
         "properties" : {
           "transferId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "TransferableInstrumentResponse" : {
+        "properties" : {
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "CHECK", "NOTE" ],
+            "type" : "string"
+          },
+          "number" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "PORTFOLIO", "AT_BANK", "COLLECTED", "ENDORSED", "COLLECTED_TO_CASH", "BOUNCED", "ISSUED", "PAID" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "TransferableTransactionResponse" : {
+        "properties" : {
+          "amount" : {
+            "type" : "number"
+          },
+          "blockedReason" : {
+            "type" : "string"
+          },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "branchName" : {
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "direction" : {
+            "enum" : [ "DEBIT", "CREDIT" ],
+            "type" : "string"
+          },
+          "documentNo" : {
+            "type" : "string"
+          },
+          "documentType" : {
+            "type" : "string"
+          },
+          "instrumentGroup" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "instruments" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TransferableInstrumentResponse"
+            },
+            "type" : "array"
+          },
+          "kind" : {
+            "enum" : [ "DEBT", "PAYMENT", "RECEIVABLE", "COLLECTION" ],
+            "type" : "string"
+          },
+          "sign" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "transactionDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "transactionId" : {
             "format" : "uuid",
             "type" : "string"
           }
@@ -9246,7 +11195,7 @@
     },
     "/api/v1/admin/invoices" : {
       "get" : {
-        "operationId" : "invoices",
+        "operationId" : "invoices_1",
         "responses" : {
           "200" : {
             "content" : {
@@ -9455,7 +11404,7 @@
         "tags" : [ "admin-saas-controller" ]
       },
       "post" : {
-        "operationId" : "create_5",
+        "operationId" : "create_7",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -9483,7 +11432,7 @@
     },
     "/api/v1/admin/tenants/{id}/activate" : {
       "post" : {
-        "operationId" : "activate_3",
+        "operationId" : "activate_4",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -11835,7 +13784,7 @@
     },
     "/api/v1/files" : {
       "get" : {
-        "operationId" : "list_5",
+        "operationId" : "list_6",
         "parameters" : [ {
           "in" : "query",
           "name" : "ownerType",
@@ -11920,7 +13869,7 @@
     },
     "/api/v1/files/{id}" : {
       "delete" : {
-        "operationId" : "delete",
+        "operationId" : "delete_1",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -11966,6 +13915,454 @@
         "tags" : [ "file-controller" ]
       }
     },
+    "/api/v1/finance/account-document-types" : {
+      "get" : {
+        "operationId" : "documentTypes",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "side",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "RECEIVABLE", "PAYABLE" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountDocumentTypeResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-ledger-controller" ]
+      }
+    },
+    "/api/v1/finance/account-documents/{id}" : {
+      "get" : {
+        "operationId" : "getDocument",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountDocumentResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-ledger-controller" ]
+      }
+    },
+    "/api/v1/finance/account-documents/{id}/cancel" : {
+      "post" : {
+        "operationId" : "cancelDocument",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountDocumentCancelRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountDocumentResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-ledger-controller" ]
+      }
+    },
+    "/api/v1/finance/account-documents/{id}/revise" : {
+      "post" : {
+        "operationId" : "reviseDocument",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountDocumentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountDocumentResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "account-ledger-controller" ]
+      }
+    },
+    "/api/v1/finance/account-groups" : {
+      "get" : {
+        "operationId" : "listGroups",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountGroupResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-profile-controller" ]
+      }
+    },
+    "/api/v1/finance/account-transactions" : {
+      "get" : {
+        "operationId" : "listTransactions",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "accountId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "currency",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "branchIds",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "accountTypes",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "subGroups",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "kinds",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "enum" : [ "DEBT", "PAYMENT", "RECEIVABLE", "COLLECTION" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "facets",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 100,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountTransactionPageResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-ledger-controller" ]
+      }
+    },
+    "/api/v1/finance/account-transfers" : {
+      "get" : {
+        "operationId" : "history",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "accountId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 100,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseAccountTransferHistoryRowResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-transfer-controller" ]
+      },
+      "post" : {
+        "operationId" : "create_6",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountTransferRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountTransferResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "account-transfer-controller" ]
+      }
+    },
+    "/api/v1/finance/account-transfers/{id}" : {
+      "get" : {
+        "operationId" : "get_4",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountTransferResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-transfer-controller" ]
+      }
+    },
+    "/api/v1/finance/account-transfers/{id}/reverse" : {
+      "post" : {
+        "operationId" : "reverse_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountTransferReverseRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountTransferResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-transfer-controller" ]
+      }
+    },
     "/api/v1/finance/accounts" : {
       "get" : {
         "operationId" : "listAccounts",
@@ -11983,6 +14380,69 @@
           "schema" : {
             "format" : "uuid",
             "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "types",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "subGroups",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "active",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "branchIds",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "balanceGroupBy",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "CURRENCY", "COMPANY", "BRANCH" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "includePlanSummary",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         }, {
           "in" : "query",
@@ -12033,6 +14493,33 @@
         "tags" : [ "finance-controller" ]
       }
     },
+    "/api/v1/finance/accounts/transactions/{id}" : {
+      "get" : {
+        "operationId" : "getTransaction",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountTransactionDetailResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-ledger-controller" ]
+      }
+    },
     "/api/v1/finance/accounts/transactions/{id}/reverse" : {
       "post" : {
         "operationId" : "reverseAccountTransaction",
@@ -12068,6 +14555,70 @@
           }
         },
         "tags" : [ "finance-controller" ]
+      }
+    },
+    "/api/v1/finance/accounts/transactions/{id}/source" : {
+      "get" : {
+        "operationId" : "transactionSource",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TransactionSourceResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-ledger-controller" ]
+      }
+    },
+    "/api/v1/finance/accounts/transactions/{id}/void" : {
+      "post" : {
+        "operationId" : "voidTransaction",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountTransactionVoidRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountTransactionResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-ledger-controller" ]
       }
     },
     "/api/v1/finance/accounts/{id}" : {
@@ -12106,6 +14657,17 @@
           "schema" : {
             "format" : "uuid",
             "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "branchIds",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
           }
         } ],
         "responses" : {
@@ -12158,6 +14720,586 @@
         "tags" : [ "finance-controller" ]
       }
     },
+    "/api/v1/finance/accounts/{id}/active" : {
+      "patch" : {
+        "operationId" : "setActive",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountActiveRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-profile-controller" ]
+      }
+    },
+    "/api/v1/finance/accounts/{id}/balances" : {
+      "get" : {
+        "operationId" : "balances",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "branchIds",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "groupBy",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "CURRENCY", "COMPANY", "BRANCH" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "asOf",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "rolloverId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountBalanceBreakdownResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-ledger-controller" ]
+      }
+    },
+    "/api/v1/finance/accounts/{id}/bank-accounts" : {
+      "get" : {
+        "operationId" : "listBankAccounts",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "includeInactive",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountBankAccountResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-profile-controller" ]
+      },
+      "post" : {
+        "operationId" : "createBankAccount",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveBankAccountRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountBankAccountResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "account-profile-controller" ]
+      }
+    },
+    "/api/v1/finance/accounts/{id}/documents" : {
+      "get" : {
+        "operationId" : "listDocuments_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "side",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "RECEIVABLE", "PAYABLE" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "documentType",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "reflected",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "OPEN", "CANCELLED" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "branchIds",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "pageable",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Pageable"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseAccountDocumentResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-ledger-controller" ]
+      },
+      "post" : {
+        "operationId" : "createDocument",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountDocumentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountDocumentResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "account-ledger-controller" ]
+      }
+    },
+    "/api/v1/finance/accounts/{id}/history" : {
+      "get" : {
+        "operationId" : "history_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "pageable",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Pageable"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseAccountHistoryResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-profile-controller" ]
+      }
+    },
+    "/api/v1/finance/accounts/{id}/invoices" : {
+      "get" : {
+        "operationId" : "invoices",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "direction",
+          "required" : true,
+          "schema" : {
+            "enum" : [ "PURCHASE", "SALES" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "documentType",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "reflected",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountInvoiceRowResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-ledger-controller" ]
+      }
+    },
+    "/api/v1/finance/accounts/{id}/limits" : {
+      "put" : {
+        "operationId" : "setLimits",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountLimitRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-profile-controller" ]
+      }
+    },
+    "/api/v1/finance/accounts/{id}/profile" : {
+      "put" : {
+        "operationId" : "updateProfile",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountProfileRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-profile-controller" ]
+      }
+    },
+    "/api/v1/finance/accounts/{id}/rollovers" : {
+      "get" : {
+        "operationId" : "list_5",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "deleted",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountRolloverResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-rollover-controller" ]
+      },
+      "post" : {
+        "operationId" : "create_5",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RolloverRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountRolloverResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "account-rollover-controller" ]
+      }
+    },
     "/api/v1/finance/accounts/{id}/statement" : {
       "get" : {
         "operationId" : "accountStatement",
@@ -12172,7 +15314,7 @@
         }, {
           "in" : "query",
           "name" : "currency",
-          "required" : true,
+          "required" : false,
           "schema" : {
             "type" : "string"
           }
@@ -12202,10 +15344,40 @@
           }
         }, {
           "in" : "query",
-          "name" : "pageable",
-          "required" : true,
+          "name" : "branchIds",
+          "required" : false,
           "schema" : {
-            "$ref" : "#/components/schemas/Pageable"
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "dateBasis",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "TRANSACTION", "DOCUMENT" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "format" : "int32",
+            "type" : "integer"
           }
         } ],
         "responses" : {
@@ -12258,6 +15430,198 @@
           }
         },
         "tags" : [ "finance-controller" ]
+      }
+    },
+    "/api/v1/finance/accounts/{id}/transferable-transactions" : {
+      "get" : {
+        "operationId" : "transferable",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/TransferableTransactionResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-transfer-controller" ]
+      }
+    },
+    "/api/v1/finance/bank-accounts" : {
+      "get" : {
+        "operationId" : "searchBankAccounts",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "accountId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "currency",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "active",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "pageable",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Pageable"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseAccountBankAccountResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-profile-controller" ]
+      }
+    },
+    "/api/v1/finance/bank-accounts/{id}" : {
+      "get" : {
+        "operationId" : "getBankAccount",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountBankAccountResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-profile-controller" ]
+      },
+      "put" : {
+        "operationId" : "updateBankAccount",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveBankAccountRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountBankAccountResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-profile-controller" ]
+      }
+    },
+    "/api/v1/finance/bank-accounts/{id}/active" : {
+      "patch" : {
+        "operationId" : "setBankAccountActive",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountActiveRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountBankAccountResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-profile-controller" ]
       }
     },
     "/api/v1/finance/collections" : {
@@ -13780,6 +17144,123 @@
           }
         },
         "tags" : [ "finance-controller" ]
+      }
+    },
+    "/api/v1/finance/rollovers/{id}" : {
+      "delete" : {
+        "operationId" : "delete",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "newActiveId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "account-rollover-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_3",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RolloverRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountRolloverResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-rollover-controller" ]
+      }
+    },
+    "/api/v1/finance/rollovers/{id}/activate" : {
+      "post" : {
+        "operationId" : "activate_3",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountRolloverResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-rollover-controller" ]
+      }
+    },
+    "/api/v1/finance/rollovers/{id}/restore" : {
+      "post" : {
+        "operationId" : "restore",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountRolloverResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-rollover-controller" ]
       }
     },
     "/api/v1/finance/settings" : {
@@ -17804,7 +21285,7 @@
     },
     "/api/v1/shipment/shipments/{id}/documents" : {
       "get" : {
-        "operationId" : "listDocuments_1",
+        "operationId" : "listDocuments_2",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",

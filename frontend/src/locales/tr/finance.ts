@@ -228,5 +228,27 @@ export default {
     INSTRUMENT_ENDORSEE_BOUNCE: "Karşılıksız ciro",
     PURCHASE_INVOICE: "Fatura",
     VEHICLE_EXPENSE: "Araç gideri",
+    // 12.1 (§5.13): MUI ekstresinde eksik kaynak etiketleri.
+    FREIGHT_INVOICE: "Navlun faturası",
+    TRIP_COST: "Sefer maliyeti",
+    WAREHOUSE_INVOICE: "Depo faturası",
+    ACCOUNT_DOCUMENT: "Borç/Alacak belgesi",
+    ACCOUNT_TRANSFER_OUT: "Cari taşıma (çıkış)",
+    ACCOUNT_TRANSFER_IN: "Cari taşıma (giriş)",
   },
+  // 12.1 hareket türü (§3.5; ZTO sekme ve rozet adları).
+  kind: { DEBT: "Borç", PAYMENT: "Ödeme", RECEIVABLE: "Alacak", COLLECTION: "Tahsilat" },
+  // Borç/Alacak belgesi ödeme yöntemi (ZTO Transactions.cshtml:1424-1430).
+  paymentMethod: {
+    CASH: "Nakit",
+    BANK: "Banka Havalesi/Eft",
+    CHECK: "Çek",
+    NOTE: "Senet",
+    CREDIT_CARD: "Kredi Kartı",
+    OTHER: "Diğer",
+  },
+  // Cari banka hesabı türü ve kategorisi (ZTO BankAccounts/Add.cshtml:152-179).
+  bankAccountKind: { TIME: "Vadeli", DEMAND: "Vadesiz", SAVINGS: "Birikim", CORPORATE: "Kurumsal" },
+  bankAccountCategory: { MAIN: "Ana Hesap", SUB: "Yan Hesap" },
+  companyType: { INDIVIDUAL: "Bireysel", CORPORATE: "Kurumsal" },
 };

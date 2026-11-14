@@ -163,6 +163,40 @@ public class InstrumentService {
     return instrument;
   }
 
+  /** Cari taşımada çekin hangi cari alanları taşındı. */
+  public record Reassignment(boolean drawer, boolean endorsee) {
+
+    public boolean any() {
+      return drawer || endorsee;
+    }
+  }
+
+  /**
+   * Cari taşıma (12.1 §3.11, K3): kilitli çekin keşideci ({@code drawer}) ve/veya lehtar ({@code
+   * endorsee}) carisi {@code from} ise {@code to} yapılır; durum, şirket ve fon değişmez. Bir alan
+   * taşındıysa {@code TRANSFERRED} hareketi (from = to durum) yazılır. Çek/senet yazımı bu serviste
+   * kalır; çağıran çeki kilitlemiştir.
+   */
+  @Transactional
+  public Reassignment transferForAccount(
+      Instrument instrument,
+      UUID from,
+      UUID to,
+      boolean drawer,
+      boolean endorsee,
+      UUID transferId,
+      LocalDate date,
+      String note) {
+    boolean movedDrawer = drawer && instrument.reassignAccount(from, to);
+    boolean movedEndorsee = endorsee && instrument.reassignEndorsee(from, to);
+    if (movedDrawer || movedEndorsee) {
+      movements.save(
+          InstrumentMovement.transferred(
+              instrument.getId(), instrument.getStatus(), date, from, to, transferId, note));
+    }
+    return new Reassignment(movedDrawer, movedEndorsee);
+  }
+
   private void assignFundIfNeeded(Instrument instrument, InstrumentStatus target, UUID fundId) {
     switch (target) {
       case AT_BANK, PAID -> instrument.assignFund(requireFund(instrument, fundId, FundKind.BANK));
@@ -268,7 +302,7 @@ public class InstrumentService {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "FUND_REQUIRED", "Bu işlem için hesap seçilmelidir.");
     }
-    FundAccount fund = funds.find(fundId);
+    FundAccount fund = funds.findVisible(fundId);
     if (fund.getKind() != kind) {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST,

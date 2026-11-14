@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuthStore } from "./auth/authStore";
@@ -183,8 +183,37 @@ const MovementsPage = lazyPage(() => import("./pages/warehouse/MovementsPage"), 
 const StockPage = lazyPage(() => import("./pages/warehouse/StockPage"), "StockPage");
 const ZtoFinansLayout = lazyPage(() => import("./zto/finans/ZtoFinansLayout"), "ZtoFinansLayout");
 const ZtoAllTransactionsPage = lazyPage(
-  () => import("./zto/finans/pages/AllTransactionsPlaceholderPage"),
-  "AllTransactionsPlaceholderPage",
+  () => import("./zto/finans/pages/allTransactions/AllTransactionsPage"),
+  "AllTransactionsPage",
+);
+// ZTO cari ekranları (12.1 §5.4).
+const ZtoCustomerAccountsPage = lazyPage(
+  () => import("./zto/finans/pages/accounts/CustomerAccountsPage"),
+  "CustomerAccountsPage",
+);
+const ZtoAccountFormPage = lazyPage(
+  () => import("./zto/finans/pages/accounts/AccountFormPage"),
+  "AccountFormPage",
+);
+const ZtoBankAccountsPage = lazyPage(
+  () => import("./zto/finans/pages/accounts/BankAccountsPage"),
+  "BankAccountsPage",
+);
+const ZtoBankAccountFormPage = lazyPage(
+  () => import("./zto/finans/pages/accounts/BankAccountFormPage"),
+  "BankAccountFormPage",
+);
+const ZtoAccountTransactionsPage = lazyPage(
+  () => import("./zto/finans/pages/transactions/AccountTransactionsPage"),
+  "AccountTransactionsPage",
+);
+const ZtoAccountStatementPage = lazyPage(
+  () => import("./zto/finans/pages/transactions/AccountStatementPage"),
+  "AccountStatementPage",
+);
+// Yazdırma rotasının kökü; ZTO CSS paketi yalnız ZTO sayfası açılınca iner (statik içe aktarılmaz).
+const ZtoFinansRoot = lazy(() =>
+  import("./zto/ZtoFinansRoot").then((module) => ({ default: module.ZtoFinansRoot })),
 );
 // ZTO tanım ekranları (12.1a §6.6): İş Yerleri, Şubeler, Şirketler.
 const ZtoWorkPlacesPage = lazyPage(
@@ -252,6 +281,21 @@ export function App() {
             <Route path="trips/:id" element={<DriverTripPage />} />
             <Route path="expenses" element={<DriverExpensesPage />} />
           </Route>
+          {/* Ekstre yazdırma sayfası (ZTO Statement, Layout = null): uygulama kabuğu dışında, yeni sekme. */}
+          <Route
+            path="/zto-finans-yazdir/cari-ekstre/:id"
+            element={
+              <RequirePermission permission="FINANCE_VIEW">
+                <ZtoFinansRoot className="zto-print zto-page-account-statement">
+                  {/* Tembel sayfa kökün içinde askıya alınır; App düzeyindeki Suspense'e çıkarsa kök
+                      söküldükçe portal kapsayıcısı (ref → state) sonsuz güncelleme döngüsüne girer. */}
+                  <Suspense fallback={null}>
+                    <ZtoAccountStatementPage />
+                  </Suspense>
+                </ZtoFinansRoot>
+              </RequirePermission>
+            }
+          />
           <Route element={<AppShell />}>
             <Route path="/" element={<LandingRedirect />} />
             <Route path="/dashboard" element={<HomePage />} />
@@ -285,6 +329,41 @@ export function App() {
             >
               <Route index element={<Navigate to="cari-hareketler" replace />} />
               <Route path="cari-hareketler" element={<ZtoAllTransactionsPage />} />
+              <Route path="cari-kartlar" element={<ZtoCustomerAccountsPage />} />
+              <Route
+                path="cari-kartlar/yeni"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_MANAGE">
+                    <ZtoAccountFormPage mode="add" />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="cari-kartlar/:id/duzenle"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_MANAGE">
+                    <ZtoAccountFormPage mode="edit" />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route path="cari-kartlar/:id/hareketler" element={<ZtoAccountTransactionsPage />} />
+              <Route path="cari-kartlar/:id/banka-hesaplari" element={<ZtoBankAccountsPage />} />
+              <Route
+                path="cari-kartlar/:id/banka-hesaplari/yeni"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_MANAGE">
+                    <ZtoBankAccountFormPage mode="add" />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="banka-hesaplari/:bankAccountId/duzenle"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_MANAGE">
+                    <ZtoBankAccountFormPage mode="edit" />
+                  </ZtoRequirePermission>
+                }
+              />
               <Route
                 path="tanimlar/is-yerleri"
                 element={

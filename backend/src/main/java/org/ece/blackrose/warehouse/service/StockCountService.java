@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.tenant.TenantClock;
 import org.ece.blackrose.warehouse.domain.StockBalance;
 import org.ece.blackrose.warehouse.domain.StockCount;
@@ -38,6 +39,7 @@ public class StockCountService {
   private final StockBalanceRepository balances;
   private final StockService stock;
   private final TenantClock clock;
+  private final BranchScopeService scope;
 
   public StockCountService(
       StockCountRepository counts,
@@ -47,7 +49,8 @@ public class StockCountService {
       StockItemRepository items,
       StockBalanceRepository balances,
       StockService stock,
-      TenantClock clock) {
+      TenantClock clock,
+      BranchScopeService scope) {
     this.counts = counts;
     this.lines = lines;
     this.warehouses = warehouses;
@@ -56,6 +59,7 @@ public class StockCountService {
     this.balances = balances;
     this.stock = stock;
     this.clock = clock;
+    this.scope = scope;
   }
 
   @Transactional
@@ -94,7 +98,8 @@ public class StockCountService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "COUNT_LINE_NOT_FOUND", "Sayım satırı bulunamadı."));
-    ensureOpen(line.getCountId());
+    StockCount count = ensureOpen(line.getCountId());
+    requireVisible(count.getWarehouseId());
     line.count(quantity);
   }
 
@@ -102,6 +107,7 @@ public class StockCountService {
   @Transactional
   public StockCountLine addLine(UUID countId, AddCountLineRequest request) {
     StockCount count = ensureOpen(countId);
+    requireVisible(count.getWarehouseId());
     WarehouseBin bin = findBin(request.binId());
     if (!bin.getWarehouseId().equals(count.getWarehouseId())) {
       throw new BusinessException(
@@ -192,11 +198,23 @@ public class StockCountService {
   }
 
   private void lockWarehouse(UUID id) {
-    warehouses
-        .findForUpdate(id)
-        .orElseThrow(
-            () ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "WAREHOUSE_NOT_FOUND", "Depo bulunamadı."));
+    scope.requireVisible(
+        warehouses
+            .findForUpdate(id)
+            .orElseThrow(StockCountService::warehouseNotFound)
+            .getBranchId());
+  }
+
+  /** Kilitsiz kapsam denetimi (sayım satırı girişi depoyu kilitlemez). */
+  private void requireVisible(UUID warehouseId) {
+    scope.requireVisible(
+        warehouses
+            .findById(warehouseId)
+            .orElseThrow(StockCountService::warehouseNotFound)
+            .getBranchId());
+  }
+
+  private static BusinessException warehouseNotFound() {
+    return new BusinessException(HttpStatus.NOT_FOUND, "WAREHOUSE_NOT_FOUND", "Depo bulunamadı.");
   }
 }

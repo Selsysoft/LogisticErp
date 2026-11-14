@@ -172,6 +172,9 @@ public final class CrmRepositories {
   public interface QuoteLineRepository extends JpaRepository<QuoteLine, UUID> {
 
     List<QuoteLine> findByQuoteIdOrderByCreatedAt(UUID quoteId);
+
+    /** Birden çok teklifin satırları tek sorguda (sefer seçenekleri). */
+    List<QuoteLine> findByQuoteIdInOrderByCreatedAt(Collection<UUID> quoteIds);
   }
 
   public interface ContractRepository extends JpaRepository<Contract, UUID> {

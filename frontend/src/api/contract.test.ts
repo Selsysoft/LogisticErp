@@ -74,7 +74,11 @@ const schemas: Record<string, Schema> = JSON.parse(readFileSync(SPEC, "utf8")).c
 function sourceFiles(): string[] {
   const config = ts.readConfigFile(join(SRC, "../tsconfig.json"), ts.sys.readFile).config;
   const parsed = ts.parseJsonConfigFileContent(config, ts.sys, join(SRC, ".."));
-  return parsed.fileNames.filter((file) => file.includes("/pages/") && !file.includes(".test."));
+  // Yalnız src/pages altı: ZTO sayfaları (src/zto/finans/pages/…) API tipi tanımlamaz, tipleri
+  // pages/finance/types.ts'ten alır (12.1 §5.0 #4).
+  return parsed.fileNames.filter(
+    (file) => file.includes("/src/pages/") && !file.includes(".test."),
+  );
 }
 
 type Kind = "string" | "number" | "boolean" | "array" | "object";

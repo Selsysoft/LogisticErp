@@ -125,5 +125,6 @@ export interface RouteDistance {
 export interface IntegrationOptions {
   shipments: { id: string; label: string }[];
   accounts: { id: string; label: string }[];
-  bankAccounts: { id: string; label: string }[];
+  /** Banka fonları; şirketi (12.1 §3.13) aktif şirkete göre süzmek için. */
+  bankAccounts: { id: string; label: string; companyId: string | null }[];
 }

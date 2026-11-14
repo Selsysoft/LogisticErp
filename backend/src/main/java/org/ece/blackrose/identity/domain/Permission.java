@@ -13,6 +13,8 @@ public enum Permission {
   FINANCE_MANAGE("finance"),
   FINANCE_PAYMENT_CREATE("finance"),
   FINANCE_APPROVE("finance"),
+  /** Personel (EMPLOYEE) carilerini görme; ZTO "Personel yalnız Finans (süper)" (12.1). */
+  FINANCE_EMPLOYEE_VIEW("finance"),
   CRM_VIEW("crm"),
   CRM_EDIT("crm"),
   SHIPMENT_VIEW("shipment"),

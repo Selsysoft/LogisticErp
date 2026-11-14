@@ -9,7 +9,6 @@ import java.util.UUID;
 import org.ece.blackrose.finance.domain.FundTransaction;
 import org.ece.blackrose.integration.domain.BankStatementLine;
 import org.ece.blackrose.integration.domain.EDocument;
-import org.ece.blackrose.integration.domain.EDocumentSettings;
 import org.ece.blackrose.integration.domain.Geofence;
 import org.ece.blackrose.integration.domain.GeofenceEvent;
 import org.ece.blackrose.integration.domain.ImportBatch;
@@ -27,8 +26,6 @@ import org.springframework.data.repository.query.Param;
 public final class IntegrationRepositories {
 
   private IntegrationRepositories() {}
-
-  public interface EDocumentSettingsRepository extends JpaRepository<EDocumentSettings, Integer> {}
 
   public interface EDocumentRepository extends JpaRepository<EDocument, UUID> {
 

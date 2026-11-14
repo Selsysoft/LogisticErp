@@ -1,15 +1,39 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { lazy } from "react";
 import { MemoryRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../i18n";
 import { useAuthStore } from "../../auth/authStore";
-import { AllTransactionsPlaceholderPage } from "./pages/AllTransactionsPlaceholderPage";
+import { useZtoSnackbar } from "../components/ZtoSnackbar";
+import { useQuickCari } from "./quickCariContext";
 import { SIDEBAR_LEAVE_DELAY_MS } from "./ZtoFinanceSidebar";
 import { ZtoFinansLayout } from "./ZtoFinansLayout";
 import { useZtoRootClass } from "./ZtoRootClassContext";
 import { addRootClass, removeRootClass, rootClassName } from "./rootClass";
+
+// Hızlı Cari modalının içeriği FE3'te; burada yalnız bağlam ve `show` durumu sınanır.
+vi.mock("./QuickCariModal", () => ({
+  QuickCariModal: ({ show, onHide }: { show: boolean; onHide: () => void }) =>
+    show ? (
+      <div data-testid="quick-cari">
+        <button onClick={onHide}>hızlı kapat</button>
+      </div>
+    ) : null,
+}));
+
+/** Cari Hareketler yer tutucusu: sayfa içeriği FE3'ün testlerinde; burada kabuk sınanır. */
+function AllTransactionsStub() {
+  const quickCari = useQuickCari();
+  const snackbar = useZtoSnackbar();
+  return (
+    <div className="container-fluid bank-statement-page">
+      <h6>Günlük Tüm Cari İşlemleri</h6>
+      <button onClick={quickCari.open}>Hızlı Cari İşlemi aç</button>
+      <button onClick={() => snackbar.show("Kaydedildi", "success")}>bildir</button>
+    </div>
+  );
+}
 
 function ListLike() {
   useZtoRootClass("definition-list-page");
@@ -33,10 +57,9 @@ function renderAt(path: string, broken = false) {
       <Routes>
         <Route path="/zto-finans" element={<ZtoFinansLayout />}>
           <Route index element={<Navigate to="cari-hareketler" replace />} />
-          <Route
-            path="cari-hareketler"
-            element={broken ? <Broken /> : <AllTransactionsPlaceholderPage />}
-          />
+          <Route path="cari-hareketler" element={broken ? <Broken /> : <AllTransactionsStub />} />
+          <Route path="cari-kartlar" element={<p>cari kartlar</p>} />
+          <Route path="cari-kartlar/:id/hareketler" element={<p>hareketler</p>} />
           <Route path="vitrin" element={<p>vitrin</p>} />
           <Route path="tanimlar/is-yerleri" element={<ListLike />} />
           <Route path="tanimlar/is-yerleri/yeni" element={<FormLike />} />
@@ -64,26 +87,11 @@ afterEach(() => {
 });
 
 describe("ZtoFinansLayout", () => {
-  it("/zto-finans Cari Hareketler iskeletine yönlenir; ZTO sayfa başı kapsam kökünde", () => {
+  it("/zto-finans Cari Hareketler sayfasına yönlenir; sayfa kapsam kökünde", () => {
     renderAt("/zto-finans");
     expect(screen.getByTestId("where").textContent).toBe("/zto-finans/cari-hareketler");
     const title = screen.getByRole("heading", { level: 6, name: "Günlük Tüm Cari İşlemleri" });
-    expect(title.closest(".zto-finans")).not.toBeNull();
-    expect(title.closest(".container-fluid.bank-statement-page")).not.toBeNull();
-    expect(title.closest(".card.mb-3.at-header-card > .card-header.bg-white")).not.toBeNull();
-    expect(q(".erp-header-icon > i").className).toBe("fas fa-calendar-day");
-    const crumbs = q(".erp-breadcrumb.d-none.d-md-block");
-    expect(crumbs.textContent).toBe(" Cari Kartlar /  Günlük Cari İşlemleri");
-    expect(crumbs.querySelectorAll("i.fas.fa-home, i.fas.fa-file-invoice-dollar")).toHaveLength(2);
-    // Üst panel: başlık, şube/iş yeri, karşılama.
-    expect(q(".at-top-panel .page-header-modern h6").textContent).toBe(" Finans Paneli");
-    expect(q(".at-top-panel .page-subtitle").textContent).toContain("ödeme planlamalarını");
-    expect(screen.getByText(/Tüm Şubeler/)).toBeTruthy();
-    expect(screen.getByText(/Tüm İş Yerleri/)).toBeTruthy();
-    expect(q(".welcome .welcome-content").textContent).toBe("Merhaba, Ayşe Yılmaz (Finans)");
-    const info = screen.getByRole("status");
-    expect(info.className).toBe("alert alert-info mb-0");
-    expect(info.textContent).toContain("Bu ekran Faz 12.1 ile gelecek.");
+    expect(title.closest(".zto-finans > .zto-finans-layout > .zto-finans-content")).not.toBeNull();
   });
 
   it("ZTO yan menüsü: başlık, gruplar, etkin öğe, pasif öğeler", () => {
@@ -113,8 +121,10 @@ describe("ZtoFinansLayout", () => {
     expect(payments.getAttribute("aria-disabled")).toBe("true");
     expect(payments.title).toBe("Bu ekran Faz 12.2a ile gelecek.");
     expect(payments.querySelector(".zt-phase")?.textContent).toBe("Faz 12.2a");
-    const add = screen.getByText("Yeni Cari Kart").closest("a") as HTMLAnchorElement;
-    expect(add.className).toBe("zt-action-add disabled");
+    // Yeni Cari Kart yalnız FINANCE_MANAGE ile görünür.
+    expect(screen.queryByText("Yeni Cari Kart")).toBeNull();
+    const accounts = screen.getByText("Cari Kartlar").closest("a") as HTMLAnchorElement;
+    expect(accounts.getAttribute("href")).toBe("/zto-finans/cari-kartlar");
     expect(screen.queryByText("Yatırımlar")).toBeNull();
   });
 
@@ -242,5 +252,64 @@ describe("ZtoFinansLayout", () => {
     expect(removeRootClass(list, "yok")).toEqual(list);
     expect(rootClassName(removeRootClass(removeRootClass(list, "a"), "b"))).toBeUndefined();
     expect(rootClassName([" ", ""])).toBeUndefined();
+  });
+});
+
+describe("ZtoFinansLayout 12.1", () => {
+  it("Yeni Cari Kart FINANCE_MANAGE ile bağlantı; alt yolda yalnız Cari Kartlar etkin", () => {
+    useAuthStore.setState({
+      me: { fullName: "A", permissions: ["FINANCE_VIEW", "FINANCE_MANAGE"] } as never,
+    });
+    renderAt("/zto-finans/cari-kartlar/abc/hareketler");
+    const add = screen.getByText("Yeni Cari Kart").closest("a") as HTMLAnchorElement;
+    expect(add.className).toBe("zt-action-add");
+    expect(add.getAttribute("href")).toBe("/zto-finans/cari-kartlar/yeni");
+    const active = Array.from(document.querySelectorAll("a.zt-active"), (a) =>
+      a.getAttribute("href"),
+    );
+    expect(active).toEqual(["/zto-finans/cari-kartlar"]);
+    cleanup();
+    renderAt("/zto-finans/cari-kartlar");
+    // ZTO'daki gibi Tüm Planlamalar da etkin görünür (12.4'e dek pasif öğe).
+    expect(
+      Array.from(document.querySelectorAll("a.zt-active"), (a) => a.getAttribute("href")),
+    ).toEqual(["/zto-finans/cari-kartlar", null]);
+  });
+
+  it("menüdeki Hızlı Cari İşlemi modalı açar (ZTO openQuickCariModal); menü kapanır", async () => {
+    renderAt("/zto-finans/cari-hareketler");
+    const item = screen.getByText("Hızlı Cari İşlemi").closest("a") as HTMLAnchorElement;
+    expect(item.getAttribute("role")).toBe("button");
+    expect(item.getAttribute("href")).toBe("#");
+    expect(item.querySelector(".zt-phase")).toBeNull();
+    fireEvent.click(arrow());
+    fireEvent.click(item);
+    expect(await screen.findByTestId("quick-cari")).toBeTruthy();
+    expect(sidebar().classList.contains("open")).toBe(false);
+    fireEvent.click(screen.getByText("hızlı kapat"));
+    expect(screen.queryByTestId("quick-cari")).toBeNull();
+    // Sayfadan da açılır (AllTransactions boş durum düğmesi).
+    fireEvent.click(screen.getByText("Hızlı Cari İşlemi aç"));
+    expect(await screen.findByTestId("quick-cari")).toBeTruthy();
+    // Boşluk tuşu da açar.
+    fireEvent.click(screen.getByText("hızlı kapat"));
+    fireEvent.keyDown(item, { key: " " });
+    expect(await screen.findByTestId("quick-cari")).toBeTruthy();
+  });
+
+  it("?quickcari=1 modalı açar ve parametreyi adresten siler", async () => {
+    renderAt("/zto-finans/cari-hareketler?quickcari=1&x=2");
+    expect(await screen.findByTestId("quick-cari")).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByTestId("where").textContent).toBe("/zto-finans/cari-hareketler"),
+    );
+  });
+
+  it("bildirim bölgesi kökte; sayfalar useZtoSnackbar ile ileti gösterir", () => {
+    renderAt("/zto-finans/cari-hareketler");
+    const region = screen.getByRole("region", { name: "Bildirimler" });
+    expect(region.parentElement).toBe(q(".zto-finans"));
+    fireEvent.click(screen.getByText("bildir"));
+    expect(region.querySelector(".snackbar.snackbar-success")?.textContent).toContain("Kaydedildi");
   });
 });

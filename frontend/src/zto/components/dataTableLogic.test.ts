@@ -6,10 +6,14 @@ import {
   columnDefId,
   compareValues,
   defaultOrder,
+  domSlotKey,
   formatCount,
+  formatLanguage,
   headerText,
   infoParts,
   infoText,
+  interleaveDecorations,
+  languageInfoText,
   matchesSearch,
   pageButtonViews,
   pageInfo,
@@ -20,6 +24,7 @@ import {
   pickExportColumns,
   rowSearchText,
   smartSearchTerms,
+  splitLengthMenu,
   startAfterLengthChange,
   toPageRequest,
   searchFold,
@@ -376,5 +381,78 @@ describe("sütun yardımcıları", () => {
     expect(defaultOrder([{ accessorKey: "a", enableSorting: false }])).toEqual([]);
     expect(defaultOrder([{ id: "islem" }])).toEqual([]);
     expect(defaultOrder([{ accessorFn: () => 1, header: () => null }])).toEqual([]);
+  });
+});
+
+describe("dil metinleri (language)", () => {
+  const values = { start: "1", end: "25", total: "1.250", max: "2.000" };
+
+  it("formatLanguage her yer tutucuyu doldurur, _MENU_'ye dokunmaz", () => {
+    expect(formatLanguage("_TOTAL_ kayıttan _START_ - _END_ arası gösteriliyor", values)).toBe(
+      "1.250 kayıttan 1 - 25 arası gösteriliyor",
+    );
+    expect(formatLanguage("(_MAX_ kayıt içinden filtrelendi)", values)).toBe(
+      "(2.000 kayıt içinden filtrelendi)",
+    );
+    expect(formatLanguage("_START_/_START_ _MENU_", values)).toBe("1/1 _MENU_");
+    expect(formatLanguage("_TOTAL_", {})).toBe("");
+  });
+
+  it("_MENU_ uzunluk select'inin önü/arkası olarak bölünür", () => {
+    expect(splitLengthMenu("Göster _MENU_ kayıt")).toEqual({ before: "Göster", after: "kayıt" });
+    expect(splitLengthMenu("_MENU_ satır")).toEqual({ before: "", after: "satır" });
+    expect(splitLengthMenu("Sayfa boyu")).toEqual({ before: "Sayfa boyu", after: "" });
+  });
+
+  it("bilgi satırı: dil metni varsa o, yoksa ztoFinans:table.*", () => {
+    const t = (key: string, v?: Record<string, string>) => `${key}|${v?.total ?? ""}`;
+    const language = {
+      info: "_TOTAL_ kayıttan _START_ - _END_ arası gösteriliyor",
+      infoEmpty: "0 kayıt gösteriliyor",
+      infoFiltered: "(_MAX_ kayıt içinden filtrelendi)",
+    };
+    expect(languageInfoText(infoParts(0, 25, 1250, 2000), language, t)).toBe(
+      "1.250 kayıttan 1 - 25 arası gösteriliyor (2.000 kayıt içinden filtrelendi)",
+    );
+    expect(languageInfoText(infoParts(0, 0, 0, 0), language, t)).toBe("0 kayıt gösteriliyor");
+    expect(languageInfoText(infoParts(0, 10, 10, 10), undefined, t)).toBe(
+      "ztoFinans:table.info|10",
+    );
+    expect(languageInfoText(infoParts(0, 10, 10, 20), { info: "_TOTAL_" }, t)).toBe(
+      "10 ztoFinans:table.infoFiltered|10",
+    );
+  });
+});
+
+describe("domSlots ve sayfa süsleri", () => {
+  it("kap eşleşmesi: önce id, sonra sınıflardan biri", () => {
+    const slots = { "dt-toggle-col": 1, totalsModeToggle: 2 };
+    expect(domSlotKey({ className: "col d-none d-md-block dt-toggle-col text-right" }, slots)).toBe(
+      "dt-toggle-col",
+    );
+    expect(domSlotKey({ id: "totalsModeToggle", className: "dt-toggle-col" }, slots)).toBe(
+      "totalsModeToggle",
+    );
+    expect(domSlotKey({ className: "row" }, slots)).toBeUndefined();
+    expect(domSlotKey({ className: "dt-toggle-col" }, undefined)).toBeUndefined();
+    expect(domSlotKey({}, slots)).toBeUndefined();
+  });
+
+  it("süsler satırlar arasına girer; satır sırası ve sayısı değişmez", () => {
+    const sketchItems = (items: ReturnType<typeof interleaveDecorations<string>>) =>
+      items.map((i) => (i.kind === "row" ? String(i.index) : i.node)).join(" ");
+    expect(
+      sketchItems(
+        interleaveDecorations(3, [
+          { beforeIndex: 0, key: "a", node: "A" },
+          { beforeIndex: 2, key: "b", node: "B" },
+          { beforeIndex: 2, key: "c", node: "C" },
+          { beforeIndex: 9, key: "z", node: "Z" },
+          { beforeIndex: -1, key: "y", node: "Y" },
+        ]),
+      ),
+    ).toBe("A Y 0 1 B C 2 Z");
+    expect(interleaveDecorations(0, [{ beforeIndex: 0, key: "a", node: "A" }])).toEqual([]);
+    expect(interleaveDecorations(2, []).filter((i) => i.kind === "row")).toHaveLength(2);
   });
 });

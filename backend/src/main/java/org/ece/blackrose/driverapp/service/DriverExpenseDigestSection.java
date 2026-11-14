@@ -13,12 +13,13 @@ import org.ece.blackrose.fleet.repository.FleetRepositories.DriverRepository;
 import org.ece.blackrose.notification.DigestLines;
 import org.ece.blackrose.notification.DigestSection;
 import org.ece.blackrose.notification.NotificationTopic;
+import org.ece.blackrose.organization.BranchFilter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Ofis onayı bekleyen sürücü masrafları. */
+/** Ofis onayı bekleyen sürücü masrafları; LIMITED alıcıda yalnız kapsamdaki seferlerinki. */
 @Component
 public class DriverExpenseDigestSection implements DigestSection {
 
@@ -37,10 +38,10 @@ public class DriverExpenseDigestSection implements DigestSection {
 
   @Override
   @Transactional(readOnly = true)
-  public Optional<Content> build(LocalDate today) {
+  public Optional<Content> build(LocalDate today, BranchFilter filter) {
     Page<DriverExpense> pending =
-        expenses.findByStatusOrderByCreatedAtDesc(
-            DriverExpense.Status.PENDING, PageRequest.of(0, DigestLines.MAX_LINES));
+        expenses.review(
+            DriverExpense.Status.PENDING, filter, PageRequest.of(0, DigestLines.MAX_LINES));
     if (pending.isEmpty()) {
       return Optional.empty();
     }

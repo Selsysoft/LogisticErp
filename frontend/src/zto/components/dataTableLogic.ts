@@ -483,3 +483,102 @@ export function defaultOrder(defs: ColumnDefLike[]): SortItem[] {
   const id = columnDefId(first);
   return id ? [{ id, desc: false }] : [];
 }
+
+// ---------------------------------------------------------------------------------------------
+// Dil metinleri (DataTables "language" seçeneği; 12.1 §5.5)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Sayfaya özgü DataTables dil metinleri; DataTables yer tutucularıyla yazılır (`_TOTAL_`, `_START_`,
+ * `_END_`, `_MAX_`, `_MENU_`). Verilmeyen anahtar `ztoFinans:table.*` metnine düşer.
+ */
+export type DataTableLanguage = Partial<{
+  info: string;
+  infoEmpty: string;
+  infoFiltered: string;
+  lengthMenu: string;
+  emptyTable: string;
+  zeroRecords: string;
+  search: string;
+}>;
+
+/** DataTables _fnInfoMacros: yer tutucuları biçimlenmiş sayılarla doldurur (_MENU_ dokunulmaz). */
+export function formatLanguage(template: string, values: Partial<InfoParts["values"]>): string {
+  return template
+    .replace(/_START_/g, values.start ?? "")
+    .replace(/_END_/g, values.end ?? "")
+    .replace(/_MAX_/g, values.max ?? "")
+    .replace(/_TOTAL_/g, values.total ?? "");
+}
+
+/** "Göster _MENU_ kayıt" → { before: "Göster", after: "kayıt" }; _MENU_ yoksa metin önde. */
+export function splitLengthMenu(template: string): { before: string; after: string } {
+  const at = template.indexOf("_MENU_");
+  if (at < 0) return { before: template.trim(), after: "" };
+  return { before: template.slice(0, at).trim(), after: template.slice(at + 6).trim() };
+}
+
+/** Bilgi satırı: sayfanın dil metni varsa onunla, yoksa ztoFinans:table.* ile. */
+export function languageInfoText(
+  parts: InfoParts,
+  language: DataTableLanguage | undefined,
+  t: Translate,
+): string {
+  const template = parts.key === "info" ? language?.info : language?.infoEmpty;
+  let out =
+    template !== undefined
+      ? formatLanguage(template, parts.values)
+      : t(`ztoFinans:table.${parts.key}`, parts.values);
+  if (parts.filtered) {
+    out +=
+      " " +
+      (language?.infoFiltered !== undefined
+        ? formatLanguage(language.infoFiltered, parts.values)
+        : t("ztoFinans:table.infoFiltered", parts.values));
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------------
+// dom kaplarına React içeriği ve sayfa süsleri
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * `domSlots` eşleşmesi: kabın id'si ya da sınıflarından biri anahtarsa o anahtar (ZTO
+ * `$('.dt-toggle-col').html(...)` karşılığı). Önce id, sonra sınıf sırası.
+ */
+export function domSlotKey(
+  node: { id?: string; className?: string },
+  slots: Readonly<Record<string, unknown>> | undefined,
+): string | undefined {
+  if (!slots) return undefined;
+  if (node.id && node.id in slots) return node.id;
+  return (node.className ?? "").split(/\s+/).find((c) => c !== "" && c in slots);
+}
+
+export type PageDecoration<N> = { beforeIndex: number; key: string; node: N };
+
+export type BodyItem<N> =
+  { kind: "row"; index: number } | { kind: "decoration"; key: string; node: N };
+
+/**
+ * Geçerli sayfanın satırları ile süs satırlarını (drawCallback'te eklenen `tr`) sıralar. Süsler
+ * `beforeIndex` satırından önce gelir; `beforeIndex >= rowCount` en sona eklenir; aynı konumdakiler
+ * verildiği sırayla. Satır yoksa süs de yok (boş tablo metni gösterilir).
+ */
+export function interleaveDecorations<N>(
+  rowCount: number,
+  decorations: ReadonlyArray<PageDecoration<N>>,
+): BodyItem<N>[] {
+  if (rowCount === 0) return [];
+  const items: BodyItem<N>[] = [];
+  const at = (index: number) =>
+    decorations
+      .filter((d) => Math.max(0, Math.min(d.beforeIndex, rowCount)) === index)
+      .map((d): BodyItem<N> => ({ kind: "decoration", key: d.key, node: d.node }));
+  for (let index = 0; index < rowCount; index++) {
+    items.push(...at(index), { kind: "row", index });
+  }
+  items.push(...at(rowCount));
+  return items;
+}

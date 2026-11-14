@@ -51,6 +51,9 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
+/** 12.1 ekranlarının ztoFinans parçaları (§5.14). */
+const TWELVE_ONE_PARTS = ["accounts", "transactions", "allTransactions", "quickCari"] as const;
+
 const translationLeaves = flatten(tr.translation);
 const ztoLeaves = flatten(tr.ztoFinans);
 
@@ -104,6 +107,40 @@ describe("translation ad alanı (eski i18n.ts'ten bölünen)", () => {
   it("tüm değerler boş olmayan metin", () => {
     expect(translationLeaves.filter(([, v]) => v.trim() === "").map(([k]) => k)).toEqual([]);
   });
+
+  it("12.1 anahtarları: izin, kaynak, tür, ödeme yöntemi, banka hesabı, erişilebilirlik", () => {
+    expect(i18n.t("permissions.FINANCE_EMPLOYEE_VIEW")).toBe("Personel carilerini görme");
+    for (const source of [
+      "FREIGHT_INVOICE",
+      "TRIP_COST",
+      "WAREHOUSE_INVOICE",
+      "ACCOUNT_DOCUMENT",
+      "ACCOUNT_TRANSFER_OUT",
+      "ACCOUNT_TRANSFER_IN",
+      "VEHICLE_EXPENSE",
+      "INSTRUMENT_ENDORSEE_BOUNCE",
+    ]) {
+      expect(hasKey(tr.translation, `finance.source.${source}`), source).toBe(true);
+    }
+    expect(
+      ["DEBT", "PAYMENT", "RECEIVABLE", "COLLECTION"].map((k) => i18n.t(`finance.kind.${k}`)),
+    ).toEqual(["Borç", "Ödeme", "Alacak", "Tahsilat"]);
+    expect(i18n.t("finance.paymentMethod.BANK")).toBe("Banka Havalesi/Eft");
+    expect(i18n.t("finance.bankAccountKind.DEMAND")).toBe("Vadesiz");
+    expect(i18n.t("finance.bankAccountCategory.SUB")).toBe("Yan Hesap");
+    expect(i18n.t("finance.companyType.INDIVIDUAL")).toBe("Bireysel");
+    expect(i18n.t("common.a11y.notifications")).toBe("Bildirimler");
+    expect(i18n.t("common.a11y.removeFilter", { filter: "İş Yeri" })).toBe(
+      "İş Yeri süzgecini kaldır",
+    );
+    expect(i18n.t("common.a11y.ibanLast4", { last4: "1234" })).toBe("IBAN, son dört hane 1234");
+    expect(i18n.t("common.a11y.limitChart", { days: 30, credit: "10.000", risk: "5.000" })).toBe(
+      "Son 30 gün bakiye grafiği; kredi limiti 10.000, risk limiti 5.000",
+    );
+    expect(i18n.t("common.a11y.statementCaption", { branch: "Merkez", currency: "TRY" })).toBe(
+      "Merkez — TRY ekstresi",
+    );
+  });
 });
 
 describe("ztoFinans ad alanı", () => {
@@ -121,8 +158,16 @@ describe("ztoFinans ad alanı", () => {
       "workPlaces",
       "branchGroups",
       "companies",
+      "accounts",
+      "transactions",
+      "allTransactions",
+      "quickCari",
     ]);
     expect(i18n.options.ns).toEqual(["translation", "ztoFinans"]);
+    // 12.1 parçaları (FE0 iskelet, sahipleri doldurur): kayıtlı ve boş değil.
+    for (const part of TWELVE_ONE_PARTS) {
+      expect(Object.keys(tr.ztoFinans[part]).length, part).toBeGreaterThan(0);
+    }
     expect(i18n.t("table.search", { ns: "ztoFinans" })).toBe("Ara:");
     expect(i18n.t("ztoFinans:nav.allTransactions")).toBe("Günlük Cari İşlemleri");
   });
@@ -159,8 +204,12 @@ describe("ztoFinans ad alanı", () => {
       "definitions.errorPrefix": ["message"],
       "companies.uyLastSync": ["value"],
     };
+    // 12.1 parçalarının yer tutucuları sahiplerinin testlerinde; burada genel denge testi yeterli.
     const actual = Object.fromEntries(
-      ztoLeaves.filter(([, v]) => variables(v).length > 0).map(([k, v]) => [k, variables(v)]),
+      ztoLeaves
+        .filter(([k]) => !TWELVE_ONE_PARTS.some((part) => k.startsWith(`${part}.`)))
+        .filter(([, v]) => variables(v).length > 0)
+        .map(([k, v]) => [k, variables(v)]),
     );
     expect(actual).toEqual(expected);
     expect(i18n.t("table.info", { ns: "ztoFinans", total: "1.250", start: 1, end: 10 })).toBe(

@@ -86,6 +86,93 @@ class DeletedTransactionFilterIT extends AbstractIntegrationTest {
     assertThat(position.get("receivable").decimalValue()).isEqualByComparingTo("90");
   }
 
+  /**
+   * 12.1 uçları: tür kırılımlı bakiye, ekstre v2 (açılış dahil, çok para birimli), çapraz liste +
+   * facet'ler, tek hareket detayı ve cari fatura listesi silinmiş satırı saymaz.
+   */
+  @Test
+  void silinmisHareketVeBelge12_1UclarindaSayilmaz() throws Exception {
+    String t = tenantCode("dtk");
+    String branch = branch(t);
+    String supplier = account(t, "T1", "SUPPLIER");
+
+    String ghostBefore = manual(t, supplier, branch, "CREDIT", "100", "2026-10-01");
+    manual(t, supplier, branch, "CREDIT", "40", "2026-10-02");
+    manual(t, supplier, branch, "CREDIT", "50", "2026-11-01");
+    String ghostInside = manual(t, supplier, branch, "CREDIT", "70", "2026-11-03");
+    markDeleted(t, "account_transaction", ghostBefore);
+    markDeleted(t, "account_transaction", ghostInside);
+    Map<String, Object> invoice = new HashMap<>();
+    invoice.put("side", "PAYABLE");
+    invoice.put("documentType", "ALIS_FATURASI");
+    invoice.put("documentNo", "AF-SIL");
+    invoice.put("documentDate", "2026-11-02");
+    invoice.put("amount", "10");
+    invoice.put("currency", "TRY");
+    invoice.put("paymentMethod", "BANK");
+    invoice.put("branchId", branch);
+    invoice.put("reflectToLedger", false);
+    String ghostDocument =
+        created(post(t, "/api/v1/finance/accounts/" + supplier + "/documents", invoice));
+    markDeleted(t, "account_document", ghostDocument);
+
+    JsonNode balances =
+        body(send(t, get("/api/v1/finance/accounts/" + supplier + "/balances"))).get("rows").get(0);
+    assertThat(balances.get("balance").decimalValue()).isEqualByComparingTo("-90");
+    assertThat(balances.get("debt").decimalValue()).isEqualByComparingTo("90");
+
+    JsonNode statement =
+        body(
+            send(
+                    t,
+                    get("/api/v1/finance/accounts/" + supplier + "/statement")
+                        .param("from", "2026-11-01")
+                        .param("to", "2026-11-30"))
+                .andExpect(status().isOk()));
+    assertThat(statement.get("openingBalances").get(0).get("amount").decimalValue())
+        .isEqualByComparingTo("-40");
+    assertThat(statement.get("totalElements").asLong()).isEqualTo(1);
+    assertThat(statement.get("lines").get(0).get("balance").decimalValue())
+        .isEqualByComparingTo("-90");
+
+    JsonNode page =
+        body(
+            send(
+                    t,
+                    get("/api/v1/finance/account-transactions")
+                        .param("from", "2026-10-01")
+                        .param("to", "2026-11-30")
+                        .param("facets", "true"))
+                .andExpect(status().isOk()));
+    assertThat(page.get("totalElements").asLong()).isEqualTo(2);
+    assertThat(page.get("facets").get("kinds").get(0).get("count").asLong()).isEqualTo(2);
+    assertThat(page.get("facets").get("branches").get(0).get("count").asLong()).isEqualTo(2);
+    send(t, get("/api/v1/finance/accounts/transactions/" + ghostInside))
+        .andExpect(status().isNotFound());
+
+    JsonNode invoices =
+        body(
+            send(
+                    t,
+                    get("/api/v1/finance/accounts/" + supplier + "/invoices")
+                        .param("direction", "PURCHASE"))
+                .andExpect(status().isOk()));
+    assertThat(invoices).isEmpty();
+    assertThat(
+            body(send(t, get("/api/v1/finance/accounts/" + supplier + "/balances")))
+                .get("payableInvoiceTotals"))
+        .isEmpty();
+
+    // B4: silinmiş hareket taşınabilir listede yoktur.
+    JsonNode transferable =
+        body(
+            send(t, get("/api/v1/finance/accounts/" + supplier + "/transferable-transactions"))
+                .andExpect(status().isOk()));
+    assertThat(transferable).hasSize(2);
+    assertThat(transferable.findValuesAsText("transactionId"))
+        .doesNotContain(ghostBefore, ghostInside);
+  }
+
   @Test
   void silinmisFonHareketiBakiyeEkstreVeYeterlilikKontrolundeSayilmaz() throws Exception {
     String t = tenantCode("dtf");

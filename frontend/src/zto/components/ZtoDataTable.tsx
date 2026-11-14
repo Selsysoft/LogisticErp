@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-table";
 import {
   CSSProperties,
+  Fragment,
   KeyboardEvent,
   MouseEvent,
   ReactNode,
@@ -35,21 +36,26 @@ import {
   clampStart,
   compareValues,
   defaultOrder,
+  domSlotKey,
   headerText,
   infoParts,
-  infoText,
+  interleaveDecorations,
+  languageInfoText,
   matchesSearch,
   pageButtonViews,
   pageInfo,
   parseDom,
   pickExportColumns,
   smartSearchTerms,
+  splitLengthMenu,
   startAfterLengthChange,
   searchTextOf,
   type ColumnDefLike,
+  type DataTableLanguage,
   type DataTableState,
   type DomFeature,
   type DomNode,
+  type PageDecoration,
   type PagingType,
   type SortItem,
 } from "./dataTableLogic";
@@ -147,6 +153,25 @@ export type ZtoDataTableProps<T> = {
   cellDataLabel?: boolean;
   /** table öğesine data-* nitelikleri (ör. { "data-definition-density": "standard" }). */
   tableDataAttributes?: Record<`data-${string}`, string>;
+  /**
+   * Sayfanın DataTables "language" metinleri (DataTables yer tutucularıyla; ör. AllTransactions
+   * "Göster _MENU_ kayıt"). Verilmeyen anahtar ztoFinans:table.* metnine düşer.
+   */
+  language?: DataTableLanguage;
+  /**
+   * `dom` kaplarına React içeriği: anahtar kabın id'si ya da sınıflarından biri (ZTO
+   * `$('.dt-toggle-col').html(...)`, ör. CAI "Alacaklı Cariler" ve #totalsModeToggle).
+   */
+  domSlots?: Record<string, ReactNode>;
+  /**
+   * Geçerli sayfanın satırları arasına veriden bağımsız `tr` ekler (ZTO drawCallback; sezon/açılış
+   * işaretçi satırları). `node` tam bir `<tr>` olmalı (genişlik `ctx.columnsCount`). Süsler sıralamaya,
+   * aramaya, sayfalamaya ve bilgi sayılarına katılmaz; sayfa değişince yeniden hesaplanır.
+   */
+  pageDecorator?: (
+    pageRows: T[],
+    ctx: { sorting: SortingState; columnsCount: number },
+  ) => Array<PageDecoration<ReactNode>>;
 };
 
 const BUTTON_CLASSES: Record<ZtoButtonKind, string> = {
@@ -228,6 +253,9 @@ export function ZtoDataTable<T>({
   lengthAriaLabel,
   cellDataLabel = false,
   tableDataAttributes,
+  language,
+  domSlots,
+  pageDecorator,
 }: ZtoDataTableProps<T>) {
   const { t } = useTranslation("ztoFinans");
   const portal = useZtoOverlayContainer();
@@ -367,6 +395,9 @@ export function ZtoDataTable<T>({
     setStart(target * effectiveLength);
   }
 
+  const lengthMenuText = language?.lengthMenu
+    ? splitLengthMenu(language.lengthMenu)
+    : { before: t("table.lengthMenuBefore"), after: t("table.lengthMenuAfter") };
   const headerGroups = table.getHeaderGroups();
   const leafCount = table.getVisibleLeafColumns().length;
   const footerGroup = table.getFooterGroups()[0];
@@ -461,8 +492,8 @@ export function ZtoDataTable<T>({
         processing && max === 0
           ? t("table.loadingRecords")
           : max === 0
-            ? (emptyText ?? t("table.emptyTable"))
-            : t("table.zeroRecords");
+            ? (emptyText ?? language?.emptyTable ?? t("table.emptyTable"))
+            : (language?.zeroRecords ?? t("table.zeroRecords"));
       return (
         <tr className="odd">
           <td valign="top" colSpan={leafCount} className="dataTables_empty">
@@ -471,7 +502,26 @@ export function ZtoDataTable<T>({
         </tr>
       );
     }
-    return pageRows.map((row, index) => (
+    const decorations = pageDecorator
+      ? pageDecorator(
+          pageRows.map((row) => row.original),
+          { sorting, columnsCount: leafCount },
+        )
+      : [];
+    if (decorations.length === 0) {
+      return pageRows.map((row, index) => renderRow(row, index));
+    }
+    return interleaveDecorations(pageRows.length, decorations).map((item) =>
+      item.kind === "row" ? (
+        renderRow(pageRows[item.index], item.index)
+      ) : (
+        <Fragment key={`decoration-${item.key}`}>{item.node}</Fragment>
+      ),
+    );
+  }
+
+  function renderRow(row: Row<T>, index: number) {
+    return (
       <tr
         key={row.id}
         role="row"
@@ -498,7 +548,7 @@ export function ZtoDataTable<T>({
           );
         })}
       </tr>
-    ));
+    );
   }
 
   function renderTable(key: string) {
@@ -581,7 +631,7 @@ export function ZtoDataTable<T>({
         return (
           <div key={key} className="dataTables_length" id={featureId("l", "length")}>
             <label>
-              {`${t("table.lengthMenuBefore")} `}
+              {`${lengthMenuText.before} `}
               <select
                 name={`${tableId}_length`}
                 aria-controls={tableId}
@@ -596,7 +646,7 @@ export function ZtoDataTable<T>({
                   </option>
                 ))}
               </select>
-              {` ${t("table.lengthMenuAfter")}`}
+              {lengthMenuText.after !== "" && ` ${lengthMenuText.after}`}
             </label>
           </div>
         );
@@ -605,7 +655,7 @@ export function ZtoDataTable<T>({
         return (
           <div key={key} id={featureId("f", "filter")} className="dataTables_filter">
             <label>
-              {t("table.search")}
+              {language?.search ?? t("table.search")}
               <input
                 type="search"
                 className="form-control form-control-sm"
@@ -650,7 +700,7 @@ export function ZtoDataTable<T>({
             role="status"
             aria-live="polite"
           >
-            {infoText(parts, (k, values) => t(k, values))}
+            {languageInfoText(parts, language, (k, values) => t(k, values))}
           </div>
         );
       }
@@ -707,9 +757,11 @@ export function ZtoDataTable<T>({
     return list.map((node, index) => {
       const key = `${prefix}${index}`;
       if (node.kind === "feature") return renderFeature(node.feature, key);
+      const slot = domSlotKey(node, domSlots);
       return (
         <div key={key} id={node.id} className={node.className}>
           {renderNodes(node.children, `${key}-`)}
+          {slot !== undefined && domSlots?.[slot]}
         </div>
       );
     });

@@ -1,0 +1,5627 @@
+/*
+ * Kaynak: ZtoFabrika/wwwroot/css/zt/customeraccounts/index.css:1-1194 + Views/CustomerAccounts/Index.cshtml
+ * <style> :42-1853, :1859-3900, :4526-4559 (CAI:1857 Font Awesome CDN satırı alınmaz) — birebir kopya;
+ * değişiklikler: Razor kaçışı @@ → @; CAI:1386 HTML yorumu ("<!-- İSTATİSTİK KARTLARI -->") CSS yorumuna
+ * çevrildi; iki :has() seçicili kural ikiye bölündü (küçültücü :is() sarmalı, kapsam denetimi); Prettier
+ * biçimi.
+ * @keyframes adları zto-customer-accounts-<ad> yapıldı (paylaşılan ZTO paketinde ad çakışması, check:zto-css): fastScroll, fadeIn, pulse-overdue, scrollText, blink-manuel, blink-cek, blink-kredi, blink-maas, fadeInUp, spin, cariSpin, cariBlink, cariBar.
+ * Sayfa kapsamı .zto-finans.zto-page-customer-accounts (prefixTransform.ts).
+ */
+/* ============================================ */
+/* Cari hesaplar: finans tablosunun kolon geometrisi yalnız burada yönetilir.
+   Genel tanım listesi CSS'i bu tablonun table-cell davranışını değiştirmemelidir. */
+body.customer-accounts-page main,
+body.customer-accounts-page #layoutSidenav_content {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+body.customer-accounts-page .container-fluid,
+body.customer-accounts-page .dataTables_wrapper,
+body.customer-accounts-page .dataTables_wrapper > .row,
+body.customer-accounts-page .dataTables_wrapper .table-responsive {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+
+body.customer-accounts-page .table-responsive {
+  overflow-x: auto !important;
+  overflow-y: visible;
+}
+
+@media (min-width: 769px) {
+  body.customer-accounts-page #customerAccountsTable {
+    width: 100% !important;
+    min-width: 1240px !important;
+    table-layout: fixed !important;
+  }
+
+  body.customer-accounts-page #customerAccountsTable thead th,
+  body.customer-accounts-page #customerAccountsTable tbody td {
+    display: table-cell !important;
+    box-sizing: border-box;
+    min-width: 0;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  body.customer-accounts-page #customerAccountsTable thead th {
+    line-height: 1.2;
+    white-space: normal !important;
+  }
+
+  body.customer-accounts-page #customerAccountsTable thead th:nth-child(1) {
+    width: 7% !important;
+  }
+  body.customer-accounts-page #customerAccountsTable thead th:nth-child(2) {
+    width: 5% !important;
+  }
+  body.customer-accounts-page #customerAccountsTable thead th:nth-child(3) {
+    width: 20% !important;
+  }
+  body.customer-accounts-page #customerAccountsTable thead th:nth-child(4) {
+    width: 9% !important;
+  }
+  body.customer-accounts-page #customerAccountsTable thead th:nth-child(5),
+  body.customer-accounts-page #customerAccountsTable thead th:nth-child(6) {
+    width: 14% !important;
+  }
+  body.customer-accounts-page #customerAccountsTable thead th:nth-child(7) {
+    width: 12% !important;
+  }
+  body.customer-accounts-page #customerAccountsTable thead th:nth-child(8) {
+    width: 8% !important;
+  }
+  body.customer-accounts-page #customerAccountsTable thead th:nth-child(9) {
+    width: 11% !important;
+  }
+
+  body.customer-accounts-page #customerAccountsTable tbody td {
+    height: 50px;
+    padding: 6px 8px !important;
+    vertical-align: middle;
+  }
+
+  body.customer-accounts-page #customerAccountsTable td.account-group-cell {
+    overflow: hidden;
+  }
+
+  body.customer-accounts-page #customerAccountsTable .account-group-badge {
+    display: inline-flex;
+    max-width: 100%;
+    min-height: 24px;
+    box-sizing: border-box;
+    gap: 5px;
+    align-items: center;
+    padding: 3px 7px;
+    overflow: hidden;
+    border: 1px solid;
+    border-radius: 7px;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+    text-align: left;
+    white-space: normal;
+  }
+
+  body.customer-accounts-page #customerAccountsTable .account-group-badge > i {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    margin-top: 1px;
+  }
+
+  /* Bu sınıf doğrudan <td> üzerinde. Grid yapmak hücreyi tablo
+       algoritmasından çıkarıp başlık/satır hizasını bozuyordu. */
+  body.customer-accounts-page #customerAccountsTable td.account-financial-pair {
+    display: table-cell !important;
+  }
+
+  body.customer-accounts-page #customerAccountsTable .account-financial-pair__item {
+    position: relative;
+    width: 100%;
+    display: flex !important;
+    flex-direction: column;
+    gap: 1px;
+    align-items: stretch;
+    justify-content: center;
+    min-width: 0;
+    min-height: 25px;
+    line-height: 1.15;
+  }
+
+  body.customer-accounts-page
+    #customerAccountsTable
+    .account-financial-pair__item
+    + .account-financial-pair__item {
+    margin-top: 2px;
+    padding-top: 3px;
+    border-top: 1px dashed #e3ebf3;
+  }
+
+  body.customer-accounts-page #customerAccountsTable .account-financial-pair__item::before {
+    /* Birleşik kolon başlığı masaüstünde iki değeri zaten açıklıyor.
+           Tekrarlanan mini başlığı gizlemek satırı 56px bandında tutar. */
+    display: none;
+    overflow: hidden;
+    width: 100%;
+    color: #71849b;
+    font-size: 8px;
+    line-height: 1.1;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.customer-accounts-page #customerAccountsTable .currency-rotating-wrapper {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0;
+    min-height: 25px;
+  }
+
+  body.customer-accounts-page #customerAccountsTable .currency-item {
+    right: 0;
+    width: 100% !important;
+    min-width: 0;
+  }
+
+  body.customer-accounts-page #customerAccountsTable .currency-item > span,
+  body.customer-accounts-page #customerAccountsTable .account-financial-pair__item > span {
+    display: grid !important;
+    grid-template-columns: minmax(0, max-content) max-content max-content;
+    gap: 1px 4px;
+    align-items: center;
+    justify-content: flex-end;
+    width: 100%;
+    min-width: 0;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+  }
+
+  body.customer-accounts-page #customerAccountsTable .account-workplace-badge {
+    display: inline-flex !important;
+    grid-column: 1 / -1;
+    justify-self: end;
+    width: auto !important;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    max-width: 100%;
+    min-height: 17px;
+    margin: 1px 0 0 auto !important;
+    padding: 1px 6px !important;
+    overflow: hidden;
+    border-radius: 999px !important;
+    box-shadow: inset 0 0 0 1px rgba(70, 93, 117, 0.08);
+    font-size: 8px !important;
+    line-height: 1.15 !important;
+    text-overflow: ellipsis;
+    white-space: nowrap !important;
+  }
+
+  body.customer-accounts-page
+    #customerAccountsTable[data-totals-mode="workplace"]
+    .account-financial-pair {
+    background-image: linear-gradient(90deg, rgba(237, 244, 250, 0.58), rgba(255, 255, 255, 0));
+    background-size: 100% calc(100% - 8px);
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  body.customer-accounts-page
+    #customerAccountsTable[data-totals-mode="workplace"]
+    .currency-item
+    > span,
+  body.customer-accounts-page
+    #customerAccountsTable[data-totals-mode="workplace"]
+    .account-financial-pair__item
+    > span {
+    padding: 1px 2px;
+  }
+
+  body.customer-accounts-page #customerAccountsTable .currency-indicator {
+    right: 2px;
+    bottom: -3px;
+    left: auto;
+    transform: none;
+  }
+}
+
+body.customer-accounts-page #totalsModeToggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border: 1px solid #d7e2ed;
+  border-radius: 10px;
+  background: #f3f7fb;
+  box-shadow: inset 0 1px 2px rgba(31, 58, 87, 0.04);
+  vertical-align: middle;
+}
+
+body.customer-accounts-page #totalsModeToggle .tmt-btn {
+  display: inline-flex;
+  min-height: 29px;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #5e7084;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+body.customer-accounts-page #totalsModeToggle .tmt-btn:hover,
+body.customer-accounts-page #totalsModeToggle .tmt-btn:focus-visible {
+  color: #1e669d;
+  outline: 0;
+}
+
+body.customer-accounts-page #totalsModeToggle .tmt-btn.is-active {
+  background: #fff;
+  box-shadow: 0 2px 7px rgba(31, 76, 112, 0.13);
+  color: #176ead;
+}
+
+/* Cari tablo denetim geçmişi: finans kolonlarına yer açan ikon + portal kart. */
+body.customer-accounts-page #customerAccountsTable .definition-list-actions-cell {
+  overflow: visible !important;
+  text-align: right !important;
+}
+
+body.customer-accounts-page #customerAccountsTable .definition-row-actions {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 5px !important;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+body.customer-accounts-page .account-detail-primary,
+body.customer-accounts-page
+  #customerAccountsTable
+  .definition-row-actions
+  > .btn-group
+  > .action-btn {
+  height: 32px;
+  min-height: 32px;
+  border-radius: 9px !important;
+}
+
+body.customer-accounts-page .account-detail-primary {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 9px !important;
+  white-space: nowrap;
+}
+
+body.customer-accounts-page .account-actions-menu {
+  min-width: 220px;
+  padding: 5px;
+  border: 1px solid #dce5ef;
+  border-radius: 10px;
+  box-shadow: 0 14px 32px rgba(31, 58, 87, 0.16);
+}
+
+body.customer-accounts-page .account-actions-menu .dropdown-item {
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #334155;
+  font-size: 11px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+body.customer-accounts-page .account-actions-menu .dropdown-item:hover,
+body.customer-accounts-page .account-actions-menu .dropdown-item:focus {
+  background: #eef5fc;
+  color: #1f5f91;
+  outline: 0;
+}
+
+/* .intro-audit-trigger ve .intro-audit-popover stilleri artık paylaşılan
+   introduction-audit.css dosyasında (tüm tanım listeleri ortak kullanır). */
+
+@media (max-width: 1450px) and (min-width: 769px) {
+  body.customer-accounts-page .account-detail-primary span {
+    display: none;
+  }
+
+  body.customer-accounts-page .account-detail-primary {
+    width: 32px;
+    padding: 0 !important;
+  }
+}
+
+/* PROFESYONEL ERP HEADER STİLLERİ */
+/* ============================================ */
+
+/* Header Genel */
+.card-header.bg-white {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+/* Icon Box */
+.erp-header-icon {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  margin-right: 6px;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  color: #495057;
+  font-size: 16px;
+}
+
+/* Breadcrumb */
+.erp-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #6c757d;
+}
+
+.erp-breadcrumb .separator {
+  color: #cbd5e0;
+  font-weight: 300;
+}
+
+.erp-breadcrumb i {
+  font-size: 10px;
+  margin-right: 3px;
+}
+
+/* Info Chips */
+.erp-info-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #495057;
+  transition: all 0.2s ease;
+}
+
+.erp-info-chip:hover {
+  background: #e9ecef;
+  border-color: #cbd5e0;
+}
+
+.erp-info-chip i {
+  font-size: 10px;
+}
+
+/* Chip Varyantları */
+.erp-info-chip.chip-success {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.erp-info-chip.chip-warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.erp-info-chip.chip-danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.erp-info-chip.chip-primary {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.erp-info-chip.chip-info {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+
+/* ERP Butonlar */
+.erp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+  background: #ffffff;
+}
+
+.erp-btn i {
+  font-size: 13px;
+}
+
+/* Buton Varyantları */
+.erp-btn-success {
+  color: #166534;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.erp-btn-success:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.erp-btn-danger {
+  color: #991b1b;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.erp-btn-danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.erp-btn-primary {
+  color: #1e40af;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.erp-btn-primary:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
+.erp-btn-secondary {
+  color: #475569;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.erp-btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e0;
+  color: #475569;
+}
+
+.erp-btn-info {
+  color: #0369a1;
+  border-color: #bae6fd;
+  background: #f0f9ff;
+}
+
+.erp-btn-info:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+.erp-btn-warning {
+  color: #92400e;
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.erp-btn-warning:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+  color: #92400e;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card-header.bg-white {
+    padding: 8px 15px !important;
+  }
+
+  .erp-header-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+
+  .card-header h6 {
+    font-size: 13px !important;
+  }
+
+  .erp-breadcrumb {
+    font-size: 10px;
+  }
+
+  .erp-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+
+  .erp-btn span {
+    display: none !important;
+  }
+
+  .erp-btn i {
+    margin: 0;
+  }
+}
+
+/* Print Style */
+@media print {
+  .erp-btn,
+  .erp-info-chip {
+    display: none !important;
+  }
+
+  .card-header.bg-white {
+    border-bottom: 2px solid #000;
+  }
+}
+
+/* Focus States */
+.erp-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+}
+
+/* Loading State */
+.erp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* Kompakt Filtre Kartı */
+.erp-filter-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.filter-field {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12px;
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.filter-field:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  height: 100%;
+  align-items: flex-end;
+}
+
+.filter-btn {
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 5px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-filter-apply {
+  background: #3b82f6;
+  color: white;
+  border-color: #2563eb;
+}
+
+.btn-filter-apply:hover {
+  background: #2563eb;
+}
+
+.btn-filter-clear {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #cbd5e0;
+}
+
+.btn-filter-clear:hover {
+  background: #e2e8f0;
+}
+
+/* Responsive Filtre */
+@media (max-width: 768px) {
+  .erp-filter-card .col-md-3,
+  .erp-filter-card .col-md-2 {
+    margin-bottom: 10px;
+  }
+
+  .filter-actions {
+    margin-top: 10px;
+    justify-content: flex-start;
+  }
+}
+
+/* Kompakt DataTable */
+.table-compact {
+  font-size: 13px;
+}
+
+.table-compact thead th {
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  color: #475569;
+}
+
+.table-compact tbody td {
+  padding: 6px 10px;
+  vertical-align: middle;
+}
+
+.table-compact .btn-sm {
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+/* DataTables Kompakt Stil */
+.dataTables_wrapper .dataTables_length select {
+  font-size: 12px;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.dataTables_wrapper .dataTables_info {
+  font-size: 12px;
+  padding-top: 8px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  font-size: 12px;
+}
+
+/* Badge Stiller */
+.badge {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-success {
+  background: #10b981;
+}
+
+.badge-primary {
+  background: #3b82f6;
+}
+
+.badge-info {
+  background: #06b6d4;
+}
+
+.badge-warning {
+  background: #f59e0b;
+}
+
+.badge-secondary {
+  background: #94a3b8;
+}
+/* Kompakt Card Tasarımı */
+.erp-stat-card {
+  border-radius: 6px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.erp-stat-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.erp-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--card-color-start), var(--card-color-end));
+  z-index: 1;
+}
+
+.erp-stat-card.card-total {
+  --card-color-start: #3b82f6;
+  --card-color-end: #06b6d4;
+}
+
+.erp-stat-card.card-count {
+  --card-color-start: #10b981;
+  --card-color-end: #84cc16;
+}
+
+.erp-stat-card.card-average {
+  --card-color-start: #f59e0b;
+  --card-color-end: #f97316;
+}
+
+.erp-stat-card.card-methods {
+  --card-color-start: #8b5cf6;
+  --card-color-end: #d946ef;
+}
+
+.erp-stat-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px 12px 15px;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+}
+
+.erp-stat-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--card-color-start), var(--card-color-end));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.erp-stat-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 3px;
+  display: block;
+}
+
+.erp-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.erp-stat-currency {
+  font-size: 12px;
+  font-weight: 600;
+  color: #718096;
+}
+
+.erp-stat-subtext {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.erp-stat-progress {
+  height: 2px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.erp-stat-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--card-color-start), var(--card-color-end));
+  transition: width 0.6s ease;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .erp-stat-content {
+    padding: 10px 10px 10px 13px;
+  }
+}
+/* Kompakt Card Tasarımı */
+.erp-stat-card {
+  border-radius: 6px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.erp-stat-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.erp-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--card-color-start), var(--card-color-end));
+  z-index: 1;
+}
+
+.erp-stat-card.card-total {
+  --card-color-start: #3b82f6;
+  --card-color-end: #06b6d4;
+}
+
+.erp-stat-card.card-count {
+  --card-color-start: #10b981;
+  --card-color-end: #84cc16;
+}
+
+.erp-stat-card.card-average {
+  --card-color-start: #f59e0b;
+  --card-color-end: #f97316;
+}
+
+.erp-stat-card.card-methods {
+  --card-color-start: #8b5cf6;
+  --card-color-end: #d946ef;
+}
+
+.erp-stat-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px 12px 15px;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+}
+
+.erp-stat-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--card-color-start), var(--card-color-end));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.erp-stat-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 3px;
+  display: block;
+}
+
+.erp-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.erp-stat-currency {
+  font-size: 12px;
+  font-weight: 600;
+  color: #718096;
+}
+
+.erp-stat-subtext {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.erp-stat-progress {
+  height: 2px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.erp-stat-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--card-color-start), var(--card-color-end));
+  transition: width 0.6s ease;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .erp-stat-content {
+    padding: 10px 10px 10px 13px;
+  }
+}
+/* ERP Modal Stilleri */
+.erp-modal {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.erp-modal .modal-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-bottom: 1px solid #cbd5e0;
+  padding: 12px 20px;
+}
+
+.erp-modal .modal-header .modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.erp-modal .modal-header .modal-title i {
+  color: #3b82f6;
+}
+
+.erp-modal .modal-body {
+  padding: 20px;
+  background: #f8fafc;
+}
+
+.erp-modal .form-group {
+  margin-bottom: 15px;
+}
+
+.erp-modal .form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.erp-modal .form-group label i {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.erp-modal .form-group .form-control {
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-size: 13px;
+  transition: all 0.2s;
+  background: white;
+}
+
+.erp-modal .form-group .form-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.erp-modal .form-group .form-control.is-invalid {
+  border-color: #ef4444;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23ef4444' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23ef4444' stroke='none'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right calc(0.375em + 0.1875rem) center;
+  background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.erp-modal .form-row {
+  margin-left: -5px;
+  margin-right: -5px;
+}
+
+.erp-modal .form-row > .col,
+.erp-modal .form-row > [class*="col-"] {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.erp-modal .modal-footer {
+  border-top: 1px solid #cbd5e0;
+  padding: 12px 20px;
+  background: #f8fafc;
+}
+
+.erp-modal .modal-footer .btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 5px;
+  border: 1px solid;
+  min-width: 80px;
+}
+
+/* Required field indicator */
+.required-field::after {
+  content: "*";
+  color: #ef4444;
+  margin-left: 3px;
+}
+
+/* Field groups */
+.field-group {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.field-group .field-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-group .field-group-title i {
+  color: #3b82f6;
+}
+
+/* Responsive modal */
+@media (max-width: 768px) {
+  .erp-modal .modal-dialog {
+    margin: 10px;
+  }
+
+  .erp-modal .modal-body {
+    padding: 15px;
+  }
+
+  .erp-modal .form-row {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+/* payments.css dosyasına ekleyin */
+#customerBankSection {
+  transition: all 0.3s ease;
+}
+
+#CustomerBankAccountID option {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+#CustomerBankAccountID option:hover {
+  background-color: #f8f9fa;
+}
+
+.field-group {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.field-group-title {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #007bff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+tr td {
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+}
+.welcome {
+  padding: 10px; /* İç boşluk */
+  background-color: #007bff; /* Mavi arka plan */
+  color: white; /* Beyaz yazı rengi */
+  border-radius: 24px; /* Köşeleri yuvarla */
+  text-align: center; /* Sol tarafa hizala */
+}
+
+.welcome-content {
+  margin-bottom: 5px; /* İki metin arasında boşluk */
+}
+
+.content {
+  margin-top: 5px; /* İki metin arasında boşluk */
+  margin-left: 10px;
+}
+
+.lower-opacity {
+  opacity: 0.7; /* Alttaki yazının şeffaflığını azalt */
+}
+/* Plan Stat Kartları - ERP Uyumlu */
+.plan-stat-card {
+  border-radius: 6px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  background: #fff;
+  position: relative;
+  cursor: pointer;
+}
+
+.plan-stat-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.plan-stat-card.active {
+  border: 2px solid #1e40af;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.plan-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  z-index: 1;
+}
+
+.plan-stat-card.card-overdue::before {
+  background: linear-gradient(180deg, #ef4444, #dc2626);
+}
+.plan-stat-card.card-today::before {
+  background: linear-gradient(180deg, #f59e0b, #d97706);
+}
+.plan-stat-card.card-noplan::before {
+  background: linear-gradient(180deg, #6b7280, #4b5563);
+}
+.plan-stat-card.card-future::before {
+  background: linear-gradient(180deg, #06b6d4, #0891b2);
+}
+.plan-stat-card.card-pending::before {
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
+}
+.plan-stat-card.card-approved::before {
+  background: linear-gradient(180deg, #10b981, #059669);
+}
+
+/* Özet Kartları için Ek Stiller */
+.plan-stat-card.card-total {
+  --card-accent-color: #3b82f6;
+}
+
+.plan-stat-card.card-total .plan-stat-icon {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.plan-stat-card.card-average {
+  --card-accent-color: #f59e0b;
+}
+
+.plan-stat-card.card-average .plan-stat-icon {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.plan-stat-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px 12px 15px;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+}
+
+.plan-stat-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.plan-stat-icon.icon-overdue {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+.plan-stat-icon.icon-today {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+.plan-stat-icon.icon-noplan {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+}
+.plan-stat-icon.icon-future {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+.plan-stat-icon.icon-pending {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+.plan-stat-icon.icon-approved {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.plan-stat-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+  display: block;
+}
+
+.plan-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #2d3748;
+  line-height: 1;
+}
+
+/* Toggle Filtre Butonları */
+.btn-toggle-filter {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  min-width: 90px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-toggle-filter:hover {
+  background: #fecaca;
+  border-color: #f87171;
+}
+
+.btn-toggle-filter.active {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #f87171;
+}
+
+.btn-toggle-filter.active::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+}
+
+.btn-toggle-filter:not(.active) {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.btn-toggle-filter:not(.active)::after {
+  display: none;
+}
+/* Icon class'ları artık JS tarafından yönetiliyor — CSS ile zorla override edilmedi */
+
+/* Responsive */
+@media (max-width: 992px) {
+  .btn-toggle-text {
+    display: none !important;
+  }
+
+  .btn-toggle-filter {
+    min-width: 40px;
+    padding: 6px 10px;
+  }
+}
+
+.fast-marquee {
+  width: 140px;
+  overflow: hidden;
+  position: relative;
+}
+
+.fast-scroll {
+  display: inline-block;
+  white-space: nowrap;
+  animation: zto-customer-accounts-fastScroll 8s linear infinite;
+  font-size: 11px;
+  color: #495057;
+  padding-right: 20px;
+}
+
+.fast-scroll:hover {
+  animation-play-state: paused;
+  font-weight: 500;
+}
+
+@keyframes zto-customer-accounts-fastScroll {
+  0% {
+    transform: translateX(140px);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* ============================================ */
+/* ✅ MODERN ERP TABLO MODERNİZASYONU
+       - Soft border (#e9edf3)
+       - Zebra stripe (çok hafif)
+       - Whitespace separation
+    /* ============================================ */
+#customerAccountsTable {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+#customerAccountsTable thead th {
+  background: #f8fafc;
+  border-top: none;
+  border-bottom: 1px solid #e9edf3;
+  color: #475569;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  padding: 10px 8px;
+  white-space: nowrap;
+}
+/* ✅ th-modern — küçük font + BÜYÜK harf yazılış (uppercase) — sayfaya sığar, görsel hiyerarşi korunur */
+#customerAccountsTable thead th.th-modern {
+  font-size: 10px;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 10px 6px;
+  white-space: nowrap;
+}
+#customerAccountsTable tbody td {
+  border-top: 1px solid #f1f5f9; /* çok soft border — Excel hissi yok */
+  border-bottom: none;
+  height: 50px;
+  padding: 4px 6px;
+  vertical-align: middle;
+}
+
+#customerAccountsTable {
+  table-layout: fixed;
+}
+
+#customerAccountsTable thead th,
+#customerAccountsTable thead th.th-modern {
+  height: 38px;
+  padding: 5px 6px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.account-financial-pair {
+  display: table-cell;
+  gap: 2px;
+  min-width: 0;
+}
+
+.account-financial-pair__item {
+  display: grid;
+  grid-template-columns: minmax(52px, 0.75fr) minmax(0, 1fr);
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  line-height: 1.05;
+}
+
+.account-financial-pair__item::before {
+  content: attr(data-label);
+  overflow: hidden;
+  color: #8a98aa;
+  font-size: 7px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+#customerAccountsTable tbody tr:first-child td {
+  border-top: none;
+}
+/* Zebra stripe — çok hafif, tarama kolaylaştırır ama dikkat dağıtmaz */
+#customerAccountsTable tbody tr:nth-child(even):not(.overdue-row):not(.today-row) {
+  background-color: #fbfcfe;
+}
+#customerAccountsTable tbody tr:hover {
+  background-color: #eff6ff !important; /* hover pastel mavi tint */
+  transition: background-color 0.15s ease;
+}
+
+/* Satır renkleri — sadece KRİTİK durumda hafif tint */
+.overdue-row {
+  background-color: rgba(239, 68, 68, 0.04) !important; /* çok soluk pembe */
+  border-left: 2px solid rgba(239, 68, 68, 0.5);
+}
+.today-row {
+  background-color: rgba(245, 158, 11, 0.05) !important; /* çok soluk amber */
+  border-left: 2px solid rgba(245, 158, 11, 0.5);
+}
+.no-plan-row {
+  background-color: transparent !important;
+}
+
+/* ============================================ */
+/* ✅ FİLTRE KARTINI HAFİF ARKA PLANLA AYIRMA — enterprise hissi */
+/* ============================================ */
+.erp-filter-card {
+  background: #f8fafc !important;
+  border: 1px solid #e9edf3 !important;
+  border-radius: 12px !important;
+  padding: 16px 18px !important;
+  margin-bottom: 16px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+/* ============================================ */
+/* ✅ MODERN INPUT/SELECT — DataTables length & search */
+/* ============================================ */
+.dataTables_length select,
+.dataTables_filter input {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  font-size: 12px;
+  background: #ffffff;
+  color: #334155;
+  transition: all 0.2s ease;
+  box-shadow: none !important;
+  outline: none !important;
+}
+.dataTables_filter input {
+  padding: 7px 12px !important;
+}
+.dataTables_length select:focus,
+.dataTables_filter input:focus {
+  border-color: #93c5fd !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12) !important; /* focus glow */
+}
+/* ✅ Select padding fix — sayı gözükmüyordu, padding sağdaki ok için ayrı */
+.dataTables_length select {
+  min-width: 90px;
+  padding: 6px 28px 6px 10px !important; /* sağda ok için 28px boşluk */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='%23475569' d='M8 11L3 6h10z'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  text-align: center;
+}
+/* ✅ Arama (filter) tablonun üstünde TAM ORTADA, length aşağıda */
+.dataTables_length {
+  float: none !important;
+  width: auto !important;
+  max-width: 100%;
+}
+.dataTables_filter {
+  float: none !important;
+  text-align: center !important;
+  width: auto !important;
+  max-width: 100%;
+  margin: 0;
+}
+.dataTables_length {
+  margin: 0;
+  text-align: left;
+}
+/* Ortadaki filtre kolonu içerik genişliğinde, iki yanındaki eşit kolonlar sayesinde
+       satır geneline göre ortalanır */
+.dt-filter-center {
+  display: flex;
+  justify-content: center;
+}
+
+/* ✅ Alacaklı Cariler — toggle switch (anahtar) */
+.dt-toggle-col {
+  display: flex !important;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.dt-redbal-switch {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 4px 3px 10px;
+  border: 1px solid #d7e2ed;
+  border-radius: 10px;
+  background: #f3f7fb;
+  cursor: pointer;
+  user-select: none;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  color: #5e7084;
+  white-space: nowrap;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.dt-redbal-switch .rb-track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: background 0.2s ease;
+  flex: 0 0 auto;
+  box-shadow: inset 0 1px 2px rgba(30, 55, 80, 0.12);
+}
+.dt-redbal-switch .rb-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
+  transition: left 0.2s ease;
+}
+.dt-redbal-switch:hover,
+.dt-redbal-switch:focus-visible {
+  border-color: #aac4da;
+  color: #285f8d;
+  outline: 0;
+}
+.dt-redbal-switch.active {
+  border-color: #f2b8c0;
+  background: #fff6f7;
+  color: #c93649;
+  box-shadow: 0 2px 7px rgba(185, 45, 65, 0.08);
+}
+.dt-redbal-switch.active .rb-track {
+  background: #d83d50;
+}
+.dt-redbal-switch.active .rb-knob {
+  left: 18px;
+}
+.dataTables_filter label {
+  display: inline-flex !important;
+  width: auto;
+  justify-content: center;
+}
+/* ✅ Daha büyük input + #007bff tonunda açık mavi içerik + belirgin kenar */
+.dataTables_filter input {
+  min-width: 320px;
+  width: 480px !important;
+  max-width: 100%;
+  flex: 0 1 auto;
+  padding: 11px 16px !important;
+  font-size: 14px !important;
+  background: #e7f1ff !important;
+  color: #0a4da8 !important;
+  border: 2px solid #007bff !important;
+  border-radius: 10px !important;
+}
+.dataTables_filter input::placeholder {
+  color: #6ea8e6;
+}
+.dataTables_filter input:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+}
+.dataTables_length,
+.dataTables_filter {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+.dataTables_filter label,
+.dataTables_length label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+/* ============================================ */
+/* ✅ SAYFA BAŞLIĞI — subtitle desteği */
+/* ============================================ */
+.page-header-modern {
+  margin-bottom: 6px;
+}
+.page-header-modern h5 {
+  margin-bottom: 2px;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 700;
+}
+.page-header-modern .page-subtitle {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 400;
+  margin: 0;
+  letter-spacing: 0.1px;
+}
+.page-header-modern hr {
+  margin: 12px 0 18px 0;
+  border: 0;
+  border-top: 1px solid #e9edf3;
+}
+
+/* Action butonları */
+.action-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid;
+  transition: all 0.2s;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn-primary {
+  color: #1e40af;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+.action-btn-primary:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.action-btn-info {
+  color: #0369a1;
+  border-color: #bae6fd;
+  background: #f0f9ff;
+}
+.action-btn-info:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+}
+
+.action-btn-warning {
+  color: #92400e;
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+.action-btn-warning:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+}
+
+.action-btn-danger {
+  color: #991b1b;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+.action-btn-danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.action-btn-success {
+  color: #166534;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+.action-btn-success:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.action-btn-secondary {
+  color: #475569;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+.action-btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e0;
+}
+
+.gap-1 {
+  gap: 4px;
+}
+.gap-2 {
+  gap: 8px;
+}
+.gap-3 {
+  gap: 12px;
+}
+
+/* Buton Dikey Ayraç */
+.btn-divider {
+  width: 1px;
+  height: 28px;
+  background: linear-gradient(180deg, transparent 0%, #cbd5e1 20%, #cbd5e1 80%, transparent 100%);
+  margin: 0 4px;
+  align-self: center;
+}
+
+/* Responsive - Mobilde ayracı gizle & Kart Görünümü */
+@media (max-width: 768px) {
+  .btn-divider {
+    display: none;
+  }
+
+  .col-md-12[style*="padding-left"] {
+    padding-left: 20px !important;
+    padding-right: 6px !important;
+  }
+
+  .dataTables_filter input {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  .custom-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+
+  .custom-card-header {
+    border-radius: 12px !important;
+    margin-bottom: 12px !important;
+    background: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+    padding: 12px !important;
+  }
+
+  .card-body {
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  .table-responsive {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    max-width: 100%;
+  }
+
+  /* ✅ Faz 61B — satır içi işlem dropdown'ı her zaman EN ÜSTTE açılır
+           (kayıt az olduğunda menü tablo/karkas katmanlarının altında kalıyordu) */
+  #customerAccountsTable .account-actions-menu,
+  #customerAccountsTable .account-actions-menu.show {
+    z-index: 100050 !important;
+  }
+  /* Satırlar kendi stacking context'lerini kuruyor — dropdown'ı AÇIK olan satır ve
+           buton grubu diğer satırların üzerine çıkarılır */
+  #customerAccountsTable tr {
+    position: relative;
+  }
+  #customerAccountsTable .btn-group {
+    position: relative;
+  }
+  #customerAccountsTable .btn-group.show {
+    z-index: 100040 !important;
+  }
+  /* Tek kural iki ayrı kurala bölündü: küçültücü :has() listesini :is() ile sarıyor, sarmalanan seçici
+     .zto-finans kapsam denetimini geçmiyor (anlam aynı). */
+  #customerAccountsTable tr:has(.btn-group.show) {
+    z-index: 100030 !important;
+  }
+  #customerAccountsTable tr:has(.dropdown-menu.show) {
+    z-index: 100030 !important;
+  }
+  /* Menü yolundaki sarmalayıcılar menüyü KESMESİN */
+  #customerAccountsTable td,
+  #customerAccountsTable tr,
+  #customerAccountsTable tbody {
+    overflow: visible !important;
+  }
+
+  #customerAccountsTable,
+  #customerAccountsTable tbody,
+  #customerAccountsTable tr {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  #customerAccountsTable thead {
+    display: none !important;
+  }
+
+  #customerAccountsTable tbody tr {
+    margin-bottom: 12px !important;
+    background: #ffffff !important;
+    border: 1px solid #e1e8ed !important;
+    border-radius: 10px !important;
+    padding: 10px 12px !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05) !important;
+    position: relative !important;
+  }
+
+  #customerAccountsTable td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 6px 0 !important;
+    border-bottom: 1px dashed #f1f5f9 !important;
+    border-top: none !important;
+    text-align: right !important;
+    font-size: 11px !important;
+    word-break: break-word !important;
+  }
+
+  #customerAccountsTable td:last-child {
+    border-bottom: none !important;
+    padding-top: 8px !important;
+    justify-content: flex-end !important;
+  }
+
+  /* Hücre Etiketleri */
+  #customerAccountsTable tbody tr td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #4b5563;
+    text-align: left;
+    padding-right: 8px;
+    flex-shrink: 0;
+  }
+
+  #customerAccountsTable .account-financial-pair__item::before {
+    content: attr(data-label);
+  }
+}
+/* ÖDEME PLANLAMA MODALI ISI HARİTASI */
+.planning-heatmap-container {
+  margin: 15px 0;
+  padding: 15px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.planning-heatmap-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.planning-heatmap-header h6 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.planning-heatmap-month {
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+  margin-bottom: 3px;
+  font-weight: 500;
+}
+
+.planning-heatmap-days {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 3px;
+}
+
+.planning-heatmap-day {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  position: relative;
+  cursor: pointer;
+  border: 1px solid rgba(27, 31, 35, 0.06);
+}
+
+.planning-heatmap-day:hover {
+  transform: scale(1.2);
+  z-index: 10;
+  border-color: rgba(27, 31, 35, 0.3);
+}
+
+.planning-heatmap-day.level-0 {
+  background: #ebedf0;
+}
+
+.planning-heatmap-day.level-1 {
+  background: #d4f4dd;
+}
+
+.planning-heatmap-day.level-2 {
+  background: #73d191;
+}
+
+.planning-heatmap-day.level-3 {
+  background: #38a05d;
+}
+
+.planning-heatmap-day.level-4 {
+  background: #1e5937;
+}
+
+.planning-heatmap-day.overdue {
+  background: #fecaca;
+  border-color: #ef4444;
+}
+
+.planning-heatmap-day.today {
+  background: #fbbf24 !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 4px rgba(245, 158, 11, 0.8);
+}
+
+.planning-heatmap-legend {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.planning-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: #64748b;
+}
+
+.planning-legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(27, 31, 35, 0.1);
+}
+
+/* GÜN YOĞUNLUK BİLGİLENDİRMESİ */
+.day-intensity-alert {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  animation: zto-customer-accounts-fadeIn 0.3s ease;
+  display: none;
+}
+
+.day-intensity-alert.low {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.day-intensity-alert.medium {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.day-intensity-alert.high {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+@keyframes zto-customer-accounts-fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 6 AYLIK ISI HARİTASI STİLLERİ */
+.six-month-horizontal-container {
+  overflow-x: auto;
+  padding: 10px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.six-month-weekday-header {
+  display: flex;
+  margin-bottom: 5px;
+  border-bottom: 2px solid #ddd;
+  padding-bottom: 5px;
+}
+
+.six-month-row {
+  display: flex;
+  margin-bottom: 3px;
+  align-items: stretch;
+  flex-wrap: wrap; /* ✅ YENİ: Alt satırlara wrap et */
+  gap: 2px; /* ✅ YENİ: Hücreler arası boşluk */
+}
+
+.six-month-month-title {
+  width: 70px;
+  min-width: 70px;
+  padding: 0px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: bold;
+  background: #f8f9fa;
+  border-right: 2px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.six-month-month-title-placeholder {
+  width: 70px;
+  min-width: 70px;
+}
+
+.six-month-day-header {
+  flex: 1;
+  min-width: 30px;
+  max-width: 30px;
+  text-align: center;
+  padding: 3px;
+  font-size: 11px;
+  border-right: 1px solid #eee;
+}
+
+.day-number {
+  font-weight: bold;
+  color: #333;
+}
+
+.day-name {
+  color: #666;
+  font-size: 10px;
+}
+
+/* ============================================ */
+/* 6 AYLIK ISI HARİTASI STİLLERİ - DÜZELTİLMİŞ */
+/* ============================================ */
+
+.six-month-day-horizontal {
+  flex: 1;
+  min-width: 16px;
+  max-width: 20px;
+  height: 20px;
+  margin: 1px;
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.six-month-day-horizontal:hover {
+  transform: scale(1.05);
+  z-index: 10;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.six-month-day-horizontal.empty {
+  background: #f5f5f5;
+  border-color: #eee;
+  cursor: default;
+}
+
+.six-month-day-horizontal .day-of-month {
+  font-size: 10px;
+  color: #333;
+  font-weight: bold;
+}
+
+/* Yoğunluk seviyeleri - TUTAR BAZLI */
+.six-month-day-horizontal.level-0 {
+  background-color: #f0f0f0;
+}
+
+.six-month-day-horizontal.level-1 {
+  background-color: #c6e48b;
+}
+
+.six-month-day-horizontal.level-2 {
+  background-color: #7bc96f;
+}
+
+.six-month-day-horizontal.level-3 {
+  background-color: #239a3b;
+}
+
+.six-month-day-horizontal.level-4 {
+  background-color: #196127;
+}
+
+.six-month-day-horizontal.level-5 {
+  background-color: #0d3b1e;
+}
+
+.six-month-day-horizontal.level-4 .day-of-month,
+.six-month-day-horizontal.level-5 .day-of-month {
+  color: #ffffff !important;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* ✅ HAFTA SONU - YÜKSEK ÖNCELİK */
+.six-month-day-horizontal.level-0.weekend,
+.six-month-day-horizontal.level-1.weekend,
+.six-month-day-horizontal.level-2.weekend,
+.six-month-day-horizontal.level-3.weekend,
+.six-month-day-horizontal.level-4.weekend,
+.six-month-day-horizontal.level-5.weekend {
+  background-color: #fff5f5 !important;
+  border: 1px solid #fecaca !important;
+}
+
+/* ✅ GECİKMİŞ - EN YÜKSEK ÖNCELİK */
+.six-month-day-horizontal.overdue {
+  background-color: #dc3545 !important;
+  border: 2px solid #991b1b !important;
+  animation: zto-customer-accounts-pulse-overdue 2s infinite;
+}
+
+/* ✅ BUGÜN - MUTLAK ÖNCELİK */
+.six-month-day-horizontal.today {
+  background-color: #fbbf24 !important;
+  border: 3px solid #f59e0b !important;
+  box-shadow: 0 0 5px rgba(245, 158, 11, 0.8) !important;
+}
+
+/* ✅ SEÇİLİ - MUTLAK ÖNCELİK */
+.six-month-day-horizontal.selected {
+  border: 3px solid #007bff !important;
+  box-shadow: 0 0 10px rgba(0, 123, 255, 0.5) !important;
+  z-index: 100 !important;
+}
+
+/* ✅ HAFTA SONU + GECİKMİŞ */
+.six-month-day-horizontal.weekend.overdue {
+  background-color: #dc3545 !important;
+  border: 2px solid #991b1b !important;
+}
+
+/* ✅ HAFTA SONU + BUGÜN */
+.six-month-day-horizontal.weekend.today {
+  background-color: #fbbf24 !important;
+  border: 3px solid #f59e0b !important;
+}
+
+/* ✅ HAFTA SONU STİLİ - ÖNCELİK ARTTIRILMIŞ */
+.six-month-day-horizontal.weekend {
+  background-color: #fff5f5 !important; /* ✅ !important ekledik */
+  border: 1px solid #fecaca !important;
+}
+
+/* Yoğunluk seviyeleri - TUTAR BAZLI */
+.level-0 {
+  background-color: #f0f0f0;
+}
+
+.level-1 {
+  background-color: #c6e48b;
+}
+
+.level-2 {
+  background-color: #7bc96f;
+}
+
+.level-3 {
+  background-color: #239a3b;
+}
+
+.level-4 {
+  background-color: #196127;
+}
+
+.level-5 {
+  background-color: #0d3b1e;
+}
+
+.overdue {
+  background-color: #dc3545;
+}
+.today {
+  background-color: #fbbf24;
+}
+
+/* Haftalık Agregasyon Switch */
+.weekly-aggregate-switch-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  font-size: 11px;
+}
+
+.weekly-aggregate-switch {
+  position: relative;
+  width: 44px;
+  height: 22px;
+}
+
+.weekly-aggregate-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.weekly-aggregate-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  transition: 0.3s;
+  border-radius: 22px;
+}
+
+.weekly-aggregate-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+input:checked + .weekly-aggregate-slider {
+  background-color: #3b82f6;
+}
+
+input:checked + .weekly-aggregate-slider:before {
+  transform: translateX(22px);
+}
+
+.weekly-aggregate-label {
+  color: #64748b;
+  font-weight: 500;
+  user-select: none;
+}
+
+.weekly-aggregate-label.active {
+  color: #1e40af;
+  font-weight: 600;
+}
+
+/* YENİ REVİZYON: Orta boyut haftalık agregasyon hücresi (yan yana etiketli) */
+.six-month-day-horizontal.week-aggregated-compact {
+  min-width: 50px;
+  max-width: 55px;
+  height: 52px;
+  flex: 0 0 52px; /* Daha küçük sabit genişlik */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 3px;
+  margin: 1px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.six-month-day-horizontal.week-aggregated-compact:hover {
+  transform: scale(1.05);
+  z-index: 10;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+}
+
+.six-month-day-horizontal.week-aggregated-compact.selected {
+  border: 2px solid #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  transform: scale(1.05);
+  z-index: 15;
+}
+
+/* İçerik container - week-aggregated-compact için */
+.week-aggregated-compact .week-aggregated-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 100%;
+}
+
+/* Hafta etiketi (1-7 Oca) - week-aggregated-compact için */
+.week-aggregated-compact .week-aggregated-label {
+  font-size: 7px;
+  color: #64748b;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+/* Ödeme sayısı (büyük, bold) - week-aggregated-compact için */
+.week-aggregated-compact .week-aggregated-count {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1;
+}
+
+/* Tutar (çok küçük) - week-aggregated-compact için */
+.week-aggregated-compact .week-aggregated-amount {
+  font-size: 6px;
+  color: #64748b;
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* ESKİ: Haftalık Agregasyon Hücresi (artık kullanılmıyor ama yedek olarak kalabilir) */
+.six-month-day-horizontal.week-aggregated {
+  min-width: 120px;
+  flex: 0 0 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px;
+  position: relative;
+}
+
+.week-aggregated-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.week-aggregated-label {
+  font-size: 9px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.week-aggregated-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.week-aggregated-amount {
+  font-size: 8px;
+  color: #475569;
+}
+
+.six-month-day-horizontal.week-aggregated.selected {
+  border: 3px solid #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  transform: scale(1.02);
+  z-index: 10;
+}
+
+.six-month-heatmap-header {
+  background: #f8f9fa;
+  padding: 10px 15px;
+  border-radius: 8px 8px 0 0;
+  border-bottom: 1px solid #dee2e6;
+  margin-bottom: 0;
+}
+
+.six-month-heatmap-title {
+  color: #2c3e50;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Flexbox düzenlemesi */
+.d-flex {
+  display: flex !important;
+}
+
+.justify-content-between {
+  justify-content: space-between !important;
+}
+
+.align-items-start {
+  align-items: flex-start !important;
+}
+
+.align-items-end {
+  align-items: flex-end !important;
+}
+
+.flex-column {
+  flex-direction: column !important;
+}
+
+.mb-0 {
+  margin-bottom: 0 !important;
+}
+
+/* Select için responsive düzenleme */
+@media (max-width: 768px) {
+  .six-month-heatmap-header {
+    flex-direction: column;
+  }
+
+  .six-month-heatmap-header > div:first-child {
+    margin-bottom: 10px;
+  }
+
+  .six-month-heatmap-header > div:last-child {
+    align-self: flex-end;
+  }
+}
+
+/* Özet satırı */
+.summary-row .six-month-month-title {
+  background: #e3f2fd;
+  font-weight: bold;
+  color: #1565c0;
+}
+
+.summary-day {
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.summary-count {
+  color: white;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+/* Tooltip - DÜZELTİLMİŞ */
+.six-month-tooltip-horizontal {
+  position: fixed;
+  background: white;
+  border: 2px solid #3b82f6;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  max-width: 320px;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.tooltip-header {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.tooltip-content {
+  color: #475569;
+  line-height: 1.5;
+}
+
+.tooltip-content > div {
+  margin-bottom: 4px;
+}
+
+.tooltip-content > div:last-child {
+  margin-bottom: 0;
+}
+
+.tooltip-details {
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.tooltip-details small {
+  line-height: 1.6;
+}
+
+.tooltip-details {
+  border-top: 1px dashed #ddd;
+  padding-top: 5px;
+  margin-top: 5px;
+}
+
+@keyframes zto-customer-accounts-pulse-overdue {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 5px rgba(220, 53, 69, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+  }
+}
+/* Modal body'nin scrollable olması için */
+.modal-body {
+  max-height: 70vh; /* veya calc(100vh - 200px) */
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Smooth scroll için */
+.modal-body {
+  scroll-behavior: smooth;
+}
+
+/* İSTATİSTİK KARTLARI — ZTO'da HTML yorumu olarak yazılmıştı; CSS'te geçersiz olduğundan yorum satırına çevrildi (sonraki .scrolling-text-container bu sayfada kullanılmıyor). */
+/* Kayan yazı konteyneri */
+.scrolling-text-container {
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+
+/* Kayan yazı */
+.scrolling-text {
+  display: inline-block;
+  padding-left: 100%;
+  animation: zto-customer-accounts-scrollText 15s linear infinite;
+  font-size: 11px;
+  color: #6c757d;
+}
+
+/* Fare üzerine gelince durdur */
+.scrolling-text:hover {
+  animation-play-state: paused;
+  color: #495057;
+  font-weight: 500;
+}
+
+/* Kayan yazı animasyonu */
+@keyframes zto-customer-accounts-scrollText {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* Tooltip için */
+.scrolling-text {
+  cursor: help;
+}
+/* ============================================ */
+/* PLAN İSTATİSTİK KARTLARI - KOMPAKT VERSİYON */
+/* ============================================ */
+.plan-stat-card {
+  border-radius: 5px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  background: #fff;
+  cursor: pointer;
+  position: relative;
+  height: 100%;
+}
+
+.plan-stat-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.plan-stat-card.active {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.plan-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--card-accent-color, #94a3b8);
+}
+
+.plan-stat-content {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  gap: 6px;
+}
+
+.plan-stat-icon {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #fff;
+}
+
+.plan-stat-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-stat-label {
+  font-size: 9px;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-stat-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+/* KART RENKLERİ */
+.plan-stat-card.card-overdue {
+  --card-accent-color: #ef4444;
+}
+
+.plan-stat-card.card-overdue .plan-stat-icon {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.plan-stat-card.card-today {
+  --card-accent-color: #f59e0b;
+}
+
+.plan-stat-card.card-today .plan-stat-icon {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.plan-stat-card.card-noplan {
+  --card-accent-color: #6b7280;
+}
+
+.plan-stat-card.card-noplan .plan-stat-icon {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+}
+
+.plan-stat-card.card-future {
+  --card-accent-color: #3b82f6;
+}
+
+.plan-stat-card.card-future .plan-stat-icon {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.plan-stat-card.card-pending {
+  --card-accent-color: #8b5cf6;
+}
+
+.plan-stat-card.card-pending .plan-stat-icon {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.plan-stat-card.card-approved {
+  --card-accent-color: #10b981;
+}
+
+.plan-stat-card.card-approved .plan-stat-icon {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+/* ============================================ */
+/* ERP STAT KARTLARI - KOMPAKT VERSİYON */
+/* ============================================ */
+.erp-stat-card {
+  border-radius: 5px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  background: #fff;
+  position: relative;
+  height: 100%;
+}
+
+.erp-stat-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.erp-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--card-color-start), var(--card-color-end));
+}
+
+.erp-stat-card.card-total {
+  --card-color-start: #3b82f6;
+  --card-color-end: #06b6d4;
+}
+
+.erp-stat-card.card-count {
+  --card-color-start: #10b981;
+  --card-color-end: #84cc16;
+}
+
+.erp-stat-card.card-average {
+  --card-color-start: #f59e0b;
+  --card-color-end: #f97316;
+}
+
+.erp-stat-card.card-methods {
+  --card-color-start: #8b5cf6;
+  --card-color-end: #d946ef;
+}
+
+.erp-stat-content {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  gap: 6px;
+  position: relative;
+  z-index: 2;
+}
+
+.erp-stat-icon {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--card-color-start), var(--card-color-end));
+}
+
+.erp-stat-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.erp-stat-label {
+  font-size: 8px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erp-stat-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.erp-stat-currency {
+  font-size: 9px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.erp-stat-subtext {
+  font-size: 8px;
+  color: #94a3b8;
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* ============================================ */
+/* TOGGLE FİLTRE BUTONLARI */
+/* ============================================ */
+/* Toggle filtre butonları — ghost stil, dikkat çekmeyen secondary action'lar
+       Aktif olduğunda hafif vurgu, aktif değilken neredeyse şeffaf */
+.btn-toggle-filter {
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  min-width: 90px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-toggle-filter:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.btn-toggle-filter.active {
+  background: #f1f5f9;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.btn-toggle-filter.active::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
+  background: #94a3b8;
+  border-radius: 50%;
+}
+
+.btn-toggle-filter:not(.active) {
+  background: #ffffff;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+
+.btn-toggle-filter:not(.active)::after {
+  display: none;
+}
+/* ✅ Icon class'ları artık JS tarafından yönetiliyor (toggleZeroDebt / toggleCustomers) —
+           CSS ile zorla override edilmiyor ki Müşteriler butonunda fa-user, Borçsuzlar'da fa-eye doğru gösterilsin. */
+
+/* ============================================ */
+/* FİLTRE GÖSTERGELERİ */
+/* ============================================ */
+tr.hidden-row {
+  display: none !important;
+}
+
+.filter-active-indicator {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #f1f5f9;
+  color: #475569;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+/* ============================================ */
+/* SECONDARY BUTONLAR — Isı Haritası, Hatırlatıcı, Göster
+       Mor gradient yerine ghost/outline stil — primary action ile yarışmasın */
+/* ============================================ */
+.btn-filter-heatmap {
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  font-size: 12px;
+  box-shadow: none;
+}
+
+.btn-filter-heatmap:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1e293b;
+  transform: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* PRIMARY action — Filtrele butonu sadece bu */
+.btn-filter-apply {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff !important;
+  border: 1px solid #1d4ed8;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.18);
+}
+
+.btn-filter-apply:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  box-shadow: 0 3px 6px rgba(37, 99, 235, 0.25);
+}
+
+/* Clear butonu — sade ghost */
+.btn-filter-clear {
+  background: #ffffff;
+  color: #94a3b8;
+  border: 1px solid #e2e8f0;
+  font-weight: 500;
+}
+
+.btn-filter-clear:hover {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #cbd5e1;
+}
+
+/* ============================================ */
+/* ÖDEME PLANLAMA ISI HARİTASI */
+/* ============================================ */
+.payment-heatmap-container {
+  overflow-x: auto;
+  padding: 20px;
+  background: #ffffff;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.heatmap-grid,
+#heatmapGrid {
+  display: inline-block;
+  margin: 0;
+  padding-left: 20px;
+}
+/* AY AYIRICI */
+.heatmap-month-gap {
+  width: 8px;
+  min-width: 8px;
+  position: relative;
+}
+
+.heatmap-month-gap::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(203, 213, 225, 0.4);
+}
+
+/* AY BAŞLIKLARI */
+.heatmap-months {
+  display: flex;
+  margin-bottom: 9px;
+  margin-left: 80px; /* ✅ Weekdays ile hizalama için */
+  gap: 42px; /* Aylar arasında boşluk */
+}
+
+.heatmap-month {
+  font-size: 13px; /* ✅ yıl eklenince sığması için küçültüldü (16px idi) */
+  font-weight: 600;
+  color: #64748b;
+  text-align: left;
+  padding-left: 0px;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* ⚡ PERF-4 — KÖK NEDEN (ölçüldü): _Layout, FontAwesome 5'in JS/SVG sürümünü yükler;
+       MutationObserver'ı tabloya basılan 1563 satırdaki ~23 bin <i class="fas ..."> ikonunu
+       tek tek SVG'ye çevirirken ana thread ~15 sn kilitleniyordu (afterHtml→dtInitStart boşluğu).
+       Tablo ikonları FA-JS'in TANIMADIĞI "faw" önekini kullanır (dönüşüm hiç tetiklenmez) ve
+       aynı glyph'ler aşağıdaki webfont ile çizilir — görünüm aynıdır, maliyet sıfırlanır.
+       Sayfanın tablo dışı kısımları FA-JS ile aynen çalışmaya devam eder. */
+.faw {
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900; /* solid */
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  line-height: 1;
+}
+
+/* ⚡ PERF-3 — tablo satırlarındaki tekrarlı inline stiller sınıfa alındı
+       (17,8 MB'lık yanıtı küçültmek için; görünüm birebir aynı) */
+.ca-a {
+  font-weight: 600;
+  font-size: 11px;
+}
+.ca-b {
+  font-weight: 700;
+  font-size: 11px;
+}
+.currency-badge-rotating.cbr-r {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+}
+.currency-badge-rotating.cbr-g {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+}
+.currency-badge-rotating.cbr-b {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+}
+.currency-badge-rotating.cbr-a {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+}
+.account-workplace-badge {
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  margin-left: 3px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.account-workplace-badge.wp-s {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+.account-workplace-badge.wp-o {
+  background: #ffedd5;
+  color: #9a3412;
+  border: 1px solid #fed7aa;
+}
+.currency-rotating-cell {
+  cursor: pointer;
+}
+a.ca-link {
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+a.ca-link:hover {
+  text-decoration: underline;
+}
+
+/* ✅ Isı haritası başlık kontrolleri — koyu mor tema üstünde modern cam görünüm */
+#paymentHeatmapModal .hm-ctl {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  height: 30px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+#paymentHeatmapModal .hm-ctl:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+#paymentHeatmapModal .hm-ctl:focus {
+  outline: none;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.22);
+}
+#paymentHeatmapModal .hm-ctl option {
+  color: #1f2937;
+  background: #fff;
+}
+#paymentHeatmapModal .hm-refresh {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+#paymentHeatmapModal .hm-refresh:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: rotate(90deg);
+}
+/* ✅ Footer: Yoğunluk Ayarları butonu */
+.hm-density-btn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 7px;
+  color: #5b21b6;
+  background: #f3e8ff;
+  border: 1px solid #d8b4fe;
+  transition: all 0.15s ease;
+}
+.hm-density-btn:hover {
+  background: #ede9fe;
+  color: #3b0764;
+}
+
+/* GRID BODY */
+.heatmap-body {
+  display: flex;
+}
+
+.heatmap-weekdays {
+  display: flex;
+  flex-direction: column;
+  margin-right: 10px;
+}
+
+.heatmap-weekday {
+  height: 15px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 8px;
+  padding-left: 5px;
+  gap: 4px;
+}
+
+/* HAFTALAR VE GÜNLER */
+.heatmap-weeks {
+  display: flex;
+}
+
+.heatmap-week {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-right: 3px;
+}
+
+.heatmap-day {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 1px solid rgba(27, 31, 35, 0.06);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.heatmap-day:hover {
+  transform: scale(1.3);
+  border-color: rgba(27, 31, 35, 0.3);
+  z-index: 10;
+}
+
+/* RENK SEVİYELERİ */
+.heatmap-day.level-0 {
+  background: #ebedf0;
+}
+
+.heatmap-day.level-1 {
+  background: #d4f4dd;
+}
+
+.heatmap-day.level-2 {
+  background: #73d191;
+}
+
+.heatmap-day.level-3 {
+  background: #38a05d;
+}
+
+.heatmap-day.level-4 {
+  background: #1e5937;
+}
+
+/* GECİKMİŞ ÖDEMELER */
+.heatmap-day.overdue-1 {
+  background: #fecaca;
+  border-color: #ef4444;
+}
+
+.heatmap-day.overdue-2 {
+  background: #f87171;
+  border-color: #dc2626;
+}
+
+.heatmap-day.overdue-3 {
+  background: #dc2626;
+  border-color: #991b1b;
+}
+
+/* BUGÜNKÜ ÖDEMELER */
+.heatmap-day.today {
+  background: #fbbf24 !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 4px rgba(245, 158, 11, 0.8) !important;
+}
+
+/* KAYNAK TİPİ SINIFLARI — Claude tarafından eklendi (Görev 12) */
+.heatmap-day.check-source {
+  border: 2px solid #fd7e14;
+}
+.heatmap-day.credit-source {
+  border: 2px solid #28a745;
+}
+.heatmap-day.salary-source {
+  border: 2px solid #6f42c1;
+}
+.heatmap-day.manual-source {
+  border: 2px solid #007bff;
+}
+.heatmap-day.mixed-source {
+  border: 2px dashed #6c757d;
+}
+
+/* TOOLTIP */
+.heatmap-tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 1000;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* LEGEND */
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+  padding: 15px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.legend-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+  margin-right: 5px;
+}
+
+.legend-box {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid rgba(27, 31, 35, 0.1);
+  display: inline-block;
+}
+
+/* LEGEND RENKLERI */
+.legend-box.level-0 {
+  background: #ebedf0;
+}
+
+.legend-box.level-1 {
+  background: #d4f4dd;
+}
+
+.legend-box.level-2 {
+  background: #73d191;
+}
+
+.legend-box.level-3 {
+  background: #38a05d;
+}
+
+.legend-box.level-4 {
+  background: #1e5937;
+}
+
+.legend-box.overdue-1 {
+  background: #fecaca;
+  border-color: #ef4444;
+}
+
+.legend-box.overdue-2 {
+  background: #f87171;
+  border-color: #dc2626;
+}
+
+.legend-box.overdue-3 {
+  background: #dc2626;
+  border-color: #991b1b;
+}
+
+.legend-box.today {
+  background: #fbbf24;
+  border-color: #f59e0b;
+}
+
+/* ============================================ */
+/* KAYNAK FİLTRE BUTONLARI */
+/* ============================================ */
+.source-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
+  vertical-align: middle;
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1.7;
+}
+.source-filter-btn:hover {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+  color: #334155;
+  transform: translateY(-1px);
+}
+.source-filter-btn:focus {
+  outline: none;
+}
+.source-filter-btn.active {
+  color: #fff !important;
+  border-color: transparent;
+}
+.source-filter-btn.src-manuel.active {
+  background: #007bff;
+}
+.source-filter-btn.src-cek.active {
+  background: #fd7e14;
+}
+.source-filter-btn.src-kredi.active {
+  background: #28a745;
+}
+.source-filter-btn.src-maas.active {
+  background: #6f42c1;
+}
+.source-filter-btn.active .src-dot {
+  background: rgba(255, 255, 255, 0.45) !important;
+}
+.source-filter-btn.src-manuel.active {
+  animation: zto-customer-accounts-blink-manuel 1.5s ease-in-out infinite;
+}
+.source-filter-btn.src-cek.active {
+  animation: zto-customer-accounts-blink-cek 1.5s ease-in-out infinite;
+}
+.source-filter-btn.src-kredi.active {
+  animation: zto-customer-accounts-blink-kredi 1.5s ease-in-out infinite;
+}
+.source-filter-btn.src-maas.active {
+  animation: zto-customer-accounts-blink-maas 1.5s ease-in-out infinite;
+}
+@keyframes zto-customer-accounts-blink-manuel {
+  0%,
+  100% {
+    background: #007bff;
+    box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.4);
+  }
+  50% {
+    background: #0056b3;
+    box-shadow: 0 0 8px 4px rgba(0, 123, 255, 0.3);
+  }
+}
+@keyframes zto-customer-accounts-blink-cek {
+  0%,
+  100% {
+    background: #fd7e14;
+    box-shadow: 0 0 0 0 rgba(253, 126, 20, 0.4);
+  }
+  50% {
+    background: #c96209;
+    box-shadow: 0 0 8px 4px rgba(253, 126, 20, 0.3);
+  }
+}
+@keyframes zto-customer-accounts-blink-kredi {
+  0%,
+  100% {
+    background: #28a745;
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
+  }
+  50% {
+    background: #1c7430;
+    box-shadow: 0 0 8px 4px rgba(40, 167, 69, 0.3);
+  }
+}
+@keyframes zto-customer-accounts-blink-maas {
+  0%,
+  100% {
+    background: #6f42c1;
+    box-shadow: 0 0 0 0 rgba(111, 66, 193, 0.4);
+  }
+  50% {
+    background: #4e2c8a;
+    box-shadow: 0 0 8px 4px rgba(111, 66, 193, 0.3);
+  }
+}
+.src-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.source-filter-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #475569;
+  margin-right: 2px;
+}
+.source-active-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  font-size: 9px;
+  color: #92400e;
+  font-weight: 600;
+  vertical-align: middle;
+  margin-left: 4px;
+  gap: 3px;
+}
+
+/* ============================================ */
+/* HAFTALIK ISI HARİTASI STİLLERİ */
+/* ============================================ */
+.week-heatmap {
+  display: flex !important;
+  gap: 9px;
+  padding: 20px 30px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  min-height: 200px;
+  background: #ffffff;
+}
+
+.month-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 105px;
+  flex-shrink: 0;
+}
+
+.month-column-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 10px;
+  padding: 4px 12px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+.month-column-title.current-month {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: #fff;
+}
+
+.month-weeks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.week-box {
+  width: 100%;
+  min-height: 56px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 4px;
+  border: 1px solid rgba(27, 31, 35, 0.08);
+  position: relative;
+}
+
+.week-box:hover {
+  transform: scale(1.06);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  z-index: 10;
+  border-color: rgba(27, 31, 35, 0.25);
+}
+
+.week-box.selected {
+  box-shadow:
+    0 0 0 2px #3b82f6,
+    0 4px 14px rgba(59, 130, 246, 0.3);
+}
+
+.week-box .week-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: inherit;
+  opacity: 0.85;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.week-box .week-count {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.week-box .week-amount {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.8;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+/* Haftalık yoğunluk seviyeleri */
+.week-box.wk-level-0 {
+  background: #ebedf0;
+  color: #94a3b8;
+}
+
+.week-box.wk-level-1 {
+  background: #d4f4dd;
+  color: #166534;
+}
+
+.week-box.wk-level-2 {
+  background: #73d191;
+  color: #14532d;
+}
+
+.week-box.wk-level-3 {
+  background: #38a05d;
+  color: #fff;
+}
+
+.week-box.wk-level-4 {
+  background: #1e5937;
+  color: #fff;
+}
+
+.week-box.wk-overdue {
+  background: #fecaca;
+  color: #991b1b;
+  border-color: #ef4444;
+}
+
+.week-box.wk-today {
+  border: 2px solid #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+}
+
+/* Haftalık tooltip */
+.week-tooltip {
+  position: absolute;
+  background: rgba(15, 23, 42, 0.95);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 10000;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  max-width: 320px;
+  line-height: 1.6;
+  backdrop-filter: blur(4px);
+}
+
+.week-tooltip .wt-header {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.week-tooltip .wt-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 2px;
+}
+
+.week-tooltip .wt-stat-label {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.week-tooltip .wt-stat-value {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.week-tooltip .wt-companies {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.week-tooltip .wt-company {
+  font-size: 11px;
+  padding: 1px 0;
+  color: #e2e8f0;
+}
+
+.week-tooltip .wt-company::before {
+  content: "\2022";
+  color: #8b5cf6;
+  margin-right: 6px;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .week-heatmap {
+    gap: 8px;
+    padding: 10px 5px;
+  }
+
+  .month-column {
+    min-width: 64px;
+  }
+
+  .week-box {
+    min-height: 44px;
+  }
+
+  .week-box .week-count {
+    font-size: 14px;
+  }
+}
+
+/* ============================================ */
+/* GÜN DETAYLARI KARTI */
+/* ============================================ */
+#dayDetailsContainer {
+  animation: zto-customer-accounts-fadeInUp 0.3s ease;
+}
+
+@keyframes zto-customer-accounts-fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Flush sınıfındaki border sıfırlama kuralını override et */
+#dayDetailsContainer .list-group-flush {
+  padding: 0;
+}
+
+#dayDetailsContainer .list-group-flush .list-group-item {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+#dayDetailsContainer .list-group-flush .list-group-item:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+#dayDetailsContainer .list-group-flush .list-group-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Legacy destek için (flush olmayan list-group için) */
+#dayDetailsContainer .list-group-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+#dayDetailsContainer .list-group-item:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+#dayDetailsContainer .list-group-item:last-child {
+  margin-bottom: 0;
+}
+
+#dayDetailsContainer .badge-sm {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+#dayDetailsContainer .card-footer {
+  background: #f8fafc;
+  border-top: 2px solid #e2e8f0;
+  font-size: 13px;
+}
+
+/* HR çizgileri için soft stil */
+#dayDetailsContainer .list-group-item hr {
+  border-color: #f1f5f9;
+  margin: 8px 0;
+}
+
+/* İkon-metin hizalama için */
+#dayDetailsContainer .list-group-item i {
+  display: inline-block;
+  text-align: center;
+}
+
+/* ============================================ */
+/* RESPONSIVE AYARLAR */
+/* ============================================ */
+@media (max-width: 1400px) {
+  .plan-stat-label,
+  .erp-stat-label {
+    font-size: 7px;
+  }
+
+  .plan-stat-value {
+    font-size: 13px;
+  }
+
+  .erp-stat-value {
+    font-size: 12px;
+  }
+
+  .plan-stat-icon,
+  .erp-stat-icon {
+    width: 22px;
+    height: 22px;
+    font-size: 9px;
+  }
+
+  .plan-stat-content,
+  .erp-stat-content {
+    padding: 5px 6px;
+    gap: 5px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .plan-stat-label,
+  .erp-stat-label {
+    font-size: 7px;
+  }
+
+  .plan-stat-value {
+    font-size: 12px;
+  }
+
+  .erp-stat-value {
+    font-size: 11px;
+  }
+
+  .plan-stat-icon,
+  .erp-stat-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 992px) {
+  .plan-stat-card,
+  .erp-stat-card {
+    margin-bottom: 5px;
+  }
+
+  .plan-stat-label,
+  .erp-stat-label {
+    font-size: 8px;
+  }
+
+  .plan-stat-value {
+    font-size: 14px;
+  }
+
+  .erp-stat-value {
+    font-size: 13px;
+  }
+
+  .plan-stat-icon,
+  .erp-stat-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+
+  .btn-toggle-filter {
+    min-width: 40px;
+    padding: 6px 10px;
+  }
+
+  .btn-toggle-text {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .plan-stat-content,
+  .erp-stat-content {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .plan-stat-icon,
+  .erp-stat-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .plan-stat-label,
+  .erp-stat-label {
+    font-size: 9px;
+  }
+
+  .plan-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-value {
+    font-size: 14px;
+  }
+  /* Heatmap responsive */
+  .heatmap-month-gap {
+    width: 6px;
+    min-width: 6px;
+  }
+
+  .heatmap-month-gap::after {
+    left: 2px;
+  }
+
+  .heatmap-months {
+    gap: 6px;
+  }
+
+  .heatmap-month {
+    font-size: 9px;
+  }
+
+  .heatmap-day {
+    width: 20px;
+    height: 20px;
+  }
+
+  .heatmap-weekday {
+    font-size: 9px;
+    height: 11px;
+  }
+
+  .heatmap-week {
+    margin-right: 1px;
+  }
+}
+
+/* ============================================ */
+/* CURRENCY TOOLTIP STİLLERİ - SOL ÜSTTE */
+/* ============================================ */
+
+.currency-stat-card {
+  position: relative;
+  cursor: pointer;
+  overflow: visible !important;
+  z-index: 6000;
+}
+
+.currency-stat-card:hover {
+  z-index: 7000;
+}
+
+/* Tooltip ana gövde - KART ALT SOL */
+.currency-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  bottom: auto;
+  left: auto;
+  right: 0;
+  transform: scale(0.95);
+  transform-origin: top right;
+  background: #1e293b;
+  color: #fff;
+  padding: 0;
+  border-radius: 10px;
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  z-index: 2147483000;
+  min-width: 320px;
+  max-width: 400px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Hover - KART ALT SOL */
+.currency-stat-card:hover .currency-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+
+.currency-stat-card.tooltip-pinned .currency-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+
+/* Tooltip oku - ÜSTE BAKACAK ŞEKİLDE */
+.currency-tooltip::after {
+  content: "";
+  position: absolute;
+  top: -16px;
+  bottom: auto;
+  left: auto;
+  right: 20px;
+  transform: none;
+  border: 8px solid transparent;
+  border-bottom-color: #1e293b;
+}
+
+#statsCardsRow {
+  position: relative;
+  z-index: 5000;
+  overflow: visible !important;
+}
+
+/* ============================================ */
+/* HEADER */
+/* ============================================ */
+
+.tooltip-header {
+  background: #3b82f6;
+  padding: 12px 16px;
+  border-radius: 10px 10px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tooltip-header.debt {
+  background: #f59e0b;
+}
+
+.tooltip-header-title {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tooltip-header-date {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+/* ============================================ */
+/* BODY */
+/* ============================================ */
+
+.tooltip-body {
+  padding: 12px 16px;
+  background: #1e293b;
+}
+
+.currency-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #374151;
+}
+
+.currency-row:last-child {
+  border-bottom: none;
+}
+
+.currency-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.currency-flag {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: #fff;
+}
+
+.currency-flag.try {
+  background: #ef4444;
+}
+.currency-flag.usd {
+  background: #22c55e;
+}
+.currency-flag.eur {
+  background: #3b82f6;
+}
+.currency-flag.gbp {
+  background: #8b5cf6;
+}
+.currency-flag.rub {
+  background: #f97316;
+}
+.currency-flag.chf {
+  background: #ef4444;
+}
+.currency-flag.default {
+  background: #6b7280;
+}
+
+.currency-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.currency-code {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.currency-rate {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.currency-amounts {
+  text-align: right;
+}
+
+.currency-original {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.currency-converted {
+  font-size: 10px;
+  color: #86efac;
+}
+
+/* ============================================ */
+/* FOOTER */
+/* ============================================ */
+
+.tooltip-footer {
+  background: #111827;
+  padding: 12px 16px;
+  border-radius: 0 0 10px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #374151;
+}
+
+.tooltip-total-label {
+  font-size: 11px;
+  color: #d1d5db;
+  text-transform: uppercase;
+}
+
+.tooltip-total-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #86efac;
+}
+
+.tooltip-source {
+  font-size: 9px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 6px 16px 10px;
+  border-top: 1px solid #374151;
+  background: #1e293b;
+}
+
+/* ============================================ */
+/* LOADING */
+/* ============================================ */
+
+.currency-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: #9ca3af;
+}
+
+.currency-loading i {
+  animation: zto-customer-accounts-spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+@keyframes zto-customer-accounts-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================ */
+/* MOBİL - SOL ÜSTTE */
+/* ============================================ */
+
+@media (max-width: 768px) {
+  .currency-tooltip {
+    position: fixed !important; /* Mobile'de fixed */
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) scale(0.95) !important;
+    min-width: 280px !important;
+    max-width: 90vw !important;
+    z-index: 999999 !important;
+  }
+
+  .currency-stat-card:hover .currency-tooltip {
+    transform: translate(-50%, -50%) scale(1) !important;
+  }
+
+  .currency-tooltip::after {
+    display: none; /* Mobile'de ok gösterme */
+  }
+}
+
+/* ============================================ */
+/* EKRAN KENARINA TAŞMA DURUMU */
+/* ============================================ */
+
+@media (min-width: 769px) {
+  .currency-tooltip {
+    max-width: min(400px, calc(100vw - 40px));
+  }
+}
+
+/* ============================================ */
+/* TAHMINI BADGE STILLERI - SAĞ ALT KÖŞEDE */
+/* ============================================ */
+
+.erp-stat-estimate {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  z-index: 3;
+}
+
+.estimate-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: rgba(0, 0, 0, 0.07);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  font-size: 8px;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.estimate-badge i {
+  font-size: 8px;
+  opacity: 0.8;
+}
+
+/* Farklı kart renklerine göre estimate badge stilleri */
+.card-total .estimate-badge {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.card-count .estimate-badge {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.card-average .estimate-badge {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.card-methods .estimate-badge {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+}
+
+/* Hover efekti */
+.plan-stat-card:hover .estimate-badge {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .erp-stat-estimate {
+    bottom: 2px;
+    right: 2px;
+  }
+
+  .estimate-badge {
+    padding: 2px 6px;
+    font-size: 8px;
+  }
+
+  .estimate-badge i {
+    font-size: 7px;
+  }
+}
+
+/* ============================================ */
+/* MEVCUT KART STILLERINE EK - Konum ayarlaması */
+/* ============================================ */
+
+.plan-stat-details {
+  flex: 1;
+  min-width: 0;
+  position: relative; /* Tahmini badge için referans */
+  padding-bottom: 20px; /* Tahmini yazısı için alan */
+}
+
+.erp-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.erp-stat-subtext {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Eğer table-responsive overflow: auto/scroll kullanıyorsa */
+.table-responsive {
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  max-width: 100%;
+}
+
+/* ============================================ */
+/* PARA BİRİMİ ROTATING ANIMASYONU */
+/* ============================================ */
+
+.currency-rotating-cell {
+  position: relative;
+  min-height: 20px;
+  overflow: visible !important;
+}
+
+.currency-rotating-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: inline-block;
+}
+
+.currency-item {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+.currency-item.active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  position: relative;
+}
+
+.currency-item.exiting {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+
+/* Para birimi badge animasyonu */
+.currency-badge-rotating {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: all 0.3s ease;
+  cursor: help;
+  vertical-align: middle;
+}
+
+.currency-badge-rotating:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Rotating indicator */
+.currency-indicator {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  z-index: 10;
+}
+
+.currency-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.currency-dot.active {
+  background: #3b82f6;
+  width: 8px;
+  border-radius: 2px;
+}
+
+.currency-dot:hover {
+  background: #60a5fa;
+}
+
+/* Pause indicator - Pozisyon ayarı */
+.currency-pause-icon {
+  position: absolute;
+  top: 5px; /* ✅ Daha yukarı */
+  left: -10px; /* ✅ Sağa yasla */
+  font-size: 9px;
+  color: #94a3b8;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none; /* ✅ Tıklamayı engelleme */
+  z-index: 100;
+}
+
+/* Hover ile göster - TR üzerinde */
+tr:hover .currency-pause-icon {
+  opacity: 1;
+}
+
+.currency-rotating-cell:hover .currency-pause-icon {
+  opacity: 1;
+}
+
+/* ============================================ */
+/* CURRENCY TOOLTIP - SOFT DESIGN */
+/* ============================================ */
+
+.currency-tooltip-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.currency-tooltip-title {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.currency-tooltip-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.currency-tooltip-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.currency-tooltip-body {
+  padding: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.currency-tooltip-row {
+  padding: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.currency-tooltip-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.currency-tooltip-row:hover {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  transform: translateX(4px);
+}
+
+.currency-tooltip-currency {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.currency-tooltip-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  min-width: 45px;
+  text-align: center;
+}
+
+.currency-tooltip-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.currency-tooltip-amounts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.currency-tooltip-amount-item {
+  background: #f8fafc;
+  padding: 8px;
+  border-radius: 6px;
+  border-left: 3px solid;
+}
+
+.currency-tooltip-amount-item.debt {
+  border-color: #ef4444;
+}
+
+.currency-tooltip-amount-item.payment {
+  border-color: #10b981;
+}
+
+.currency-tooltip-amount-item.credit {
+  border-color: #3b82f6;
+}
+
+.currency-tooltip-amount-item.collection {
+  border-color: #f59e0b;
+}
+
+.currency-tooltip-amount-label {
+  font-size: 9px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.currency-tooltip-amount-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.currency-tooltip-balance {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 12px;
+  border: 2px solid #3b82f6;
+}
+
+.currency-tooltip-balance-label {
+  font-size: 10px;
+  color: #1e40af;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.currency-tooltip-balance-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.currency-tooltip-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.currency-tooltip-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.currency-tooltip-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+/* ============================================ */
+/* PLAN TOOLTIP STİLLERİ - ÇOK PLANLI CARİLER İÇİN */
+/* ============================================ */
+
+.tooltip-trigger-td {
+  position: relative;
+  cursor: help;
+}
+
+.tooltip-trigger-td:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Tooltip Container */
+.plan-tooltip {
+  position: fixed;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0;
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  z-index: 999999;
+  min-width: 320px;
+  max-width: 450px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.plan-tooltip.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Tooltip Header */
+.plan-tooltip-header {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #ffffff;
+  padding: 12px 16px;
+  border-radius: 6px 6px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #1d4ed8;
+}
+
+.plan-tooltip-title {
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan-tooltip-count {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.25);
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+/* Tooltip Body */
+.plan-tooltip-body {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+/* Plan Item */
+.plan-item {
+  padding: 10px;
+  margin-bottom: 8px;
+  background: #f8fafc;
+  border-left: 3px solid #94a3b8;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.plan-item:hover {
+  background: #f1f5f9;
+  border-left-color: #3b82f6;
+  transform: translateX(2px);
+}
+
+.plan-item:last-child {
+  margin-bottom: 0;
+}
+
+.plan-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.plan-item-date {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.plan-item-amount {
+  font-size: 13px;
+  font-weight: 700;
+  color: #3b82f6;
+}
+
+.plan-item-details {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.plan-item-badge {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.plan-item-badge.status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.plan-item-badge.status-approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.plan-item-badge.status-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.plan-item-badge.status-waiting {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+/* Scrollbar */
+.plan-tooltip-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.plan-tooltip-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.plan-tooltip-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.plan-tooltip-body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ============================================ */
+/* PAYMENT PLANS TOOLTIP STYLES */
+/* ============================================ */
+
+.payment-plans-tooltip {
+  position: fixed;
+  z-index: 999999;
+  min-width: 380px;
+  max-width: 500px;
+  background: #1e293b;
+  border-radius: 10px;
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.9);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.payment-plans-tooltip.show {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.payment-plans-tooltip.pinned {
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 2px #3b82f6;
+}
+
+.tooltip-header-plans {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tooltip-header-title-plans {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+}
+
+.tooltip-close-btn-plans {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.tooltip-close-btn-plans:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: rotate(90deg);
+}
+
+.tooltip-balances-plans {
+  background: #0f172a;
+  padding: 12px 18px;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.balance-item-plans {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #1e293b;
+  border-radius: 6px;
+  border: 1px solid #334155;
+}
+
+.balance-icon-plans {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.balance-icon-plans.balance-positive {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.balance-icon-plans.balance-negative {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.balance-icon-plans.balance-zero {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+}
+
+.balance-info-plans {
+  display: flex;
+  flex-direction: column;
+}
+
+.balance-amount-plans {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.balance-currency-plans {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.tooltip-body-plans {
+  max-height: 400px;
+  overflow-y: auto;
+  background: #1e293b;
+  padding: 12px;
+}
+
+.plan-item-plans {
+  background: #0f172a;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid #334155;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.plan-item-plans:last-child {
+  margin-bottom: 0;
+}
+
+.plan-item-plans:hover {
+  background: #1e293b;
+  border-color: #475569;
+  transform: translateX(4px);
+}
+
+.plan-item-plans.plan-overdue {
+  background: linear-gradient(to right, rgba(239, 68, 68, 0.15), #0f172a);
+  border-left: 3px solid #ef4444;
+}
+
+.plan-item-plans.plan-today {
+  background: linear-gradient(to right, rgba(245, 158, 11, 0.15), #0f172a);
+  border-left: 3px solid #f59e0b;
+}
+
+.plan-date-plans {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 6px;
+}
+
+.plan-date-icon-plans {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #fff;
+}
+
+.plan-date-icon-plans.date-overdue {
+  background: #ef4444;
+}
+
+.plan-date-icon-plans.date-today {
+  background: #f59e0b;
+}
+
+.plan-date-icon-plans.date-future {
+  background: #3b82f6;
+}
+
+.plan-amount-plans {
+  font-size: 15px;
+  font-weight: 700;
+  color: #86efac;
+  margin-bottom: 8px;
+}
+
+.plan-statuses-plans {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.plan-status-badge-plans {
+  font-size: 9px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Plan Durumu Renkleri */
+.plan-status-badge-plans.plan-status-waiting {
+  background: rgba(107, 114, 128, 0.2);
+  color: #d1d5db;
+  border: 1px solid #4b5563;
+}
+
+.plan-status-badge-plans.plan-status-completed {
+  background: rgba(16, 185, 129, 0.2);
+  color: #86efac;
+  border: 1px solid #10b981;
+}
+
+.plan-status-badge-plans.plan-status-delayed {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid #ef4444;
+}
+
+.plan-status-badge-plans.plan-status-cancelled {
+  background: rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
+  border: 1px solid #6b7280;
+}
+
+.plan-status-badge-plans.plan-status-processing {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  border: 1px solid #3b82f6;
+}
+
+/* Onay Durumu Renkleri (ödeme onay yönetimi dot renkleri gibi) */
+.plan-status-badge-plans.approval-status-waiting {
+  background: rgba(107, 114, 128, 0.2);
+  color: #d1d5db;
+  border: 1px solid #4b5563;
+}
+
+.plan-status-badge-plans.approval-status-pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid #f59e0b;
+}
+
+.plan-status-badge-plans.approval-status-approved {
+  background: rgba(16, 185, 129, 0.2);
+  color: #86efac;
+  border: 1px solid #10b981;
+}
+
+.plan-status-badge-plans.approval-status-rejected {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid #ef4444;
+}
+
+.plan-status-badge-plans.approval-status-instructed {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  border: 1px solid #3b82f6;
+}
+
+.plan-status-badge-plans.approval-status-completed {
+  background: rgba(16, 185, 129, 0.2);
+  color: #86efac;
+  border: 1px solid #10b981;
+}
+
+/* Scrollbar styling */
+.tooltip-body-plans::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tooltip-body-plans::-webkit-scrollbar-track {
+  background: #0f172a;
+  border-radius: 10px;
+}
+
+.tooltip-body-plans::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 10px;
+}
+
+.tooltip-body-plans::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .payment-plans-tooltip {
+    min-width: 90vw;
+    max-width: 95vw;
+  }
+
+  .tooltip-body-plans {
+    max-height: 60vh;
+  }
+}
+
+/* Hover indicator for tooltip trigger */
+.tooltip-trigger-td {
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.tooltip-trigger-td:hover {
+  background: rgba(59, 130, 246, 0.05) !important;
+}
+
+.tooltip-trigger-td::after {
+  content: "\f05a";
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: #94a3b8;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.tooltip-trigger-td:hover::after {
+  opacity: 0.6;
+}
+
+/* ============================================ */
+/* PLAN DETAY MODALI STİLLERİ */
+/* ============================================ */
+
+/* Plan item stilleri */
+.plan-modal-item {
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #e0e6ed;
+  transition: all 0.2s ease;
+}
+.plan-modal-item:last-child {
+  margin-bottom: 0;
+}
+.plan-modal-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.plan-modal-item.overdue {
+  background: #fef2f2;
+  border-left: 3px solid #ef4444;
+}
+.plan-modal-item.today {
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+}
+.plan-modal-item.future {
+  background: #f8fafc;
+  border-left: 3px solid #3b82f6;
+}
+
+.plan-modal-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.plan-modal-amount {
+  font-size: 15px;
+  font-weight: 700;
+  color: #3b82f6;
+  margin-bottom: 8px;
+}
+.plan-modal-statuses {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Status badge */
+.plan-tooltip-status-badge {
+  font-size: 9px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.plan-tooltip-status-badge.plan-status-waiting {
+  background: rgba(148, 163, 184, 0.2);
+  color: #64748b;
+  border: 1px solid #94a3b8;
+}
+.status-dot.dot-beklemede {
+  background: #94a3b8;
+}
+.plan-tooltip-status-badge.plan-status-completed {
+  background: rgba(16, 185, 129, 0.2);
+  color: #059669;
+  border: 1px solid #10b981;
+}
+.status-dot.dot-tamamlandi {
+  background: #10b981;
+}
+.plan-tooltip-status-badge.plan-status-delayed {
+  background: rgba(239, 68, 68, 0.2);
+  color: #dc2626;
+  border: 1px solid #ef4444;
+}
+.status-dot.dot-gecikmis {
+  background: #ef4444;
+}
+.plan-tooltip-status-badge.approval-status-waiting {
+  background: rgba(148, 163, 184, 0.2);
+  color: #64748b;
+  border: 1px solid #94a3b8;
+}
+.status-dot.dot-onay-beklemede {
+  background: #94a3b8;
+}
+.plan-tooltip-status-badge.approval-status-pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: #d97706;
+  border: 1px solid #f59e0b;
+}
+.status-dot.dot-onay-bekliyor {
+  background: #f59e0b;
+}
+.plan-tooltip-status-badge.approval-status-approved {
+  background: rgba(16, 185, 129, 0.2);
+  color: #059669;
+  border: 1px solid #10b981;
+}
+.status-dot.dot-onaylandi {
+  background: #10b981;
+}
+.plan-tooltip-status-badge.approval-status-rejected {
+  background: rgba(239, 68, 68, 0.2);
+  color: #dc2626;
+  border: 1px solid #ef4444;
+}
+.status-dot.dot-reddedildi {
+  background: #ef4444;
+}
+.plan-tooltip-status-badge.approval-status-instructed {
+  background: rgba(59, 130, 246, 0.2);
+  color: #2563eb;
+  border: 1px solid #3b82f6;
+}
+.status-dot.dot-talimat-verildi {
+  background: #3b82f6;
+}
+.plan-tooltip-status-badge.approval-status-completed {
+  background: rgba(139, 92, 246, 0.2);
+  color: #7c3aed;
+  border: 1px solid #8b5cf6;
+}
+.status-dot.dot-tamamlandi-onay {
+  background: #8b5cf6;
+}
+
+/* Loading & Empty */
+.plan-modal-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #64748b;
+  font-size: 13px;
+}
+.plan-modal-loading i {
+  animation: zto-customer-accounts-spin 1s linear infinite;
+  margin-right: 8px;
+}
+.plan-modal-empty {
+  text-align: center;
+  padding: 40px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* Scrollbar */
+#planModalBody::-webkit-scrollbar {
+  width: 6px;
+}
+#planModalBody::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+#planModalBody::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+#planModalBody::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* İş Yeri Multi-Select Filter */
+.wp-multiselect-container {
+  position: relative;
+}
+.wp-multiselect-btn {
+  width: 100%;
+  text-align: left;
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  background: #fff;
+}
+.wp-multiselect-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  min-width: 220px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 9999;
+  max-height: 210px;
+  overflow-y: auto;
+}
+.wp-multiselect-actions {
+  display: flex;
+  gap: 4px;
+  padding: 5px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 6px 6px 0 0;
+  position: sticky;
+  top: 0;
+}
+.wp-multiselect-actions button {
+  font-size: 10px;
+  padding: 2px 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #475569;
+}
+.wp-multiselect-actions button:hover {
+  background: #e2e8f0;
+}
+.wp-multiselect-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 11px;
+  color: #334155;
+  user-select: none;
+}
+.wp-multiselect-item:hover {
+  background: #f1f5f9;
+}
+.wp-multiselect-item input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ⚡ Arka planda tam yükleme overlay'i */
+#cariLoadingOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(2px);
+}
+#cariLoadingOverlay.active {
+  display: flex;
+}
+#cariLoadingOverlay .cari-loading-box {
+  text-align: center;
+  padding: 22px 32px;
+  background: #ffffff;
+  border: 1px solid #e6ebf2;
+  border-radius: 14px;
+  box-shadow: 0 12px 38px rgba(16, 24, 40, 0.14);
+  min-width: 270px;
+}
+#cariLoadingOverlay .cari-loading-spinner {
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 12px;
+  border: 4px solid #e6ebf2;
+  border-top-color: #0d6efd;
+  border-radius: 50%;
+  animation: zto-customer-accounts-cariSpin 0.8s linear infinite;
+}
+@keyframes zto-customer-accounts-cariSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+#cariLoadingOverlay .cari-loading-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2937;
+}
+#cariLoadingOverlay .cari-loading-text .cari-dots span {
+  animation: zto-customer-accounts-cariBlink 1.4s infinite both;
+}
+#cariLoadingOverlay .cari-loading-text .cari-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+#cariLoadingOverlay .cari-loading-text .cari-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes zto-customer-accounts-cariBlink {
+  0%,
+  80%,
+  100% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+#cariLoadingOverlay .cari-loading-sub {
+  font-size: 11px;
+  color: #8a94a6;
+  margin-top: 3px;
+}
+#cariLoadingOverlay .cari-loading-bar {
+  position: relative;
+  margin-top: 13px;
+  height: 5px;
+  border-radius: 999px;
+  background: #eef2f7;
+  overflow: hidden;
+}
+#cariLoadingOverlay .cari-loading-bar > span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 40%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0d6efd, #5aa9ff);
+  animation: zto-customer-accounts-cariBar 1.15s ease-in-out infinite;
+  will-change: transform; /* GPU/compositor — ana iş parçacığı meşgulken bile akar */
+}
+@keyframes zto-customer-accounts-cariBar {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(280%);
+  }
+}

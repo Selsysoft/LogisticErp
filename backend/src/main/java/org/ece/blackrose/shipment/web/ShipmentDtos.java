@@ -294,7 +294,8 @@ public final class ShipmentDtos {
 
   public record Option(UUID id, String label) {}
 
-  public record QuoteLineOption(UUID id, String label, UUID accountId) {}
+  /** Kabul edilmiş teklif satırı; şirket, seferin iş yerinin şirketine göre süzmek içindir. */
+  public record QuoteLineOption(UUID id, String label, UUID accountId, UUID companyId) {}
 
   /** Operasyon kullanıcısının finans ve CRM izni olmadan seçim yapabilmesi için. */
   public record ShipmentOptionsResponse(

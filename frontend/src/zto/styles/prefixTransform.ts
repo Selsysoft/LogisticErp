@@ -1,5 +1,4 @@
-import type { Plugin, PluginCreator } from "postcss";
-import prefixSelector from "postcss-prefix-selector";
+import type { PluginCreator, Rule } from "postcss";
 
 /**
  * ZTO CSS kapsamlama kuralları (MX4 B.3, teknik 1). vite.config.ts bu modülü içe aktarır; mantık
@@ -49,7 +48,44 @@ export function isZtoStyleFile(file: string | undefined): boolean {
   return !!file && /[\\/]src[\\/]zto[\\/]styles[\\/]/.test(file);
 }
 
-const prefixer = prefixSelector({ prefix: ZTO_SCOPE, transform }) as Plugin;
+/**
+ * Sayfa kapsamı (12.1 §5.6): ZTO'da sayfa satır içi stilleri ve sayfa CSS'leri yalnız o sayfada
+ * yüklenir; burada hepsi tek parçada olduğu için genel seçicileri (`.card-header`, `.table th`) diğer
+ * ZTO sayfalarına sızar. `src/zto/styles/pages/scoped/<ad>.css`'ten gelen kurallar
+ * `.zto-finans.zto-page-<ad>` altına alınır (sayfa bu sınıfı useZtoRootClass ile köke yazar).
+ */
+const SCOPED_PAGE = /[\\/]src[\\/]zto[\\/]styles[\\/]pages[\\/]scoped[\\/]([A-Za-z0-9_-]+)\.css$/;
+
+/**
+ * Dosya adı ile sayfa kök sınıfı farklı olanlar: `all-transactions-page.css` (12.0'ın kapsamsız
+ * `pages/all-transactions.css`'inden ayırmak için) → `zto-page-all-transactions`.
+ */
+export const PAGE_SCOPE_ALIASES: Readonly<Record<string, string>> = {
+  "all-transactions-page": "all-transactions",
+};
+
+/** Dosyanın kapsamı: sayfa kapsamlı dosyada `.zto-finans.zto-page-<ad>`, diğerlerinde `.zto-finans`. */
+export function scopeForFile(file: string | undefined): string {
+  const match = file ? SCOPED_PAGE.exec(file) : null;
+  if (!match) return ZTO_SCOPE;
+  return `${ZTO_SCOPE}.zto-page-${PAGE_SCOPE_ALIASES[match[1]] ?? match[1]}`;
+}
+
+const KEYFRAMES = /keyframes$/i;
+
+/**
+ * Kuralın seçicilerini kapsamlar; kaynak dosya kural düzeyinde okunur (Vite @import'ları birleştirse
+ * de `rule.source.input.file` özgün dosyadır). @keyframes adımları seçici değildir, atlanır.
+ * scopeSelector tekrar uygulanırsa değişmez (PostCSS değişen düğümü yeniden ziyaret eder).
+ */
+function scopeRule(rule: Rule, fallbackFile: string | undefined) {
+  const parent = rule.parent;
+  if (parent?.type === "atrule" && KEYFRAMES.test((parent as { name: string }).name)) {
+    return;
+  }
+  const scope = scopeForFile(rule.source?.input.file ?? fallbackFile);
+  rule.selectors = rule.selectors.map((selector) => scopeSelector(selector, scope));
+}
 
 /**
  * Giriş dosyası src/zto/styles altındaysa, Vite'ın @import ile birleştirdiği tüm CSS (vendor, Font
@@ -64,8 +100,9 @@ export const ztoScopePlugin: PluginCreator<void> = () => ({
     if (!isZtoStyleFile(result.root.source?.input.file)) {
       return {};
     }
+    const entry = result.root.source?.input.file;
     return {
-      ...prefixer.prepare?.(result),
+      Rule: (rule) => scopeRule(rule, entry),
       AtRule: {
         page: (atRule) => {
           atRule.remove();

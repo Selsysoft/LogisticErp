@@ -12,6 +12,7 @@ import org.ece.blackrose.identity.domain.Permission;
 import org.ece.blackrose.identity.domain.UserAccount;
 import org.ece.blackrose.identity.repository.IdentityRepositories.UserAccountRepository;
 import org.ece.blackrose.identity.security.AuthenticatedUser;
+import org.ece.blackrose.identity.service.UserScopeGuard;
 import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentRepository;
 import org.ece.blackrose.shipment.service.TripFinanceService;
@@ -34,6 +35,7 @@ public class DriverExpenseReviewService {
   private final ApplicationEventPublisher publisher;
   private final ShipmentRepository shipments;
   private final BranchScopeService scope;
+  private final UserScopeGuard userScope;
 
   public DriverExpenseReviewService(
       DriverExpenseRepository expenses,
@@ -42,9 +44,11 @@ public class DriverExpenseReviewService {
       TripFinanceService tripFinance,
       ApplicationEventPublisher publisher,
       ShipmentRepository shipments,
-      BranchScopeService scope) {
+      BranchScopeService scope,
+      UserScopeGuard userScope) {
     this.shipments = shipments;
     this.scope = scope;
+    this.userScope = userScope;
     this.publisher = publisher;
     this.expenses = expenses;
     this.drivers = drivers;
@@ -119,6 +123,8 @@ public class DriverExpenseReviewService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "Bu e-postada kullanıcı yok."));
+    // LIMITED yönetici yalnız kendi kapsamındaki kullanıcıyı bağlayabilir (403).
+    userScope.requireManageable(user);
     if (!user.getEffectivePermissions().contains(Permission.DRIVER_APP)) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "USER_NOT_DRIVER", "Kullanıcının sürücü uygulaması izni yok.");
@@ -137,13 +143,17 @@ public class DriverExpenseReviewService {
     return email;
   }
 
+  /** Sürücü yoksa 404; şubesi kapsam dışıysa 403 {@code BRANCH_OUT_OF_SCOPE} (şubesiz görünür). */
   private Driver driver(UUID id) {
-    return drivers
-        .findById(id)
-        .orElseThrow(
-            () ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "DRIVER_NOT_FOUND", "Sürücü bulunamadı."));
+    Driver driver =
+        drivers
+            .findById(id)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        HttpStatus.NOT_FOUND, "DRIVER_NOT_FOUND", "Sürücü bulunamadı."));
+    scope.requireVisible(driver.getBranchId());
+    return driver;
   }
 
   private DriverExpense pending(UUID id) {

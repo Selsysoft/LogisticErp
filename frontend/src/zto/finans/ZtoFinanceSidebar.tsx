@@ -1,9 +1,20 @@
-import { Fragment, KeyboardEvent, PointerEvent, useEffect, useId, useRef, useState } from "react";
+import {
+  Fragment,
+  KeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 import { hasPermission, useAuthStore } from "../../auth/authStore";
 import {
-  isActive,
+  activeItemIds,
+  isModalAction,
   isNavigable,
   itemPath,
   visibleSections,
@@ -11,6 +22,7 @@ import {
   type ZtoNavItem,
   type ZtoNavSection,
 } from "./navItems";
+import { QuickCariContext } from "./quickCariContext";
 
 /** ZTO'nun fareyle çıkınca kapanma gecikmesi (_SideMenu_Assets.cshtml:247-251). */
 export const SIDEBAR_LEAVE_DELAY_MS = 120;
@@ -43,6 +55,11 @@ export function ZtoFinanceSidebar({
   const panelId = useId();
   const me = useAuthStore((state) => state.me);
   const visible = visibleSections(dev, sections, (permission) => hasPermission(me, permission));
+  // En uzun eşleşen öğeler etkin (Cari Kartlar + Tüm Planlamalar aynı yolda birlikte, 12.1 §5.4).
+  const active = activeItemIds(
+    visible.flatMap((section) => section.items),
+    pathname,
+  );
 
   // Sayfa değişince kapanır (ZTO'da tam sayfa yüklemesi menüyü kapatır).
   useEffect(() => {
@@ -120,7 +137,7 @@ export function ZtoFinanceSidebar({
           <ul
             className="zt-sidebar-nav"
             aria-label={t("nav.root")}
-            // Bağlantı seçilince kapanır (aynı sayfa seçilse de; ZTO'da sayfa yeniden yüklenir).
+            // Bağlantı ya da modal öğesi seçilince kapanır (ZTO'da sayfa yeniden yüklenir).
             onClick={(event) => {
               if ((event.target as Element).closest("a[href]")) setOpen(false);
             }}
@@ -138,7 +155,7 @@ export function ZtoFinanceSidebar({
                 </li>
                 {section.items.map((item) => (
                   <li key={item.id}>
-                    <SidebarLink item={item} active={isActive(item, pathname)} />
+                    <SidebarLink item={item} active={active.has(item.id)} />
                   </li>
                 ))}
               </Fragment>
@@ -152,6 +169,7 @@ export function ZtoFinanceSidebar({
 
 function SidebarLink({ item, active }: { item: ZtoNavItem; active: boolean }) {
   const { t } = useTranslation("ztoFinans");
+  const quickCari = useContext(QuickCariContext);
   const content = (
     <>
       <span className="zt-icon">
@@ -164,6 +182,26 @@ function SidebarLink({ item, active }: { item: ZtoNavItem; active: boolean }) {
     .filter(Boolean)
     .join(" ");
 
+  if (isModalAction(item) && quickCari) {
+    // ZTO: <a href="javascript:void(0)" onclick="openQuickCariModal()">; düğme rolüyle, Enter/Boşluk.
+    const openModal = (event: ReactMouseEvent | KeyboardEvent) => {
+      event.preventDefault();
+      quickCari.open();
+    };
+    return (
+      <a
+        href="#"
+        role="button"
+        className={classes || undefined}
+        onClick={openModal}
+        onKeyDown={(event) => {
+          if (event.key === " ") openModal(event);
+        }}
+      >
+        {content}
+      </a>
+    );
+  }
   if (isNavigable(item)) {
     return (
       <Link

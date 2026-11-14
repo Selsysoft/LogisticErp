@@ -206,6 +206,76 @@ describe("ZtoModal", () => {
     expect(document.querySelector(".modal")).toBeNull();
   });
 
+  it("rootId .modal öğesine yazılır (.modal-dialog'a değil); prop kalkınca silinir", () => {
+    function WithRoot({ rootId }: { rootId?: string }) {
+      return (
+        <ZtoFinansRoot>
+          <ZtoModal
+            show
+            onHide={() => undefined}
+            title="T"
+            id="ic"
+            rootId={rootId}
+            animation={false}
+          >
+            x
+          </ZtoModal>
+        </ZtoFinansRoot>
+      );
+    }
+    const view = render(<WithRoot rootId="cariTasimaModal" />);
+    const modal = document.querySelector(".modal") as HTMLElement;
+    expect(document.querySelector(".modal#cariTasimaModal")).toBe(modal);
+    expect(document.querySelector(".modal-dialog#cariTasimaModal")).toBeNull();
+    // id ve rol/aria nitelikleri değişmez.
+    expect(modal.querySelector(":scope > .modal-dialog")?.id).toBe("ic");
+    expect(modal.getAttribute("role")).toBe("dialog");
+    expect(modal.getAttribute("aria-labelledby")).toBe("icLabel");
+    view.rerender(<WithRoot />);
+    expect(modal.hasAttribute("id")).toBe(false);
+  });
+
+  it("bare: çocuklar doğrudan .modal-content içinde; .modal-body yok; aria-labelledby verilen", () => {
+    render(
+      <ZtoFinansRoot>
+        <ZtoModal
+          show
+          onHide={() => undefined}
+          bare
+          rootId="quickCariActionModal"
+          size="lg"
+          centered
+          contentClassName="qca-content"
+          ariaLabelledBy="quickCariActionTitle"
+          animation={false}
+        >
+          <div className="qca-header">
+            <div className="qca-title" id="quickCariActionTitle">
+              Hızlı Cari İşlemi
+            </div>
+          </div>
+          <div className="qca-body">gövde</div>
+        </ZtoModal>
+      </ZtoFinansRoot>,
+    );
+    const modal = document.querySelector(".modal#quickCariActionModal") as HTMLElement;
+    expect(modal).not.toBeNull();
+    const dialog = modal.querySelector(":scope > .modal-dialog") as HTMLElement;
+    expect(dialog.className).toBe("modal-dialog modal-lg modal-dialog-centered");
+    expect(dialog.getAttribute("role")).toBe("document");
+    const content = dialog.querySelector(":scope > .modal-content.qca-content") as HTMLElement;
+    expect(content.firstElementChild?.className).toBe("qca-header");
+    expect(content.lastElementChild?.className).toBe("qca-body");
+    expect(modal.querySelector(".modal-body, .modal-header, .modal-footer")).toBeNull();
+    expect(modal.getAttribute("aria-labelledby")).toBe("quickCariActionTitle");
+    expect(modal.getAttribute("aria-modal")).toBe("true");
+  });
+
+  it("ariaLabelledBy normal kipte başlık id'sinin yerine geçer", () => {
+    renderModal({ ariaLabelledBy: "baska", id: "m" });
+    expect(document.querySelector(".modal")?.getAttribute("aria-labelledby")).toBe("baska");
+  });
+
   it("titlePrefix: başlık div > önek + h5.modal-title olarak sarılır", () => {
     renderModal({ titlePrefix: <span className="ust">ÜST</span>, title: "Ad" });
     const wrapper = root().querySelector(".modal-header > div") as HTMLElement;

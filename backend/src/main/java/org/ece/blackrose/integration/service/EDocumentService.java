@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.finance.domain.Account;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
+import org.ece.blackrose.identity.security.PersonalDataProtector;
 import org.ece.blackrose.integration.domain.EDocument;
 import org.ece.blackrose.integration.domain.IntegrationTypes.EDocumentKind;
 import org.ece.blackrose.integration.domain.IntegrationTypes.EDocumentSource;
@@ -64,7 +65,9 @@ public class EDocumentService implements InvoiceCancelGuard {
   private final CompanyResolver companies;
   private final TenantClock clock;
   private final BranchScopeService scope;
+  private final PersonalDataProtector protector;
 
+  @SuppressWarnings("java:S107")
   public EDocumentService(
       EDocumentRepository documents,
       CompanyService companyService,
@@ -77,8 +80,10 @@ public class EDocumentService implements InvoiceCancelGuard {
       ObjectMapper json,
       TenantClock clock,
       CompanyResolver companies,
-      BranchScopeService scope) {
+      BranchScopeService scope,
+      PersonalDataProtector protector) {
     this.scope = scope;
+    this.protector = protector;
     this.companies = companies;
     this.documents = documents;
     this.companyService = companyService;
@@ -156,7 +161,7 @@ public class EDocumentService implements InvoiceCancelGuard {
     scope.requireVisible(invoice.getBranchId());
     Party supplier = supplier(invoice.getCompanyId());
     Account customer = accounts.findById(invoice.getAccountId()).orElseThrow();
-    if (request.kind() == EDocumentKind.EFATURA && customer.getTaxNumber() == null) {
+    if (request.kind() == EDocumentKind.EFATURA && taxNumberOf(customer) == null) {
       throw new BusinessException(
           HttpStatus.CONFLICT,
           "CUSTOMER_TAX_REQUIRED",
@@ -170,13 +175,13 @@ public class EDocumentService implements InvoiceCancelGuard {
                 ettn,
                 invoice.getInvoiceDate(),
                 supplier,
-                new Party(customer.getName(), customer.getTaxNumber(), null, null),
+                new Party(customer.getName(), taxNumberOf(customer), null, null),
                 invoice.getNet(),
                 invoice.getVat(),
                 invoice.getWithholding(),
                 invoice.getTotal()));
     return deliver(
-        request, invoice.getNumber(), invoice.getCompanyId(), ettn, customer.getTaxNumber(), ubl);
+        request, invoice.getNumber(), invoice.getCompanyId(), ettn, taxNumberOf(customer), ubl);
   }
 
   private EDocument sendWaybill(SendEDocumentRequest request, UUID ettn) {
@@ -207,13 +212,20 @@ public class EDocumentService implements InvoiceCancelGuard {
                 supplier,
                 new Party(
                     content.consigneeName() != null ? content.consigneeName() : customer.getName(),
-                    customer.getTaxNumber(),
+                    taxNumberOf(customer),
                     null,
                     content.consigneeAddress()),
                 content.plates(),
                 content.drivers(),
                 content.totalWeightKg()));
-    return deliver(request, document.getNumber(), companyId, ettn, customer.getTaxNumber(), ubl);
+    return deliver(request, document.getNumber(), companyId, ettn, taxNumberOf(customer), ubl);
+  }
+
+  /** Alıcı VKN'si düz; bireysel carinin TCKN'si şifreli saklanır, belgeye açık basılır. */
+  private String taxNumberOf(Account customer) {
+    return customer.getTaxNumber() != null
+        ? customer.getTaxNumber()
+        : protector.decrypt(customer.getTaxNumberEnc());
   }
 
   private EDocument deliver(

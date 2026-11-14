@@ -1,0 +1,193 @@
+/*
+ * Kaynak: ZtoFabrika/Views/BankAccounts/Add.cshtml:13-80 (+ Edit.cshtml:52-66 renk farkı .cst-edit
+ * değiştiricisiyle) — birebir kopya; değişiklikler: .loading kuralı (url('~/factory.gif'), varlık yok)
+ * alınmadı. Sayfa kapsamı .zto-finans.zto-page-bank-account-form.
+ */
+.custom-card {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  background-color: white;
+}
+/* .loading (factory.gif arka planı) alınmadı: görsel varlık yok, sayfada .loading kullanılmıyor. */
+
+.tooltip-text {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  white-space: normal;
+  width: 250px;
+  font-size: 12px;
+  line-height: 1.4;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.input-group {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  width: 100%;
+}
+
+.input-group .form-control {
+  position: relative;
+  flex: 1 1 auto;
+  width: 1%;
+  min-width: 0;
+}
+
+.input-group .btn {
+  position: relative;
+  z-index: 2;
+}
+
+/* ===== Modern kart (product/add tarzı) — mavi ===== */
+.cst-wrap {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.cst-card {
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+.cst-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 16px 22px;
+  border-bottom: 1px solid #eef2f7;
+  background: linear-gradient(135deg, #fbfdff 0%, #f1f5f9 100%);
+}
+.cst-head-left {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.cst-head-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: #fff;
+  font-size: 17px;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.28);
+}
+.cst-head-title h5 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 750;
+  color: #1e293b;
+  line-height: 1.25;
+}
+.cst-head-title p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+.cst-head-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cst-list-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 8px 15px;
+  border: 1px solid #c3dfff;
+  border-radius: 9px;
+  background: #fff;
+  color: #0056b3;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-decoration: none !important;
+  transition:
+    transform 0.15s,
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+.cst-list-link:hover {
+  transform: translateY(-1px);
+  border-color: #7cbaff;
+  background: #e8f2ff;
+  color: #004c94;
+}
+.cst-list-link--muted {
+  border-color: #d9e1ec;
+  color: #4b5c72;
+}
+.cst-list-link--muted:hover {
+  border-color: #b7c4d6;
+  background: #f4f8fb;
+  color: #2d3f56;
+}
+.cst-body {
+  padding: 22px 24px 26px;
+}
+.cst-body .form-label {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: #334155;
+  margin-bottom: 6px;
+}
+.cst-body .form-control {
+  border-radius: 9px;
+  border: 1px solid #d8e0ea;
+}
+.cst-body .form-control:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+.cst-body .btn-primary {
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  border: none;
+  font-weight: 700;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25);
+}
+
+/* Edit.cshtml:52-66 renk farkı — .cst-edit değiştiricisiyle (Banka Hesabı Düzenle) */
+.cst-edit .cst-head-icon {
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  box-shadow: 0 6px 14px rgba(14, 165, 233, 0.28);
+}
+.cst-edit .cst-list-link {
+  border: 1px solid #d9e1ec;
+  color: #4b5c72;
+}
+.cst-edit .cst-list-link:hover {
+  border-color: #b7c4d6;
+  background: #f4f8fb;
+  color: #2d3f56;
+}
+.cst-edit .cst-body .form-control:focus {
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.14);
+}
+.cst-edit .cst-body .btn-success {
+  border-radius: 10px;
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  border: none;
+  font-weight: 700;
+  box-shadow: 0 6px 16px rgba(22, 163, 74, 0.25);
+}

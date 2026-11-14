@@ -1,0 +1,249 @@
+/*
+ * Kaynak: ZtoFabrika/Views/Shared/_ProductionLayout.cshtml "HIZLI CARİ İŞLEMİ MODALI" <style> :3804-3837
+ * — birebir kopya; değişiklikler: Razor kaçışı (çift @) kaldırıldı; .modal öğesinin satır içi
+ * z-index:10550 stili (:3839) kural olarak eklendi (dosya sonunda, "Blackrose eki"). Sayfa kapsamı yok
+ * (modal her sayfada açılır; seçiciler #quickCariActionModal ile başlar). wwwroot/css/account-actions.css
+ * (:569) bu modala ait değil (kullanıcı değiştirme / çıkış modalları) ve alınmadı.
+ */
+#quickCariActionModal .qca-content {
+  border: none;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(16, 24, 40, 0.28);
+}
+#quickCariActionModal .qca-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+  color: #fff;
+}
+#quickCariActionModal .qca-title {
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#quickCariActionModal .qca-close {
+  background: rgba(255, 255, 255, 0.16);
+  border: none;
+  color: #fff;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+#quickCariActionModal .qca-close:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+#quickCariActionModal .qca-body {
+  padding: 16px 18px 20px;
+  background: #f8fafc;
+}
+#quickCariActionModal .qca-search-wrap {
+  position: relative;
+}
+#quickCariActionModal .qca-search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 15px;
+}
+#quickCariActionModal .qca-search-input {
+  width: 100%;
+  padding: 14px 44px 14px 42px;
+  font-size: 15px;
+  border: 2px solid #cdd6e3;
+  border-radius: 12px;
+  outline: none;
+  background: #fff;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+#quickCariActionModal .qca-search-input:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12);
+}
+#quickCariActionModal .qca-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #eef2f7;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+}
+#quickCariActionModal .qca-results {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 5;
+  background: #fff;
+  border: 1px solid #e3e8ef;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(16, 24, 40, 0.16);
+  max-height: 300px;
+  overflow-y: auto;
+  display: none;
+}
+#quickCariActionModal .qca-results.show {
+  display: block;
+}
+#quickCariActionModal .qca-result-item {
+  padding: 9px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f4f8;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#quickCariActionModal .qca-result-item:last-child {
+  border-bottom: none;
+}
+#quickCariActionModal .qca-result-item:hover,
+#quickCariActionModal .qca-result-item.active {
+  background: #eff5ff;
+}
+#quickCariActionModal .qca-ri-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #e7f1ff;
+  color: #0d6efd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-size: 13px;
+}
+#quickCariActionModal .qca-ri-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #1f2937;
+}
+#quickCariActionModal .qca-ri-sub {
+  font-size: 11px;
+  color: #8a94a6;
+}
+#quickCariActionModal .qca-results-empty {
+  padding: 14px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 12px;
+}
+#quickCariActionModal .qca-selected {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid #e3e8ef;
+  border-left: 4px solid #0d6efd;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+#quickCariActionModal .qca-sel-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0d6efd, #5aa9ff);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex: 0 0 auto;
+}
+#quickCariActionModal .qca-sel-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: #1f2937;
+}
+#quickCariActionModal .qca-sel-sub {
+  font-size: 11px;
+  color: #8a94a6;
+}
+#quickCariActionModal .qca-empty {
+  text-align: center;
+  color: #94a3b8;
+  padding: 30px 10px;
+}
+#quickCariActionModal .qca-empty > i {
+  font-size: 34px;
+  opacity: 0.45;
+}
+#quickCariActionModal .qca-empty-t {
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 8px;
+}
+#quickCariActionModal .qca-empty-s {
+  font-size: 12px;
+  margin-top: 3px;
+}
+#quickCariActionModal .qca-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+@media (max-width: 600px) {
+  #quickCariActionModal .qca-actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+#quickCariActionModal .qca-card {
+  background: #fff;
+  border: 1px solid #e3e8ef;
+  border-radius: 12px;
+  padding: 16px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s,
+    border-color 0.12s;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+#quickCariActionModal .qca-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(13, 110, 253, 0.16);
+  border-color: #bcd4ff;
+  text-decoration: none;
+}
+#quickCariActionModal .qca-card-ic {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  color: #fff;
+}
+#quickCariActionModal .qca-card-lbl {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  line-height: 1.3;
+}
+
+/* Blackrose eki: ZTO .modal satır içi stili (style="z-index:10550;") */
+#quickCariActionModal {
+  z-index: 10550;
+}

@@ -40,12 +40,17 @@ import org.ece.blackrose.fleet.web.FleetDtos.FuelConsumptionResponse;
 import org.ece.blackrose.fleet.web.FleetDtos.FuelConsumptionRow;
 import org.ece.blackrose.fleet.web.FleetDtos.ReminderResponse;
 import org.ece.blackrose.fleet.web.FleetDtos.VehicleCostRow;
+import org.ece.blackrose.organization.BranchScopeService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Hatırlatmalar, uygun kaynak sorgusu, yakıt tüketimi ve araç maliyeti. */
+/**
+ * Hatırlatmalar, uygun kaynak sorgusu, yakıt tüketimi ve araç maliyeti. LIMITED kullanıcıda
+ * listeler izinli iş yerleriyle sınırlıdır (şubesiz araç/sürücü görünür); sefer atamasındaki {@link
+ * #check} kapsamdan bağımsızdır.
+ */
 @Service
 public class FleetInsightService {
 
@@ -61,6 +66,7 @@ public class FleetInsightService {
   private final VehicleExpenseRepository expenses;
   private final FleetSettingsRepository settings;
   private final List<ResourceBusyProvider> busyProviders;
+  private final BranchScopeService scope;
 
   public FleetInsightService(
       VehicleRepository vehicles,
@@ -69,8 +75,10 @@ public class FleetInsightService {
       ResourceBlockRepository blocks,
       VehicleExpenseRepository expenses,
       FleetSettingsRepository settings,
-      @Lazy List<ResourceBusyProvider> busyProviders) {
+      @Lazy List<ResourceBusyProvider> busyProviders,
+      BranchScopeService scope) {
     this.busyProviders = busyProviders;
+    this.scope = scope;
     this.vehicles = vehicles;
     this.drivers = drivers;
     this.documents = documents;
@@ -79,12 +87,26 @@ public class FleetInsightService {
     this.settings = settings;
   }
 
+  /**
+   * @param allowed izinli iş yerleri; {@code null} tüm iş yerleri (şubesiz araç/sürücü her zaman
+   *     dahil)
+   */
   @Transactional(readOnly = true)
-  public List<ReminderResponse> reminders(LocalDate today, Integer days) {
+  public List<ReminderResponse> reminders(LocalDate today, Integer days, Set<UUID> allowed) {
     int window = days != null ? days : settings.findById(1).orElseThrow().getReminderDays();
     LocalDate until = today.plusDays(window);
-    Map<UUID, Vehicle> vehicleById = byId(vehicles.findAll(), Vehicle::getId);
-    Map<UUID, Driver> driverById = byId(drivers.findAll(), Driver::getId);
+    Map<UUID, Vehicle> vehicleById =
+        byId(
+            vehicles.findAll().stream()
+                .filter(vehicle -> visible(vehicle.getBranchId(), allowed))
+                .toList(),
+            Vehicle::getId);
+    Map<UUID, Driver> driverById =
+        byId(
+            drivers.findAll().stream()
+                .filter(driver -> visible(driver.getBranchId(), allowed))
+                .toList(),
+            Driver::getId);
 
     List<ReminderResponse> reminders = new ArrayList<>();
     for (ComplianceDocument document : documents.latestExpiringBy(until)) {
@@ -166,14 +188,19 @@ public class FleetInsightService {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "PERIOD_INVALID", "Bitiş tarihi başlangıçtan önce olamaz.");
     }
-    return availability(type, from, to, minTon, busyIds(type, from, to));
+    return availability(type, from, to, minTon, busyIds(type, from, to), scope.allowedOrNull());
   }
 
   private List<AvailabilityResponse> availability(
-      SubjectType type, LocalDate from, LocalDate to, BigDecimal minTon, Set<UUID> busy) {
+      SubjectType type,
+      LocalDate from,
+      LocalDate to,
+      BigDecimal minTon,
+      Set<UUID> busy,
+      Set<UUID> allowed) {
     return type == SubjectType.VEHICLE
-        ? vehicleAvailability(from, to, minTon, busy)
-        : driverAvailability(from, to, busy);
+        ? vehicleAvailability(from, to, minTon, busy, allowed)
+        : driverAvailability(from, to, busy, allowed);
   }
 
   private Set<UUID> busyIds(SubjectType type, LocalDate from, LocalDate to) {
@@ -189,7 +216,7 @@ public class FleetInsightService {
    */
   @Transactional(readOnly = true)
   public AvailabilityResponse check(SubjectType type, UUID id, LocalDate from, LocalDate to) {
-    return availability(type, from, to, null, Set.of()).stream()
+    return availability(type, from, to, null, Set.of(), null).stream()
         .filter(row -> row.subjectId().equals(id))
         .findFirst()
         .orElseThrow(
@@ -199,9 +226,10 @@ public class FleetInsightService {
   }
 
   private List<AvailabilityResponse> vehicleAvailability(
-      LocalDate from, LocalDate to, BigDecimal minTon, Set<UUID> busy) {
+      LocalDate from, LocalDate to, BigDecimal minTon, Set<UUID> busy, Set<UUID> allowed) {
     List<Vehicle> all =
         vehicles.findAll().stream()
+            .filter(v -> visible(v.getBranchId(), allowed))
             .filter(
                 v ->
                     minTon == null
@@ -237,10 +265,11 @@ public class FleetInsightService {
   }
 
   private List<AvailabilityResponse> driverAvailability(
-      LocalDate from, LocalDate to, Set<UUID> busy) {
+      LocalDate from, LocalDate to, Set<UUID> busy, Set<UUID> allowed) {
     List<Driver> all =
         drivers.findAll().stream()
             .filter(driver -> driver.getStatus() != DriverStatus.LEFT)
+            .filter(driver -> visible(driver.getBranchId(), allowed))
             .sorted(Comparator.comparing(Driver::getFullName))
             .toList();
     Map<UUID, List<ComplianceDocument>> docs =
@@ -337,6 +366,7 @@ public class FleetInsightService {
    */
   @Transactional(readOnly = true)
   public FuelConsumptionResponse fuelConsumption(UUID vehicleId) {
+    vehicles.findById(vehicleId).ifPresent(vehicle -> scope.requireVisible(vehicle.getBranchId()));
     List<VehicleExpense> fuel =
         expenses.findByVehicleIdAndKindOrderByOdometerKmAscExpenseDateAsc(
             vehicleId, ExpenseKind.FUEL);
@@ -372,11 +402,16 @@ public class FleetInsightService {
     return new FuelConsumptionResponse(vehicleId, average, rows);
   }
 
-  /** Araç başına maliyet. Tutarlar her kayıtta sabitlenen TL karşılığından toplanır. */
+  /**
+   * Araç başına maliyet. Tutarlar her kayıtta sabitlenen TL karşılığından toplanır. LIMITED
+   * kullanıcıda yalnız izinli iş yerlerinde yazılmış giderler sayılır.
+   */
   @Transactional(readOnly = true)
   public List<VehicleCostRow> vehicleCosts(LocalDate from, LocalDate to) {
+    Set<UUID> allowed = scope.allowedOrNull();
     Map<UUID, List<VehicleExpense>> byVehicle =
         expenses.findByExpenseDateBetween(from, to).stream()
+            .filter(expense -> allowed == null || allowed.contains(expense.getBranchId()))
             .collect(Collectors.groupingBy(VehicleExpense::getVehicleId));
     Map<UUID, Vehicle> vehicleById = byId(vehicles.findAll(), Vehicle::getId);
     List<VehicleCostRow> rows = new ArrayList<>();
@@ -460,6 +495,11 @@ public class FleetInsightService {
         : Optional.ofNullable(drivers.get(document.getSubjectId()))
             .map(Driver::getFullName)
             .orElse(null);
+  }
+
+  /** Şubesiz kayıt her kullanıcıya görünür; {@code allowed == null} tüm iş yerleri. */
+  private static boolean visible(UUID branchId, Set<UUID> allowed) {
+    return allowed == null || branchId == null || allowed.contains(branchId);
   }
 
   private static <T> Map<UUID, T> byId(List<T> items, Function<T, UUID> id) {

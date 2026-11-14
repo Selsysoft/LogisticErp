@@ -12,6 +12,7 @@ Bu klasör, ZTO Fabrika (`.NET 8 MVC` ERP) finans modülünün Blackrose'a eklen
 | 2026-11-13 | Kapsam taraması (Faz 0 envanter promptları A/B/C + ana prompt §4.1): eşlenmemiş sayfalar ve yeni gereksinim (2–3 şirket adına işlem, personel/maaş) için MX5–MX9 yazıldı; Faz 12'ye 12.1a, 12.2a, 12.9, 12.10, 12.11 eklendi. |
 | 2026-11-13 | Analiz bu repoya aktarıldı; Faz 12 açıldı. JDK 21, Maven 3.9.16, Docker Desktop kuruldu (Docker için yeniden başlatma bekleniyor). |
 | 2026-11-13 | 12.0 (ön yüz altyapısı) ve **12.1a (iş yeri / şube / çoklu şirket)** tamamlandı. 12.1a uygulama belgesi [`uygulama/12.1a_TASARIM.md`](uygulama/12.1a_TASARIM.md) (MX5'i düzelten tek yetkili belge); kullanıcı kararları K-1…K-5; durum ve kalanlar FAZ_12 "Uygulama Notu 12.1a". Sırada 12.1 (cari). |
+| 2026-11-14 | **12.1 (cari)** tamamlandı: cari profili/limit/alt grup, cari IBAN'ları, Borç/Alacak belgesi, sezon devri, cari taşıma (bağlı tüm çek/senetlerle), şirket kırılımlı bakiye/ekstre; ZTO Cari Kartlar, Cari Hareketler, Günlük Tüm Cari İşlemleri, Ekstre, Banka Hesapları ekranları ve Hızlı Cari İşlemi; 12.1a K-1 LIMITED kapsam sertleştirmesi. Uygulama belgesi [`uygulama/12.1_TASARIM.md`](uygulama/12.1_TASARIM.md) (MX1, MX8 §3'ü düzeltir); otonom kararlar (kullanıcı onayına açık) belge §9; durum FAZ_12 "Uygulama Notu 12.1". Sırada 12.2 (banka/kasa). |
 
 ## Okuma sırası
 

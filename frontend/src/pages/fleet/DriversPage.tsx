@@ -17,6 +17,7 @@ import {
   useCan,
   usePaging,
 } from "../finance/common";
+import { companyOfBranch, fundsOfCompany } from "../finance/branchOptions";
 import { Page } from "../finance/types";
 import { BlocksSection, DocumentsSection } from "./ResourceSections";
 import { Driver, FleetOptions } from "./types";
@@ -185,7 +186,12 @@ function AdvanceDialog({ driverId, onClose }: { driverId: string; onClose: () =>
           label: t("fleet.field.fund"),
           type: "select",
           required: true,
-          options: funds.map((fund) => ({ value: fund.id, label: fund.label })),
+          // Yalnız seçili iş yerinin şirketinin fonları (12.1a §6.13 deseni).
+          optionsFrom: (values) =>
+            fundsOfCompany(
+              funds,
+              companyOfBranch(branches.data, String(values.branchId ?? "")),
+            ).map((fund) => ({ value: fund.id, label: fund.label })),
         },
         { name: "amount", label: t("finance.field.amount"), type: "amount", required: true },
         {

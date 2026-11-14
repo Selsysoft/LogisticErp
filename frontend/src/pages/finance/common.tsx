@@ -145,6 +145,11 @@ export function companyIdOf(values: Record<string, string>): { companyId?: strin
   return companyId ? { companyId } : {};
 }
 
+/**
+ * MUI cari seçicilerinin listesi. 12.1 (OK-7): personel carileri FINANCE_EMPLOYEE_VIEW olmayan
+ * kullanıcıya sunucuda süzülür; seçicide görünmez, eski kayıtlarda adı çözülemeyen satır "—" gösterir
+ * (bilinçli; ayrı süzülmeyen seçenek ucu açılmaz).
+ */
 export function useAccounts() {
   return useQuery({
     queryKey: ["finance", "accounts", "options"],

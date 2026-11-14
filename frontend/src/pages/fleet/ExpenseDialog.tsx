@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { apiGet, apiRequest } from "../../api/client";
 import { orNull } from "../crm/common";
+import { companyOfBranch, fundsOfCompany } from "../finance/branchOptions";
 import { FieldDef, FormDialog, today, useBranchOptions, useCurrencies } from "../finance/common";
 import { FleetOptions } from "./types";
 
@@ -77,10 +78,12 @@ export function ExpenseDialog({
       name: "fundAccountId",
       label: t("finance.field.fund"),
       type: "select",
-      options: options.data.funds.map((fund) => ({
-        value: fund.id,
-        label: `${fund.label} (${fund.currency})`,
-      })),
+      // Yalnız seçili iş yerinin şirketinin fonları (başka şirketin fonu 422 COMPANY_MISMATCH).
+      optionsFrom: (values) =>
+        fundsOfCompany(
+          options.data.funds,
+          companyOfBranch(branches.data, String(values.branchId ?? "")),
+        ).map((fund) => ({ value: fund.id, label: `${fund.label} (${fund.currency})` })),
     },
     {
       name: "odometerKm",

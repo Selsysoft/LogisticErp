@@ -68,7 +68,10 @@ public class PaymentPlanService {
   private final ApplicationEventPublisher publisher;
   private final CompanyResolver companies;
   private final BranchScopeService scope;
+  private final AccountAccess access;
+  private final CompanyIdentityRule identityRule;
 
+  @SuppressWarnings("java:S107")
   public PaymentPlanService(
       PaymentPlanRepository plans,
       PaymentPlanEventRepository events,
@@ -80,8 +83,12 @@ public class PaymentPlanService {
       AuditService audit,
       ApplicationEventPublisher publisher,
       CompanyResolver companies,
-      BranchScopeService scope) {
+      BranchScopeService scope,
+      AccountAccess access,
+      CompanyIdentityRule identityRule) {
     this.scope = scope;
+    this.access = access;
+    this.identityRule = identityRule;
     this.companies = companies;
     this.publisher = publisher;
     this.settingsRepository = settingsRepository;
@@ -103,6 +110,17 @@ public class PaymentPlanService {
   public List<PaymentPlanEvent> history(UUID id) {
     plans.findById(id).ifPresent(plan -> scope.requireVisible(plan.getBranchId()));
     return events.findByPlanIdOrderByCreatedAt(id);
+  }
+
+  /**
+   * Kullanıcı girişli elle plan: pasif cari 422, cari–şirket kimlik kuralı. Fatura ve sefer
+   * kapanışının açtığı planlar {@link #create} ile türetilir ve bu kurala girmez (12.1 §3.1).
+   */
+  @Transactional
+  public PaymentPlan createManual(CreatePlanRequest request) {
+    identityRule.require(
+        access.usableLocked(request.accountId()), companies.companyOf(request.branchId()));
+    return create(request, null);
   }
 
   @Transactional

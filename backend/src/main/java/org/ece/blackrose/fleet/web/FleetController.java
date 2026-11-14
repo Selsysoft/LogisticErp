@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.ece.blackrose.common.web.PageResponse;
+import org.ece.blackrose.finance.domain.Account;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.FundAccountRepository;
@@ -250,6 +251,7 @@ public class FleetController {
   FleetOptionsResponse options() {
     return new FleetOptionsResponse(
         accounts.findAll().stream()
+            .filter(Account::isActive)
             .filter(
                 account ->
                     account.getType() == AccountType.SUPPLIER
@@ -260,7 +262,11 @@ public class FleetController {
             .map(
                 fund ->
                     new FundOption(
-                        fund.getId(), fund.getName(), fund.getKind().name(), fund.getCurrency()))
+                        fund.getId(),
+                        fund.getName(),
+                        fund.getKind(),
+                        fund.getCurrency(),
+                        fund.getCompanyId()))
             .toList());
   }
 
@@ -269,7 +275,7 @@ public class FleetController {
   @GetMapping("/reminders")
   @PreAuthorize(VIEW)
   List<ReminderResponse> reminders(@RequestParam(required = false) Integer days) {
-    return insights.reminders(clock.today(), days);
+    return insights.reminders(clock.today(), days, scope.allowedOrNull());
   }
 
   @GetMapping("/availability")

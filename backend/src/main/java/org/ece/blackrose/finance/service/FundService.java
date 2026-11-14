@@ -113,7 +113,7 @@ public class FundService {
 
   @Transactional
   public void delete(UUID id) {
-    FundAccount fund = visible(id);
+    FundAccount fund = findVisible(id);
     if (transactions.existsByFundAccountId(id)) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "FUND_HAS_TRANSACTIONS", "Hareketi olan hesap silinemez.");
@@ -129,7 +129,7 @@ public class FundService {
 
   @Transactional
   public FundTransaction postManual(UUID fundId, ManualFundTransactionRequest request) {
-    visible(fundId);
+    findVisible(fundId);
     return ledger.post(
         new FundPosting(
             fundId,
@@ -151,7 +151,7 @@ public class FundService {
                 () ->
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "TRANSACTION_NOT_FOUND", "Hareket bulunamadı."));
-    visible(original.getFundAccountId());
+    findVisible(original.getFundAccountId());
     if (!LedgerService.SOURCE_MANUAL.equals(original.getSourceType())
         && !SOURCE_TRANSFER.equals(original.getSourceType())) {
       throw new BusinessException(
@@ -176,9 +176,9 @@ public class FundService {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "TRANSFER_SAME_FUND", "Kaynak ve hedef hesap aynı olamaz.");
     }
-    if (!visible(request.fromFundId())
+    if (!findVisible(request.fromFundId())
         .getCompanyId()
-        .equals(visible(request.toFundId()).getCompanyId())) {
+        .equals(findVisible(request.toFundId()).getCompanyId())) {
       throw new BusinessException(
           HttpStatus.UNPROCESSABLE_ENTITY,
           "COMPANY_MISMATCH",
@@ -213,7 +213,7 @@ public class FundService {
 
   @Transactional(readOnly = true)
   public StatementResponse statement(UUID id, LocalDate from, LocalDate to, Pageable pageable) {
-    FundAccount fund = visible(id);
+    FundAccount fund = findVisible(id);
     BigDecimal opening = transactions.balanceBefore(id, from);
     Page<FundStatementRow> page = transactions.statement(id, from, to, pageable);
     List<StatementLine> lines =
@@ -241,8 +241,11 @@ public class FundService {
         page.getTotalPages());
   }
 
-  /** Kapsam denetimiyle hesap: fonun iş yeri LIMITED kullanıcının kapsamında olmalı (403). */
-  private FundAccount visible(UUID id) {
+  /**
+   * Kapsam denetimiyle hesap: fonun iş yeri LIMITED kullanıcının kapsamında olmalı (403 {@code
+   * BRANCH_OUT_OF_SCOPE}). Ödeme/tahsilat ve çek işlemlerinde fon seçimi de bundan geçer.
+   */
+  public FundAccount findVisible(UUID id) {
     FundAccount fund = find(id);
     scope.requireVisible(fund.getBranchId());
     return fund;

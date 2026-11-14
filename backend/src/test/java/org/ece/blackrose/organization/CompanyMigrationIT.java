@@ -17,6 +17,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Faz 12.1a göçü (tenant V22–V26, admin V8) mevcut veriye sahip, boş ve bozuk veri taşıyan
@@ -45,6 +47,7 @@ class CompanyMigrationIT extends AbstractIntegrationTest {
 
   @Autowired DataSource dataSource;
   @Autowired JdbcTemplate jdbc;
+  @Autowired PlatformTransactionManager transactionManager;
   @Autowired TenantMigrator migrator;
 
   // G-1
@@ -323,42 +326,55 @@ class CompanyMigrationIT extends AbstractIntegrationTest {
     assertThat(series(s, "WAREHOUSE_INVOICE").get("next_value")).isEqualTo(10L);
   }
 
-  // G-8
-  @Test
-  void planSinirlariBosBaslarVeSifirReddedilir() {
+  // G-8: şema denetimi (satır sayımı başka testlerin açtığı planlardan etkilenmesin diye).
+  @ParameterizedTest
+  @CsvSource({"max_companies, plan_max_companies_ck", "max_branches, plan_max_branches_ck"})
+  void planSinirlariBosBaslarVeSifirReddedilir(String column, String constraint) {
+    Map<String, Object> definition =
+        jdbc.queryForMap(
+            "select is_nullable, column_default, data_type from information_schema.columns"
+                + " where table_schema = 'admin' and table_name = 'plan' and column_name = ?",
+            column);
+    assertThat(definition.get("is_nullable")).isEqualTo("YES");
+    assertThat(definition.get("column_default")).as("varsayılansız: sınırsız başlar").isNull();
+    assertThat(definition.get("data_type")).isEqualTo("integer");
     assertThat(
             jdbc.queryForObject(
-                // Yalnız göçten önce var olan (tohum) plan: diğer testler sınırlı plan açabilir.
-                "select count(*) from admin.plan where code = 'DENEME'"
-                    + " and (max_companies is not null or max_branches is not null)",
-                Long.class))
+                "select pg_get_constraintdef(c.oid) from pg_constraint c"
+                    + " join pg_class t on t.oid = c.conrelid"
+                    + " join pg_namespace n on n.oid = t.relnamespace"
+                    + " where n.nspname = 'admin' and t.relname = 'plan' and c.contype = 'c'"
+                    + " and c.conname = ?",
+                String.class,
+                constraint))
+        .contains(column)
+        .contains(">= 1");
+
+    // İhlal denemesi geri alınan işlemde: kalıntı satır kalmaz.
+    String code = "MIG-" + UUID.randomUUID().toString().substring(0, 8);
+    TransactionTemplate tx = new TransactionTemplate(transactionManager);
+    assertThatThrownBy(
+            () ->
+                tx.executeWithoutResult(
+                    status -> {
+                      new SchemaRows(jdbc)
+                          .insert(
+                              "admin",
+                              "plan",
+                              Map.of(
+                                  "code",
+                                  code,
+                                  "monthly_price",
+                                  BigDecimal.TEN,
+                                  "currency",
+                                  "TRY",
+                                  column,
+                                  0));
+                    }))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThat(
+            jdbc.queryForObject("select count(*) from admin.plan where code = ?", Long.class, code))
         .isZero();
-    SchemaRows rows = new SchemaRows(jdbc);
-    UUID plan =
-        rows.insert(
-            "admin",
-            "plan",
-            Map.of(
-                "code",
-                "MIG-" + UUID.randomUUID().toString().substring(0, 8),
-                "monthly_price",
-                BigDecimal.TEN,
-                "currency",
-                "TRY",
-                "max_companies",
-                2,
-                "max_branches",
-                5));
-    try {
-      assertThatThrownBy(
-              () -> jdbc.update("update admin.plan set max_companies = 0 where id = ?", plan))
-          .isInstanceOf(DataIntegrityViolationException.class);
-      assertThatThrownBy(
-              () -> jdbc.update("update admin.plan set max_branches = 0 where id = ?", plan))
-          .isInstanceOf(DataIntegrityViolationException.class);
-    } finally {
-      jdbc.update("delete from admin.plan where id = ?", plan);
-    }
   }
 
   @Test

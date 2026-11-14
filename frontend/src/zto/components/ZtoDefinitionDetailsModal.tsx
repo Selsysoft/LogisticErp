@@ -4,10 +4,12 @@ import { formatDateTime } from "../format";
 import type { ZtoAuditInfo } from "./ZtoAuditCell";
 import {
   actorText,
-  entityAccent,
-  ENTITY_ICONS,
+  detailsVariant,
   fieldIcon,
+  fieldValueOf,
+  historyRows,
   type DefinitionEntityKey,
+  type DefinitionHistoryEntry,
 } from "./definitionLogic";
 import { ZtoModal } from "./ZtoModal";
 
@@ -28,6 +30,13 @@ export type ZtoDefinitionDetailsModalProps = {
   fields: ZtoDefinitionField[];
   /** null: içerik hazırlanıyor (definition-details-loading, başlık "Tanım Bilgileri"). */
   audit: ZtoAuditInfo | null;
+  /**
+   * Verilirse "Düzenleme Geçmişi" bölümü çizilir (Blackrose eki; cari kart `GET …/history`). Boş dizi
+   * "Henüz değişiklik kaydı yok." gösterir.
+   */
+  history?: DefinitionHistoryEntry[];
+  /** Geçmiş olay kodunun görünen adı; verilmezse kod aynen. */
+  historyEventLabel?: (event: string) => string;
 };
 
 /**
@@ -46,11 +55,23 @@ export function ZtoDefinitionDetailsModal({
   status,
   fields,
   audit,
+  history,
+  historyEventLabel,
 }: ZtoDefinitionDetailsModalProps) {
   const { t } = useTranslation("ztoFinans");
   const system = t("definitions.systemImport");
   const loaded = audit !== null;
   const updated = (audit?.updateCount ?? 0) > 0;
+  const variant = detailsVariant(entityKey);
+  // ZTO: cari kartta modal başlığı "Cari Hesap Detayı", hero üst metni sabit (ZTO Fabrika yerine).
+  const modalTitle = variant.customerAccount ? t("definitions.customerAccountTitle") : entityTitle;
+  const rows = history
+    ? historyRows(history, {
+        systemImport: system,
+        formatAt: formatDateTime,
+        eventLabel: historyEventLabel,
+      })
+    : null;
 
   return (
     <ZtoModal
@@ -63,7 +84,7 @@ export function ZtoDefinitionDetailsModal({
       titlePrefix={
         <span className="definition-details-modal__eyebrow">{t("definitions.eyebrow")}</span>
       }
-      title={loaded ? entityTitle : t("definitions.modalTitle")}
+      title={loaded ? modalTitle : t("definitions.modalTitle")}
     >
       {!loaded ? (
         <div className="definition-details-loading">
@@ -71,24 +92,40 @@ export function ZtoDefinitionDetailsModal({
           <span>{t("definitions.loading")}</span>
         </div>
       ) : (
-        <div
-          className={`definition-details definition-details--vivid dd-accent-${entityAccent(entityKey)}`}
-          data-definition-modal-title={entityTitle}
-        >
-          <section className="definition-details__hero definition-details__hero--vivid">
+        <div className={variant.rootClass} data-definition-modal-title={modalTitle}>
+          <section className={variant.heroClass}>
             <span className="definition-details__hero-icon">
-              <i className={`fas ${ENTITY_ICONS[entityKey]}`} />
+              <i className={`fas ${variant.icon}`} />
             </span>
             <div className="definition-details__hero-content">
-              <small>{entityTitle}</small>
+              <small>
+                {variant.customerAccount ? t("definitions.customerAccountCaption") : entityTitle}
+              </small>
               <h4>{recordTitle}</h4>
-              {status && (
+              {variant.customerAccount ? (
                 <div className="definition-details__hero-meta">
+                  <span>
+                    <i className="fas fa-barcode" />
+                    {fieldValueOf(fields, "Cari Kodu") as ReactNode}
+                  </span>
+                  <span>
+                    <i className="fas fa-layer-group" />
+                    {fieldValueOf(fields, "Cari Grubu") as ReactNode}
+                  </span>
                   <span className="definition-details__status">
                     <i className="fas fa-circle" />
-                    {status}
+                    {fieldValueOf(fields, "Durum") as ReactNode}
                   </span>
                 </div>
+              ) : (
+                status && (
+                  <div className="definition-details__hero-meta">
+                    <span className="definition-details__status">
+                      <i className="fas fa-circle" />
+                      {status}
+                    </span>
+                  </div>
+                )
               )}
             </div>
             <span className="definition-details__record-number">
@@ -154,6 +191,27 @@ export function ZtoDefinitionDetailsModal({
               </article>
             </div>
           </section>
+
+          {rows && (
+            <section className="definition-details__section definition-details__section--history">
+              <div className="definition-details__section-title">
+                <i className="fas fa-list-ul" />
+                <span>{t("definitions.historySection")}</span>
+              </div>
+              {rows.length === 0 ? (
+                <p className="text-muted small mb-0">{t("definitions.historyEmpty")}</p>
+              ) : (
+                <ul className="list-unstyled mb-0 definition-history">
+                  {rows.map((row) => (
+                    <li key={row.key} className="definition-history__item">
+                      <time>{row.at}</time> <strong>{row.actor}</strong> — <span>{row.event}</span>
+                      {row.details && <small className="d-block text-muted">{row.details}</small>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
         </div>
       )}
     </ZtoModal>

@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   Link,
   MenuItem,
   Stack,
@@ -15,6 +16,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import { apiGet, apiRequest } from "../../api/client";
+import { cancelDocument } from "./accountApi";
 import { useAuthStore } from "../../auth/authStore";
 import { useActiveCompanyId } from "../../auth/companyStore";
 import { defaultBranchValue } from "./branchOptions";
@@ -40,10 +42,24 @@ import { Account, Page, Statement, StatementLine } from "./types";
 const ACCOUNT_TYPES = ["CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK"];
 const REVERSIBLE = ["MANUAL", "OPENING", "OPENING_INVOICE"];
 
+/**
+ * Yeni cari kartı tür seçenekleri (12.1 §5.13): personel carisi yalnız FINANCE_EMPLOYEE_VIEW ile
+ * (yoksa sunucu 403 ACCOUNT_EMPLOYEE_FORBIDDEN döner).
+ */
+export function accountTypeOptions(canSeeEmployees: boolean): string[] {
+  return ACCOUNT_TYPES.filter((type) => canSeeEmployees || type !== "EMPLOYEE");
+}
+
+/** Borç/Alacak belgesinin satırı ekstreden iptal edilebilir mi (iptal ters kayıt üretir). */
+export function isCancellableDocumentLine(line: StatementLine): boolean {
+  return line.sourceType === "ACCOUNT_DOCUMENT" && line.reversed !== true && line.reversal !== true;
+}
+
 export function AccountsPage() {
   const { t } = useTranslation();
   const client = useQueryClient();
   const canManage = useCan("FINANCE_MANAGE");
+  const canSeeEmployees = useCan("FINANCE_EMPLOYEE_VIEW");
   const paging = usePaging();
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
@@ -114,9 +130,19 @@ export function AccountsPage() {
             {
               header: t("finance.field.name"),
               render: (account) => (
-                <Link component={RouterLink} to={`/finance/accounts/${account.id}`}>
-                  {account.name}
-                </Link>
+                <>
+                  <Link component={RouterLink} to={`/finance/accounts/${account.id}`}>
+                    {account.name}
+                  </Link>
+                  {account.active === false && (
+                    <Chip
+                      size="small"
+                      label={t("finance.definitions.passive")}
+                      sx={{ ml: 1 }}
+                      variant="outlined"
+                    />
+                  )}
+                </>
               ),
             },
             {
@@ -147,7 +173,11 @@ export function AccountsPage() {
         <FormDialog
           title={t("finance.action.newAccount")}
           fields={[
-            { name: "code", label: t("finance.field.code"), required: true },
+            {
+              name: "code",
+              label: t("finance.field.code"),
+              helperText: t("finance.definitions.codeOptional"),
+            },
             { name: "name", label: t("finance.field.name"), required: true },
             {
               name: "type",
@@ -155,7 +185,7 @@ export function AccountsPage() {
               type: "select",
               required: true,
               defaultValue: "CUSTOMER",
-              options: ACCOUNT_TYPES.map((value) => ({
+              options: accountTypeOptions(canSeeEmployees).map((value) => ({
                 value,
                 label: t(`finance.accountType.${value}`),
               })),
@@ -166,6 +196,8 @@ export function AccountsPage() {
           onSubmit={(values) =>
             apiRequest("POST", "/finance/accounts", {
               ...values,
+              // Boş kod sunucuda gruba göre üretilir (12.1 §4.1).
+              code: values.code.trim() || undefined,
               taxNumber: values.taxNumber || null,
             })
           }
@@ -192,6 +224,7 @@ export function AccountDetailPage() {
   const [to, setTo] = useState(today());
   const [adding, setAdding] = useState(false);
   const [reversing, setReversing] = useState<StatementLine | null>(null);
+  const [cancelling, setCancelling] = useState<StatementLine | null>(null);
   const paging = usePaging(50);
 
   const account = useQuery({
@@ -216,6 +249,15 @@ export function AccountDetailPage() {
       {account.data && (
         <>
           <SectionHeader title={`${account.data.code} · ${account.data.name}`}>
+            {account.data.taxNumber && (
+              // TCKN izinsiz kullanıcıya maskeli gelir (taxNumberMasked); olduğu gibi gösterilir.
+              <Typography variant="body2" color="text.secondary">
+                {t("finance.field.taxNumber")}: {account.data.taxNumber}
+              </Typography>
+            )}
+            {account.data.active === false && (
+              <Chip size="small" label={t("finance.definitions.passive")} variant="outlined" />
+            )}
             {canPost && (
               <Button variant="contained" onClick={() => setAdding(true)}>
                 {t("finance.action.manualTx")}
@@ -318,11 +360,16 @@ export function AccountDetailPage() {
                 // Belgeye bağlı hareket belgesinden iptal edilir; elle ve açılış hareketi buradan.
                 render: (line) =>
                   canPost &&
-                  REVERSIBLE.includes(line.sourceType) && (
+                  (REVERSIBLE.includes(line.sourceType) ? (
                     <Button size="small" color="error" onClick={() => setReversing(line)}>
                       {t("finance.action.reverse")}
                     </Button>
-                  ),
+                  ) : isCancellableDocumentLine(line) ? (
+                    // Borç/Alacak belgesi belgeden iptal edilir (12.1 §4.3; ters kayıt belge servisinde).
+                    <Button size="small" color="error" onClick={() => setCancelling(line)}>
+                      {t("finance.action.cancel")}
+                    </Button>
+                  ) : null),
               },
             ]}
             pagination={{
@@ -358,6 +405,33 @@ export function AccountDetailPage() {
           }
           onSaved={() => {
             setReversing(null);
+            void client.invalidateQueries({ queryKey: ["finance"] });
+          }}
+        />
+      )}
+      {cancelling && (
+        <FormDialog
+          title={`${t("finance.action.cancel")} · ${formatAmount(cancelling.amount)} ${currency}`}
+          fields={[
+            {
+              name: "date",
+              label: t("finance.field.date"),
+              type: "date",
+              required: true,
+              defaultValue: today(),
+            },
+            { name: "description", label: t("finance.field.description") },
+          ]}
+          submitLabel={t("finance.action.cancel")}
+          onClose={() => setCancelling(null)}
+          onSubmit={(values) =>
+            cancelDocument(cancelling.sourceId, {
+              date: values.date,
+              reason: values.description || undefined,
+            })
+          }
+          onSaved={() => {
+            setCancelling(null);
             void client.invalidateQueries({ queryKey: ["finance"] });
           }}
         />

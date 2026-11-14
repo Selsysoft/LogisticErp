@@ -5,6 +5,8 @@ import postcss from "postcss";
 import { describe, expect, it } from "vitest";
 import {
   isZtoStyleFile,
+  PAGE_SCOPE_ALIASES,
+  scopeForFile,
   scopeSelector,
   transform,
   ZTO_SCOPE,
@@ -96,6 +98,78 @@ describe("ztoScopePlugin", () => {
     const source = "@page { size: a3 } body { margin: 0 } .btn { color: red }";
     expect(await scope(source, "F:/p/node_modules/@fontsource/open-sans/400.css")).toBe(source);
     expect(await scope(source, null)).toBe(source);
+  });
+});
+
+describe("sayfa kapsamı (12.1 §5.6)", () => {
+  const SCOPED = "F:/proje/frontend/src/zto/styles/pages/scoped/foo.css";
+
+  it("scoped klasöründeki dosya .zto-finans.zto-page-<ad>; diğerleri .zto-finans", () => {
+    expect(scopeForFile(SCOPED)).toBe(".zto-finans.zto-page-foo");
+    expect(
+      scopeForFile("C:\\p\\frontend\\src\\zto\\styles\\pages\\scoped\\customer-accounts.css"),
+    ).toBe(".zto-finans.zto-page-customer-accounts");
+    expect(
+      scopeForFile("F:/p/frontend/src/zto/styles/pages/scoped/all-transactions-page.css"),
+    ).toBe(".zto-finans.zto-page-all-transactions");
+    expect(PAGE_SCOPE_ALIASES["all-transactions-page"]).toBe("all-transactions");
+    expect(scopeForFile("F:/p/frontend/src/zto/styles/pages/all-transactions.css")).toBe(
+      ".zto-finans",
+    );
+    expect(scopeForFile("F:/p/frontend/src/zto/styles/pages/scoped/x/y.css")).toBe(".zto-finans");
+    expect(scopeForFile(undefined)).toBe(".zto-finans");
+  });
+
+  it("scoped dosyadaki kurallar sayfa kökü altında; body sınıfı köke bağlanır", async () => {
+    const css = await scope(
+      ".card x { color: red } body.y x { margin: 0 } html, .card-header { padding: 0 }" +
+        "@media print { .table th { color: #000 } }" +
+        "@keyframes zto-foo-pulse { from { opacity: 0 } to { opacity: 1 } }",
+      SCOPED,
+    );
+    expect(css).toContain(".zto-finans.zto-page-foo .card x { color: red }");
+    expect(css).toContain(".zto-finans.zto-page-foo.y x { margin: 0 }");
+    expect(css).toContain(".zto-finans.zto-page-foo, .zto-finans.zto-page-foo .card-header");
+    expect(css).toContain("@media print { .zto-finans.zto-page-foo .table th");
+    expect(css).toContain("@keyframes zto-foo-pulse { from { opacity: 0 } to { opacity: 1 } }");
+  });
+
+  it("scoped olmayan dosya değişmez (yalnız .zto-finans)", async () => {
+    const css = await scope(".card x { color: red }", "F:/p/frontend/src/zto/styles/pages/a.css");
+    expect(css).toBe(".zto-finans .card x { color: red }");
+  });
+
+  it("birleştirilmiş girişte kapsam kural kaynağından okunur", async () => {
+    const root = postcss.parse(".card { color: red }", { from: SCOPED });
+    const other = postcss.parse(".card { color: blue }", {
+      from: "F:/p/frontend/src/zto/styles/vendor/layout.css",
+    });
+    root.append(other.nodes);
+    const result = await postcss([ztoScopePlugin()]).process(root, { from: ZTO_FILE });
+    expect(result.css).toContain(".zto-finans.zto-page-foo .card { color: red }");
+    expect(result.css).toContain(".zto-finans .card { color: blue }");
+  });
+});
+
+describe("12.1 sayfa CSS iskeletleri", () => {
+  it("_index.css scoped dosyaları mevcut @import'lardan sonra sırayla içe aktarır", () => {
+    const imports = Array.from(
+      read("pages/_index.css").matchAll(/^@import "([^"]+)";/gm),
+      (m) => m[1],
+    );
+    expect(imports.slice(-8)).toEqual([
+      "./scoped/customer-accounts.css",
+      "./scoped/account-form.css",
+      "./scoped/bank-accounts.css",
+      "./scoped/bank-account-form.css",
+      "./scoped/account-transactions.css",
+      "./scoped/account-statement.css",
+      "./scoped/all-transactions-page.css",
+      "./quick-cari.css",
+    ]);
+    for (const file of imports.slice(-8)) {
+      expect(read(`pages/${file.slice(2)}`)).toMatch(/Kaynak: /);
+    }
   });
 });
 

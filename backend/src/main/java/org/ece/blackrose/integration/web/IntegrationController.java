@@ -31,6 +31,7 @@ import org.ece.blackrose.integration.repository.IntegrationRepositories.Geofence
 import org.ece.blackrose.integration.repository.IntegrationRepositories.RouteDistanceRepository;
 import org.ece.blackrose.integration.repository.IntegrationRepositories.VehiclePositionRepository;
 import org.ece.blackrose.integration.service.BankStatementService;
+import org.ece.blackrose.integration.service.CsvRows;
 import org.ece.blackrose.integration.service.EDocumentService;
 import org.ece.blackrose.integration.service.ExpenseImportService;
 import org.ece.blackrose.integration.service.GpsService;
@@ -40,6 +41,7 @@ import org.ece.blackrose.integration.web.IntegrationDtos.DistanceResponse;
 import org.ece.blackrose.integration.web.IntegrationDtos.EDocumentCandidate;
 import org.ece.blackrose.integration.web.IntegrationDtos.EDocumentResponse;
 import org.ece.blackrose.integration.web.IntegrationDtos.EDocumentSettingsResponse;
+import org.ece.blackrose.integration.web.IntegrationDtos.FundOptionResponse;
 import org.ece.blackrose.integration.web.IntegrationDtos.GeofenceEventResponse;
 import org.ece.blackrose.integration.web.IntegrationDtos.GeofenceResponse;
 import org.ece.blackrose.integration.web.IntegrationDtos.ImportBatchResponse;
@@ -51,6 +53,7 @@ import org.ece.blackrose.integration.web.IntegrationDtos.IntegrationOptionsRespo
 import org.ece.blackrose.integration.web.IntegrationDtos.MatchLineRequest;
 import org.ece.blackrose.integration.web.IntegrationDtos.OpenTransactionResponse;
 import org.ece.blackrose.integration.web.IntegrationDtos.Option;
+import org.ece.blackrose.integration.web.IntegrationDtos.PositionRequest;
 import org.ece.blackrose.integration.web.IntegrationDtos.PositionResponse;
 import org.ece.blackrose.integration.web.IntegrationDtos.ReconciliationResponse;
 import org.ece.blackrose.integration.web.IntegrationDtos.SaveDistanceRequest;
@@ -156,7 +159,10 @@ public class IntegrationController {
   @GetMapping("/e-document-settings")
   @PreAuthorize(SHIPMENT_VIEW)
   EDocumentSettingsResponse edocumentSettings() {
-    return settingsResponse(edocuments.settings());
+    Company settings = edocuments.settings();
+    // Eski uç varsayılan şirketin kimliğini döner; o şirketi görmeyen LIMITED kullanıcıya kapalı.
+    scope.requireCompanyVisible(settings.getId());
+    return settingsResponse(settings);
   }
 
   @PutMapping("/e-document-settings")
@@ -258,19 +264,42 @@ public class IntegrationController {
   @PostMapping("/gps/positions")
   @PreAuthorize(FLEET_EDIT)
   IngestResultResponse ingestPositions(@Valid @RequestBody IngestPositionsRequest request) {
-    return gps.ingest(request.positions());
+    Set<UUID> allowed = scope.allowedOrNull();
+    if (allowed == null) {
+      return gps.ingest(request.positions());
+    }
+    // LIMITED kullanıcı kapsam dışı aracın konumunu yazamaz: satır bilinmeyen araç gibi reddedilir.
+    Set<String> hidden =
+        vehicles.findAll().stream()
+            .filter(vehicle -> !visible(vehicle.getBranchId(), allowed))
+            .map(vehicle -> CsvRows.plate(vehicle.getPlate()))
+            .collect(Collectors.toSet());
+    List<PositionRequest> accepted =
+        request.positions().stream()
+            .filter(position -> !hidden.contains(CsvRows.plate(position.plate())))
+            .toList();
+    int rejected = request.positions().size() - accepted.size();
+    IngestResultResponse result =
+        accepted.isEmpty() ? new IngestResultResponse(0, 0, 0, 0) : gps.ingest(accepted);
+    return new IngestResultResponse(
+        result.stored(), result.duplicates(), result.unknownVehicles() + rejected, result.events());
   }
 
   @GetMapping("/gps/positions")
   @PreAuthorize(SHIPMENT_VIEW)
   List<PositionResponse> latestPositions() {
-    return positionResponses(positions.latestPerVehicle());
+    Set<UUID> vehicleIds = visibleVehicleIdsOrNull();
+    return positionResponses(
+        positions.latestPerVehicle().stream()
+            .filter(row -> vehicleIds == null || vehicleIds.contains(row.getVehicleId()))
+            .toList());
   }
 
   /** Seferin araçlarının son konumu; sefer takibinde gösterilir. */
   @GetMapping("/gps/shipments/{id}")
   @PreAuthorize(SHIPMENT_VIEW)
   List<PositionResponse> shipmentPositions(@PathVariable UUID id) {
+    shipments.findById(id).ifPresent(shipment -> scope.requireVisible(shipment.getBranchId()));
     return positionResponses(
         legs.findByShipmentIdOrderBySequenceNo(id).stream()
             .map(ShipmentLeg::getVehicleId)
@@ -301,6 +330,7 @@ public class IntegrationController {
   @PreAuthorize(FLEET_EDIT)
   @Transactional
   public GeofenceResponse createGeofence(@Valid @RequestBody SaveGeofenceRequest request) {
+    scope.requireAll("GEOFENCE");
     Geofence zone =
         geofences.save(
             new Geofence(
@@ -314,13 +344,18 @@ public class IntegrationController {
   @PreAuthorize(FLEET_EDIT)
   @Transactional
   public void deleteGeofence(@PathVariable UUID id) {
+    scope.requireAll("GEOFENCE");
     geofences.findById(id).ifPresent(Geofence::markDeleted);
   }
 
   @GetMapping("/gps/events")
   @PreAuthorize(SHIPMENT_VIEW)
   List<GeofenceEventResponse> geofenceEvents() {
-    var rows = geofenceEvents.findAllByOrderByOccurredAtDesc(PageRequest.of(0, EVENT_LIMIT));
+    Set<UUID> vehicleIds = visibleVehicleIdsOrNull();
+    var rows =
+        geofenceEvents.findAllByOrderByOccurredAtDesc(PageRequest.of(0, EVENT_LIMIT)).stream()
+            .filter(row -> vehicleIds == null || vehicleIds.contains(row.getVehicleId()))
+            .toList();
     Map<UUID, String> zones =
         geofences.findAll().stream().collect(Collectors.toMap(Geofence::getId, Geofence::getName));
     Map<UUID, String> plates = plates();
@@ -419,6 +454,7 @@ public class IntegrationController {
   @PreAuthorize(DISPATCH)
   @Transactional
   public DistanceResponse saveDistance(@Valid @RequestBody SaveDistanceRequest request) {
+    scope.requireAll("ROUTE_DISTANCE");
     String key = TableDistanceProvider.key(request.origin(), request.destination());
     if (routes.findByRouteKey(key).isPresent()) {
       throw new BusinessException(HttpStatus.CONFLICT, "CODE_TAKEN", "Bu güzergâh kayıtlı.");
@@ -438,6 +474,7 @@ public class IntegrationController {
   @PreAuthorize(DISPATCH)
   @Transactional
   public void deleteDistance(@PathVariable UUID id) {
+    scope.requireAll("ROUTE_DISTANCE");
     routes.deleteById(id);
   }
 
@@ -464,7 +501,7 @@ public class IntegrationController {
             .toList(),
         funds.search(scope.filter(null, null)).stream()
             .filter(fund -> "BANK".equals(fund.getKind().name()))
-            .map(fund -> new Option(fund.getId(), fund.getName()))
+            .map(fund -> new FundOptionResponse(fund.getId(), fund.getName(), fund.getCompanyId()))
             .toList());
   }
 
@@ -590,6 +627,22 @@ public class IntegrationController {
         route.getDestination(),
         route.getDistanceKm(),
         route.getMinutes());
+  }
+
+  /** LIMITED kullanıcıda görünür araçlar (şubesiz araç dahil); ALL için {@code null}. */
+  private Set<UUID> visibleVehicleIdsOrNull() {
+    Set<UUID> allowed = scope.allowedOrNull();
+    if (allowed == null) {
+      return null;
+    }
+    return vehicles.findAll().stream()
+        .filter(vehicle -> visible(vehicle.getBranchId(), allowed))
+        .map(Vehicle::getId)
+        .collect(Collectors.toSet());
+  }
+
+  private static boolean visible(UUID branchId, Set<UUID> allowed) {
+    return branchId == null || allowed.contains(branchId);
   }
 
   private Map<UUID, String> plates() {

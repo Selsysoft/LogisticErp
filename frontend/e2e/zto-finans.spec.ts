@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { Owner, unique } from "./fixtures";
 import { expect, login, tenantState, test } from "./support";
 
 /**
@@ -162,17 +163,21 @@ const MODULES = [
   { name: "Kullanıcılar", url: /\/users$/ },
 ];
 
-test("/zto-finans Cari Hareketler iskeletine yönlenir; ZTO kökü ve yan menü", async ({ page }) => {
+test("/zto-finans Günlük Tüm Cari İşlemleri'ne yönlenir; ZTO kökü ve yan menü", async ({
+  page,
+}) => {
   await login(page, tenantState());
   await page.goto("/zto-finans");
   await expect(page).toHaveURL(/\/zto-finans\/cari-hareketler$/);
   const root = page.locator(".zto-finans");
   await expect(root).toHaveCount(1);
-  await expect(root).toHaveClass("zto-finans sb-nav-fixed");
+  // Sayfa kök sınıfı (zto-page-all-transactions) da eklendiği için düzenli ifade.
+  await expect(root).toHaveClass(/zto-finans sb-nav-fixed/);
+  await expect(root).toHaveClass(/zto-page-all-transactions/);
   await expect(
     root.getByRole("heading", { level: 6, name: "Günlük Tüm Cari İşlemleri" }),
   ).toBeVisible();
-  await expect(root.getByText("Bu ekran Faz 12.1 ile gelecek.")).toBeVisible();
+  await expect(root.locator("#allTransactionsFilters")).toBeVisible();
 
   // ZTO yan menüsü: fareyle açılır; yazılmamış ekranlar pasif.
   const sidebar = root.locator("#ztSidebar");
@@ -196,17 +201,22 @@ test("ZTO kökü içinde Bootstrap 4 / SB Admin ve Font Awesome uygulanır", asy
   await login(page, tenantState());
   await page.goto("/zto-finans/cari-hareketler");
   const root = page.locator(".zto-finans");
-  await expect(root.locator(".alert-info")).toBeVisible();
+  await expect(root.locator("#allTransactionsFilters")).toBeVisible();
   const styles = await page.evaluate(async () => {
     await document.fonts.ready;
     const css = (selector: string, pseudo?: string) => {
       const el = document.querySelector(selector);
       return el ? getComputedStyle(el, pseudo) : null;
     };
-    // Bootstrap .btn-primary örneği (kapsam içinde geçici düğme).
+    // Bootstrap .btn-primary ve .alert-info örnekleri (kapsam içinde geçici öğeler; 12.1'de sayfada
+    // bilgi kutusu yok, stil kuralı ölçülür).
     const button = document.createElement("button");
     button.className = "btn btn-primary";
     document.querySelector(".zto-finans-content")?.appendChild(button);
+    const alert = document.createElement("div");
+    alert.className = "alert alert-info";
+    alert.textContent = "a";
+    document.querySelector(".zto-finans-content")?.appendChild(alert);
     const btn = getComputedStyle(button);
     const result = {
       rootFont: css(".zto-finans")?.fontFamily,
@@ -222,6 +232,7 @@ test("ZTO kökü içinde Bootstrap 4 / SB Admin ve Font Awesome uygulanır", asy
       faLoaded: document.fonts.check('900 16px "Font Awesome 5 Free"'),
     };
     button.remove();
+    alert.remove();
     return result;
   });
   expect(styles.rootFont).toContain("Open Sans");
@@ -244,7 +255,7 @@ test("CSS sırası ZTO ile aynı: Bootstrap layout.css'in modal kurallarını ez
   await page.setViewportSize({ width: 1280, height: 800 });
   await login(page, tenantState());
   await page.goto("/zto-finans/cari-hareketler");
-  await expect(page.locator(".zto-finans .alert-info")).toBeVisible();
+  await expect(page.locator(".zto-finans #allTransactionsFilters")).toBeVisible();
   const styles = await page.evaluate(async () => {
     await document.fonts.ready;
     // ZtoModal işaretlemesi (vitrin üretimde yok): kapsam içinde geçici modal içeriği.
@@ -296,8 +307,10 @@ for (const viewport of [
   }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await login(page, tenantState());
-    await page.goto("/zto-finans/cari-hareketler");
-    await expect(page.locator(".zto-finans .alert-info")).toBeVisible();
+    // 12.1'de Günlük Tüm Cari İşlemleri dolu bir ekran; kısa kalan tanım listesi (Şirketler, tek
+    // şirketli test kiracısı) ölçülür.
+    await page.goto("/zto-finans/tanimlar/sirketler");
+    await expect(page.locator(".zto-finans table").first()).toBeVisible();
     await expect
       .poll(() => page.evaluate(() => document.scrollingElement!.scrollHeight - window.innerHeight))
       .toBeLessThanOrEqual(0);
@@ -324,7 +337,7 @@ test("ZTO CSS'i yüklendikten sonra MUI ekranlarının stilleri değişmez", asy
 
   // 2) ZTO Finans'ı SPA içinde aç: CSS parçası belgeye eklenir.
   await openModule(page, "ZTO Finans", /\/zto-finans\/cari-hareketler$/);
-  await expect(page.locator(".zto-finans .alert-info")).toBeVisible();
+  await expect(page.locator(".zto-finans #allTransactionsFilters")).toBeVisible();
   expect(await ztoCssLoaded(page)).toBe(true);
 
   // 3) Aynı ekranlara SPA içinde dönüp yeniden ölç; CSS parçası hâlâ yüklü.
@@ -502,4 +515,79 @@ test("tanım CSS'i ZTO sırasıyla: Detay düğmesinde Bootstrap .btn-sm kazanı
   // eşit özgüllükte kazanır (ZTO _Layout.cshtml:31-33 sırası).
   expect(styles.detailFont).not.toBe("11px");
   expect(styles.countDisplay).not.toBe("none");
+});
+
+/** Yerel bugün (yyyy-MM-dd; uygulamanın today() karşılığı). */
+function localToday() {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+test("Günlük Tüm Cari İşlemleri: 7 Gün, kart süzgeci çipi, boş durum → Hızlı Cari İşlemi → Cari Hareketler", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const owner = await Owner.login(tenantState());
+  const branchName = `E2E AT ${unique("")}`;
+  const branchId = await owner.branch(branchName);
+  const accountName = `E2E Günlük Cari ${unique("")}`;
+  const accountId = await owner.account("SUPPLIER", accountName);
+  await owner.request("POST", `/finance/accounts/${accountId}/transactions`, {
+    branchId,
+    direction: "DEBIT",
+    money: { amount: "1250.50", currency: "TRY" },
+    date: localToday(),
+    description: "E2E günlük hareket",
+  });
+
+  await login(page, tenantState());
+  await page.goto("/zto-finans/cari-hareketler");
+  const root = page.locator(".zto-finans");
+  const filters = root.locator("#allTransactionsFilters");
+  await expect(filters).toBeVisible();
+
+  // Hızlı aralık: 7 Gün etkin olur, tabloda bugünkü hareket görünür (istemci araması ile bulunur).
+  await filters.getByRole("button", { name: "7 Gün" }).click();
+  await expect(filters.getByRole("button", { name: "7 Gün" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  const table = root.locator("#allCustomerTransactionsTable");
+  await root.locator("#allCustomerTransactionsTable_filter input").fill(accountName);
+  await expect(table.locator("a.at-cari-link", { hasText: accountName })).toBeVisible();
+  await expect(table.locator("tbody tr").first()).toContainText("1.250,50 ₺");
+
+  // Kart süzgeci: İş Yerleri kartında yeni iş yeri → çip "İş Yeri: …"; çip kaldırılınca kaybolur.
+  const branchCard = root
+    .locator("#atCardWorkPlace")
+    .getByRole("button", { name: new RegExp(branchName) });
+  await branchCard.click();
+  await expect(branchCard).toHaveAttribute("aria-pressed", "true");
+  const chip = root.locator("#atDynamicFilterIndicator .at-filter-chip");
+  await expect(chip).toContainText(`İş Yeri: ${branchName}`);
+  await chip.getByRole("button", { name: /süzgecini kaldır/ }).click();
+  await expect(chip).toHaveCount(0);
+
+  // Boş durum: hareketsiz geçmiş bir gün → "Hızlı Cari İşlemi" modalı açar.
+  await filters.getByLabel("Başlangıç Tarihi").fill("2001-01-01");
+  await filters.getByLabel("Bitiş Tarihi").fill("2001-01-01");
+  await expect(root.getByText("Bugün henüz bir cari işlemi yapılmadı")).toBeVisible();
+  await root.getByRole("button", { name: "Hızlı Cari İşlemi" }).click();
+  const modal = root.locator("#quickCariActionModal.modal");
+  await expect(modal).toBeVisible();
+  await expect(modal.locator(".modal-content.qca-content > .qca-header")).toBeVisible();
+  await modal.getByPlaceholder("Cari ara — ad veya kod yazın...").fill(accountName);
+  await modal.getByRole("option", { name: new RegExp(accountName) }).click();
+  await expect(modal.locator("#qcaSelected")).toContainText(accountName);
+  await modal.getByRole("link", { name: "Cari Hareketler" }).click();
+  await expect(page).toHaveURL(new RegExp(`/zto-finans/cari-kartlar/${accountId}/hareketler$`));
+  await expect(modal).toHaveCount(0);
+
+  // Menüdeki "Hızlı Cari İşlemi" aynı modalı açar.
+  await root.locator(".zt-sidebar-arrow").hover();
+  await root.locator("#ztSidebar").getByRole("button", { name: "Hızlı Cari İşlemi" }).click();
+  await expect(root.locator("#quickCariActionModal.modal")).toBeVisible();
+  await expect(
+    root.locator("#quickCariActionModal").getByText("Bir cari arayın ve seçin"),
+  ).toBeVisible();
 });

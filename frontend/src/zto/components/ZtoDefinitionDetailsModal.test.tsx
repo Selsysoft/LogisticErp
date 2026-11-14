@@ -135,3 +135,63 @@ describe("ZtoDefinitionDetailsModal (Şablon C)", () => {
     expect(q(".definition-details__hero-icon > i").className).toBe("fas fa-city");
   });
 });
+
+describe("ZtoDefinitionDetailsModal cari kart ve geçmiş (12.1)", () => {
+  const fields = [
+    { label: "Cari Adı", value: "Acar Lojistik" },
+    { label: "Cari Kodu", value: "MUS-0001" },
+    { label: "Cari Grubu", value: "Müşteri" },
+    { label: "Vergi No", value: "1234567890" },
+    { label: "Telefon", value: null },
+    { label: "Durum", value: "Aktif" },
+  ];
+
+  it("customer-account: ZTO cari görünümü, başlık 'Cari Hesap Detayı', hero meta", () => {
+    renderModal({
+      entityKey: "customer-account",
+      entityTitle: "Cari Kart",
+      recordTitle: "Acar Lojistik",
+      recordId: "MUS-0001",
+      fields,
+    });
+    expect(q(".modal-title").textContent).toBe("Cari Hesap Detayı");
+    const root = q(".definition-details");
+    expect(root.className).toBe("definition-details definition-details--customer-account");
+    expect(root.dataset.definitionModalTitle).toBe("Cari Hesap Detayı");
+    const hero = q(".definition-details__hero");
+    expect(hero.className).toBe(
+      "definition-details__hero definition-details__hero--customer-account",
+    );
+    expect(hero.querySelector(".definition-details__hero-icon i")?.className).toBe(
+      "fas fa-file-invoice-dollar",
+    );
+    expect(hero.querySelector("small")?.textContent).toBe("Cari Yönetimi");
+    const meta = Array.from(
+      hero.querySelectorAll(".definition-details__hero-meta > span"),
+      (s) => s.textContent,
+    );
+    expect(meta).toEqual(["MUS-0001", "Müşteri", "Aktif"]);
+    expect(document.querySelector(".definition-details__section--history")).toBeNull();
+  });
+
+  it("geçmiş bölümü: satırlar ve boş durum", () => {
+    renderModal({
+      entityKey: "customer-account",
+      fields,
+      history: [
+        { at: "2026-11-01T08:00:00Z", actor: "ayse@acme.com", event: "Oluşturuldu", details: null },
+      ],
+    });
+    const section = q(".definition-details__section--history");
+    expect(section.querySelector(".definition-details__section-title span")?.textContent).toBe(
+      "Düzenleme Geçmişi",
+    );
+    const items = section.querySelectorAll("li.definition-history__item");
+    expect(items).toHaveLength(1);
+    expect(items[0].textContent).toContain("ayse@acme.com");
+    expect(items[0].textContent).toContain("Oluşturuldu");
+    cleanup();
+    renderModal({ history: [] });
+    expect(screen.getByText("Henüz değişiklik kaydı yok.")).toBeTruthy();
+  });
+});

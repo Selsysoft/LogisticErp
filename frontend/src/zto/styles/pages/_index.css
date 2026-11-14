@@ -9,3 +9,16 @@
 @import "./all-transactions.css";
 /* Views/Uyumsoft/Settings.cshtml gövde içi <style> (Şirketler › e-Belge); tanım CSS'leri zto-finans.css'te. */
 @import "./uyumsoft-settings.css";
+/*
+ * 12.1 sayfa CSS'leri: pages/scoped/<ad>.css kuralları .zto-finans.zto-page-<ad> kapsamına alınır
+ * (prefixTransform.ts scopeForFile); sayfa kök sınıfını useZtoRootClass ile yazar. quick-cari.css
+ * kapsamsızdır (Hızlı Cari modalı her sayfada).
+ */
+@import "./scoped/customer-accounts.css";
+@import "./scoped/account-form.css";
+@import "./scoped/bank-accounts.css";
+@import "./scoped/bank-account-form.css";
+@import "./scoped/account-transactions.css";
+@import "./scoped/account-statement.css";
+@import "./scoped/all-transactions-page.css";
+@import "./quick-cari.css";

@@ -1,0 +1,1464 @@
+/*
+ * Kaynak: ZTO AllTransactions.cshtml:9-10 yükleme sırasıyla — birebir kopya:
+ *  1) wwwroot/css/zt/bankstatement/index.css: AllTransactions işaretlemesinin kullandığı bloklar :6-66
+ *     (.bank-statement-page kart/başlık/gövde), :262-292 (form), :448-480 (tablo, düğme), :1085-1131
+ *     (DataTables, rozet). 12.0'ın erp-header.css'e aldığı :723-971 tekrar edilmez; sayfada karşılığı
+ *     olmayan bloklar (transfer, tahsilat, hesap paneli, erp-stat-card, erp-modal …) alınmadı.
+ *  2) wwwroot/css/zt/accounttransaction/transactions.css: sayfaya dokunan genel kurallar :923-925
+ *     (.form-control yüksekliği), :1293-1299 (.card), :1605-1625 (DataTables), :1640-1644 (.badge),
+ *     :1892-1915 ve :1933-1947 (rozet renkleri). Sayfa dışı (Cari Hareketler) seçicileri alınmadı.
+ *  3) Views/AccountTransaction/AllTransactions.cshtml <style> :13-1131; 12.0'da pages/all-transactions.css'e
+ *     alınan :773-778 (.at-header-card) ve :918-956 (.at-top-panel) tekrar edilmez.
+ * Değişiklikler: Razor kaçışı "@media" → "@media"; prettier biçimi; dosya sonunda "Blackrose eki"
+ * (ZTO satır içi sütun genişlikleri, düğmeye çevrilen kart öğeleri ve çip kapatma düğmesinin
+ * varsayılan biçiminin sıfırlanması, pasif araç düğmesi). Sayfa kapsamı .zto-finans.zto-page-all-transactions
+ * (dosya adı takma adı: prefixTransform.ts PAGE_SCOPE_ALIASES).
+ */
+
+/* ===== 1) bankstatement/index.css ===== */
+/* Genel Sayfa Ayarları */
+.bank-statement-page {
+  font-size: 13px;
+}
+
+.bank-statement-page .card {
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 12px;
+}
+
+.bank-statement-page .card-header {
+  padding: 10px 15px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.bank-statement-page .card-header h6 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  color: #334155;
+}
+
+.bank-statement-page .card-body {
+  padding: 12px 15px;
+}
+
+/* Tab Stilleri - Kompakt */
+.bank-statement-page .nav-tabs {
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 12px;
+}
+
+.bank-statement-page .nav-tabs .nav-link {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px 6px 0 0;
+  color: #64748b;
+  border: none;
+  margin-right: 4px;
+}
+
+.bank-statement-page .nav-tabs .nav-link:hover {
+  color: #3b82f6;
+  background: #f0f9ff;
+}
+
+.bank-statement-page .nav-tabs .nav-link.active {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  border: none;
+}
+
+.bank-statement-page .nav-tabs .badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  margin-left: 4px;
+}
+
+.bank-statement-page .form-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.bank-statement-page .form-control {
+  font-size: 12px;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+}
+
+.bank-statement-page .form-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.bank-statement-page .form-control-sm {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.bank-statement-page .input-group-text {
+  font-size: 11px;
+  padding: 4px 8px;
+  background: #f1f5f9;
+}
+
+/* Hesaplama Paneli - Kompakt */
+
+/* Tablo Stilleri - Kompakt */
+.bank-statement-page .table {
+  font-size: 12px;
+}
+
+.bank-statement-page .table thead th {
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f8fafc;
+}
+
+.bank-statement-page .table tbody td {
+  padding: 6px 10px;
+  vertical-align: middle;
+}
+
+/* Butonlar - Kompakt */
+.bank-statement-page .btn {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.bank-statement-page .btn-sm {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+
+.bank-statement-page .btn-lg {
+  font-size: 13px;
+  padding: 8px 16px;
+}
+
+/* Readonly Input Stili */
+
+/* DataTables Kompakt Stil */
+.dataTables_wrapper .dataTables_length select {
+  font-size: 12px;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.dataTables_wrapper .dataTables_info {
+  font-size: 12px;
+  padding-top: 8px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  font-size: 12px;
+}
+
+/* Badge Stiller */
+.badge {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-success {
+  background: #10b981;
+}
+
+.badge-primary {
+  background: #3b82f6;
+}
+
+.badge-info {
+  background: #06b6d4;
+}
+
+.badge-warning {
+  background: #f59e0b;
+}
+
+.badge-secondary {
+  background: #94a3b8;
+}
+/* Kompakt Card Tasarımı */
+
+/* ===== 2) accounttransaction/transactions.css ===== */
+.form-control {
+  height: 36px !important;
+}
+
+/* Kart stilleri */
+.card {
+  border: 1px solid rgba(0, 0, 0, 0.125);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* DataTables Kompakt Stil */
+.dataTables_wrapper .dataTables_length select {
+  /*padding: 2px 8px;*/
+  font-size: 12px;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.dataTables_wrapper .dataTables_info {
+  font-size: 12px;
+  padding-top: 8px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  font-size: 12px;
+}
+
+/* Badge Stiller */
+.badge {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Borç türü badge stilleri */
+.badge.badge-info {
+  background-color: #17a2b8 !important;
+  color: white;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+}
+
+.badge.badge-primary {
+  background-color: #007bff !important;
+  color: white;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+}
+
+.badge + .badge {
+  margin-left: 0.25rem;
+}
+
+/* Tablo içindeki badge'ler için */
+td .badge {
+  vertical-align: middle;
+  display: inline-block;
+}
+
+/* Belge Türü Badge Stilleri */
+.badge-primary {
+  background-color: #0d6efd !important;
+  color: white !important;
+}
+
+.badge-warning {
+  background-color: #ffc107 !important;
+  color: #000 !important;
+}
+
+.badge-secondary {
+  background-color: #6c757d !important;
+  color: white !important;
+}
+
+/* ===== 3) AllTransactions.cshtml <style> ===== */
+/* Filtre satırı: tüm input/select/button aynı hizada */
+/* transactions.css içinde .form-control height:36px !important var -> bu sayfada da aynı hizada kalması için 36px */
+:root {
+  --at-filter-height: 36px;
+  --at-font: 13px;
+  --at-font-small: 11px;
+}
+
+/* Genel fontları büyüt (sayfa-scope) */
+#allTransactionsFilters,
+#allTransactionsFilters .form-label,
+#allTransactionsFilters .form-control,
+#allTransactionsFilters .btn {
+  font-size: var(--at-font) !important;
+}
+
+/* DataTables üst/alt kontrol alanları */
+.bank-statement-page .dataTables_wrapper,
+.bank-statement-page .dataTables_wrapper .dataTables_length,
+.bank-statement-page .dataTables_wrapper .dataTables_filter,
+.bank-statement-page .dataTables_wrapper .dataTables_info,
+.bank-statement-page .dataTables_wrapper .dataTables_paginate {
+  font-size: var(--at-font-small) !important;
+}
+
+/* Tablo yazıları */
+#allCustomerTransactionsTable,
+#allCustomerTransactionsTable th,
+#allCustomerTransactionsTable td {
+  font-size: var(--at-font-small) !important;
+}
+
+#allTransactionsFilters .form-control-sm {
+  height: var(--at-filter-height) !important;
+  min-height: var(--at-filter-height) !important;
+}
+
+/* Select2 tekli seçim yüksekliği eşitle */
+#allTransactionsFilters .select2-container .select2-selection--single {
+  height: var(--at-filter-height) !important;
+  min-height: var(--at-filter-height) !important;
+}
+
+#allTransactionsFilters
+  .select2-container--default
+  .select2-selection--single
+  .select2-selection__rendered {
+  line-height: calc(var(--at-filter-height) - 2px) !important;
+}
+
+#allTransactionsFilters
+  .select2-container--default
+  .select2-selection--single
+  .select2-selection__arrow {
+  height: var(--at-filter-height) !important;
+}
+
+/*
+      transactions.css içinde global .select2-container { z-index:9999 !important; } var.
+      Bu sayfada kapalı Select2'nin üstte kalmasını engellemek için scope'lu override:
+      - kapalı: normal stacking
+      - açık dropdown: üstte kalsın
+    */
+#allTransactionsFilters .select2-container {
+  z-index: 1 !important;
+}
+#allTransactionsFilters .select2-container--open,
+#allTransactionsFilters .select2-dropdown {
+  z-index: 1060 !important;
+}
+
+#allTransactionsFilters #btnFilter,
+#allTransactionsFilters #btnClear {
+  height: var(--at-filter-height) !important;
+  min-height: var(--at-filter-height) !important;
+  line-height: var(--at-filter-height) !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* X butonu aynı hizada dursun */
+#allTransactionsFilters .filter-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+/* ───────── KOMPAKT PROFESYONEL FİLTRE ───────── */
+.at-filter-card {
+  background: #fff;
+  border: 1px solid #e6eaf0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.04);
+}
+
+.at-quick-range {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 9px;
+  margin-bottom: 9px;
+  border-bottom: 1px dashed #e6eaf0;
+}
+
+.at-quick-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  margin-right: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.at-range-btn {
+  border: 1px solid #d8dee9;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.3;
+}
+
+.at-range-btn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.at-range-btn.active {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: #1d4ed8;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.at-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px 10px;
+  align-items: end;
+}
+
+.at-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.at-field.at-field-wide {
+  grid-column: span 2;
+}
+
+.at-field .form-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 3px;
+}
+
+.at-field-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.at-field-actions .btn {
+  height: var(--at-filter-height);
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .at-field.at-field-wide {
+    grid-column: span 2;
+  }
+}
+
+/* DataTables üst kontrol satırı: Göster ... kayıt + Ara hizalama düzeltmesi */
+#allCustomerTransactionsTable_wrapper .dataTables_length,
+#allCustomerTransactionsTable_wrapper .dataTables_filter {
+  margin-bottom: 8px;
+}
+
+#allCustomerTransactionsTable_wrapper .dataTables_length label,
+#allCustomerTransactionsTable_wrapper .dataTables_filter label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0;
+}
+
+#allCustomerTransactionsTable_wrapper .dataTables_length select {
+  width: auto;
+  min-width: 64px;
+  display: inline-block;
+  margin: 0 2px;
+  padding: 2px 6px;
+}
+
+#allCustomerTransactionsTable_wrapper .dataTables_filter input {
+  margin-left: 6px;
+  display: inline-block;
+  width: auto;
+  min-width: 200px;
+}
+
+/* Boş durum tasarımı */
+.at-empty-state {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.at-empty-state .at-empty-icon {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  color: #2563eb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  margin-bottom: 14px;
+}
+
+.at-empty-state h6 {
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 6px;
+}
+
+.at-empty-state p {
+  color: #64748b;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.at-empty-state .at-empty-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  border: none;
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.at-empty-state .at-empty-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.32);
+  color: #fff;
+}
+
+/* ───────── DYNAMIC FILTER CARDS (bankintroduction stili) ───────── */
+.dynamic-filter-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.stat-main-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.04);
+}
+
+.stat-main-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+}
+
+.stat-items-wrapper {
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  border-radius: 7px;
+  padding: 5px 7px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  background: #f8fafc;
+  border: 1px solid transparent;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.stat-item:hover {
+  background: #eef2ff;
+}
+
+.stat-item.active {
+  background: #dbeafe;
+  border-color: #60a5fa;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.stat-item-empty {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.stat-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-item-value {
+  min-width: 22px;
+  text-align: right;
+  font-weight: 700;
+}
+
+.at-dynamic-indicator {
+  margin-bottom: 10px;
+}
+
+.at-dynamic-indicator .at-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+
+.at-dynamic-indicator .at-filter-chip .at-chip-clear {
+  cursor: pointer;
+  color: #2563eb;
+}
+
+/* Header sağ üst — ısı haritası/hatırlatıcı butonları */
+.at-tool-btn {
+  border: 1px solid #d8dee9;
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.at-tool-btn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+@media (max-width: 1200px) {
+  .dynamic-filter-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
+  .dynamic-filter-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ───────── TABLO — CustomerAccounts/Index tarzı, göz yormayan ───────── */
+.bank-statement-page .card {
+  border: 1px solid #e6eaf0;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.04);
+}
+
+#allCustomerTransactionsTable {
+  margin-bottom: 0;
+}
+
+#allCustomerTransactionsTable thead th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-top: none;
+  border-bottom: 2px solid #e6eaf0;
+  white-space: nowrap;
+  vertical-align: middle;
+  padding: 9px 8px;
+}
+
+#allCustomerTransactionsTable tbody td {
+  font-size: 12px;
+  color: #334155;
+  vertical-align: middle;
+  padding: 7px 8px;
+  border-color: #eef2f7;
+}
+
+#allCustomerTransactionsTable tbody tr:nth-child(even) {
+  background: #fcfdfe;
+}
+
+#allCustomerTransactionsTable tbody tr:hover {
+  background: #eff6ff !important;
+}
+
+/* Badge'ler yumuşak ERP tonları */
+#allCustomerTransactionsTable .badge {
+  font-weight: 600;
+  font-size: 10.5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.2px;
+}
+
+/* İşlem Türü badge'leri — belirgin (vivid) solid renkler */
+#allCustomerTransactionsTable .badge-danger {
+  background: #dc2626 !important;
+  color: #fff !important;
+}
+
+#allCustomerTransactionsTable .badge-success {
+  background: #16a34a !important;
+  color: #fff !important;
+}
+
+#allCustomerTransactionsTable .badge-warning {
+  background: #f59e0b !important;
+  color: #fff !important;
+}
+
+#allCustomerTransactionsTable .badge-primary {
+  background: #2563eb !important;
+  color: #fff !important;
+}
+
+#allCustomerTransactionsTable .badge-info {
+  background: #0891b2 !important;
+  color: #fff !important;
+}
+
+/* Cari Adı — mavi bold link + ikon */
+#allCustomerTransactionsTable .at-cari-link {
+  color: #2563eb;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+#allCustomerTransactionsTable .at-cari-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+#allCustomerTransactionsTable .at-cari-link i {
+  font-size: 11px;
+  color: #93c5fd;
+}
+
+/* Oluşturan — kullanıcı ikonlu */
+#allCustomerTransactionsTable .at-createdby {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #475569;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+#allCustomerTransactionsTable .at-createdby i {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+/* Hesap Grubu — badge */
+#allCustomerTransactionsTable .at-group-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #e0e7ff;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+#allCustomerTransactionsTable .at-group-badge i {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+/* Tutar renkleri biraz yumuşatılır */
+#allCustomerTransactionsTable .text-danger {
+  color: #dc2626 !important;
+}
+
+#allCustomerTransactionsTable .text-success {
+  color: #16a34a !important;
+}
+
+#allCustomerTransactionsTable .text-warning {
+  color: #d97706 !important;
+}
+
+#allCustomerTransactionsTable .text-primary {
+  color: #2563eb !important;
+}
+
+#allCustomerTransactionsTable .btn-outline-primary {
+  border-color: #bfdbfe;
+  color: #2563eb;
+  padding: 2px 8px;
+}
+
+#allCustomerTransactionsTable .btn-outline-primary:hover {
+  background: #2563eb;
+  color: #fff;
+}
+
+/* DataTables alt bilgi/sayfalama yumuşak */
+#allCustomerTransactionsTable_wrapper .dataTables_info {
+  font-size: 12px;
+  color: #64748b;
+  padding-top: 10px;
+}
+
+#allCustomerTransactionsTable_wrapper .dataTables_paginate {
+  padding-top: 8px;
+}
+
+#allCustomerTransactionsTable_wrapper .dataTables_paginate .paginate_button.current {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #fff !important;
+  border-radius: 6px;
+}
+
+#allCustomerTransactionsTable_wrapper .dataTables_paginate .paginate_button {
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+/* ───────── KOMPAKT FİLTRE OVERRIDE ───────── */
+.at-filter-card {
+  padding: 8px 10px !important;
+  margin-bottom: 8px !important;
+}
+
+.at-toprow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed #e6eaf0;
+}
+
+.at-quick-range {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+  gap: 5px;
+}
+
+.at-range-btn {
+  padding: 3px 10px;
+  font-size: 11.5px;
+}
+
+/* Modern kompakt para birimi pill grubu */
+.at-currency {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 3px 5px;
+}
+
+.at-cur-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 0 4px;
+}
+
+.at-cur-btn {
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  line-height: 1.3;
+}
+
+.at-cur-btn:hover {
+  color: #2563eb;
+}
+
+.at-cur-btn.active {
+  background: #fff;
+  color: #1d4ed8;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12);
+}
+
+.at-filter-grid {
+  gap: 6px 10px;
+}
+
+.at-field .form-label {
+  margin-bottom: 2px;
+}
+
+/* Dinamik kartları kompaktla */
+.dynamic-filter-cards {
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.stat-items-wrapper {
+  max-height: 78px;
+  padding: 5px;
+}
+
+.stat-main-header {
+  padding: 6px 9px;
+  font-size: 11px;
+}
+
+.stat-item {
+  padding: 4px 7px;
+  margin-bottom: 3px;
+}
+
+/* ───────── HEADER MERKEZİ HIZLI CARİ ARAMA ───────── */
+.atcs-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  max-width: 520px; /* ✅ Yeni Cari Kart butonu artık kutunun içinde */
+  min-width: 0;
+}
+
+/* ✅ İç sarmal: ikon + input + temizle (buton bunun sağına bitişik gelir) */
+.atcs-inpin {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ✅ Yeni Cari Kart butonu — arama kutusuna bitişik, aynı yükseklik (38px), yalnız ikonlar */
+.atcs-new-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex-shrink: 0;
+  height: 38px;
+  margin-left: 6px;
+  padding: 0 14px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff !important;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-decoration: none !important;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.26);
+  transition: transform 0.12s;
+}
+
+.atcs-new-btn:hover {
+  transform: translateY(-1px);
+  color: #fff;
+}
+
+.atcs-inputbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.atcs-ic {
+  position: absolute;
+  left: 13px;
+  color: #94a3b8;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.atcs-input {
+  width: 100%;
+  height: 38px;
+  border: 1px solid #d8dee9;
+  border-radius: 999px;
+  padding: 0 38px 0 36px;
+  font-size: 13px;
+  color: #1e293b;
+  background: #f8fafc;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.atcs-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.atcs-clear {
+  position: absolute;
+  right: 10px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px;
+}
+
+.atcs-clear:hover {
+  color: #ef4444;
+}
+
+.atcs-results {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 99999;
+  background: #fff;
+  border: 1px solid #e3e8ef;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(16, 24, 40, 0.16);
+  max-height: 380px;
+  overflow-y: auto;
+  display: none;
+}
+
+.atcs-results.show {
+  display: block;
+}
+
+.atcs-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f4f8;
+}
+
+.atcs-item:last-child {
+  border-bottom: none;
+}
+
+.atcs-item:hover {
+  background: #f8fafc;
+}
+
+.atcs-ri-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: #eff5ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.atcs-ri-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.atcs-ri-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atcs-ri-sub {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.atcs-ri-group {
+  display: inline-block;
+  background: #eef2ff;
+  color: #4338ca;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.atcs-ri-actions {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.atcs-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #e3e8ef;
+  background: #fff;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+
+.atcs-act:hover {
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.atcs-act.atcs-act-primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: #1d4ed8;
+  color: #fff;
+}
+
+.atcs-act.atcs-act-ekstre {
+  background: #ecfeff;
+  border-color: #a5f3fc;
+  color: #0e7490;
+}
+
+/* ✅ Cari kartı düzenle (ikon buton — CustomerAccounts/Edit, yeni sekme) */
+.atcs-act.atcs-act-edit {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+  padding: 5px 8px;
+}
+
+.atcs-empty {
+  padding: 16px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+@media (max-width: 992px) {
+  .atcs-wrap {
+    max-width: 320px;
+  }
+}
+
+/* ───────── DÜN butonu — turuncu/sarı ton ───────── */
+.at-range-btn[data-range="yesterday"] {
+  border-color: #fcd34d;
+  color: #b45309;
+  background: #fffbeb;
+}
+
+.at-range-btn[data-range="yesterday"]:hover {
+  border-color: #f59e0b;
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.at-range-btn[data-range="yesterday"].active {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border-color: #d97706;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+}
+
+/* ───────── DAHA KOMPAKT FİLTRE ───────── */
+.at-filter-card {
+  padding: 7px 9px !important;
+  margin-bottom: 7px !important;
+}
+.at-toprow {
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+}
+.at-range-btn {
+  padding: 2px 9px;
+  font-size: 11px;
+}
+.at-filter-grid {
+  gap: 5px 8px;
+}
+
+.at-field .form-control-sm {
+  height: 30px !important;
+  min-height: 30px !important;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.at-field .form-label {
+  font-size: 10px;
+  margin-bottom: 1px;
+}
+
+.dynamic-filter-cards {
+  gap: 7px;
+  margin-bottom: 7px;
+}
+.stat-main-header {
+  padding: 4px 8px;
+  font-size: 10.5px;
+}
+.stat-items-wrapper {
+  max-height: 62px;
+  padding: 4px;
+}
+.stat-item {
+  padding: 3px 6px;
+  margin-bottom: 2px;
+  font-size: 10.5px;
+}
+.at-dynamic-indicator {
+  margin-bottom: 6px;
+}
+
+/* ───────── TEK SATIR FİLTRE DÜZENİ (nowrap) ───────── */
+.at-toprow {
+  align-items: flex-end;
+  gap: 6px 8px;
+  flex-wrap: nowrap;
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  overflow: visible;
+}
+
+.at-filter-card {
+  overflow: visible;
+}
+
+.at-quick-range {
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+}
+
+.at-inline-controls {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.at-currency {
+  flex-shrink: 0;
+  align-self: flex-end;
+}
+
+/* İkonlu, radius'lu pill input/select */
+.at-ic-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  background: #f8fafc;
+  border: 1px solid #d8dee9;
+  border-radius: 999px;
+  flex-shrink: 0;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.at-ic-pill:focus-within {
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.at-ic-lead {
+  color: #2563eb;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.at-bare-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 11.5px;
+  color: #1e293b;
+  height: 100%;
+  padding: 0;
+  width: 96px;
+}
+
+.at-bare-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.at-range-arrow {
+  color: #94a3b8;
+  font-size: 11px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.at-ic-cari {
+  flex: 0 1 190px;
+  min-width: 130px;
+  max-width: 220px;
+  position: relative;
+}
+
+.at-ic-cari .at-bare-input {
+  width: 100%;
+  cursor: text;
+}
+
+.at-cari-clear-btn {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
+.at-cari-clear-btn:hover {
+  color: #ef4444;
+}
+
+/* Cari arama dropdown (atCariSearch tarzı) */
+.at-cari-filter-results {
+  top: calc(100% + 8px);
+  left: 0;
+  right: auto;
+  min-width: 320px;
+  max-width: 420px;
+  z-index: 99999;
+}
+
+#allTransactionsFilters #btnClear.at-ic-clear {
+  height: 30px !important;
+  min-height: 30px !important;
+  line-height: 28px !important;
+  align-self: flex-end;
+  flex-shrink: 0;
+  padding: 0 12px !important;
+  border-radius: 999px;
+  font-size: 12px !important;
+}
+
+@media (max-width: 1300px) {
+  .at-quick-range .at-quick-label {
+    display: none;
+  }
+  .at-currency .at-cur-label {
+    display: none;
+  }
+}
+
+/* ===== Blackrose eki ===== */
+
+/* ZTO th satır içi genişlikleri (AllTransactions.cshtml:1325-1335); ZtoDataTable th'ye stil yazmaz. */
+#allCustomerTransactionsTable thead th:nth-child(1) {
+  width: 80px;
+}
+#allCustomerTransactionsTable thead th:nth-child(2) {
+  width: 110px;
+}
+#allCustomerTransactionsTable thead th:nth-child(3) {
+  width: 90px;
+}
+#allCustomerTransactionsTable thead th:nth-child(5) {
+  width: 140px;
+}
+#allCustomerTransactionsTable thead th:nth-child(6),
+#allCustomerTransactionsTable thead th:nth-child(7),
+#allCustomerTransactionsTable thead th:nth-child(11) {
+  width: 90px;
+}
+#allCustomerTransactionsTable thead th:nth-child(8) {
+  width: 120px;
+}
+#allCustomerTransactionsTable thead th:nth-child(10) {
+  width: 120px;
+}
+
+/*
+ * Kart öğeleri ve çip kapatma ZTO'da tıklanan div/span; burada klavyeyle kullanılabilsin diye
+ * <button> (MWG). Görünüm aynı kalsın diye tarayıcının düğme biçimi sıfırlanır.
+ */
+button.stat-item {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+button.at-chip-clear {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  line-height: 1;
+}
+
+/* "Faz 12.4 ile gelecek" pasif araç düğmeleri (Ödeme Planlama Haritası, hatırlatıcı). */
+.at-tool-btn[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

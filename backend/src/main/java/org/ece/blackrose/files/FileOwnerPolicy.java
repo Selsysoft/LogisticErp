@@ -20,4 +20,11 @@ public interface FileOwnerPolicy {
   default boolean managedByOwner() {
     return false;
   }
+
+  /**
+   * Kayıt düzeyinde erişim (iş yeri/şirket kapsamı, personel carisi). İzin denetiminden sonra
+   * yükleme, listeleme, indirme ve silmede çağrılır; erişim yoksa uygun 403/404 fırlatır. Kayıt
+   * yoksa bir şey yapmaz (varlık denetimi {@link #exists} ile ayrıdır).
+   */
+  default void requireAccess(UUID ownerId) {}
 }

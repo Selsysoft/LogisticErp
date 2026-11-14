@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.ece.blackrose.common.money.Money;
+import org.ece.blackrose.finance.domain.FinanceTypes.FundKind;
 import org.ece.blackrose.fleet.domain.FleetTypes.Availability;
 import org.ece.blackrose.fleet.domain.FleetTypes.DocumentType;
 import org.ece.blackrose.fleet.domain.FleetTypes.DriverStatus;
@@ -212,7 +213,8 @@ public final class FleetDtos {
 
   public record Option(UUID id, String label) {}
 
-  public record FundOption(UUID id, String label, String kind, String currency) {}
+  /** Fonun şirketi, ön yüzün seçilen iş yerinin şirketine göre süzmesi içindir. */
+  public record FundOption(UUID id, String label, FundKind kind, String currency, UUID companyId) {}
 
   /** Filo kullanıcısının finans izni olmadan seçim yapabilmesi için yalnız ad ve kimlik döner. */
   public record FleetOptionsResponse(List<Option> suppliers, List<FundOption> funds) {}

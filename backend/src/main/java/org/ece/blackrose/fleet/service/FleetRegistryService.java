@@ -186,7 +186,13 @@ public class FleetRegistryService {
 
   @Transactional
   public void deleteDocument(UUID id) {
-    documents.findById(id).ifPresent(ComplianceDocument::markDeleted);
+    documents
+        .findById(id)
+        .ifPresent(
+            document -> {
+              requireSubjectVisible(document.getSubjectType(), document.getSubjectId());
+              document.markDeleted();
+            });
   }
 
   @Transactional(readOnly = true)
@@ -209,7 +215,13 @@ public class FleetRegistryService {
 
   @Transactional
   public void deleteBlock(UUID id) {
-    blocks.findById(id).ifPresent(ResourceBlock::markDeleted);
+    blocks
+        .findById(id)
+        .ifPresent(
+            block -> {
+              requireSubjectVisible(block.getSubjectType(), block.getSubjectId());
+              block.markDeleted();
+            });
   }
 
   @Transactional(readOnly = true)
@@ -220,6 +232,7 @@ public class FleetRegistryService {
   @Transactional
   public FleetSettings updateSettings(
       boolean blockOnExpired, int reminderDays, Boolean reminderEmail) {
+    scope.requireAll("FLEET_SETTINGS");
     FleetSettings current = settings();
     current.update(
         blockOnExpired,
@@ -228,12 +241,22 @@ public class FleetRegistryService {
     return current;
   }
 
+  /** Konu yoksa 404; şubesi kapsam dışıysa 403 {@code BRANCH_OUT_OF_SCOPE} (şubesiz görünür). */
   private void ensureSubject(SubjectType type, UUID id) {
-    if (type == SubjectType.VEHICLE) {
-      findVehicle(id);
-    } else {
-      findDriver(id);
-    }
+    scope.requireVisible(
+        type == SubjectType.VEHICLE ? findVehicle(id).getBranchId() : findDriver(id).getBranchId());
+  }
+
+  /**
+   * Belge, takvim kapatması ve dosyalar için konunun iş yeri kapsamı; konu silinmişse/yoksa bir şey
+   * yapmaz.
+   */
+  @Transactional(readOnly = true)
+  public void requireSubjectVisible(SubjectType type, UUID id) {
+    (type == SubjectType.VEHICLE
+            ? vehicles.findById(id).map(Vehicle::getBranchId)
+            : drivers.findById(id).map(Driver::getBranchId))
+        .ifPresent(scope::requireVisible);
   }
 
   private Vehicle findVehicle(UUID id) {
