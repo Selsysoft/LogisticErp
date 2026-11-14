@@ -10,6 +10,7 @@ import {
   branchLabelOf,
   buildRow,
   buildRowsChunked,
+  invoiceGapAmounts,
   comparePlanDate,
   defaultOrder,
   financeEntries,
@@ -495,5 +496,47 @@ describe("istatistikler", () => {
       { currency: "USD", amount: 2 },
     ]);
     expect(plannedTry(stats.planned)).toBe(150);
+  });
+});
+
+describe("12.2 eksik fatura (K-12.2-4)", () => {
+  it("buildRow invoiceGap bağlamdan; yoksa boş", () => {
+    const gaps = new Map([["gap", [{ currency: "TRY", amount: 50 }]]]);
+    expect(buildRow(account({ id: "gap" }), { ...CTX, invoiceGaps: gaps }).invoiceGap).toEqual([
+      { currency: "TRY", amount: 50 },
+    ]);
+    expect(buildRow(account({ id: "none" }), { ...CTX, invoiceGaps: gaps }).invoiceGap).toEqual([]);
+    expect(buildRow(account({ id: "gap" }), CTX).invoiceGap).toEqual([]);
+  });
+
+  it("Eksik Faturalı süzgeci yalnız eksiği olanları bırakır; diğer süzgeçlerle birleşir", () => {
+    const gaps = new Map([
+      ["gap", [{ currency: "TRY", amount: 50 }]],
+      ["cust", [{ currency: "USD", amount: 5 }]],
+    ]);
+    const ctx = { ...CTX, invoiceGaps: gaps };
+    const rows = [
+      buildRow(account({ id: "gap" }), ctx),
+      buildRow(account({ id: "plain" }), ctx),
+      buildRow(account({ id: "cust", type: "CUSTOMER" }), ctx),
+    ];
+    const ids = (filters: Partial<typeof NO_QUICK_FILTERS>) =>
+      applyQuickFilters(rows, { ...NO_QUICK_FILTERS, ...filters }, TODAY).map((r) => r.id);
+    expect(ids({ missingInvoice: true })).toEqual(["gap", "cust"]);
+    expect(ids({ missingInvoice: true, hideCustomers: true })).toEqual(["gap"]);
+    expect(NO_QUICK_FILTERS.missingInvoice).toBe(false);
+  });
+
+  it("invoiceGapAmounts ipucu metni", () => {
+    expect(
+      invoiceGapAmounts(
+        [
+          { currency: "TRY", amount: 50 },
+          { currency: "USD", amount: 2 },
+        ],
+        (a, c) => `${a} ${c}`,
+      ),
+    ).toBe("50 TRY, 2 USD");
+    expect(invoiceGapAmounts([], (a, c) => `${a} ${c}`)).toBe("");
   });
 });

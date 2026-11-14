@@ -2,6 +2,7 @@ import type { SortingState } from "@tanstack/react-table";
 import type {
   Account,
   AccountDocumentType,
+  AccountInvoiceGap,
   AccountRollover,
   AccountTransactionRow,
   AccountType,
@@ -309,6 +310,89 @@ export function invoiceGap(totalDebt: number, invoiceTotal: number) {
   if (diff > 1) return { status: "warning" as const, diff, badge: "badge-warning" };
   if (diff < -1) return { status: "info" as const, diff, badge: "badge-info" };
   return { status: "success" as const, diff, badge: "badge-success" };
+}
+
+export type InvoiceGapView = ReturnType<typeof invoiceGap> & {
+  ledgerTotal: number;
+  invoiceTotal: number;
+};
+
+/**
+ * Borç kartı popover'ının sunucu tabanlı karşılığı (12.2 §5.14): `/balances` `invoiceGaps` geldiyse
+ * fark sunucunun `missing`'i (defter tabanı, açılış hariç, açılış faturası dahil; §3.7), tutarlar
+ * `ledgerTotal`/`invoiceTotal`; satır yoksa eşleşiyor. Alan hiç yoksa (eski sunucu) 12.1 hesabı
+ * (`Toplam Borç − Resmi Fatura`). Tolerans aynı (1 birim).
+ */
+export function invoiceGapView(
+  gaps: readonly AccountInvoiceGap[] | null | undefined,
+  side: DocumentSide,
+  currency: string,
+  companyId: string | null,
+  fallback: { ledgerTotal: number; invoiceTotal: number },
+): InvoiceGapView {
+  if (!gaps) {
+    return { ...invoiceGap(fallback.ledgerTotal, fallback.invoiceTotal), ...fallback };
+  }
+  const row = pickInvoiceGap(gaps, side, currency, companyId);
+  const ledgerTotal = row?.ledgerTotal ?? 0;
+  const invoiceTotal = row?.invoiceTotal ?? 0;
+  const base = invoiceGap(round2(row?.missing ?? 0), 0);
+  return { ...base, ledgerTotal, invoiceTotal };
+}
+
+/**
+ * Seçili görünümün satırı: şirket seçiliyse o şirketin satırı (yoksa konsolide), konsolidede
+ * `companyId = null` satırı (yoksa şirket satırlarının toplamı).
+ */
+export function pickInvoiceGap(
+  gaps: readonly AccountInvoiceGap[],
+  side: DocumentSide,
+  currency: string,
+  companyId: string | null,
+): AccountInvoiceGap | null {
+  const rows = gaps.filter((g) => g.side === side && g.currency === currency);
+  const exact = rows.find((g) => g.companyId === companyId);
+  if (exact) return exact;
+  const consolidated = rows.find((g) => g.companyId === null);
+  if (companyId && consolidated) return consolidated;
+  if (companyId || rows.length === 0) return null;
+  return rows.reduce<AccountInvoiceGap>(
+    (acc, g) => ({
+      ...acc,
+      ledgerTotal: round2(acc.ledgerTotal + g.ledgerTotal),
+      invoiceTotal: round2(acc.invoiceTotal + g.invoiceTotal),
+      missing: round2(acc.missing + g.missing),
+    }),
+    { ...rows[0], companyId: null, ledgerTotal: 0, invoiceTotal: 0, missing: 0 },
+  );
+}
+
+export type GapLine = { key: string; companyId: string | null; missing: number };
+
+/**
+ * Kartın altındaki "Kalan … için fatura bilgisi eksik." satırları (yalnız `missing > 1`). Şirket
+ * seçiliyse ya da tek şirkette tek satır; konsolidede ≥ 2 şirkette şirket başına satırlar.
+ */
+export function invoiceGapLines(
+  gaps: readonly AccountInvoiceGap[] | null | undefined,
+  side: DocumentSide,
+  currency: string,
+  companyId: string | null,
+  perCompany: boolean,
+): GapLine[] {
+  if (!gaps) return [];
+  if (perCompany && !companyId) {
+    const lines = gaps
+      .filter(
+        (g) => g.side === side && g.currency === currency && g.companyId !== null && g.missing > 1,
+      )
+      .map((g) => ({ key: `${side}-${g.companyId}`, companyId: g.companyId, missing: g.missing }));
+    if (lines.length > 0) return lines;
+  }
+  const row = pickInvoiceGap(gaps, side, currency, companyId);
+  return row && row.missing > 1
+    ? [{ key: `${side}-${row.companyId ?? "all"}`, companyId: null, missing: row.missing }]
+    : [];
 }
 
 /** Başlık bakiye çipi (TR:268-276): müşteride > 0 chip-warning, diğerlerinde chip-danger; < 0 chip-success. */

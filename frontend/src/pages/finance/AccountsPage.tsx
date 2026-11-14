@@ -9,14 +9,16 @@ import {
   MenuItem,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
+import ErrorOutline from "@mui/icons-material/ErrorOutline";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import { apiGet, apiRequest } from "../../api/client";
-import { cancelDocument } from "./accountApi";
+import { cancelDocument, useAccountBalances } from "./accountApi";
 import { useAuthStore } from "../../auth/authStore";
 import { useActiveCompanyId } from "../../auth/companyStore";
 import { defaultBranchValue } from "./branchOptions";
@@ -31,13 +33,17 @@ import {
   today,
   useBranchOptions,
   useCan,
+  useCompanyName,
   useCurrencies,
+  useMultiCompany,
   usePaging,
 } from "./common";
+import { useInvoiceGaps } from "./fundApi";
+import { displayGaps, missingByAccount } from "./settlementWarnings";
 import { OpeningBalanceDialog } from "./OpeningBalanceDialog";
 import { withCompany } from "./companyQuery";
 import { OpeningInvoiceDialog } from "./OpeningInvoiceDialog";
-import { Account, Page, Statement, StatementLine } from "./types";
+import { Account, CurrencyAmount, Page, Statement, StatementLine } from "./types";
 
 const ACCOUNT_TYPES = ["CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK"];
 const REVERSIBLE = ["MANUAL", "OPENING", "OPENING_INVOICE"];
@@ -53,6 +59,11 @@ export function accountTypeOptions(canSeeEmployees: boolean): string[] {
 /** Borç/Alacak belgesinin satırı ekstreden iptal edilebilir mi (iptal ters kayıt üretir). */
 export function isCancellableDocumentLine(line: StatementLine): boolean {
   return line.sourceType === "ACCOUNT_DOCUMENT" && line.reversed !== true && line.reversal !== true;
+}
+
+/** "50,00 TRY, 10,00 USD" (eksik fatura ipucu). */
+export function missingText(amounts: readonly CurrencyAmount[]): string {
+  return amounts.map((item) => `${formatAmount(item.amount)} ${item.currency}`).join(", ");
 }
 
 export function AccountsPage() {
@@ -79,6 +90,9 @@ export function AccountsPage() {
       ),
     placeholderData: keepPreviousData,
   });
+  // Eksik faturalı cariler (K-12.2-4 "cari listesi"): aktif şirket için tek istek.
+  const gaps = useInvoiceGaps({});
+  const missing = missingByAccount(gaps.data ?? []);
 
   return (
     <>
@@ -152,12 +166,34 @@ export function AccountsPage() {
             {
               header: t("finance.field.balance"),
               align: "right",
-              render: (account) =>
-                account.balances.map((balance) => (
-                  <div key={balance.currency}>
-                    {formatAmount(balance.balance)} {balance.currency}
-                  </div>
-                )),
+              render: (account) => {
+                const amounts = missing.get(account.id);
+                const label = amounts
+                  ? t("finance.warning.missingChip", { amount: missingText(amounts) })
+                  : "";
+                return (
+                  <>
+                    {account.balances.map((balance) => (
+                      <div key={balance.currency}>
+                        {formatAmount(balance.balance)} {balance.currency}
+                      </div>
+                    ))}
+                    {amounts && (
+                      <Tooltip title={label}>
+                        <Box
+                          component="span"
+                          tabIndex={0}
+                          role="img"
+                          aria-label={label}
+                          sx={{ display: "inline-flex", color: "error.main", ml: 0.5 }}
+                        >
+                          <ErrorOutline fontSize="small" />
+                        </Box>
+                      </Tooltip>
+                    )}
+                  </>
+                );
+              },
             },
           ]}
           pagination={{
@@ -217,6 +253,8 @@ export function AccountDetailPage() {
   const client = useQueryClient();
   const canPost = useCan("FINANCE_PAYMENT_CREATE");
   const { optionsFor, companyId } = useBranchOptions();
+  const multiCompany = useMultiCompany();
+  const companyName = useCompanyName();
   const defaultBranchId = useAuthStore((state) => state.me?.defaultBranchId);
   const currencies = useCurrencies();
   const [currency, setCurrency] = useState("TRY");
@@ -231,6 +269,9 @@ export function AccountDetailPage() {
     queryKey: ["finance", "accounts", "detail", id, companyId],
     queryFn: () => apiGet<Account>(withCompany(`/finance/accounts/${id}`, companyId)),
   });
+  // Eksik fatura çipleri (K-12.2-4 "cari kartı"): şirket başına (`/balances` invoiceGaps).
+  const balances = useAccountBalances(id, { groupBy: "CURRENCY" });
+  const gapChips = displayGaps(balances.data?.invoiceGaps, companyId, multiCompany);
   const statement = useQuery({
     queryKey: ["finance", "statement", id, currency, from, to, paging.page, paging.size, companyId],
     queryFn: () =>
@@ -258,6 +299,19 @@ export function AccountDetailPage() {
             {account.data.active === false && (
               <Chip size="small" label={t("finance.definitions.passive")} variant="outlined" />
             )}
+            {gapChips.map((gap) => (
+              <Chip
+                key={`${gap.companyId ?? "all"}-${gap.side}-${gap.currency}`}
+                size="small"
+                color="error"
+                label={
+                  (gap.companyId && multiCompany ? `${companyName(gap.companyId)}: ` : "") +
+                  t("finance.warning.missingChip", {
+                    amount: `${formatAmount(gap.missing)} ${gap.currency}`,
+                  })
+                }
+              />
+            ))}
             {canPost && (
               <Button variant="contained" onClick={() => setAdding(true)}>
                 {t("finance.action.manualTx")}

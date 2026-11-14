@@ -51,6 +51,10 @@ export default {
     customers: "Müşteriler",
     customersShown: "Müşteri hesapları görünüyor - Gizlemek için tıklayın",
     customersHidden: "Müşteri hesapları gizleniyor - Göstermek için tıklayın",
+    // 12.2 (K-12.2-4) Blackrose eki.
+    missingInvoice: "Eksik Faturalı",
+    missingInvoiceOff: "Tüm cariler görünüyor - Yalnız eksik faturalıları göstermek için tıklayın",
+    missingInvoiceOn: "Yalnız eksik faturalı cariler görünüyor - Tümünü göstermek için tıklayın",
     search: "Arama",
     searchPlaceholder: "Cari adı veya kodunda ara...",
     apply: "Filtrele",
@@ -135,6 +139,7 @@ export default {
     balanced: "Dengede",
     passive: "Pasif",
     planCount: "{{n}} plan",
+    invoiceGap: "Eksik fatura: {{amount}}",
   },
   planStatus: {
     none: "Planlama Yok",

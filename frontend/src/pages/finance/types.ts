@@ -191,6 +191,11 @@ export interface AccountDocumentType {
   isDefault: boolean;
   selectable: boolean;
   sortOrder: number;
+  /**
+   * 12.2 (V34): belge eksik fatura hesabında fatura sayılır (§3.7). İsteğe bağlı: B4 öncesi sunucu
+   * göndermez ve 12.1 test verileri alanı içermez (FE-0 bu dosyalara dokunmaz); yoksa false sayılır.
+   */
+  countsAsInvoice?: boolean;
 }
 
 /** Şema `AccountDocumentTaxResponse`. */
@@ -337,6 +342,10 @@ export interface AccountBalanceBreakdown {
   splitDate: string | null;
   rows: BalanceBreakdownRow[];
   payableInvoiceTotals: CurrencyAmount[];
+  /** 12.2 §4.6: kesilen (satış tarafı) fatura toplamları. */
+  receivableInvoiceTotals: CurrencyAmount[];
+  /** 12.2 §4.6: şirket başına satırlar + `companyId = null` konsolide satır. */
+  invoiceGaps: AccountInvoiceGap[];
 }
 
 /** Şema `AccountInvoiceRowResponse` (alış ∪ satış birleşik fatura satırı). */
@@ -567,18 +576,33 @@ export type AccountTransferBody = {
   date?: string;
 };
 
+/** Şema `FundResponse` (12.2 §4.1; mevcut alan sırası korunur, yeniler sonda). */
 export interface Fund {
   id: string;
   code: string;
   name: string;
-  kind: "BANK" | "CASH";
+  kind: FundKind;
   currency: string;
   branchId: string;
   companyId: string;
   bankName: string | null;
   iban: string | null;
   allowNegative: boolean;
+  /** Tüm hareketler (ileri tarihliler dahil) — 12.2 §3.2.1. */
   balance: number;
+  accountType: FundAccountType;
+  /** Maskeli "****1234" (düz hali yalnız `FundDetail`'de ve FINANCE_MANAGE'de). */
+  accountNo: string | null;
+  bankBranchName: string | null;
+  description: string | null;
+  active: boolean;
+  /** `asOf` (varsayılan bugün) dahil bakiye — ekranlardaki "Güncel Bakiye". */
+  currentBalance: number;
+  futureCount: number;
+  futureNet: number;
+  openingBalance: number;
+  openingDate: string | null;
+  transactionCount: number;
 }
 
 /** Şema `StatementLine` (12.1 §4.5 eklemeleri). */
@@ -670,6 +694,7 @@ export interface Settlement {
   settlementDate: string;
   description: string | null;
   status: "POSTED" | "REVERSED";
+  companyId: string;
 }
 
 export interface DailyReport {
@@ -691,6 +716,7 @@ export interface Invoice {
   total: Money;
   status: "OPEN" | "CANCELLED";
   description: string | null;
+  companyId: string;
 }
 
 export interface Plan {
@@ -773,3 +799,602 @@ export interface Aging {
   daysOver90: number;
   total: number;
 }
+
+// ---------------------------------------------------------------------------------------------
+// 12.2 — Banka / kasa / transfer merkezi / döviz bozumu / uyarılar (12.2_TASARIM §4). Ad kuralı:
+// backend record adı eksi `Response` soneki (contract.test.ts `schemaFor`). Yanıt arayüzlerinde
+// satır içi tip yok; her iç nesne adlıdır. decimal → number, Money.amount → string (mevcut şema).
+// ---------------------------------------------------------------------------------------------
+
+export type FundKind = "BANK" | "CASH";
+/** `fund_account.account_type`: Vadesiz / Kredi / Vadeli Mevduat / Yatırım. */
+export type FundAccountType = "DEMAND" | "CREDIT" | "DEPOSIT" | "INVESTMENT";
+export type FundDirection = "IN" | "OUT";
+/** Manuel fon hareketi kategorisi (V33 `fin_income_expense`). */
+export type FundCategory = "EXPENSE" | "INCOME" | "OTHER";
+export type FundTransferType =
+  "VIREMENT" | "EFT" | "WIRE" | "FX_EXCHANGE" | "BANK_TO_CASH" | "CASH_TO_BANK" | "CASH_TO_CASH";
+/** Şirketler arası virmanda VIREMENT ve FX_EXCHANGE yok (OK-12.2-12, OK-12.2-13). */
+export type IntercompanyTransferType = Exclude<FundTransferType, "VIREMENT" | "FX_EXCHANGE">;
+export type IntercompanyReasonType = "DEBT_PAID" | "LOAN_GIVEN";
+export type TransferStatus = "POSTED" | "REVERSED";
+export type TransferCostKind = "COMMISSION" | "FEE" | "KMV";
+export type TransferSourceKind = "SETTLEMENT" | "TRANSFER";
+export type RateOperation = "MULTIPLY" | "DIVIDE";
+export type FxCalcMode = "SOURCE_RATE" | "RATE_TARGET" | "SOURCE_TARGET";
+export type TransferRecordType = "FUND_TRANSFER" | "INTERCOMPANY";
+/** `GET /funds/transfers?transferType=`: tür ya da şirketler arası kayıtlar. */
+export type TransferListType = FundTransferType | "INTERCOMPANY";
+export type TransferCollectionState = "COMPLETE" | "PARTIAL" | "PENDING" | "CANCELLED" | "NONE";
+export type TransferSummaryGroup =
+  | "VIREMENT_EFT_WIRE"
+  | "FX_EXCHANGE"
+  | "BANK_TO_CASH"
+  | "CASH_TO_BANK"
+  | "CASH_TO_CASH"
+  | "INTERCOMPANY"
+  | "TOTAL";
+export type SettlementType = "PAYMENT" | "COLLECTION";
+export type SettlementWarningSeverity = "CONFIRM" | "INFO";
+
+/** Şema `FundDetailResponse`: `accountNo` yalnız burada ve FINANCE_MANAGE'de düz (SEC-12.2-07). */
+export interface FundDetail extends Fund {
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string;
+  updatedAt: string;
+  updateCount: number;
+  lastTransactionDate: string | null;
+}
+
+/** Şema `FundSummaryRowResponse` (şirket × tür × hesap türü × para birimi). */
+export interface FundSummaryRow {
+  companyId: string;
+  kind: FundKind;
+  accountType: FundAccountType;
+  currency: string;
+  count: number;
+  inactiveCount: number;
+  currentBalance: number;
+  balance: number;
+  futureNet: number;
+  openingTotal: number;
+}
+
+/**
+ * Şema `FundSparklineResponse`: son 20 hareketin işaretli tutarları (giriş +, çıkış −), eskiden
+ * yeniye (12.2 §3.2.4); bakiye eğrisi istemcide birikimli toplamla çizilir.
+ */
+export interface FundSparkline {
+  fundId: string;
+  points: number[];
+}
+
+/** Şema `FundDeleteReasonResponse` (`kind` = engelleyen kayıt türü). */
+export interface FundDeleteReason {
+  kind: string;
+  count: number;
+}
+
+/** Şema `FundCanDeleteResponse`. */
+export interface FundCanDelete {
+  allowed: boolean;
+  reasons: FundDeleteReason[];
+}
+
+/** Şema `FundActivityOutflowResponse` (FIFO eşleşen çıkış). */
+export interface FundActivityOutflow {
+  id: string;
+  date: string;
+  accountingType: string;
+  description: string | null;
+  amount: number;
+}
+
+/** Şema `FundActivityInflowResponse` (FIFO giriş; `id` yoksa dönem başı devri). */
+export interface FundActivityInflow {
+  no: number;
+  id: string | null;
+  date: string;
+  accountingType: string;
+  description: string | null;
+  amount: number;
+  remaining: number;
+  outflows: FundActivityOutflow[];
+}
+
+/** Şema `FundActivityUnspentResponse` (dönem sonunda harcanmamış giriş). */
+export interface FundActivityUnspent {
+  no: number;
+  date: string;
+  accountingType: string;
+  description: string | null;
+  original: number;
+  remaining: number;
+  used: number;
+}
+
+/** Şema `FundActivityReportResponse` (`GET /funds/{id}/activity-report`). */
+export interface FundActivityReport {
+  fund: Fund;
+  from: string;
+  to: string;
+  opening: number;
+  totalIn: number;
+  totalOut: number;
+  net: number;
+  inflows: FundActivityInflow[];
+  unspent: FundActivityUnspent[];
+  unmatchedOut: number;
+}
+
+/** Şema `FundTransactionRowResponse` (çok hesaplı hareket araması; yürüyen bakiye hesap başına). */
+export interface FundTransactionRow {
+  id: string;
+  fundAccountId: string;
+  fundCode: string;
+  fundName: string;
+  bankName: string | null;
+  kind: FundKind;
+  accountType: FundAccountType;
+  companyId: string;
+  branchId: string;
+  currency: string;
+  transactionDate: string;
+  direction: FundDirection;
+  amount: number;
+  exchangeRate: number;
+  tlAmount: number;
+  runningBalance: number;
+  description: string | null;
+  sourceType: string;
+  sourceId: string;
+  /** Sunucuda türetilen ZTO "MUHASEBE TİPİ" (§3.2.6). */
+  accountingType: string;
+  transferCode: string | null;
+  category: string | null;
+  accountId: string | null;
+  accountCode: string | null;
+  accountName: string | null;
+  reversal: boolean;
+  reversed: boolean;
+  createdBy: string;
+  createdAt: string;
+}
+
+/** Şema `FundCurrencyTotalResponse`. */
+export interface FundCurrencyTotal {
+  currency: string;
+  totalIn: number;
+  totalOut: number;
+  net: number;
+  count: number;
+}
+
+/** Şema `FundTransactionSummaryResponse` (`summary=true`; dönem açılış/kapanış tek fonda). */
+export interface FundTransactionSummary {
+  currencies: FundCurrencyTotal[];
+  periodOpening: number | null;
+  periodClosing: number | null;
+}
+
+/** Şema `FundTransactionPageResponse` (`PageResponse` + özet). */
+export interface FundTransactionPage {
+  content: FundTransactionRow[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  summary: FundTransactionSummary | null;
+}
+
+/** Şema `FundRefResponse` (hareket detayındaki fon; `accountNo` maskeli). */
+export interface FundRef {
+  id: string;
+  code: string;
+  name: string;
+  bankName: string | null;
+  iban: string | null;
+  accountNo: string | null;
+  bankBranchName: string | null;
+  currency: string;
+}
+
+/** Şema `FundSourceRefResponse` (kaynak belge bağlantısı; `route` yoksa bağlantı yok). */
+export interface FundSourceRef {
+  kind: string;
+  id: string;
+  code: string | null;
+  route: string | null;
+}
+
+/** Şema `FundTransactionDetailResponse`. */
+export interface FundTransactionDetail extends FundTransactionRow {
+  fund: FundRef;
+  source: FundSourceRef | null;
+}
+
+/** Şema `TransferCostResponse` (Komisyon / Masraf / KMV; `fundAccountId` = masrafın düştüğü fon). */
+export interface TransferCost {
+  id: string;
+  kind: TransferCostKind;
+  fundAccountId: string;
+  ratePercent: number | null;
+  baseAmount: number | null;
+  money: Money;
+}
+
+/** Şema `TransferSourceResponse` (döviz bozumunun tahsilat / önceki bozum kaynağı). */
+export interface TransferSource {
+  id: string;
+  kind: TransferSourceKind;
+  sourceId: string;
+  code: string | null;
+  date: string;
+  amount: number;
+  usedAmount: number;
+}
+
+/** Şema `FundTransferResponse`; görünmeyen tarafın kod/adı `null`. */
+export interface FundTransfer {
+  id: string;
+  /** = id (eski `TransferResponse` uyumu). */
+  transferId: string;
+  code: string;
+  companyId: string;
+  transferType: FundTransferType;
+  transferDate: string;
+  fromFundId: string;
+  fromFundCode: string | null;
+  fromFundName: string | null;
+  toFundId: string;
+  toFundCode: string | null;
+  toFundName: string | null;
+  money: Money;
+  targetMoney: Money;
+  rate: number | null;
+  rateOperation: RateOperation | null;
+  calcMode: FxCalcMode | null;
+  fxDiffTl: number | null;
+  documentNo: string | null;
+  description: string | null;
+  status: TransferStatus;
+  reversedAt: string | null;
+  reversalReason: string | null;
+  replacesTransferId: string | null;
+  replacedByTransferId: string | null;
+  costs: TransferCost[];
+  sources: TransferSource[];
+  createdBy: string;
+  createdAt: string;
+}
+
+/** Şema `TransferCollectionResponse` (döviz bozumunun bağlı tahsilatı). */
+export interface TransferCollection {
+  settlementId: string;
+  date: string;
+  amount: number;
+  accountId: string | null;
+  accountName: string | null;
+  state: TransferCollectionState;
+}
+
+/** Şema `TransferListRowResponse` (Transferler sekmesi; şirket içi + şirketler arası). */
+export interface TransferListRow {
+  recordType: TransferRecordType;
+  id: string;
+  code: string;
+  transferType: FundTransferType;
+  reasonType: IntercompanyReasonType | null;
+  transferDate: string;
+  companyId: string;
+  toCompanyId: string | null;
+  fromFundId: string;
+  fromFundCode: string | null;
+  fromFundName: string | null;
+  fromKind: FundKind;
+  fromBranchId: string | null;
+  toFundId: string;
+  toFundCode: string | null;
+  toFundName: string | null;
+  toKind: FundKind;
+  toBranchId: string | null;
+  sourceMoney: Money;
+  targetMoney: Money;
+  rate: number | null;
+  rateOperation: RateOperation | null;
+  costTotalTl: number;
+  costFundNames: string | null;
+  collection: TransferCollection | null;
+  description: string | null;
+  status: TransferStatus;
+  documentNo: string | null;
+}
+
+/** Şema `TransferSummaryRowResponse` (grup başına adet ve para birimi tutarları). */
+export interface TransferSummaryRow {
+  group: TransferSummaryGroup;
+  count: number;
+  amounts: CurrencyAmount[];
+}
+
+/** Şema `TransferDependentResponse` (bu transferi kaynak kullanan döviz bozumu). */
+export interface TransferDependent {
+  transferId: string;
+  code: string;
+  date: string;
+  sourceFundName: string;
+  targetFundName: string;
+  usedAmount: number;
+}
+
+/** Şema `FxSourceResponse` (önceki bozumdan kalan döviz). */
+export interface FxSource {
+  transferId: string;
+  code: string;
+  date: string;
+  sourceFundName: string;
+  deposited: number;
+  used: number;
+  remaining: number;
+}
+
+/** Şema `FxCandidateAccountResponse` (bozulabilir tahsilatı olan cari). */
+export interface FxCandidateAccount {
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  collectionCount: number;
+  remainingTotal: number;
+}
+
+/** Şema `FxCandidateCollectionResponse`. */
+export interface FxCandidateCollection {
+  settlementId: string;
+  date: string;
+  amount: number;
+  broken: number;
+  remaining: number;
+  description: string | null;
+}
+
+/** Şema `FxReportStatsResponse`. */
+export interface FxReportStats {
+  collectionCount: number;
+  fxCount: number;
+  fxWithoutCollection: number;
+  unbrokenCollectionCount: number;
+  totalBroken: CurrencyAmount[];
+}
+
+/** Şema `FxReportSourceResponse`. */
+export interface FxReportSource {
+  kind: TransferSourceKind;
+  id: string;
+  code: string | null;
+  date: string;
+  accountName: string | null;
+  amount: number;
+  used: number;
+}
+
+/** Şema `FxReportRowResponse` (`level` = izlenebilirlik girintisi). */
+export interface FxReportRow {
+  transferId: string;
+  code: string;
+  date: string;
+  level: number;
+  sourceFundName: string | null;
+  sourceMoney: Money;
+  targetFundName: string | null;
+  targetMoney: Money;
+  rate: number;
+  rateOperation: RateOperation;
+  fxDiffTl: number | null;
+  status: TransferStatus;
+  sources: FxReportSource[];
+}
+
+/** Şema `FxUnbrokenCollectionResponse`. */
+export interface FxUnbrokenCollection {
+  settlementId: string;
+  date: string;
+  accountName: string | null;
+  money: Money;
+}
+
+/** Şema `FxReportResponse` (Döviz Bozum & Tahsilat İzlenebilirliği). */
+export interface FxReport {
+  stats: FxReportStats;
+  rows: FxReportRow[];
+  unbrokenCollections: FxUnbrokenCollection[];
+}
+
+/** Şema `IntercompanyTransferResponse`; görünmeyen tarafın kod/ad/iş yeri `null`. */
+export interface IntercompanyTransfer {
+  id: string;
+  code: string;
+  transferType: IntercompanyTransferType;
+  reasonType: IntercompanyReasonType;
+  transferDate: string;
+  fromCompanyId: string;
+  toCompanyId: string;
+  fromBranchId: string | null;
+  toBranchId: string | null;
+  fromFundId: string;
+  fromFundCode: string | null;
+  fromFundName: string | null;
+  toFundId: string;
+  toFundCode: string | null;
+  toFundName: string | null;
+  money: Money;
+  paymentSettlementId: string;
+  collectionSettlementId: string;
+  documentNo: string | null;
+  /** Kullanıcı açıklaması. */
+  description: string | null;
+  /** Sunucunun kurduğu neden metni (§3.4.1). */
+  reasonText: string;
+  status: TransferStatus;
+  reversedAt: string | null;
+  reversalReason: string | null;
+  createdBy: string;
+  createdAt: string;
+}
+
+/** Şema `CompanyOutstandingResponse` (yalnız görünür şirketler). */
+export interface CompanyOutstanding {
+  companyId: string;
+  outstanding: number;
+}
+
+/**
+ * Şema `SettlementWarningResponse` (§3.6): tutarlar kullanıcının kapsamındakilerdir; gizli kısım
+ * yalnız `partialScope` / `otherHiddenExists` bayraklarıyla bildirilir (SEC-12.2-02).
+ */
+export interface SettlementWarning {
+  code: "COMPANY_ALLOCATION_EXCEEDED";
+  severity: SettlementWarningSeverity;
+  currency: string;
+  companyId: string;
+  companyOutstanding: number;
+  amount: number;
+  excess: number;
+  others: CompanyOutstanding[];
+  partialScope: boolean;
+  otherHiddenExists: boolean;
+}
+
+/**
+ * Şema `AccountInvoiceGapResponse` (§3.7): PAYABLE = cari alacağı / girilen fatura, RECEIVABLE = cari
+ * borcu / kesilen fatura; `companyId = null` konsolide satır.
+ */
+export interface AccountInvoiceGap {
+  accountId: string;
+  side: DocumentSide;
+  companyId: string | null;
+  currency: string;
+  ledgerTotal: number;
+  invoiceTotal: number;
+  missing: number;
+}
+
+/** Şema `SettlementCheckResponse` (`POST /settlements/check`; yazmaz). */
+export interface SettlementCheck {
+  warnings: SettlementWarning[];
+  invoiceGaps: AccountInvoiceGap[];
+}
+
+// 12.2 istek gövdeleri (type alias; sözleşme testi yalnız arayüzleri tarar).
+
+/** `POST /finance/funds` (`CreateFundRequest`). */
+export type FundBody = {
+  code: string;
+  name: string;
+  kind: FundKind;
+  currency: string;
+  branchId: string;
+  bankName?: string;
+  iban?: string;
+  allowNegative: boolean;
+  accountType?: FundAccountType;
+  /** Şifreli saklanır. */
+  accountNo?: string;
+  bankBranchName?: string;
+  description?: string;
+  active?: boolean;
+  /** İşaretli, 2 hane. */
+  openingBalance?: number;
+  openingDate?: string;
+  /** Döviz açılışında elle kur (`> 0`); boşsa açılış tarihindeki kur (OK-12.2-37). */
+  openingRate?: number;
+};
+
+/** `PUT /finance/funds/{id}` (`UpdateFundRequest`); null/undefined = değişmez. */
+export type UpdateFundBody = {
+  name: string;
+  branchId: string;
+  bankName?: string;
+  iban?: string;
+  allowNegative?: boolean;
+  accountNo?: string;
+  bankBranchName?: string;
+  description?: string;
+  active?: boolean | null;
+  openingBalance?: number | null;
+  openingDate?: string;
+  /** Yalnız açılış değişirken; döviz fonda kur tablosu boşsa zorunlu (422 `RATE_MISSING`). */
+  openingRate?: number;
+};
+
+/** `TransferCostRequest`. */
+export type TransferCostBody = {
+  kind: TransferCostKind;
+  fundAccountId?: string;
+  amount?: number;
+  ratePercent?: number;
+};
+
+/** `TransferSourceRequest` (yalnız döviz bozumu). */
+export type TransferSourceBody = {
+  kind: TransferSourceKind;
+  id: string;
+  usedAmount: number;
+};
+
+/** `POST /finance/funds/transfers` (`FundTransferRequest`); `transferType` yoksa eski gövde. */
+export type FundTransferBody = {
+  transferType?: FundTransferType;
+  fromFundId: string;
+  toFundId: string;
+  /** Kaynak tutar. */
+  money: Money;
+  /** Döviz bozumunda zorunlu. */
+  targetMoney?: Money;
+  rate?: number;
+  rateOperation?: RateOperation;
+  calcMode?: FxCalcMode;
+  date: string;
+  documentNo?: string;
+  description?: string;
+  /** Eski: aynı para birimli bacakların elle TL kuru. */
+  exchangeRate?: number;
+  costs?: TransferCostBody[];
+  sources?: TransferSourceBody[];
+};
+
+/** `POST /finance/funds/transfers/{id}/replace`. */
+export type ReplaceTransferBody = { transfer: FundTransferBody; reason?: string };
+
+/** `POST …/transfers/{id}/reverse` ve `/intercompany-transfers/{id}/reverse`. */
+export type ReverseTransferBody = { date: string; reason?: string };
+
+/** `POST /finance/intercompany-transfers`. */
+export type IntercompanyTransferBody = {
+  transferType: IntercompanyTransferType;
+  reasonType: IntercompanyReasonType;
+  fromFundId: string;
+  toFundId: string;
+  money: Money;
+  date: string;
+  documentNo?: string;
+  description?: string;
+};
+
+/**
+ * `POST /finance/payments|collections` ve `/settlements/check` (`SettlementRequest`);
+ * `confirmWarnings` yalnız kayıt uçlarında (409 CONFIRMATION_REQUIRED sonrası).
+ */
+export type SettlementBody = {
+  method: "CASH" | "BANK" | "CHECK";
+  accountId?: string;
+  branchId: string;
+  fundAccountId?: string;
+  instrumentId?: string;
+  expenseItemId?: string;
+  money: Money;
+  date: string;
+  description?: string;
+  exchangeRate?: number;
+  confirmWarnings?: boolean;
+};

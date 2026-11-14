@@ -160,7 +160,8 @@ class AccountProfileIT extends AccountTestSupport {
     assertThat(stored).doesNotContain("Mahallesi").isNotBlank();
     assertThat(detail(w, null, id).get("address").asText()).isEqualTo(address);
     String accounting = userWithRole(w, "muhasebe", "ACCOUNTING");
-    assertThat(detail(w, accounting, id).get("address").isNull()).isTrue();
+    // K-12.2-5: açık adres detayda yetkisiz kullanıcıya da görünür; listede yok.
+    assertThat(detail(w, accounting, id).get("address").asText()).isEqualTo(address);
     assertThat(detail(w, accounting, id).get("city").asText()).isEqualTo("İstanbul");
     JsonNode listed = listRow(w, null, id, Map.of("search", "profil tedarik"));
     assertThat(listed.get("address").isNull()).isTrue();

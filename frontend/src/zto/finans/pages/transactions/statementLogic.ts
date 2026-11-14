@@ -1,4 +1,10 @@
-import type { StatementDateBasis, StatementLine } from "../../../../pages/finance/types";
+import { gapsForCompany } from "../../../../pages/finance/settlementWarnings";
+import type {
+  AccountInvoiceGap,
+  DocumentSide,
+  StatementDateBasis,
+  StatementLine,
+} from "../../../../pages/finance/types";
 import { TASK_BUDGET_MS, yieldToMain } from "../../../a11y/yieldToMain";
 
 /*
@@ -262,4 +268,36 @@ export async function groupStatementChunked(
     }
   }
   return finish(builder);
+}
+
+export type MissingInvoiceRow = {
+  key: string;
+  currency: string;
+  side: DocumentSide;
+  missing: number;
+};
+
+/**
+ * "Genel Özet" tablosunun "Fatura bilgisi eksik" satırları (12.2 §5.14, K-12.2-4): seçili şirket
+ * (boş = konsolide) için para birimi × taraf başına `missing > 1`; görünmeyen para birimleri atlanır.
+ * Sıra: para birimi, sonra PAYABLE (cari alacağı) önce.
+ */
+export function missingInvoiceRows(
+  gaps: readonly AccountInvoiceGap[] | null | undefined,
+  companyId: string | null,
+  visibleCurrency: (currency: string) => boolean = () => true,
+): MissingInvoiceRow[] {
+  return gapsForCompany(gaps, companyId)
+    .filter((gap) => visibleCurrency(gap.currency))
+    .sort(
+      (a, b) =>
+        a.currency.localeCompare(b.currency) ||
+        (a.side === b.side ? 0 : a.side === "PAYABLE" ? -1 : 1),
+    )
+    .map((gap) => ({
+      key: `${gap.currency}|${gap.side}`,
+      currency: gap.currency,
+      side: gap.side,
+      missing: gap.missing,
+    }));
 }

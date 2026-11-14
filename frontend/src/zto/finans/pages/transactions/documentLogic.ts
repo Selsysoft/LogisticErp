@@ -164,3 +164,40 @@ export function toDocumentBody(
   }
   return body;
 }
+
+// ---------------------------------------------------------------------------------------------
+// 12.2 eksik fatura (§5.14 "fatura girişi", K-12.2-4)
+// ---------------------------------------------------------------------------------------------
+
+const round2 = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+
+export type InvoiceContribution = {
+  /** Seçili tür eksik fatura hesabında fatura sayılır (`countsAsInvoice`). */
+  countsAsInvoice: boolean;
+  /** Belge deftere yansır mı (fatura bölümü yoksa her zaman yansır). */
+  reflect: boolean;
+  /** Deftere yansısaydı yazılacak tutar: fatura bölümünde net ödenecek, değilse tutar (§3.7 tabanı). */
+  net: number;
+};
+
+/**
+ * Belgenin fatura toplamına katkısı: yalnız yansıtılmayan fatura belgesi eksiği azaltır (yansıyan
+ * belge hem defter toplamını hem fatura toplamını aynı tutarla artırır, eksik değişmez).
+ */
+export function unreflectedInvoiceAmount(input: InvoiceContribution): number {
+  if (!input.countsAsInvoice || input.reflect) return 0;
+  return Number.isFinite(input.net) && input.net > 0 ? round2(input.net) : 0;
+}
+
+/**
+ * "Bu belge kaydedilince kalan" (§5.14): mevcut eksik − yeni belgenin katkısı (+ revizede eski
+ * belgenin katkısı geri eklenir). Sonuç eksiye düşmez (fatura fazlası "0" gösterilir).
+ */
+export function remainingAfterSave(
+  missing: number,
+  next: InvoiceContribution,
+  previous: InvoiceContribution | null = null,
+): number {
+  const before = previous ? unreflectedInvoiceAmount(previous) : 0;
+  return Math.max(0, round2(missing + before - unreflectedInvoiceAmount(next)));
+}

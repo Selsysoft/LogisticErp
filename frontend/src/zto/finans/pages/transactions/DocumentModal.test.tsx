@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../../../i18n";
 import { apiError, fakeApi, renderAt, signIn } from "../definitions/definitionTestUtils";
 import { DocumentModal } from "./DocumentModal";
-import { commonApi, makeAccount } from "./transactionsTestUtils";
+import { commonApi, docType, makeAccount } from "./transactionsTestUtils";
 
 vi.mock("../../../../api/client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../../api/client")>()),
@@ -67,6 +67,11 @@ describe("DocumentModal", { timeout: 60_000 }, () => {
     await waitFor(() => expect(select.options.length).toBe(3));
     expect(select.value).toBe("");
     expect(select.options[0].disabled).toBe(true);
+    // Eksik fatura canlı bölgesi uyarı yokken de DOM'da: boş ve sr-only (F-12.2-R7).
+    const region = document.getElementById("debtInvoiceGapNote") as HTMLElement;
+    expect(region.getAttribute("role")).toBe("status");
+    expect(region.className).toBe("sr-only");
+    expect(region.textContent).toBe("");
   });
 
   it("zorunlu alan eksikse ZTO iletisi ve aria-invalid yalnız gönderimden sonra", async () => {
@@ -149,5 +154,51 @@ describe("DocumentModal", { timeout: 60_000 }, () => {
     expect(body.documentType).toBe("CEZA_KARSI_TARAF");
     expect(body.tax).toBeUndefined();
     expect(onHide).not.toHaveBeenCalled();
+  });
+
+  it("12.2 fatura sayılan türde eksik fatura ve kaydedilince kalan (yansıtılmayan: net düşer)", async () => {
+    fakeApi.on("GET", "/finance/account-document-types", [
+      docType("PAYABLE", "ALIS_FATURASI", "Alış Faturası", {
+        audience: "OTHER",
+        invoiceSection: true,
+        isDefault: true,
+        countsAsInvoice: true,
+      }),
+    ]);
+    fakeApi.on("GET", /^\/finance\/accounts\/a1\/balances/, {
+      groupBy: "CURRENCY",
+      splitDate: null,
+      rows: [],
+      payableInvoiceTotals: [],
+      receivableInvoiceTotals: [],
+      invoiceGaps: [
+        {
+          accountId: "a1",
+          side: "PAYABLE",
+          companyId: null,
+          currency: "TRY",
+          ledgerTotal: 150,
+          invoiceTotal: 100,
+          missing: 50,
+        },
+      ],
+    });
+    open("PAYABLE");
+    expect(
+      await screen.findByText(
+        "Kalan 50,00 ₺ için fatura bilgisi eksik.",
+        { exact: false },
+        { timeout: 20_000 },
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Bu belge kaydedilince kalan: 50,00 ₺")).toBeTruthy();
+    const region = document.getElementById("debtInvoiceGapNote") as HTMLElement;
+    expect(region.getAttribute("role")).toBe("status");
+    expect(region.className).toBe("col-12 mb-2");
+    expect(region.textContent).toContain("Kalan 50,00 ₺ için fatura bilgisi eksik.");
+    fireEvent.change(screen.getByLabelText(/Mal Hizmet Toplam Tutar/), { target: { value: "25" } });
+    fireEvent.change(screen.getByLabelText(/KDV Oranı/), { target: { value: "0" } });
+    fireEvent.click(screen.getByLabelText(/Borca Yansıt/));
+    expect(await screen.findByText("Bu belge kaydedilince kalan: 25,00 ₺")).toBeTruthy();
   });
 });

@@ -53,6 +53,8 @@ function sourceFiles(dir: string): string[] {
 
 /** 12.1 ekranlarının ztoFinans parçaları (§5.14). */
 const TWELVE_ONE_PARTS = ["accounts", "transactions", "allTransactions", "quickCari"] as const;
+/** 12.2 ekranlarının ztoFinans parçaları (12.2 §5.15; FE-0 iskelet, FE-1/FE-2 doldurur). */
+const TWELVE_TWO_PARTS = ["funds", "fundTransactions", "transferCenter"] as const;
 
 const translationLeaves = flatten(tr.translation);
 const ztoLeaves = flatten(tr.ztoFinans);
@@ -162,8 +164,15 @@ describe("ztoFinans ad alanı", () => {
       "transactions",
       "allTransactions",
       "quickCari",
+      "funds",
+      "fundTransactions",
+      "transferCenter",
     ]);
     expect(i18n.options.ns).toEqual(["translation", "ztoFinans"]);
+    // 12.2 parçaları kayıtlı nesneler (boş olabilir; sahipleri doldurur).
+    for (const part of TWELVE_TWO_PARTS) {
+      expect(typeof tr.ztoFinans[part], part).toBe("object");
+    }
     // 12.1 parçaları (FE0 iskelet, sahipleri doldurur): kayıtlı ve boş değil.
     for (const part of TWELVE_ONE_PARTS) {
       expect(Object.keys(tr.ztoFinans[part]).length, part).toBeGreaterThan(0);
@@ -204,10 +213,14 @@ describe("ztoFinans ad alanı", () => {
       "definitions.errorPrefix": ["message"],
       "companies.uyLastSync": ["value"],
     };
-    // 12.1 parçalarının yer tutucuları sahiplerinin testlerinde; burada genel denge testi yeterli.
+    // 12.1 ve 12.2 parçalarının yer tutucuları sahiplerinin testlerinde; burada genel denge testi
+    // yeterli. Aşağıdaki temsilî 12.2 çağrıları yanlış değişken adını çözülmemiş "{{…}}" olarak yakalar.
     const actual = Object.fromEntries(
       ztoLeaves
-        .filter(([k]) => !TWELVE_ONE_PARTS.some((part) => k.startsWith(`${part}.`)))
+        .filter(
+          ([k]) =>
+            ![...TWELVE_ONE_PARTS, ...TWELVE_TWO_PARTS].some((part) => k.startsWith(`${part}.`)),
+        )
         .filter(([, v]) => variables(v).length > 0)
         .map(([k, v]) => [k, variables(v)]),
     );
@@ -220,6 +233,19 @@ describe("ztoFinans ad alanı", () => {
       "Güncelleme Sayısı: 2",
     );
     expect(i18n.t("ztoFinans:definitions.errorPrefix", { message: "x" })).toBe("Hata: x");
+    const twelveTwo: Array<[string, Record<string, unknown>]> = [
+      ["funds.list.showing", { total: 3 }],
+      ["funds.list.resultsFound", { count: 2 }],
+      ["funds.form.company", { name: "X" }],
+      ["funds.deleteModal.reasons.PAYMENT", { count: 2 }],
+      ["funds.deleteModal.reasons.other", { count: 2, kind: "x" }],
+      ["fundTransactions.extract.failed", { message: "x" }],
+      ["fundTransactions.extract.footer", { date: "01.01.2026" }],
+    ];
+    for (const [key, values] of twelveTwo) {
+      expect(hasKey(tr.ztoFinans, key), key).toBe(true);
+      expect(i18n.t(`ztoFinans:${key}`, values), key).not.toMatch(/\{\{/);
+    }
   });
 
   it("çift süslü parantezler her iki ad alanında da dengeli", () => {

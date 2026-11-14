@@ -12,8 +12,9 @@ export type CariSidebarProps = {
 };
 
 /**
- * Cari Bilgileri kayar paneli (ZTO Transactions.cshtml:121-200 #cariSidebar). Adres satırı yalnız `address`
- * doluysa (FINANCE_MANAGE detay yanıtı, SEC-11); vergi no TCKN ise sunucudan maskeli gelir. ZTO yalnız
+ * Cari Bilgileri kayar paneli (ZTO Transactions.cshtml:121-200 #cariSidebar). Adres satırı `address`
+ * doluysa; 12.2'den itibaren detay yanıtında FINANCE_VIEW ile herkese gelir (K-12.2-5; 12.1 OK-38/SEC-11
+ * geri alındı, liste yanıtında yine null). Vergi no TCKN ise sunucudan maskeli gelir. ZTO yalnız
  * :hover ile açılır; klavye için sap düğmesi `aria-expanded`, Escape kapatır ve odak sapa döner (MWG).
  */
 export function CariSidebar({ account, branchName, canEdit }: CariSidebarProps) {

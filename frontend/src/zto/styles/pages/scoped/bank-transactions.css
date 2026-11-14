@@ -1,0 +1,1780 @@
+/*
+ * Kaynak: ZtoFabrika/wwwroot/css/zt/banktransaction/index.css:1-1032 + Views/BankTransactions/Index.cshtml:35-83,
+ * :515-527, :5217-5619 (instruction-* hariç) + css/zt/customeraccountpayment/payments.css'ten yalnız süzgeç
+ * kartı parçaları (.filter-label i :46, .filter-btn i :89, .ss-* SearchableSelect :1667-1969, :1990-2016)
+ * Birebir kopya (12.2_TASARIM §5.4); değişiklikler: Razor kaçışı @@ → @, bu dosyada tanımlı
+ * @keyframes adları paket genelinde çakışmasın diye zto-<sayfa>- önekli (check:zto-css);
+ * payments.css §8 'MODAL İÇİ OVERFLOW FIX' (:1971-1988; .modal-body/.modal-dialog overflow) .ss-* değildir,
+ * sayfanın modallarını bozmasın diye alınmadı
+ * Sayfa kapsamı .zto-finans.zto-page-bank-transactions (prefixTransform scopeForFile).
+ */
+/* --- wwwroot/css/zt/banktransaction/index.css:1-1032 --- */
+/* ============================================ */
+/* PROFESYONEL ERP HEADER STİLLERİ */
+/* ============================================ */
+
+/* Header Genel */
+.card-header.bg-white {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+/* Icon Box */
+.erp-header-icon {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  margin-right: 6px;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  color: #495057;
+  font-size: 16px;
+}
+
+/* Breadcrumb */
+.erp-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #6c757d;
+}
+
+.erp-breadcrumb .separator {
+  color: #cbd5e0;
+  font-weight: 300;
+}
+
+.erp-breadcrumb i {
+  font-size: 10px;
+  margin-right: 3px;
+}
+
+/* Info Chips */
+.erp-info-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #495057;
+  transition: all 0.2s ease;
+}
+
+.erp-info-chip:hover {
+  background: #e9ecef;
+  border-color: #cbd5e0;
+}
+
+.erp-info-chip i {
+  font-size: 10px;
+}
+
+/* Chip Varyantları */
+.erp-info-chip.chip-success {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.erp-info-chip.chip-warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.erp-info-chip.chip-danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.erp-info-chip.chip-primary {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.erp-info-chip.chip-info {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+
+/* ERP Butonlar */
+.erp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+  background: #ffffff;
+}
+
+.erp-btn i {
+  font-size: 13px;
+}
+
+/* Buton Varyantları */
+.erp-btn-success {
+  color: #166534;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.erp-btn-success:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.erp-btn-danger {
+  color: #991b1b;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.erp-btn-danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.erp-btn-primary {
+  color: #1e40af;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.erp-btn-primary:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
+.erp-btn-secondary {
+  color: #475569;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.erp-btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e0;
+  color: #475569;
+}
+
+.erp-btn-info {
+  color: #0369a1;
+  border-color: #bae6fd;
+  background: #f0f9ff;
+}
+
+.erp-btn-info:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+.erp-btn-warning {
+  color: #92400e;
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.erp-btn-warning:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+  color: #92400e;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card-header.bg-white {
+    padding: 8px 15px !important;
+  }
+
+  .erp-header-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+
+  .card-header h6 {
+    font-size: 13px !important;
+  }
+
+  .erp-breadcrumb {
+    font-size: 10px;
+  }
+
+  .erp-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+
+  .erp-btn span {
+    display: none !important;
+  }
+
+  .erp-btn i {
+    margin: 0;
+  }
+}
+
+/* Print Style */
+@media print {
+  .erp-btn,
+  .erp-info-chip {
+    display: none !important;
+  }
+
+  .card-header.bg-white {
+    border-bottom: 2px solid #000;
+  }
+}
+
+/* Focus States */
+.erp-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+}
+
+/* Loading State */
+.erp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* Kompakt Filtre Kartı */
+.erp-filter-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.filter-field {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12px;
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.filter-field:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  height: 100%;
+  align-items: flex-end;
+}
+
+.filter-btn {
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 5px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-filter-apply {
+  background: #3b82f6;
+  color: white;
+  border-color: #2563eb;
+}
+
+.btn-filter-apply:hover {
+  background: #2563eb;
+}
+
+.btn-filter-clear {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #cbd5e0;
+}
+
+.btn-filter-clear:hover {
+  background: #e2e8f0;
+}
+
+/* Responsive Filtre */
+@media (max-width: 768px) {
+  .erp-filter-card .col-md-3,
+  .erp-filter-card .col-md-2 {
+    margin-bottom: 10px;
+  }
+
+  .filter-actions {
+    margin-top: 10px;
+    justify-content: flex-start;
+  }
+}
+
+/* Kompakt DataTable */
+.table-compact {
+  font-size: 13px;
+}
+
+.table-compact thead th {
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  color: #475569;
+}
+
+.table-compact tbody td {
+  padding: 6px 10px;
+  vertical-align: middle;
+}
+
+.table-compact .btn-sm {
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+/* DataTables Kompakt Stil */
+.dataTables_wrapper .dataTables_length select {
+  font-size: 12px;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.dataTables_wrapper .dataTables_info {
+  font-size: 12px;
+  padding-top: 8px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  font-size: 12px;
+}
+
+/* Badge Stiller */
+.badge {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-success {
+  background: #10b981;
+}
+
+.badge-primary {
+  background: #3b82f6;
+}
+
+.badge-info {
+  background: #06b6d4;
+}
+
+.badge-warning {
+  background: #f59e0b;
+}
+
+.badge-secondary {
+  background: #94a3b8;
+}
+/* Kompakt Card Tasarımı */
+.erp-stat-card {
+  border-radius: 6px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.erp-stat-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.erp-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--card-color-start), var(--card-color-end));
+  z-index: 1;
+}
+
+.erp-stat-card.card-total {
+  --card-color-start: #3b82f6;
+  --card-color-end: #06b6d4;
+}
+
+.erp-stat-card.card-count {
+  --card-color-start: #10b981;
+  --card-color-end: #84cc16;
+}
+
+.erp-stat-card.card-average {
+  --card-color-start: #f59e0b;
+  --card-color-end: #f97316;
+}
+
+.erp-stat-card.card-methods {
+  --card-color-start: #8b5cf6;
+  --card-color-end: #d946ef;
+}
+
+.erp-stat-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px 12px 15px;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+}
+
+.erp-stat-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--card-color-start), var(--card-color-end));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.erp-stat-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 3px;
+  display: block;
+}
+
+.erp-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.erp-stat-currency {
+  font-size: 12px;
+  font-weight: 600;
+  color: #718096;
+}
+
+.erp-stat-subtext {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.erp-stat-progress {
+  height: 2px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.erp-stat-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--card-color-start), var(--card-color-end));
+  transition: width 0.6s ease;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .erp-stat-content {
+    padding: 10px 10px 10px 13px;
+  }
+}
+/* Kompakt Card Tasarımı */
+.erp-stat-card {
+  border-radius: 6px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.erp-stat-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.erp-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--card-color-start), var(--card-color-end));
+  z-index: 1;
+}
+
+.erp-stat-card.card-total {
+  --card-color-start: #3b82f6;
+  --card-color-end: #06b6d4;
+}
+
+.erp-stat-card.card-count {
+  --card-color-start: #10b981;
+  --card-color-end: #84cc16;
+}
+
+.erp-stat-card.card-average {
+  --card-color-start: #f59e0b;
+  --card-color-end: #f97316;
+}
+
+.erp-stat-card.card-methods {
+  --card-color-start: #8b5cf6;
+  --card-color-end: #d946ef;
+}
+
+.erp-stat-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px 12px 15px;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+}
+
+.erp-stat-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--card-color-start), var(--card-color-end));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.erp-stat-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 3px;
+  display: block;
+}
+
+.erp-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.erp-stat-currency {
+  font-size: 12px;
+  font-weight: 600;
+  color: #718096;
+}
+
+.erp-stat-subtext {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.erp-stat-progress {
+  height: 2px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.erp-stat-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--card-color-start), var(--card-color-end));
+  transition: width 0.6s ease;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .erp-stat-content {
+    padding: 10px 10px 10px 13px;
+  }
+}
+/* ERP Modal Stilleri */
+.erp-modal {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.erp-modal .modal-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-bottom: 1px solid #cbd5e0;
+  padding: 12px 20px;
+}
+
+.erp-modal .modal-header .modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.erp-modal .modal-header .modal-title i {
+  color: #3b82f6;
+}
+
+.erp-modal .modal-body {
+  padding: 20px;
+  background: #f8fafc;
+}
+
+.erp-modal .form-group {
+  margin-bottom: 15px;
+}
+
+.erp-modal .form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.erp-modal .form-group label i {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.erp-modal .form-group .form-control {
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-size: 13px;
+  transition: all 0.2s;
+  background: white;
+}
+
+.erp-modal .form-group .form-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.erp-modal .form-group .form-control.is-invalid {
+  border-color: #ef4444;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23ef4444' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23ef4444' stroke='none'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right calc(0.375em + 0.1875rem) center;
+  background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.erp-modal .form-row {
+  margin-left: -5px;
+  margin-right: -5px;
+}
+
+.erp-modal .form-row > .col,
+.erp-modal .form-row > [class*="col-"] {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.erp-modal .modal-footer {
+  border-top: 1px solid #cbd5e0;
+  padding: 12px 20px;
+  background: #f8fafc;
+}
+
+.erp-modal .modal-footer .btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 5px;
+  border: 1px solid;
+  min-width: 80px;
+}
+
+/* Required field indicator */
+.required-field::after {
+  content: "*";
+  color: #ef4444;
+  margin-left: 3px;
+}
+
+/* Field groups */
+.field-group {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.field-group .field-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-group .field-group-title i {
+  color: #3b82f6;
+}
+
+/* Responsive modal */
+@media (max-width: 768px) {
+  .erp-modal .modal-dialog {
+    margin: 10px;
+  }
+
+  .erp-modal .modal-body {
+    padding: 15px;
+  }
+
+  .erp-modal .form-row {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+/* payments.css dosyasına ekleyin */
+#customerBankSection {
+  transition: all 0.3s ease;
+}
+
+#CustomerBankAccountID option {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+#CustomerBankAccountID option:hover {
+  background-color: #f8f9fa;
+}
+
+.field-group {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.field-group-title {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #007bff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Seçili Banka Kartı Stilleri */
+.selected-bank-summary .bank-icon-lg {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.bank-stat-item {
+  padding: 8px;
+}
+
+.bank-stat-item .stat-label {
+  font-size: 10px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.bank-stat-item .stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.bank-balance-box {
+  background: white;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.bank-balance-box .stat-label {
+  font-size: 10px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.bank-balance-box .balance-value {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 4px 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .bank-stat-item .stat-value {
+    font-size: 13px;
+  }
+
+  .bank-balance-box .balance-value {
+    font-size: 18px;
+  }
+
+  .selected-bank-summary .bank-icon-lg {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+}
+
+/* ============================================================ */
+/* ÖDEME MODALI 3 KOLON LAYOUT  (BankTransactions içinde)       */
+/* ============================================================ */
+
+.payment-3col-row {
+  margin-bottom: 12px;
+}
+
+.payment-col-card {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 12px 14px;
+  position: relative;
+  transition: box-shadow 0.15s ease;
+}
+
+.payment-col-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+.payment-3col-row > div:nth-child(1) .payment-col-card {
+  border-left: 3px solid #3b82f6;
+}
+
+.payment-3col-row > div:nth-child(2) .payment-col-card {
+  border-left: 3px solid #10b981;
+}
+
+.payment-method-col .payment-col-card,
+.payment-method-col .field-group {
+  border-left: 3px solid #f59e0b;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.15s ease;
+}
+
+.payment-method-col.method-bank .payment-col-card,
+.payment-method-col.method-bank .field-group {
+  border-left-color: #3b82f6;
+}
+
+.payment-method-col.method-cash .payment-col-card,
+.payment-method-col.method-cash .field-group {
+  border-left-color: #10b981;
+}
+
+.payment-method-col.method-check .payment-col-card,
+.payment-method-col.method-check .field-group {
+  border-left-color: #1d4ed8;
+}
+
+.payment-method-col.method-bill .payment-col-card,
+.payment-method-col.method-bill .field-group {
+  border-left-color: #d97706;
+}
+
+#crossCurrencyRow,
+#crossExchangeRateRow {
+  animation: zto-btx-slideDown 0.2s ease-out;
+}
+
+@keyframes zto-btx-slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.payment-method-col > div[id] {
+  animation: zto-btx-fadeInRight 0.18s ease-out;
+}
+
+@keyframes zto-btx-fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .payment-3col-row .col-md-3,
+  .payment-3col-row .col-md-6 {
+    margin-bottom: 10px;
+  }
+  .payment-col-card {
+    padding: 10px 12px;
+  }
+}
+/* --- Views/BankTransactions/Index.cshtml:35-83 --- */
+.btn-divider {
+  width: 1px;
+  height: 28px;
+  background: linear-gradient(180deg, transparent 0%, #cbd5e1 20%, #cbd5e1 80%, transparent 100%);
+  margin: 0 4px;
+  margin-right: 12px;
+  align-self: center;
+}
+
+.erp-filter-card .filter-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  width: 100%;
+}
+
+.erp-filter-card .filter-actions .filter-btn {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  padding: 0;
+  border-radius: 6px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.erp-filter-card .filter-actions .btn-filter-refresh {
+  background: #0b5ed7;
+  color: #fff;
+  border: 1px solid #0a58ca;
+}
+
+.erp-filter-card .filter-actions .btn-filter-refresh:hover {
+  background: #0a58ca;
+  border-color: #084298;
+}
+
+.erp-filter-card .filter-actions .btn-filter-refresh i.is-spinning {
+  animation: zto-btx-bank-filter-refresh-spin 0.8s linear infinite;
+}
+
+@keyframes zto-btx-bank-filter-refresh-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* --- Views/BankTransactions/Index.cshtml:515-527 --- */
+@keyframes zto-btx-scaleUp {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+/* --- Views/BankTransactions/Index.cshtml:5217-5619 --- */
+.detail-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: white;
+}
+
+.detail-card-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  padding: 12px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  color: #334155;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-card-body {
+  padding: 16px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  min-width: 120px;
+}
+
+.detail-value {
+  font-size: 13px;
+  color: #1e293b;
+  font-weight: 600;
+  text-align: right;
+  flex: 1;
+  word-break: break-word;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .detail-item {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .detail-label {
+    min-width: auto;
+  }
+
+  .detail-value {
+    text-align: left;
+  }
+}
+
+/* Tablo özel stilleri */
+#transactionsTable thead th {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 10px 8px;
+  border-bottom: 2px solid #cbd5e0;
+}
+
+#transactionsTable tbody td {
+  padding: 3px;
+  vertical-align: middle;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+#transactionsTable tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+/* Badge özel stilleri */
+.badge-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.badge-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.badge-secondary {
+  background: #64748b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .erp-stat-card .erp-stat-value {
+    font-size: 14px;
+  }
+
+  #transactionsTable {
+    font-size: 11px;
+  }
+}
+
+/* Talimat modalı için otomatik doldurulmuş alan stilleri */
+.auto-filled {
+  background-color: #d1fae5 !important;
+  border-color: #10b981 !important;
+  font-weight: 500;
+}
+
+.auto-filled:focus {
+  background-color: #a7f3d0 !important;
+  box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.25) !important;
+}
+
+/* Talimat ödemesi için readonly alanlar - YEŞİL RENK */
+
+/* Select dropdown için özel stil */
+
+/* Talimat uyarı tooltip animasyonu */
+@keyframes zto-btx-warningBounce {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(-20px);
+  }
+
+  50% {
+    transform: scale(1.05) translateY(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* YENİ: CARİ KARTLARI İÇİN STILLER - KOMPAKT + YATAY SCROLL */
+.customer-cards-horizontal-scroll {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 16px;
+  padding: 8px 4px 16px 4px;
+  scroll-behavior: smooth;
+}
+
+.customer-cards-horizontal-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.customer-cards-horizontal-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.customer-cards-horizontal-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.customer-cards-horizontal-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.stat-total {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.stat-completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.stat-remaining {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.stat-postponed {
+  background: #fce7f3;
+  color: #831843;
+}
+
+/* ÖDEME SATIRI STİLLERİ */
+.payment-row {
+  padding: 16px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.payment-row.completed {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.payment-row.postponed {
+  background: #fef3c7;
+  border-color: #fbbf24;
+}
+
+.payment-row.selected {
+  background: #fef9c3;
+  border-color: #eab308;
+  box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3);
+}
+
+.payment-row.pending {
+  background: white;
+  border-color: #e5e7eb;
+}
+
+.payment-row.pending:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.payment-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.payment-checkbox:disabled {
+  cursor: not-allowed;
+}
+
+.payment-info {
+  flex-grow: 1;
+  margin-left: 16px;
+}
+
+.payment-amount {
+  font-size: 18px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.payment-date {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.payment-description {
+  font-size: 13px;
+  color: #475569;
+  margin-top: 8px;
+}
+
+.payment-iban {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 6px;
+  font-family: "Courier New", monospace;
+  letter-spacing: 0.5px;
+}
+
+.payment-status-badge {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.status-completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-postponed {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-pending {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+/* Utility Classes */
+.gap-1 {
+  gap: 8px;
+}
+/* --- wwwroot/css/zt/customeraccountpayment/payments.css:46-50 (.filter-label i) --- */
+.filter-label i {
+  margin-right: 0.3rem;
+  color: #6c757d;
+  font-size: 0.7rem;
+}
+/* --- wwwroot/css/zt/customeraccountpayment/payments.css:89-91 (.filter-btn i) --- */
+.filter-btn i {
+  font-size: 0.75rem;
+}
+/* --- wwwroot/css/zt/customeraccountpayment/payments.css:1667-1969 (SearchableSelect .ss-*) --- */
+/* ------------------------------------------------------------ */
+/* 1. WRAPPER - SearchableSelect container                      */
+/* ------------------------------------------------------------ */
+.ss-wrapper {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+/* ------------------------------------------------------------ */
+/* 2. TRIGGER BUTTON - Seçili değeri gösteren alan              */
+/* ------------------------------------------------------------ */
+.ss-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  min-height: 34px;
+  padding: 5px 10px;
+  background: #ffffff;
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+  font-size: 13px;
+  color: #1e293b;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.ss-trigger:hover {
+  border-color: #94a3b8;
+}
+
+.ss-trigger.ss-open,
+.ss-trigger:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  outline: none;
+}
+
+/* Placeholder rengi */
+.ss-trigger.ss-placeholder {
+  color: #94a3b8;
+}
+
+/* Seçili değer metni */
+.ss-trigger-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+/* Chevron ikonu */
+.ss-trigger-icon {
+  flex-shrink: 0;
+  color: #94a3b8;
+  font-size: 11px;
+  transition: transform 0.2s ease;
+  line-height: 1;
+}
+
+.ss-trigger.ss-open .ss-trigger-icon {
+  transform: rotate(180deg);
+  color: #3b82f6;
+}
+
+/* Disabled durumu */
+.ss-trigger.ss-disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
+  border-color: #e2e8f0;
+}
+
+.ss-trigger.ss-disabled:hover {
+  border-color: #e2e8f0;
+}
+
+/* Validation error durumu */
+.ss-trigger.is-invalid {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* ------------------------------------------------------------ */
+/* 3. DROPDOWN PANEL                                            */
+/* ------------------------------------------------------------ */
+.ss-dropdown {
+  position: fixed; /* ✅ DÜZELTİLDİ: absolute yerine fixed - modal içinde scroll sorununu önler */
+  /* top, left, width JavaScript tarafından dinamik set edilir */
+  z-index: 99999;
+  background: #ffffff;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 2px 6px rgba(0, 0, 0, 0.06);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 200px;
+  max-height: 300px; /* ✅ EKLENDI: Dropdown'ın maksimum yüksekliği */
+  /* Modal içinde z-index sorununu önle */
+  isolation: isolate;
+}
+
+/* Modal içinde z-index garantisi */
+.modal .ss-dropdown,
+.erp-modal .ss-dropdown {
+  z-index: 99999;
+}
+
+.ss-dropdown.ss-open {
+  display: flex;
+  animation: zto-btx-ssDropdownIn 0.15s ease-out;
+}
+
+@keyframes zto-btx-ssDropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ------------------------------------------------------------ */
+/* 4. ARAMA KUTUSU                                              */
+/* ------------------------------------------------------------ */
+.ss-search-wrap,
+.ss-search-box {
+  padding: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
+.ss-search-input {
+  width: 100%;
+  padding: 6px 10px 6px 30px;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #1e293b;
+  background: #ffffff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E")
+    no-repeat 9px center;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  outline: none;
+}
+
+.ss-search-input::placeholder {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.ss-search-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* ------------------------------------------------------------ */
+/* 5. SEÇENEK LİSTESİ                                          */
+/* ------------------------------------------------------------ */
+.ss-list,
+.ss-options-list {
+  overflow-y: auto;
+  max-height: 220px;
+  padding: 4px 0;
+  flex: 1;
+}
+
+/* Scrollbar stili - mevcut ERP tema ile uyumlu */
+.ss-list::-webkit-scrollbar,
+.ss-options-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.ss-list::-webkit-scrollbar-track,
+.ss-options-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.ss-list::-webkit-scrollbar-thumb,
+.ss-options-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.ss-list::-webkit-scrollbar-thumb:hover,
+.ss-options-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ------------------------------------------------------------ */
+/* 6. SEÇENEK ÖĞELERİ                                         */
+/* ------------------------------------------------------------ */
+.ss-option {
+  padding: 7px 12px;
+  font-size: 13px;
+  color: #1e293b;
+  cursor: pointer;
+  transition: background-color 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  line-height: 1.4;
+}
+
+.ss-option:hover {
+  background-color: #eff6ff;
+  color: #1e40af;
+}
+
+.ss-option.ss-selected {
+  background-color: #dbeafe;
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.ss-option.ss-selected::after {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
+  flex-shrink: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%231e40af' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E")
+    no-repeat center;
+}
+
+.ss-option:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+  background-color: #eff6ff;
+}
+
+/* Eşleşen kısmı vurgula */
+.ss-option .ss-highlight {
+  background-color: #fef08a;
+  color: #713f12;
+  border-radius: 2px;
+  padding: 0 1px;
+  font-weight: 700;
+}
+
+/* Boş durum */
+.ss-no-result,
+.ss-no-results {
+  padding: 16px 12px;
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.ss-no-result::before,
+.ss-no-results::before {
+  content: "";
+  display: block;
+  width: 28px;
+  height: 28px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E")
+    no-repeat center;
+}
+
+/* ------------------------------------------------------------ */
+/* 7. FOOTER - Seçimi temizle butonu                           */
+/* ------------------------------------------------------------ */
+.ss-footer {
+  border-top: 1px solid #e2e8f0;
+  padding: 5px 8px;
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
+.ss-clear-btn {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #64748b;
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+
+.ss-clear-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+/* --- wwwroot/css/zt/customeraccountpayment/payments.css:1990-2016 (.ss-* responsive + dolu gelme) --- */
+/* ------------------------------------------------------------ */
+/* 9. RESPONSIVE                                                */
+/* ------------------------------------------------------------ */
+@media (max-width: 768px) {
+  .ss-options-list {
+    max-height: 160px;
+  }
+
+  .ss-option {
+    padding: 9px 12px;
+    font-size: 13px;
+  }
+
+  .ss-trigger {
+    min-height: 38px;
+  }
+}
+
+/* ------------------------------------------------------------ */
+/* 10. PRE-FILLED / DOLU GELME DURUMU                         */
+/* ViewBag.SelectedAccountId ile doldurulan select için        */
+/* ss-placeholder class'ı eklenmez, seçili değer gösterilir   */
+/* ------------------------------------------------------------ */
+.ss-trigger:not(.ss-placeholder) {
+  color: #1e293b;
+  font-weight: 500;
+}

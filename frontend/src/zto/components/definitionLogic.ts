@@ -126,25 +126,33 @@ export function fieldIcon(label: string | null | undefined): string {
   return "fa-info-circle";
 }
 
-export type DefinitionEntityKey = "workplace" | "branch" | "company" | "customer-account";
+export type DefinitionEntityKey =
+  "workplace" | "branch" | "company" | "customer-account" | "bank" | "cash";
 
 /**
  * Hero simgesi (_Details.cshtml:46-75; şirket Blackrose eki, liste simgesiyle aynı). Cari kart
  * (DefinitionAuditRegistry.cs:58 "Cari Kart") ZTO'da kendi görünümüyle fa-file-invoice-dollar.
+ * Banka ve kasa (12.2; DefinitionAuditRegistry.cs:54-55) _Details.cshtml:53-54.
  */
 export const ENTITY_ICONS: Record<DefinitionEntityKey, string> = {
   workplace: "fa-building",
   branch: "fa-city",
   company: "fa-landmark",
   "customer-account": "fa-file-invoice-dollar",
+  bank: "fa-university",
+  cash: "fa-cash-register",
 };
 
+export type EntityAccent = "blue" | "indigo" | "amber";
+
 /**
- * Vurgu teması (_Details.cshtml:77-88): workplace/branch mavi, diğerleri (şirket) indigo. Cari kartın
- * vurgusu yok; kendi `definition-details--customer-account` görünümü kullanılır (detailsVariant).
+ * Vurgu teması (_Details.cshtml:77-88): workplace/branch/bank mavi, cash amber, diğerleri (şirket)
+ * indigo. Cari kartın vurgusu yok; kendi `definition-details--customer-account` görünümü kullanılır
+ * (detailsVariant).
  */
-export function entityAccent(key: DefinitionEntityKey): "blue" | "indigo" | null {
+export function entityAccent(key: DefinitionEntityKey): EntityAccent | null {
   if (key === "customer-account") return null;
+  if (key === "cash") return "amber";
   return key === "company" ? "indigo" : "blue";
 }
 

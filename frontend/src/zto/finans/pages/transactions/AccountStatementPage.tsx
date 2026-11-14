@@ -6,6 +6,7 @@ import { useAuthStore } from "../../../../auth/authStore";
 import { activeCompanies, isMultiCompany } from "../../../../auth/companyStore";
 import {
   useAccount,
+  useAccountBalances,
   useAccountInvoices,
   useAccountStatement,
 } from "../../../../pages/finance/accountApi";
@@ -17,6 +18,7 @@ import {
   balanceMark,
   groupStatement,
   groupStatementChunked,
+  missingInvoiceRows,
   periodLabel,
   showsDetailToggle,
   statementNo,
@@ -81,6 +83,12 @@ export function AccountStatementPage() {
     to: range.to || STATEMENT_OPEN_TO,
     dateBasis: basis,
     companyId: companyId || null,
+  });
+  // 12.2 (§5.14): "Fatura bilgisi eksik" satırları; seçili şirket ve iş yeri kapsamında.
+  const balances = useAccountBalances(id, {
+    groupBy: "CURRENCY",
+    companyId: companyId || null,
+    branchIds: branchId ? [branchId] : undefined,
   });
   const detailOn = detailed && showsDetailToggle(account.data?.subGroup);
   const purchase = useAccountInvoices(detailOn ? id : undefined, {
@@ -774,6 +782,31 @@ export function AccountStatementPage() {
                       </td>
                     </tr>
                   ))}
+                {missingInvoiceRows(
+                  balances.data?.invoiceGaps,
+                  companyId || null,
+                  visibleCurrency,
+                ).map((row) => (
+                  <tr
+                    key={`missing-${row.key}`}
+                    className="missing-invoice-row"
+                    data-currency-id={row.currency}
+                    style={{ fontWeight: "bold", textAlign: "right" }}
+                  >
+                    <td className="text-danger" style={{ textAlign: "center" }}>
+                      {t("transactions.statement.missingInvoice")}
+                    </td>
+                    <td
+                      style={{ textAlign: "center" }}
+                    >{`${row.currency} (${currencySymbol(row.currency)})`}</td>
+                    <td colSpan={3} className="text-danger" style={{ textAlign: "right" }}>
+                      {`${formatN2(row.missing)} ${currencySymbol(row.currency)}`}
+                    </td>
+                    <td className="text-danger" style={{ textAlign: "center" }}>
+                      {t(`transactions.statement.missingSide.${row.side}`)}
+                    </td>
+                  </tr>
+                ))}
               </tfoot>
             </table>
           </div>

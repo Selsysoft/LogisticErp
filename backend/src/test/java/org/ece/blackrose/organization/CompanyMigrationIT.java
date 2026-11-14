@@ -69,8 +69,9 @@ class CompanyMigrationIT extends AbstractIntegrationTest {
     assertThat(series(s, "FREIGHT_INVOICE").get("prefix")).isEqualTo("NF");
     assertThat(series(s, "WAREHOUSE_INVOICE").get("prefix")).isEqualTo("DF");
     assertThat(series(s, "FREIGHT_INVOICE").get("year")).isNull();
+    // V25 (NF, DF) + V32 (VRM, SVR; Faz 12.2).
     assertThat(jdbc.queryForObject(q(s, "select count(*) from %s.document_series"), Long.class))
-        .isEqualTo(2);
+        .isEqualTo(4);
   }
 
   // G-2, G-9

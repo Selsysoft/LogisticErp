@@ -49,7 +49,19 @@
             "enum" : [ "CURRENCY", "COMPANY", "BRANCH" ],
             "type" : "string"
           },
+          "invoiceGaps" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AccountInvoiceGapResponse"
+            },
+            "type" : "array"
+          },
           "payableInvoiceTotals" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CurrencyAmountResponse"
+            },
+            "type" : "array"
+          },
+          "receivableInvoiceTotals" : {
             "items" : {
               "$ref" : "#/components/schemas/CurrencyAmountResponse"
             },
@@ -417,6 +429,9 @@
           "code" : {
             "type" : "string"
           },
+          "countsAsInvoice" : {
+            "type" : "boolean"
+          },
           "invoiceSection" : {
             "type" : "boolean"
           },
@@ -490,6 +505,35 @@
             "type" : "string"
           },
           "event" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AccountInvoiceGapResponse" : {
+        "properties" : {
+          "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "invoiceTotal" : {
+            "type" : "number"
+          },
+          "ledgerTotal" : {
+            "type" : "number"
+          },
+          "missing" : {
+            "type" : "number"
+          },
+          "side" : {
+            "enum" : [ "PAYABLE", "RECEIVABLE" ],
             "type" : "string"
           }
         },
@@ -2294,6 +2338,18 @@
         },
         "type" : "object"
       },
+      "CompanyOutstandingResponse" : {
+        "properties" : {
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "outstanding" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
       "CompanyResponse" : {
         "properties" : {
           "active" : {
@@ -2695,8 +2751,25 @@
       },
       "CreateFundRequest" : {
         "properties" : {
+          "accountNo" : {
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "accountType" : {
+            "enum" : [ "DEMAND", "CREDIT", "DEPOSIT", "INVESTMENT" ],
+            "type" : "string"
+          },
+          "active" : {
+            "type" : "boolean"
+          },
           "allowNegative" : {
             "type" : "boolean"
+          },
+          "bankBranchName" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
           },
           "bankName" : {
             "maxLength" : 100,
@@ -2717,6 +2790,11 @@
             "minLength" : 3,
             "type" : "string"
           },
+          "description" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
           "iban" : {
             "maxLength" : 34,
             "minLength" : 0,
@@ -2730,6 +2808,16 @@
             "maxLength" : 200,
             "minLength" : 0,
             "type" : "string"
+          },
+          "openingBalance" : {
+            "type" : "number"
+          },
+          "openingDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "openingRate" : {
+            "type" : "number"
           }
         },
         "required" : [ "branchId", "code", "currency", "kind", "name" ],
@@ -3433,7 +3521,7 @@
             "type" : "string"
           },
           "docType" : {
-            "enum" : [ "FREIGHT_INVOICE", "WAREHOUSE_INVOICE" ],
+            "enum" : [ "FREIGHT_INVOICE", "WAREHOUSE_INVOICE", "FUND_TRANSFER", "INTERCOMPANY_TRANSFER" ],
             "type" : "string"
           },
           "id" : {
@@ -4003,6 +4091,291 @@
         },
         "type" : "object"
       },
+      "FundActiveRequest" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "active" ],
+        "type" : "object"
+      },
+      "FundActivityInflowResponse" : {
+        "properties" : {
+          "accountingType" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "no" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "outflows" : {
+            "items" : {
+              "$ref" : "#/components/schemas/FundActivityOutflowResponse"
+            },
+            "type" : "array"
+          },
+          "remaining" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "FundActivityOutflowResponse" : {
+        "properties" : {
+          "accountingType" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "FundActivityReportResponse" : {
+        "properties" : {
+          "from" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "fund" : {
+            "$ref" : "#/components/schemas/FundResponse"
+          },
+          "inflows" : {
+            "items" : {
+              "$ref" : "#/components/schemas/FundActivityInflowResponse"
+            },
+            "type" : "array"
+          },
+          "net" : {
+            "type" : "number"
+          },
+          "opening" : {
+            "type" : "number"
+          },
+          "to" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "totalIn" : {
+            "type" : "number"
+          },
+          "totalOut" : {
+            "type" : "number"
+          },
+          "unmatchedOut" : {
+            "type" : "number"
+          },
+          "unspent" : {
+            "items" : {
+              "$ref" : "#/components/schemas/FundActivityUnspentResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "FundActivityUnspentResponse" : {
+        "properties" : {
+          "accountingType" : {
+            "type" : "string"
+          },
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "no" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "original" : {
+            "type" : "number"
+          },
+          "remaining" : {
+            "type" : "number"
+          },
+          "used" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "FundCanDeleteResponse" : {
+        "properties" : {
+          "allowed" : {
+            "type" : "boolean"
+          },
+          "reasons" : {
+            "items" : {
+              "$ref" : "#/components/schemas/FundDeleteReasonResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "FundCurrencyTotalResponse" : {
+        "properties" : {
+          "count" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "net" : {
+            "type" : "number"
+          },
+          "totalIn" : {
+            "type" : "number"
+          },
+          "totalOut" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "FundDeleteReasonResponse" : {
+        "properties" : {
+          "count" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "kind" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "FundDetailResponse" : {
+        "properties" : {
+          "accountNo" : {
+            "type" : "string"
+          },
+          "accountType" : {
+            "enum" : [ "DEMAND", "CREDIT", "DEPOSIT", "INVESTMENT" ],
+            "type" : "string"
+          },
+          "active" : {
+            "type" : "boolean"
+          },
+          "allowNegative" : {
+            "type" : "boolean"
+          },
+          "balance" : {
+            "type" : "number"
+          },
+          "bankBranchName" : {
+            "type" : "string"
+          },
+          "bankName" : {
+            "type" : "string"
+          },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "currentBalance" : {
+            "type" : "number"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "futureCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "futureNet" : {
+            "type" : "number"
+          },
+          "iban" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "BANK", "CASH" ],
+            "type" : "string"
+          },
+          "lastTransactionDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "openingBalance" : {
+            "type" : "number"
+          },
+          "openingDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "transactionCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "updateCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "updatedBy" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "FundOption" : {
         "properties" : {
           "companyId" : {
@@ -4042,13 +4415,56 @@
         },
         "type" : "object"
       },
+      "FundRefResponse" : {
+        "properties" : {
+          "accountNo" : {
+            "type" : "string"
+          },
+          "bankBranchName" : {
+            "type" : "string"
+          },
+          "bankName" : {
+            "type" : "string"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "iban" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "FundResponse" : {
         "properties" : {
+          "accountNo" : {
+            "type" : "string"
+          },
+          "accountType" : {
+            "enum" : [ "DEMAND", "CREDIT", "DEPOSIT", "INVESTMENT" ],
+            "type" : "string"
+          },
+          "active" : {
+            "type" : "boolean"
+          },
           "allowNegative" : {
             "type" : "boolean"
           },
           "balance" : {
             "type" : "number"
+          },
+          "bankBranchName" : {
+            "type" : "string"
           },
           "bankName" : {
             "type" : "string"
@@ -4067,6 +4483,19 @@
           "currency" : {
             "type" : "string"
           },
+          "currentBalance" : {
+            "type" : "number"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "futureCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "futureNet" : {
+            "type" : "number"
+          },
           "iban" : {
             "type" : "string"
           },
@@ -4080,12 +4509,244 @@
           },
           "name" : {
             "type" : "string"
+          },
+          "openingBalance" : {
+            "type" : "number"
+          },
+          "openingDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "transactionCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "FundSourceRefResponse" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "route" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "FundSparklineResponse" : {
+        "properties" : {
+          "fundId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "points" : {
+            "items" : {
+              "type" : "number"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "FundSummaryRowResponse" : {
+        "properties" : {
+          "accountType" : {
+            "enum" : [ "DEMAND", "CREDIT", "DEPOSIT", "INVESTMENT" ],
+            "type" : "string"
+          },
+          "balance" : {
+            "type" : "number"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "count" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "currentBalance" : {
+            "type" : "number"
+          },
+          "futureNet" : {
+            "type" : "number"
+          },
+          "inactiveCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "kind" : {
+            "enum" : [ "BANK", "CASH" ],
+            "type" : "string"
+          },
+          "openingTotal" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "FundTransactionDetailResponse" : {
+        "properties" : {
+          "accountCode" : {
+            "type" : "string"
+          },
+          "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "accountName" : {
+            "type" : "string"
+          },
+          "accountType" : {
+            "enum" : [ "DEMAND", "CREDIT", "DEPOSIT", "INVESTMENT" ],
+            "type" : "string"
+          },
+          "accountingType" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "bankName" : {
+            "type" : "string"
+          },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "category" : {
+            "enum" : [ "EXPENSE", "INCOME", "OTHER", "OPENING", "COMMISSION", "FEE", "KMV" ],
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "direction" : {
+            "enum" : [ "IN", "OUT" ],
+            "type" : "string"
+          },
+          "exchangeRate" : {
+            "type" : "number"
+          },
+          "fund" : {
+            "$ref" : "#/components/schemas/FundRefResponse"
+          },
+          "fundAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "fundCode" : {
+            "type" : "string"
+          },
+          "fundName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "BANK", "CASH" ],
+            "type" : "string"
+          },
+          "reversal" : {
+            "type" : "boolean"
+          },
+          "reversed" : {
+            "type" : "boolean"
+          },
+          "runningBalance" : {
+            "type" : "number"
+          },
+          "source" : {
+            "$ref" : "#/components/schemas/FundSourceRefResponse"
+          },
+          "sourceId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "sourceType" : {
+            "type" : "string"
+          },
+          "tlAmount" : {
+            "type" : "number"
+          },
+          "transactionDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "transferCode" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "FundTransactionPageResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/FundTransactionRowResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "summary" : {
+            "$ref" : "#/components/schemas/FundTransactionSummaryResponse"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
       },
       "FundTransactionResponse" : {
         "properties" : {
+          "category" : {
+            "enum" : [ "EXPENSE", "INCOME", "OTHER", "OPENING", "COMMISSION", "FEE", "KMV" ],
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "description" : {
             "type" : "string"
           },
@@ -4121,6 +4782,307 @@
         },
         "type" : "object"
       },
+      "FundTransactionRowResponse" : {
+        "properties" : {
+          "accountCode" : {
+            "type" : "string"
+          },
+          "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "accountName" : {
+            "type" : "string"
+          },
+          "accountType" : {
+            "enum" : [ "DEMAND", "CREDIT", "DEPOSIT", "INVESTMENT" ],
+            "type" : "string"
+          },
+          "accountingType" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "bankName" : {
+            "type" : "string"
+          },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "category" : {
+            "enum" : [ "EXPENSE", "INCOME", "OTHER", "OPENING", "COMMISSION", "FEE", "KMV" ],
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "direction" : {
+            "enum" : [ "IN", "OUT" ],
+            "type" : "string"
+          },
+          "exchangeRate" : {
+            "type" : "number"
+          },
+          "fundAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "fundCode" : {
+            "type" : "string"
+          },
+          "fundName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "BANK", "CASH" ],
+            "type" : "string"
+          },
+          "reversal" : {
+            "type" : "boolean"
+          },
+          "reversed" : {
+            "type" : "boolean"
+          },
+          "runningBalance" : {
+            "type" : "number"
+          },
+          "sourceId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "sourceType" : {
+            "type" : "string"
+          },
+          "tlAmount" : {
+            "type" : "number"
+          },
+          "transactionDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "transferCode" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "FundTransactionSummaryResponse" : {
+        "properties" : {
+          "currencies" : {
+            "items" : {
+              "$ref" : "#/components/schemas/FundCurrencyTotalResponse"
+            },
+            "type" : "array"
+          },
+          "periodClosing" : {
+            "type" : "number"
+          },
+          "periodOpening" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "FundTransferRequest" : {
+        "properties" : {
+          "calcMode" : {
+            "enum" : [ "SOURCE_RATE", "RATE_TARGET", "SOURCE_TARGET" ],
+            "type" : "string"
+          },
+          "costs" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TransferCostRequest"
+            },
+            "maxItems" : 3,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "description" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "documentNo" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "exchangeRate" : {
+            "type" : "number"
+          },
+          "fromFundId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "money" : {
+            "$ref" : "#/components/schemas/Money"
+          },
+          "rate" : {
+            "type" : "number"
+          },
+          "rateOperation" : {
+            "enum" : [ "MULTIPLY", "DIVIDE" ],
+            "type" : "string"
+          },
+          "sources" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TransferSourceRequest"
+            },
+            "maxItems" : 50,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "targetMoney" : {
+            "$ref" : "#/components/schemas/Money"
+          },
+          "toFundId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "transferType" : {
+            "enum" : [ "VIREMENT", "EFT", "WIRE", "FX_EXCHANGE", "BANK_TO_CASH", "CASH_TO_BANK", "CASH_TO_CASH" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "date", "fromFundId", "money", "toFundId" ],
+        "type" : "object"
+      },
+      "FundTransferResponse" : {
+        "properties" : {
+          "calcMode" : {
+            "enum" : [ "SOURCE_RATE", "RATE_TARGET", "SOURCE_TARGET" ],
+            "type" : "string"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "costs" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TransferCostResponse"
+            },
+            "type" : "array"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "documentNo" : {
+            "type" : "string"
+          },
+          "fromFundCode" : {
+            "type" : "string"
+          },
+          "fromFundId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "fromFundName" : {
+            "type" : "string"
+          },
+          "fxDiffTl" : {
+            "type" : "number"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "money" : {
+            "$ref" : "#/components/schemas/Money"
+          },
+          "rate" : {
+            "type" : "number"
+          },
+          "rateOperation" : {
+            "enum" : [ "MULTIPLY", "DIVIDE" ],
+            "type" : "string"
+          },
+          "replacedByTransferId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "replacesTransferId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "reversalReason" : {
+            "type" : "string"
+          },
+          "reversedAt" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "sources" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TransferSourceResponse"
+            },
+            "type" : "array"
+          },
+          "status" : {
+            "enum" : [ "POSTED", "REVERSED" ],
+            "type" : "string"
+          },
+          "targetMoney" : {
+            "$ref" : "#/components/schemas/Money"
+          },
+          "toFundCode" : {
+            "type" : "string"
+          },
+          "toFundId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "toFundName" : {
+            "type" : "string"
+          },
+          "transferDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "transferId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "transferType" : {
+            "enum" : [ "VIREMENT", "EFT", "WIRE", "FX_EXCHANGE", "BANK_TO_CASH", "CASH_TO_BANK", "CASH_TO_CASH" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "FunnelEntry" : {
         "properties" : {
           "count" : {
@@ -4136,6 +5098,228 @@
           },
           "total" : {
             "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "FxCandidateAccountResponse" : {
+        "properties" : {
+          "accountCode" : {
+            "type" : "string"
+          },
+          "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "accountName" : {
+            "type" : "string"
+          },
+          "collectionCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "remainingTotal" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "FxCandidateCollectionResponse" : {
+        "properties" : {
+          "amount" : {
+            "type" : "number"
+          },
+          "broken" : {
+            "type" : "number"
+          },
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "remaining" : {
+            "type" : "number"
+          },
+          "settlementId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "FxReportResponse" : {
+        "properties" : {
+          "rows" : {
+            "items" : {
+              "$ref" : "#/components/schemas/FxReportRowResponse"
+            },
+            "type" : "array"
+          },
+          "stats" : {
+            "$ref" : "#/components/schemas/FxReportStatsResponse"
+          },
+          "unbrokenCollections" : {
+            "items" : {
+              "$ref" : "#/components/schemas/FxUnbrokenCollectionResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "FxReportRowResponse" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "fxDiffTl" : {
+            "type" : "number"
+          },
+          "level" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "rate" : {
+            "type" : "number"
+          },
+          "rateOperation" : {
+            "enum" : [ "MULTIPLY", "DIVIDE" ],
+            "type" : "string"
+          },
+          "sourceFundName" : {
+            "type" : "string"
+          },
+          "sourceMoney" : {
+            "$ref" : "#/components/schemas/Money"
+          },
+          "sources" : {
+            "items" : {
+              "$ref" : "#/components/schemas/FxReportSourceResponse"
+            },
+            "type" : "array"
+          },
+          "status" : {
+            "enum" : [ "POSTED", "REVERSED" ],
+            "type" : "string"
+          },
+          "targetFundName" : {
+            "type" : "string"
+          },
+          "targetMoney" : {
+            "$ref" : "#/components/schemas/Money"
+          },
+          "transferId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "FxReportSourceResponse" : {
+        "properties" : {
+          "accountName" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "SETTLEMENT", "TRANSFER" ],
+            "type" : "string"
+          },
+          "used" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "FxReportStatsResponse" : {
+        "properties" : {
+          "collectionCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "fxCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "fxWithoutCollection" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalBroken" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CurrencyAmountResponse"
+            },
+            "type" : "array"
+          },
+          "unbrokenCollectionCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "FxSourceResponse" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "deposited" : {
+            "type" : "number"
+          },
+          "remaining" : {
+            "type" : "number"
+          },
+          "sourceFundName" : {
+            "type" : "string"
+          },
+          "transferId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "used" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "FxUnbrokenCollectionResponse" : {
+        "properties" : {
+          "accountName" : {
+            "type" : "string"
+          },
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "money" : {
+            "$ref" : "#/components/schemas/Money"
+          },
+          "settlementId" : {
+            "format" : "uuid",
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -4602,6 +5786,143 @@
         },
         "type" : "object"
       },
+      "IntercompanyTransferRequest" : {
+        "properties" : {
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "description" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "documentNo" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "fromFundId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "money" : {
+            "$ref" : "#/components/schemas/Money"
+          },
+          "reasonType" : {
+            "enum" : [ "DEBT_PAID", "LOAN_GIVEN" ],
+            "type" : "string"
+          },
+          "toFundId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "transferType" : {
+            "enum" : [ "VIREMENT", "EFT", "WIRE", "FX_EXCHANGE", "BANK_TO_CASH", "CASH_TO_BANK", "CASH_TO_CASH" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "date", "fromFundId", "money", "reasonType", "toFundId", "transferType" ],
+        "type" : "object"
+      },
+      "IntercompanyTransferResponse" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "collectionSettlementId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "documentNo" : {
+            "type" : "string"
+          },
+          "fromBranchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "fromCompanyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "fromFundCode" : {
+            "type" : "string"
+          },
+          "fromFundId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "fromFundName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "money" : {
+            "$ref" : "#/components/schemas/Money"
+          },
+          "paymentSettlementId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "reasonText" : {
+            "type" : "string"
+          },
+          "reasonType" : {
+            "enum" : [ "DEBT_PAID", "LOAN_GIVEN" ],
+            "type" : "string"
+          },
+          "reversalReason" : {
+            "type" : "string"
+          },
+          "reversedAt" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "POSTED", "REVERSED" ],
+            "type" : "string"
+          },
+          "toBranchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "toCompanyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "toFundCode" : {
+            "type" : "string"
+          },
+          "toFundId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "toFundName" : {
+            "type" : "string"
+          },
+          "transferDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "transferType" : {
+            "enum" : [ "VIREMENT", "EFT", "WIRE", "FX_EXCHANGE", "BANK_TO_CASH", "CASH_TO_BANK", "CASH_TO_CASH" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "InviteUserRequest" : {
         "properties" : {
           "email" : {
@@ -5016,6 +6337,10 @@
       },
       "ManualFundTransactionRequest" : {
         "properties" : {
+          "category" : {
+            "enum" : [ "EXPENSE", "INCOME", "OTHER", "OPENING", "COMMISSION", "FEE", "KMV" ],
+            "type" : "string"
+          },
           "date" : {
             "format" : "date",
             "type" : "string"
@@ -6045,6 +7370,33 @@
         },
         "type" : "object"
       },
+      "PageResponseIntercompanyTransferResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/IntercompanyTransferResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "PageResponseMovementResponse" : {
         "properties" : {
           "content" : {
@@ -6239,6 +7591,33 @@
           "content" : {
             "items" : {
               "$ref" : "#/components/schemas/ShipmentSummary"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseTransferListRowResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TransferListRowResponse"
             },
             "type" : "array"
           },
@@ -7358,6 +8737,20 @@
         },
         "type" : "object"
       },
+      "ReplaceTransferRequest" : {
+        "properties" : {
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "transfer" : {
+            "$ref" : "#/components/schemas/FundTransferRequest"
+          }
+        },
+        "required" : [ "transfer" ],
+        "type" : "object"
+      },
       "ReportDashboardResponse" : {
         "properties" : {
           "customs" : {
@@ -7402,6 +8795,21 @@
             "type" : "string"
           },
           "description" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "date" ],
+        "type" : "object"
+      },
+      "ReverseTransferRequest" : {
+        "properties" : {
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "reason" : {
             "maxLength" : 500,
             "minLength" : 0,
             "type" : "string"
@@ -9295,6 +10703,23 @@
         "required" : [ "newPassword", "token" ],
         "type" : "object"
       },
+      "SettlementCheckResponse" : {
+        "properties" : {
+          "invoiceGaps" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AccountInvoiceGapResponse"
+            },
+            "type" : "array"
+          },
+          "warnings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SettlementWarningResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "SettlementPerformanceRow" : {
         "properties" : {
           "collected" : {
@@ -9326,6 +10751,9 @@
           "branchId" : {
             "format" : "uuid",
             "type" : "string"
+          },
+          "confirmWarnings" : {
+            "type" : "boolean"
           },
           "date" : {
             "format" : "date",
@@ -9419,6 +10847,47 @@
           },
           "type" : {
             "enum" : [ "PAYMENT", "COLLECTION" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SettlementWarningResponse" : {
+        "properties" : {
+          "amount" : {
+            "type" : "number"
+          },
+          "code" : {
+            "enum" : [ "COMPANY_ALLOCATION_EXCEEDED", "INVOICE_MISSING" ],
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyOutstanding" : {
+            "type" : "number"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "excess" : {
+            "type" : "number"
+          },
+          "otherHiddenExists" : {
+            "type" : "boolean"
+          },
+          "others" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CompanyOutstandingResponse"
+            },
+            "type" : "array"
+          },
+          "partialScope" : {
+            "type" : "boolean"
+          },
+          "severity" : {
+            "enum" : [ "CONFIRM", "INFO" ],
             "type" : "string"
           }
         },
@@ -10158,39 +11627,269 @@
         },
         "type" : "object"
       },
-      "TransferRequest" : {
+      "TransferCollectionResponse" : {
         "properties" : {
+          "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "accountName" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "number"
+          },
           "date" : {
             "format" : "date",
             "type" : "string"
           },
-          "description" : {
-            "maxLength" : 500,
-            "minLength" : 0,
+          "settlementId" : {
+            "format" : "uuid",
             "type" : "string"
           },
-          "exchangeRate" : {
+          "state" : {
+            "enum" : [ "COMPLETE", "PARTIAL", "PENDING", "CANCELLED", "NONE" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "TransferCostRequest" : {
+        "properties" : {
+          "amount" : {
             "type" : "number"
           },
-          "fromFundId" : {
+          "fundAccountId" : {
             "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "COMMISSION", "FEE", "KMV" ],
+            "type" : "string"
+          },
+          "ratePercent" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "kind" ],
+        "type" : "object"
+      },
+      "TransferCostResponse" : {
+        "properties" : {
+          "baseAmount" : {
+            "type" : "number"
+          },
+          "fundAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "COMMISSION", "FEE", "KMV" ],
             "type" : "string"
           },
           "money" : {
             "$ref" : "#/components/schemas/Money"
           },
+          "ratePercent" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "TransferDependentResponse" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "sourceFundName" : {
+            "type" : "string"
+          },
+          "targetFundName" : {
+            "type" : "string"
+          },
+          "transferId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "usedAmount" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "TransferListRowResponse" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "collection" : {
+            "$ref" : "#/components/schemas/TransferCollectionResponse"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "costFundNames" : {
+            "type" : "string"
+          },
+          "costTotalTl" : {
+            "type" : "number"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "documentNo" : {
+            "type" : "string"
+          },
+          "fromBranchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "fromFundCode" : {
+            "type" : "string"
+          },
+          "fromFundId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "fromFundName" : {
+            "type" : "string"
+          },
+          "fromKind" : {
+            "enum" : [ "BANK", "CASH" ],
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "rate" : {
+            "type" : "number"
+          },
+          "rateOperation" : {
+            "enum" : [ "MULTIPLY", "DIVIDE" ],
+            "type" : "string"
+          },
+          "reasonType" : {
+            "enum" : [ "DEBT_PAID", "LOAN_GIVEN" ],
+            "type" : "string"
+          },
+          "recordType" : {
+            "enum" : [ "FUND_TRANSFER", "INTERCOMPANY" ],
+            "type" : "string"
+          },
+          "sourceMoney" : {
+            "$ref" : "#/components/schemas/Money"
+          },
+          "status" : {
+            "enum" : [ "POSTED", "REVERSED" ],
+            "type" : "string"
+          },
+          "targetMoney" : {
+            "$ref" : "#/components/schemas/Money"
+          },
+          "toBranchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "toCompanyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "toFundCode" : {
+            "type" : "string"
+          },
           "toFundId" : {
             "format" : "uuid",
             "type" : "string"
+          },
+          "toFundName" : {
+            "type" : "string"
+          },
+          "toKind" : {
+            "enum" : [ "BANK", "CASH" ],
+            "type" : "string"
+          },
+          "transferDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "transferType" : {
+            "enum" : [ "VIREMENT", "EFT", "WIRE", "FX_EXCHANGE", "BANK_TO_CASH", "CASH_TO_BANK", "CASH_TO_CASH" ],
+            "type" : "string"
           }
         },
-        "required" : [ "date", "fromFundId", "money", "toFundId" ],
         "type" : "object"
       },
-      "TransferResponse" : {
+      "TransferSourceRequest" : {
         "properties" : {
-          "transferId" : {
+          "id" : {
             "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "SETTLEMENT", "TRANSFER" ],
+            "type" : "string"
+          },
+          "usedAmount" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "id", "kind", "usedAmount" ],
+        "type" : "object"
+      },
+      "TransferSourceResponse" : {
+        "properties" : {
+          "amount" : {
+            "type" : "number"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "SETTLEMENT", "TRANSFER" ],
+            "type" : "string"
+          },
+          "sourceId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "usedAmount" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "TransferSummaryRowResponse" : {
+        "properties" : {
+          "amounts" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CurrencyAmountResponse"
+            },
+            "type" : "array"
+          },
+          "count" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "group" : {
+            "enum" : [ "VIREMENT_EFT_WIRE", "FX_EXCHANGE", "BANK_TO_CASH", "CASH_TO_BANK", "CASH_TO_CASH", "INTERCOMPANY", "TOTAL" ],
             "type" : "string"
           }
         },
@@ -10520,8 +12219,21 @@
       },
       "UpdateFundRequest" : {
         "properties" : {
+          "accountNo" : {
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "active" : {
+            "type" : "boolean"
+          },
           "allowNegative" : {
             "type" : "boolean"
+          },
+          "bankBranchName" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
           },
           "bankName" : {
             "maxLength" : 100,
@@ -10530,6 +12242,11 @@
           },
           "branchId" : {
             "format" : "uuid",
+            "type" : "string"
+          },
+          "description" : {
+            "maxLength" : 500,
+            "minLength" : 0,
             "type" : "string"
           },
           "iban" : {
@@ -10541,6 +12258,16 @@
             "maxLength" : 200,
             "minLength" : 0,
             "type" : "string"
+          },
+          "openingBalance" : {
+            "type" : "number"
+          },
+          "openingDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "openingRate" : {
+            "type" : "number"
           }
         },
         "required" : [ "branchId", "name" ],
@@ -11404,7 +13131,7 @@
         "tags" : [ "admin-saas-controller" ]
       },
       "post" : {
-        "operationId" : "create_7",
+        "operationId" : "create_8",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -13784,7 +15511,7 @@
     },
     "/api/v1/files" : {
       "get" : {
-        "operationId" : "list_6",
+        "operationId" : "list_7",
         "parameters" : [ {
           "in" : "query",
           "name" : "ownerType",
@@ -14264,7 +15991,7 @@
         "tags" : [ "account-transfer-controller" ]
       },
       "post" : {
-        "operationId" : "create_6",
+        "operationId" : "create_7",
         "parameters" : [ {
           "in" : "header",
           "name" : "Idempotency-Key",
@@ -14302,7 +16029,7 @@
     },
     "/api/v1/finance/account-transfers/{id}" : {
       "get" : {
-        "operationId" : "get_4",
+        "operationId" : "get_6",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -14329,7 +16056,7 @@
     },
     "/api/v1/finance/account-transfers/{id}/reverse" : {
       "post" : {
-        "operationId" : "reverse_1",
+        "operationId" : "reverse_2",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -14491,6 +16218,44 @@
           }
         },
         "tags" : [ "finance-controller" ]
+      }
+    },
+    "/api/v1/finance/accounts/invoice-gaps" : {
+      "get" : {
+        "operationId" : "invoiceGaps",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "side",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "PAYABLE", "RECEIVABLE" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountInvoiceGapResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-ledger-controller" ]
       }
     },
     "/api/v1/finance/accounts/transactions/{id}" : {
@@ -14722,7 +16487,7 @@
     },
     "/api/v1/finance/accounts/{id}/active" : {
       "patch" : {
-        "operationId" : "setActive",
+        "operationId" : "setActive_1",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -15229,7 +16994,7 @@
     },
     "/api/v1/finance/accounts/{id}/rollovers" : {
       "get" : {
-        "operationId" : "list_5",
+        "operationId" : "list_6",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -15265,7 +17030,7 @@
         "tags" : [ "account-rollover-controller" ]
       },
       "post" : {
-        "operationId" : "create_5",
+        "operationId" : "create_6",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -15951,6 +17716,55 @@
             "format" : "uuid",
             "type" : "string"
           }
+        }, {
+          "in" : "query",
+          "name" : "branchId",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "kind",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "BANK", "CASH" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "accountType",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "DEMAND", "CREDIT", "DEPOSIT", "INVESTMENT" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "active",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "currency",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "asOf",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -15996,6 +17810,385 @@
         "tags" : [ "finance-controller" ]
       }
     },
+    "/api/v1/finance/funds/sparklines" : {
+      "get" : {
+        "operationId" : "sparklines",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "ids",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/FundSparklineResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/summary" : {
+      "get" : {
+        "operationId" : "summary_1",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "kind",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "BANK", "CASH" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "asOf",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/FundSummaryRowResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/transactions" : {
+      "get" : {
+        "operationId" : "transactions",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "kind",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "BANK", "CASH" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "fundId",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "branchId",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "accountType",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "DEMAND", "CREDIT", "DEPOSIT", "INVESTMENT" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "direction",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "IN", "OUT" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "accountingType",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "enum" : [ "INTERCOMPANY", "ACCOUNT_PAYMENT", "ACCOUNT_COLLECTION", "EXPENSE", "VIREMENT", "EFT", "WIRE", "FX_EXCHANGE", "BANK_TO_CASH", "CASH_TO_BANK", "CASH_TO_CASH", "TRANSFER_COST", "LEGACY_TRANSFER", "CHECK_COLLECTION", "NOTE_COLLECTION", "CHECK_PAYMENT", "NOTE_PAYMENT", "INCOME", "OTHER", "OPENING", "CREDIT_DRAWDOWN", "NET_SALARY" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "currency",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "summary",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 50,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "sort",
+          "required" : false,
+          "schema" : {
+            "default" : "transactionDate,desc",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FundTransactionPageResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/transactions/export" : {
+      "get" : {
+        "operationId" : "exportTransactions",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "kind",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "BANK", "CASH" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "fundId",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "branchId",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "accountType",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "DEMAND", "CREDIT", "DEPOSIT", "INVESTMENT" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "direction",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "IN", "OUT" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "accountingType",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "enum" : [ "INTERCOMPANY", "ACCOUNT_PAYMENT", "ACCOUNT_COLLECTION", "EXPENSE", "VIREMENT", "EFT", "WIRE", "FX_EXCHANGE", "BANK_TO_CASH", "CASH_TO_BANK", "CASH_TO_CASH", "TRANSFER_COST", "LEGACY_TRANSFER", "CHECK_COLLECTION", "NOTE_COLLECTION", "CHECK_PAYMENT", "NOTE_PAYMENT", "INCOME", "OTHER", "OPENING", "CREDIT_DRAWDOWN", "NET_SALARY" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "currency",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "sort",
+          "required" : false,
+          "schema" : {
+            "default" : "transactionDate,desc",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/FundTransactionRowResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/transactions/{id}" : {
+      "get" : {
+        "operationId" : "transaction",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FundTransactionDetailResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-controller" ]
+      }
+    },
     "/api/v1/finance/funds/transactions/{id}/reverse" : {
       "post" : {
         "operationId" : "reverseFundTransaction",
@@ -16034,13 +18227,107 @@
       }
     },
     "/api/v1/finance/funds/transfers" : {
+      "get" : {
+        "operationId" : "list_5",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "branchId",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "transferType",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "POSTED", "REVERSED" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 25,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseTransferListRowResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-transfer-controller" ]
+      },
       "post" : {
-        "operationId" : "transfer",
+        "operationId" : "create_5",
         "parameters" : [ {
           "in" : "header",
           "name" : "Idempotency-Key",
           "required" : false,
           "schema" : {
+            "maxLength" : 100,
+            "minLength" : 0,
             "type" : "string"
           }
         } ],
@@ -16048,7 +18335,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/TransferRequest"
+                "$ref" : "#/components/schemas/FundTransferRequest"
               }
             }
           },
@@ -16059,14 +18346,355 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/TransferResponse"
+                  "$ref" : "#/components/schemas/FundTransferResponse"
                 }
               }
             },
             "description" : "Created"
           }
         },
-        "tags" : [ "finance-controller" ]
+        "tags" : [ "fund-transfer-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/transfers/fx-collection-candidates" : {
+      "get" : {
+        "operationId" : "fxCandidates",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "fundId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "currency",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "accountId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "oneOf" : [ {
+                      "$ref" : "#/components/schemas/FxCandidateAccountResponse"
+                    }, {
+                      "$ref" : "#/components/schemas/FxCandidateCollectionResponse"
+                    } ],
+                    "type" : "object"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-transfer-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/transfers/fx-report" : {
+      "get" : {
+        "operationId" : "fxReport",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FxReportResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-transfer-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/transfers/fx-sources" : {
+      "get" : {
+        "operationId" : "fxSources",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "fundId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "currency",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/FxSourceResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-transfer-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/transfers/summary" : {
+      "get" : {
+        "operationId" : "summary",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "branchId",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "transferType",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/TransferSummaryRowResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-transfer-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/transfers/{id}" : {
+      "get" : {
+        "operationId" : "get_5",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FundTransferResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-transfer-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/transfers/{id}/dependents" : {
+      "get" : {
+        "operationId" : "dependents",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/TransferDependentResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-transfer-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/transfers/{id}/replace" : {
+      "post" : {
+        "operationId" : "replace",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReplaceTransferRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FundTransferResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "fund-transfer-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/transfers/{id}/reverse" : {
+      "post" : {
+        "operationId" : "reverse_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReverseTransferRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FundTransferResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-transfer-controller" ]
       }
     },
     "/api/v1/finance/funds/{id}" : {
@@ -16087,6 +18715,39 @@
           }
         },
         "tags" : [ "finance-controller" ]
+      },
+      "get" : {
+        "operationId" : "get_3",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "asOf",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FundDetailResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-controller" ]
       },
       "put" : {
         "operationId" : "updateFund",
@@ -16122,6 +18783,113 @@
           }
         },
         "tags" : [ "finance-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/{id}/active" : {
+      "patch" : {
+        "operationId" : "setActive",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/FundActiveRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FundResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/{id}/activity-report" : {
+      "get" : {
+        "operationId" : "activity",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FundActivityReportResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-controller" ]
+      }
+    },
+    "/api/v1/finance/funds/{id}/can-delete" : {
+      "get" : {
+        "operationId" : "canDelete",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FundCanDeleteResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-controller" ]
       }
     },
     "/api/v1/finance/funds/{id}/statement" : {
@@ -16318,6 +19086,167 @@
           }
         },
         "tags" : [ "finance-controller" ]
+      }
+    },
+    "/api/v1/finance/intercompany-transfers" : {
+      "get" : {
+        "operationId" : "listIntercompany",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "companyId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 200,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseIntercompanyTransferResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-transfer-controller" ]
+      },
+      "post" : {
+        "operationId" : "createIntercompany",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/IntercompanyTransferRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IntercompanyTransferResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "fund-transfer-controller" ]
+      }
+    },
+    "/api/v1/finance/intercompany-transfers/{id}" : {
+      "get" : {
+        "operationId" : "getIntercompany",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IntercompanyTransferResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-transfer-controller" ]
+      }
+    },
+    "/api/v1/finance/intercompany-transfers/{id}/reverse" : {
+      "post" : {
+        "operationId" : "reverseIntercompany",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReverseTransferRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IntercompanyTransferResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "fund-transfer-controller" ]
       }
     },
     "/api/v1/finance/opening-balances" : {
@@ -17298,6 +20227,43 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/FinanceSettingsResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "finance-controller" ]
+      }
+    },
+    "/api/v1/finance/settlements/check" : {
+      "post" : {
+        "operationId" : "checkSettlement",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "type",
+          "required" : true,
+          "schema" : {
+            "enum" : [ "PAYMENT", "COLLECTION" ],
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SettlementRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SettlementCheckResponse"
                 }
               }
             },
@@ -21156,7 +24122,7 @@
     },
     "/api/v1/shipment/shipments/{id}" : {
       "get" : {
-        "operationId" : "get_3",
+        "operationId" : "get_4",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",

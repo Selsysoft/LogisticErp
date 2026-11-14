@@ -11,6 +11,7 @@ import org.ece.blackrose.finance.domain.FinanceTypes.AccountDocumentStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.BalanceGroupBy;
 import org.ece.blackrose.finance.domain.FinanceTypes.InvoiceDirection;
+import org.ece.blackrose.finance.domain.FinanceTypes.InvoiceSide;
 import org.ece.blackrose.finance.domain.FinanceTypes.TransactionKind;
 import org.ece.blackrose.finance.service.AccountDocumentService;
 import org.ece.blackrose.finance.service.AccountDocumentService.AccountDocumentQuery;
@@ -18,11 +19,13 @@ import org.ece.blackrose.finance.service.AccountService;
 import org.ece.blackrose.finance.service.AccountTransactionQueryService;
 import org.ece.blackrose.finance.service.AccountTransactionQueryService.AccountTransactionQuery;
 import org.ece.blackrose.finance.service.AccountTransactionVoidService;
+import org.ece.blackrose.finance.service.InvoiceCoverageService;
 import org.ece.blackrose.finance.web.AccountDtos.AccountBalanceBreakdownResponse;
 import org.ece.blackrose.finance.web.AccountDtos.AccountDocumentCancelRequest;
 import org.ece.blackrose.finance.web.AccountDtos.AccountDocumentRequest;
 import org.ece.blackrose.finance.web.AccountDtos.AccountDocumentResponse;
 import org.ece.blackrose.finance.web.AccountDtos.AccountDocumentTypeResponse;
+import org.ece.blackrose.finance.web.AccountDtos.AccountInvoiceGapResponse;
 import org.ece.blackrose.finance.web.AccountDtos.AccountInvoiceRowResponse;
 import org.ece.blackrose.finance.web.AccountDtos.AccountTransactionDetailResponse;
 import org.ece.blackrose.finance.web.AccountDtos.AccountTransactionPageResponse;
@@ -60,6 +63,7 @@ public class AccountLedgerController {
   private final AccountTransactionQueryService queries;
   private final AccountTransactionVoidService voids;
   private final AccountService accounts;
+  private final InvoiceCoverageService invoiceCoverage;
   private final FinanceMapper mapper;
 
   public AccountLedgerController(
@@ -67,7 +71,9 @@ public class AccountLedgerController {
       AccountTransactionQueryService queries,
       AccountTransactionVoidService voids,
       AccountService accounts,
+      InvoiceCoverageService invoiceCoverage,
       FinanceMapper mapper) {
+    this.invoiceCoverage = invoiceCoverage;
     this.documents = documents;
     this.queries = queries;
     this.voids = voids;
@@ -223,6 +229,18 @@ public class AccountLedgerController {
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
       @RequestParam(required = false) UUID companyId) {
     return accounts.invoices(id, direction, documentType, reflected, from, to, companyId);
+  }
+
+  /**
+   * Eksik faturalı cariler (12.2 §4.6): yalnız {@code missing > 1}; şirket verilmezse konsolide
+   * satırlar. Fazlası 422 {@code RESULT_TOO_LARGE}.
+   */
+  @GetMapping("/accounts/invoice-gaps")
+  @PreAuthorize(VIEW)
+  List<AccountInvoiceGapResponse> invoiceGaps(
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(required = false) InvoiceSide side) {
+    return invoiceCoverage.listGaps(companyId, side);
   }
 
   private static String blankToNull(String value) {

@@ -1,0 +1,185 @@
+/*
+ * Kaynak: ZtoFabrika/Views/BankIntroduction/Details.cshtml:14-192 (timedeposits/index.css ve introduction-audit.css
+ * ayrıca yüklüdür: ilki banks.css'te değil, burada gerekmez; ikincisi pages/introduction-audit.css)
+ * Birebir kopya (12.2_TASARIM §5.4); değişiklikler: Razor kaçışı @@ → @, bu dosyada tanımlı
+ * @keyframes adları paket genelinde çakışmasın diye zto-<sayfa>- önekli (check:zto-css).
+ * Sayfa kapsamı .zto-finans.zto-page-bank-detail (prefixTransform scopeForFile).
+ */
+/* --- Views/BankIntroduction/Details.cshtml:14-192 --- */
+.detail-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.detail-card-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail-card-body {
+  padding: 25px;
+}
+
+.info-row {
+  display: flex;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+  min-width: 180px;
+}
+
+.info-value {
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 600;
+  flex: 1;
+}
+
+.balance-display {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 5px;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.balance-display.negative {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.balance-display.credit {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.balance-amount {
+  font-size: 30px;
+  font-weight: 700;
+  margin: 10px 0;
+}
+
+.balance-label {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 5px;
+}
+
+.initial-balance {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-top: 10px;
+}
+
+.account-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.type-vadesiz {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+}
+
+.type-kredi {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.type-mevduat {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.type-yatirim {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+}
+
+.transaction-item {
+  padding: 5px;
+  border-left: 4px solid #e2e8f0;
+  margin-bottom: 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.transaction-item:hover {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.transaction-item.income {
+  border-left-color: #10b981;
+}
+
+.transaction-item.expense {
+  border-left-color: #ef4444;
+}
+
+.transaction-date {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.transaction-type {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.transaction-amount {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.transaction-amount.income {
+  color: #10b981;
+}
+
+.transaction-amount.expense {
+  color: #ef4444;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.warning-box {
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.danger-box {
+  background: #fee2e2;
+  border-left: 4px solid #ef4444;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}

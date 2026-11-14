@@ -29,6 +29,7 @@ import org.ece.blackrose.finance.domain.FinanceTypes.AgingType;
 import org.ece.blackrose.finance.domain.FinanceTypes.BalanceGroupBy;
 import org.ece.blackrose.finance.domain.FinanceTypes.DateBasis;
 import org.ece.blackrose.finance.domain.FinanceTypes.InvoiceDirection;
+import org.ece.blackrose.finance.domain.FinanceTypes.InvoiceSide;
 import org.ece.blackrose.finance.repository.AccountRepositories.AccountCompanyLimitRepository;
 import org.ece.blackrose.finance.repository.AccountRepositories.AccountGroupRepository;
 import org.ece.blackrose.finance.repository.AccountRepositories.AccountRolloverRepository;
@@ -45,6 +46,7 @@ import org.ece.blackrose.finance.web.AccountDtos.AccountBalanceBreakdownResponse
 import org.ece.blackrose.finance.web.AccountDtos.AccountCompanyLimitResponse;
 import org.ece.blackrose.finance.web.AccountDtos.AccountGroupResponse;
 import org.ece.blackrose.finance.web.AccountDtos.AccountHistoryResponse;
+import org.ece.blackrose.finance.web.AccountDtos.AccountInvoiceGapResponse;
 import org.ece.blackrose.finance.web.AccountDtos.AccountInvoiceRowResponse;
 import org.ece.blackrose.finance.web.AccountDtos.AccountLimitRequest;
 import org.ece.blackrose.finance.web.AccountDtos.AccountPlanSummaryResponse;
@@ -167,6 +169,7 @@ public class AccountService {
   private final AuditService audit;
   private final AuditLogRepository auditLogs;
   private final TenantClock clock;
+  private final InvoiceCoverageService invoiceCoverage;
 
   @SuppressWarnings("java:S107")
   public AccountService(
@@ -186,7 +189,9 @@ public class AccountService {
       PersonalDataProtector protector,
       AuditService audit,
       AuditLogRepository auditLogs,
-      TenantClock clock) {
+      TenantClock clock,
+      InvoiceCoverageService invoiceCoverage) {
+    this.invoiceCoverage = invoiceCoverage;
     this.accounts = accounts;
     this.transactions = transactions;
     this.groups = groups;
@@ -650,7 +655,8 @@ public class AccountService {
 
   /**
    * Kırılımlı bakiye (12.1 §3.6): para birimi, şirket ya da iş yeri kırılımı; sezon seçiliyse devir
-   * öncesi/sonrası bölmesi ve toplamı. Resmi fatura toplamı müşteri dışı carilerde.
+   * öncesi/sonrası bölmesi ve toplamı. Fatura toplamları ve eksik fatura satırları defter
+   * tabanlıdır (12.2 §3.7); alış tarafı ("Resmi Fatura") müşteri dışı carilerde.
    */
   @Transactional(readOnly = true)
   public AccountBalanceBreakdownResponse breakdown(
@@ -684,13 +690,18 @@ public class AccountService {
       rows.addAll(totals(segments));
     }
     segments.forEach(row -> rows.add(breakdownRow(row.getSegment(), row)));
+    List<AccountInvoiceGapResponse> coverage = invoiceCoverage.coverage(id, filter, asOf);
     List<CurrencyAmountResponse> payable =
         account.getType() == AccountType.CUSTOMER
             ? List.of()
-            : transactions.payableInvoiceTotals(id, filter).stream()
-                .map(row -> new CurrencyAmountResponse(row.getCurrency(), row.getAmount()))
-                .toList();
-    return new AccountBalanceBreakdownResponse(grouping, splitDate, rows, payable);
+            : InvoiceCoverageService.invoiceTotals(coverage, InvoiceSide.PAYABLE);
+    return new AccountBalanceBreakdownResponse(
+        grouping,
+        splitDate,
+        rows,
+        payable,
+        InvoiceCoverageService.invoiceTotals(coverage, InvoiceSide.RECEIVABLE),
+        coverage);
   }
 
   /**
@@ -939,8 +950,8 @@ public class AccountService {
   }
 
   /**
-   * Adres ve açık TCKN yalnız detayda ve yalnız FINANCE_MANAGE sahibine; listede adres yok, TCKN
-   * maskeli. İl/ilçe/ülke/posta kodu herkese açıktır (adresin maskesi).
+   * Açık adres detayda herkese (K-12.2-5), listede yok (veri en aza indirme); açık TCKN yalnız
+   * detayda ve yalnız FINANCE_MANAGE sahibine, aksi maskeli.
    */
   private AccountResponse toResponse(
       Account account,
@@ -986,7 +997,7 @@ public class AccountService {
         account.getContactName(),
         account.getContactTitle(),
         account.getContactMobile(),
-        manage ? protector.decrypt(account.getAddressEnc()) : null,
+        detail ? protector.decrypt(account.getAddressEnc()) : null,
         account.getCity(),
         account.getDistrict(),
         account.getCountry(),

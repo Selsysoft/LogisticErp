@@ -1,0 +1,2151 @@
+/*
+ * Kaynak: ZtoFabrika/wwwroot/css/zt/bankstatement/index.css:1-721 ve :972-1608 (erp-header.css ve
+ * all-transactions-page.css'e kopyalanan :722-971 "PROFESYONEL ERP HEADER" bloğu yinelenmez) +
+ * Views/BankStatement/Index.cshtml <style> :9-768.
+ * Birebir kopya (12.2_TASARIM §5.4); değişiklikler: (1) cshtml parçasında Razor kaçışı @@ → @;
+ * (2) @keyframes pulse → zto-transfer-center-pulse (paket genelinde ad çakışması, check:zto-css) ve
+ * onu kullanan animation bildirimi; (3) dosyanın sonunda "Blackrose ekleri" bölümü (şirketler arası
+ * rozet, sekme/kart düğme sıfırlamaları). Sayfa kapsamı .zto-finans.zto-page-transfer-center.
+ */
+/* --- wwwroot/css/zt/bankstatement/index.css :1-721 --- */
+/* ============================================ */
+/* BANKA EKSTRE & VİRMAN - KOMPAKT ERP STİLLERİ */
+/* ============================================ */
+
+/* Genel Sayfa Ayarları */
+.bank-statement-page {
+  font-size: 13px;
+}
+
+.bank-statement-page .card {
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 12px;
+}
+
+.bank-statement-page .card-header {
+  padding: 10px 15px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.bank-statement-page .card-header h6 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  color: #334155;
+}
+
+.bank-statement-page .card-body {
+  padding: 12px 15px;
+}
+
+/* Tab Stilleri - Kompakt */
+.bank-statement-page .nav-tabs {
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 12px;
+}
+
+.bank-statement-page .nav-tabs .nav-link {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px 6px 0 0;
+  color: #64748b;
+  border: none;
+  margin-right: 4px;
+}
+
+.bank-statement-page .nav-tabs .nav-link:hover {
+  color: #3b82f6;
+  background: #f0f9ff;
+}
+
+.bank-statement-page .nav-tabs .nav-link.active {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  border: none;
+}
+
+.bank-statement-page .nav-tabs .badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  margin-left: 4px;
+}
+
+/* Transfer Tipi Kartları - Kompakt */
+.transfer-type-card {
+  border-radius: 6px;
+  border: 2px solid #e2e8f0;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  background: #fff;
+}
+
+.transfer-type-card:hover {
+  border-color: #3b82f6;
+  background: #f0f9ff;
+}
+
+.transfer-type-card.active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.transfer-type-card i {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.transfer-type-card .title {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.transfer-type-card .desc {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* Banka Seçim Kartları - Kompakt */
+.bank-select-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.bank-select-card label {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.bank-select-card .balance {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.bank-select-card .balance.positive {
+  color: #10b981;
+}
+
+.bank-select-card .balance.negative {
+  color: #ef4444;
+}
+
+/* Tahsilat Seçim Bölümü - Kompakt */
+.collection-section {
+  border: 1px solid #fbbf24;
+  border-radius: 6px;
+  background: #fffbeb;
+  margin-bottom: 12px;
+}
+
+.collection-section .section-header {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #78350f;
+  padding: 8px 12px;
+  border-radius: 5px 5px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.collection-section .section-body {
+  padding: 10px 12px;
+}
+
+.collection-section .info-alert {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 11px;
+  margin-bottom: 10px;
+  color: #92400e;
+}
+
+/* Tahsilat Detay Kartı - Kompakt */
+.collection-detail-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 10px;
+  margin-top: 8px;
+}
+
+.collection-detail-card .detail-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.collection-detail-card .detail-item {
+  flex: 1;
+  min-width: 100px;
+  padding: 6px 8px;
+  background: #f8fafc;
+  border-radius: 4px;
+}
+
+.collection-detail-card .detail-label {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.collection-detail-card .detail-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Sipariş Tablosu - Kompakt */
+.orders-table-container {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.orders-table {
+  font-size: 11px;
+  margin-bottom: 0;
+}
+
+.orders-table thead th {
+  padding: 6px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.orders-table tbody td {
+  padding: 5px 8px;
+  vertical-align: middle;
+}
+
+.orders-table .exchange-input {
+  width: 80px;
+  padding: 3px 6px;
+  font-size: 11px;
+  border: 1px solid #cbd5e0;
+  border-radius: 3px;
+}
+
+.orders-table tfoot {
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.orders-table tfoot td {
+  padding: 6px 8px;
+}
+
+/* Toplam Bozulacak Tutar Vurgusu */
+.total-exchange-display {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.total-exchange-display .amount {
+  font-size: 16px;
+}
+
+/* Form Alanları - Kompakt */
+.bank-statement-page .form-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.bank-statement-page .form-control {
+  font-size: 12px;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+}
+
+.bank-statement-page .form-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.bank-statement-page .form-control-sm {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.bank-statement-page .input-group-text {
+  font-size: 11px;
+  padding: 4px 8px;
+  background: #f1f5f9;
+}
+
+/* Hesaplama Paneli - Kompakt */
+.calc-panel {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.calc-panel .calc-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.calc-panel .calc-row.total {
+  border-top: 1px solid #cbd5e0;
+  margin-top: 6px;
+  padding-top: 8px;
+}
+
+.calc-panel .calc-value {
+  font-weight: 600;
+}
+
+.calc-panel .calc-result {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+/* Maliyet Detayları - Kompakt */
+.cost-panel {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 5px;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.cost-panel .cost-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #92400e;
+  margin-bottom: 6px;
+}
+
+.cost-panel .cost-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 11px;
+  border-bottom: 1px dashed #fcd34d;
+}
+
+.cost-panel .cost-row:last-child {
+  border-bottom: none;
+  font-weight: 700;
+  padding-top: 6px;
+}
+
+/* Banka Listesi Tablosu - Kompakt */
+.bank-list-table {
+  font-size: 11px;
+}
+
+.bank-list-table thead th {
+  padding: 6px 8px;
+  font-size: 10px;
+  background: #f8fafc;
+}
+
+.bank-list-table tbody td {
+  padding: 5px 8px;
+}
+
+/* Ok İkonu */
+.arrow-icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arrow-icon {
+  font-size: 24px;
+  color: #3b82f6;
+  animation: zto-transfer-center-pulse 2s infinite;
+}
+
+@keyframes zto-transfer-center-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Transfer Badge'leri */
+.transfer-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.transfer-badge.virman {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.transfer-badge.doviz {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Özet Kartları - Kompakt */
+.summary-card {
+  border-radius: 6px;
+  padding: 10px 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.summary-card .small {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.summary-card .h4,
+.summary-card .h5 {
+  font-size: 16px;
+  margin-bottom: 0;
+  margin-top: 4px;
+}
+
+/* Filtre Alanları - Kompakt */
+.filter-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.filter-section .form-label {
+  font-size: 10px;
+  margin-bottom: 3px;
+}
+
+.filter-section .form-control-sm {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+/* Tablo Stilleri - Kompakt */
+.bank-statement-page .table {
+  font-size: 12px;
+}
+
+.bank-statement-page .table thead th {
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f8fafc;
+}
+
+.bank-statement-page .table tbody td {
+  padding: 6px 10px;
+  vertical-align: middle;
+}
+
+/* Butonlar - Kompakt */
+.bank-statement-page .btn {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.bank-statement-page .btn-sm {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+
+.bank-statement-page .btn-lg {
+  font-size: 13px;
+  padding: 8px 16px;
+}
+
+/* Readonly Input Stili */
+.readonly-amount {
+  background: #f1f5f9 !important;
+  font-weight: 600;
+  color: #1e40af;
+  cursor: not-allowed;
+}
+
+.transfer-side-panel-sticky {
+  position: sticky;
+  top: 78px;
+  align-self: flex-start;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .bank-statement-page .col-lg-8,
+  .bank-statement-page .col-lg-4 {
+    margin-bottom: 12px;
+  }
+
+  .transfer-side-panel-sticky {
+    position: static;
+    top: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .bank-select-card {
+    margin-bottom: 8px;
+  }
+
+  .arrow-icon-container {
+    transform: rotate(90deg);
+    padding: 8px 0;
+  }
+
+  .transfer-type-card {
+    margin-bottom: 8px;
+  }
+}
+
+/* Scrollbar Stilleri */
+.orders-table-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.orders-table-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.orders-table-container::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.orders-table-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.collection-info {
+  line-height: 1.2;
+}
+
+.collection-doc {
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.collection-date {
+  font-size: 10px;
+}
+
+.collection-amount {
+  font-size: 11px;
+  color: #28a745 !important;
+  font-weight: 600;
+}
+
+.customer-info {
+  line-height: 1.2;
+}
+
+.customer-code {
+  font-size: 10px;
+}
+
+.customer-name {
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.transfer-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.transfer-badge.virman {
+  background-color: #007bff;
+  color: white;
+}
+
+.transfer-badge.eft {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.transfer-badge.havale {
+  background-color: #6f42c1;
+  color: white;
+}
+
+.transfer-badge.doviz {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.transfer-badge.bankcash {
+  background-color: #16a34a;
+  color: #ffffff;
+}
+
+.transfer-badge.in {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.transfer-badge.out {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.statement-bank-link,
+.statement-account-link {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.statement-cash-link {
+  color: #ea7a00;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.statement-bank-link:hover,
+.statement-account-link:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+.statement-cash-link:hover {
+  color: #c95f00;
+  text-decoration: underline;
+}
+
+.statement-type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.statement-type-in {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.statement-type-out {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.statement-type-virman {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.statement-type-eft {
+  background-color: #cffafe;
+  color: #155e75;
+}
+
+.statement-type-havale {
+  background-color: #ede9fe;
+  color: #5b21b6;
+}
+
+.statement-type-doviz {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.statement-type-default {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+/* Tablo hücre boyutları için */
+#transfersTable th,
+#transfersTable td {
+  vertical-align: middle !important;
+  padding: 3px 5px !important;
+  font-size: 11px !important;
+}
+
+#transfersTable th.transfer-type-col,
+#transfersTable td.transfer-type-cell {
+  width: 120px;
+  min-width: 100px;
+  white-space: nowrap;
+}
+
+#bankStatementTable th.statement-type-col,
+#bankStatementTable td.statement-type-cell,
+#cashStatementTable th.statement-type-col,
+#cashStatementTable td.statement-type-cell {
+  min-width: 120px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Transfer türüne göre satır renklendirme */
+#transfersTable tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Döviz bozum satırları için sol kenar çizgisi */
+#transfersTable tbody tr[data-exchange="true"] {
+  border-left: 3px solid #ffc107;
+}
+/* --- wwwroot/css/zt/bankstatement/index.css :972-1608 --- */
+/* Kompakt Filtre Kartı */
+.erp-filter-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.filter-field {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12px;
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.filter-field:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  height: 100%;
+  align-items: flex-end;
+}
+
+.filter-btn {
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 5px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-filter-apply {
+  background: #3b82f6;
+  color: white;
+  border-color: #2563eb;
+}
+
+.btn-filter-apply:hover {
+  background: #2563eb;
+}
+
+.btn-filter-clear {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #cbd5e0;
+}
+
+.btn-filter-clear:hover {
+  background: #e2e8f0;
+}
+
+/* Responsive Filtre */
+@media (max-width: 768px) {
+  .erp-filter-card .col-md-3,
+  .erp-filter-card .col-md-2 {
+    margin-bottom: 10px;
+  }
+
+  .filter-actions {
+    margin-top: 10px;
+    justify-content: flex-start;
+  }
+}
+
+/* Kompakt DataTable */
+.table-compact {
+  font-size: 13px;
+}
+
+.table-compact thead th {
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  color: #475569;
+}
+
+.table-compact tbody td {
+  padding: 6px 10px;
+  vertical-align: middle;
+}
+
+.table-compact .btn-sm {
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+/* DataTables Kompakt Stil */
+.dataTables_wrapper .dataTables_length select {
+  font-size: 12px;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.dataTables_wrapper .dataTables_info {
+  font-size: 12px;
+  padding-top: 8px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  font-size: 12px;
+}
+
+/* Badge Stiller */
+.badge {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-success {
+  background: #10b981;
+}
+
+.badge-primary {
+  background: #3b82f6;
+}
+
+.badge-info {
+  background: #06b6d4;
+}
+
+.badge-warning {
+  background: #f59e0b;
+}
+
+.badge-secondary {
+  background: #94a3b8;
+}
+/* Kompakt Card Tasarımı */
+.erp-stat-card {
+  border-radius: 6px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.erp-stat-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.erp-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--card-color-start), var(--card-color-end));
+  z-index: 1;
+}
+
+.erp-stat-card.card-total {
+  --card-color-start: #3b82f6;
+  --card-color-end: #06b6d4;
+}
+
+.erp-stat-card.card-count {
+  --card-color-start: #10b981;
+  --card-color-end: #84cc16;
+}
+
+.erp-stat-card.card-average {
+  --card-color-start: #f59e0b;
+  --card-color-end: #f97316;
+}
+
+.erp-stat-card.card-methods {
+  --card-color-start: #8b5cf6;
+  --card-color-end: #d946ef;
+}
+
+.erp-stat-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px 12px 15px;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+}
+
+.erp-stat-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--card-color-start), var(--card-color-end));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.erp-stat-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 3px;
+  display: block;
+}
+
+.erp-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.erp-stat-currency {
+  font-size: 12px;
+  font-weight: 600;
+  color: #718096;
+}
+
+.erp-stat-subtext {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.erp-stat-progress {
+  height: 2px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.erp-stat-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--card-color-start), var(--card-color-end));
+  transition: width 0.6s ease;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .erp-stat-content {
+    padding: 10px 10px 10px 13px;
+  }
+}
+/* Kompakt Card Tasarımı */
+.erp-stat-card {
+  border-radius: 6px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.erp-stat-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.erp-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--card-color-start), var(--card-color-end));
+  z-index: 1;
+}
+
+.erp-stat-card.card-total {
+  --card-color-start: #3b82f6;
+  --card-color-end: #06b6d4;
+}
+
+.erp-stat-card.card-count {
+  --card-color-start: #10b981;
+  --card-color-end: #84cc16;
+}
+
+.erp-stat-card.card-average {
+  --card-color-start: #f59e0b;
+  --card-color-end: #f97316;
+}
+
+.erp-stat-card.card-methods {
+  --card-color-start: #8b5cf6;
+  --card-color-end: #d946ef;
+}
+
+.erp-stat-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px 12px 15px;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+}
+
+.erp-stat-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--card-color-start), var(--card-color-end));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.erp-stat-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 3px;
+  display: block;
+}
+
+.erp-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.erp-stat-currency {
+  font-size: 12px;
+  font-weight: 600;
+  color: #718096;
+}
+
+.erp-stat-subtext {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.erp-stat-progress {
+  height: 2px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.erp-stat-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--card-color-start), var(--card-color-end));
+  transition: width 0.6s ease;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .erp-stat-content {
+    padding: 10px 10px 10px 13px;
+  }
+}
+/* ERP Modal Stilleri */
+.erp-modal {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.erp-modal .modal-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-bottom: 1px solid #cbd5e0;
+  padding: 12px 20px;
+}
+
+.erp-modal .modal-header .modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.erp-modal .modal-header .modal-title i {
+  color: #3b82f6;
+}
+
+.erp-modal .modal-body {
+  padding: 20px;
+  background: #f8fafc;
+}
+
+.erp-modal .form-group {
+  margin-bottom: 15px;
+}
+
+.erp-modal .form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.erp-modal .form-group label i {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.erp-modal .form-group .form-control {
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-size: 13px;
+  transition: all 0.2s;
+  background: white;
+}
+
+.erp-modal .form-group .form-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.erp-modal .form-group .form-control.is-invalid {
+  border-color: #ef4444;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23ef4444' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23ef4444' stroke='none'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right calc(0.375em + 0.1875rem) center;
+  background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.erp-modal .form-row {
+  margin-left: -5px;
+  margin-right: -5px;
+}
+
+.erp-modal .form-row > .col,
+.erp-modal .form-row > [class*="col-"] {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.erp-modal .modal-footer {
+  border-top: 1px solid #cbd5e0;
+  padding: 12px 20px;
+  background: #f8fafc;
+}
+
+.erp-modal .modal-footer .btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 5px;
+  border: 1px solid;
+  min-width: 80px;
+}
+
+/* Required field indicator */
+.required-field::after {
+  content: "*";
+  color: #ef4444;
+  margin-left: 3px;
+}
+
+/* Field groups */
+.field-group {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.field-group .field-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-group .field-group-title i {
+  color: #3b82f6;
+}
+
+/* Responsive modal */
+@media (max-width: 768px) {
+  .erp-modal .modal-dialog {
+    margin: 10px;
+  }
+
+  .erp-modal .modal-body {
+    padding: 15px;
+  }
+
+  .erp-modal .form-row {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+/* payments.css dosyasına ekleyin */
+#customerBankSection {
+  transition: all 0.3s ease;
+}
+
+#CustomerBankAccountID option {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+#CustomerBankAccountID option:hover {
+  background-color: #f8f9fa;
+}
+
+.field-group {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.field-group-title {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #007bff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --- Views/BankStatement/Index.cshtml <style> :9-768 --- */
+/* ============================================================ */
+/* ✅ Select2 yazı boyutu — bu sayfa için kompakt                */
+/*    Hem default hem bootstrap teması yüklü olabilir; her       */
+/*    iki theme için ve genel selectorler için agresif override. */
+/* ============================================================ */
+
+/* Wrapper container — Flex ile dikey ortalama */
+html body .select2-container .select2-selection,
+html body .select2-container--default .select2-selection--single,
+html body .select2-container--bootstrap .select2-selection--single,
+html body .select2-container .select2-selection--single {
+  height: 30px !important;
+  min-height: 30px !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 !important;
+}
+
+/* ✅ SEÇİLEN değerin görünen yazısı — flex ortalama, ellipsis, clear sağa */
+html body .select2-container .select2-selection__rendered,
+html body .select2-container--default .select2-selection--single .select2-selection__rendered,
+html body .select2-container--bootstrap .select2-selection--single .select2-selection__rendered,
+html body .select2-container .select2-selection--single .select2-selection__rendered,
+html body span.select2-selection__rendered,
+.select2-container .select2-selection__rendered[role="textbox"],
+.select2-container .select2-selection__rendered {
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+  padding: 0 28px 0 8px !important; /* sağda ok+clear için 28px yer */
+  color: #1e293b !important;
+  height: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin: 0 !important;
+  /* Uzun text sığmazsa ... ile kesilsin */
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  position: relative !important;
+}
+
+/* Rendered içindeki child text/span — ellipsis için flex:1 + min-width:0 */
+html body .select2-selection__rendered > *:not(.select2-selection__clear) {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 11px !important;
+  line-height: inherit !important;
+}
+
+/* ✅ Clear (×) butonu — sağda, ok ile arasında belirgin boşluk */
+html body .select2-container .select2-selection__rendered .select2-selection__clear,
+html body .select2-selection__clear {
+  order: 99 !important;
+  margin-left: auto !important;
+  margin-right: 18px !important; /* sağdaki ok ile arasında boşluk */
+  color: #94a3b8 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  flex: 0 0 auto !important;
+  line-height: 1 !important;
+  padding: 0 2px !important;
+}
+html body .select2-selection__clear:hover {
+  color: #dc3545 !important;
+}
+
+/* Sağ ok — tam yükseklik */
+html body .select2-container .select2-selection__arrow,
+html body .select2-container--default .select2-selection--single .select2-selection__arrow,
+html body .select2-container--bootstrap .select2-selection--single .select2-selection__arrow {
+  height: 30px !important;
+  top: 0 !important;
+  right: 4px !important;
+}
+
+/* Placeholder */
+html body .select2-selection__placeholder,
+html body .select2-container .select2-selection__placeholder {
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+}
+
+/* Multi-select selected items */
+html body .select2-container .select2-selection--multiple {
+  min-height: 30px !important;
+}
+html body .select2-container .select2-selection--multiple .select2-selection__choice {
+  font-size: 10px !important;
+  padding: 1px 6px !important;
+  margin-top: 3px !important;
+}
+
+/* Dropdown — body'ye attach edilen menü (zaten çalışıyor) */
+.select2-container .select2-dropdown,
+.select2-dropdown,
+.select2-container--open .select2-dropdown {
+  font-size: 11px !important;
+}
+.select2-results__option,
+.select2-results__option[aria-selected],
+.select2-results__option--highlighted {
+  font-size: 11px !important;
+  padding: 4px 10px !important;
+  line-height: 1.35 !important;
+}
+.select2-search--dropdown .select2-search__field {
+  font-size: 11px !important;
+  padding: 4px 6px !important;
+}
+
+.btn-divider {
+  width: 1px;
+  height: 28px;
+  background: linear-gradient(180deg, transparent 0%, #cbd5e1 20%, #cbd5e1 80%, transparent 100%);
+  margin: 0 4px;
+  margin-right: 12px;
+  align-self: center;
+}
+.transfer-direction-column {
+  transition: none !important;
+}
+
+.transfer-direction-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  text-align: center;
+  transition: none !important;
+}
+
+.exchange-direction-title {
+  margin-top: 6px;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 700;
+  display: none;
+}
+
+.exchange-direction-pair {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  display: none;
+}
+
+.text-exchanged-dark-orange {
+  color: var(--bs-orange) !important;
+}
+
+.rate-symbol-btn {
+  min-width: 34px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.rate-symbol-x {
+  color: #047857;
+  border-color: #34d399;
+  background-color: #ecfdf5;
+}
+
+.rate-symbol-div {
+  color: #1d4ed8;
+  border-color: #93c5fd;
+  background-color: #eff6ff;
+}
+
+.transfer-rate-cell {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  min-height: 60px;
+}
+
+.transfer-rate-main {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-left: auto;
+  text-align: right;
+}
+
+.transfer-rate-currency {
+  font-size: 10px;
+  color: #7c3aed;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 10px;
+  padding: 1px 6px;
+}
+
+.transfer-rate-op {
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: 0;
+  min-width: 20px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1px 6px;
+}
+
+.transfer-rate-op.x {
+  color: #065f46;
+  background: #d1fae5;
+}
+
+.transfer-rate-op.div {
+  color: #1e3a8a;
+  background: #dbeafe;
+}
+
+.transfer-formula {
+  margin-top: 2px;
+  color: #6b7280;
+  font-size: 9px;
+  line-height: 1.2;
+  white-space: normal;
+}
+
+.transfer-arrow-cell {
+  min-width: 150px;
+}
+
+.negative-balance-soft-card {
+  border: 1px solid #dbeafe;
+  background: linear-gradient(180deg, #f8fbff 0%, #f3f8ff 100%);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.negative-balance-soft-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.negative-balance-soft-row:last-child {
+  margin-bottom: 0;
+}
+
+.negative-balance-soft-value {
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+.negative-balance-soft-label-danger {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.negative-balance-soft-value.outgoing {
+  color: #b91c1c;
+}
+
+.negative-balance-soft-value.negative {
+  color: #b91c1c;
+}
+
+.edit-collection-card {
+  border: 1px solid #dbe7ff;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.edit-collection-card .edit-collection-header {
+  background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%);
+  border-bottom: 1px solid #e1ebff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+.edit-collection-card .edit-collection-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #1e3a8a;
+  font-size: 14px;
+}
+
+.edit-collection-card .edit-collection-title i {
+  color: #2563eb;
+}
+
+.edit-collection-card .edit-collection-badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.edit-collection-card .edit-collection-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.edit-collection-card .edit-collection-account {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.edit-collection-card .edit-collection-date {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.edit-collection-card .edit-collection-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.edit-collection-card .edit-collection-metric {
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.edit-collection-card .edit-collection-metric-label {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.edit-collection-card .edit-collection-metric-value {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.edit-collection-card .edit-collection-metric-value .edit-source-symbol {
+  font-size: 12px;
+  color: #334155;
+  margin-left: 2px;
+}
+
+.edit-collection-card .metric-total {
+  border-color: #dbeafe;
+  background: #eff6ff;
+}
+
+.edit-collection-card .metric-exchanged {
+  border-color: #ffedd5;
+  background: #fff7ed;
+}
+
+.edit-collection-card .metric-remaining {
+  border-color: #dcfce7;
+  background: #f0fdf4;
+}
+
+.edit-collection-card .metric-remaining .edit-collection-metric-value {
+  color: #166534;
+}
+
+.edit-collection-card .edit-collection-max-wrap {
+  margin-top: 10px;
+  border: 1px dashed #93c5fd;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-collection-card .edit-collection-max-label {
+  font-size: 12px;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.edit-collection-card .edit-collection-max-value {
+  color: #1d4ed8;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.edit-orders-table-container {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  overflow: auto;
+  max-height: 280px;
+}
+
+.edit-orders-total-display {
+  font-size: 12px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.edit-orders-total-display .amount {
+  color: #0f766e;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.transfer-type-grid .transfer-type-card {
+  border-radius: 12px;
+  border: 1px solid #dbe4f0;
+  padding: 14px 12px;
+  min-height: 100px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #ffffff;
+}
+
+.transfer-type-grid .transfer-type-card .title {
+  margin-top: 6px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.transfer-type-grid .transfer-type-card .desc {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.transfer-type-grid .transfer-type-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+}
+
+.transfer-type-grid .transfer-type-card.virman.active {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fbff 100%);
+}
+
+.transfer-type-grid .transfer-type-card.exchange.active {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fff7ed 100%);
+}
+
+.transfer-type-grid .transfer-type-card.bankcash.active {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+}
+
+.flow-step-card {
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+  min-height: 100%;
+}
+
+.flow-step-card.flow-step-source {
+  border-left: 4px solid #ef4444;
+}
+
+.flow-step-card.flow-step-target {
+  border-left: 4px solid #22c55e;
+}
+
+@media (max-width: 767.98px) {
+  .edit-collection-card .edit-collection-metrics {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .edit-collection-card .edit-collection-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .edit-collection-card .edit-collection-max-wrap {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Transfer Direction Card Styles */
+.edit-transfer-direction-card {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px solid #0284c7;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12);
+}
+
+.edit-transfer-direction-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.edit-transfer-side {
+  flex: 1;
+  min-width: 150px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.edit-transfer-side-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.edit-transfer-side.source .edit-transfer-side-icon {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.edit-transfer-side.target .edit-transfer-side-icon {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.edit-transfer-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+}
+
+.edit-transfer-bank-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0c4a6e;
+  text-transform: capitalize;
+  line-height: 1.3;
+}
+
+.edit-transfer-workplace-name {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 500;
+  text-transform: capitalize;
+  line-height: 1.2;
+}
+
+.edit-transfer-arrow {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 60px;
+  height: 50px;
+}
+
+.edit-transfer-arrow i {
+  font-size: 24px;
+  color: #0284c7;
+}
+
+.edit-transfer-arrow-line {
+  width: 16px;
+  height: 2px;
+  background: linear-gradient(90deg, #0284c7 0%, transparent 100%);
+}
+
+@media (max-width: 768px) {
+  .edit-transfer-direction-flow {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .edit-transfer-arrow {
+    transform: rotate(90deg);
+    height: 40px;
+  }
+
+  .edit-transfer-side {
+    width: 100%;
+  }
+}
+
+/* ============================================================
+       ✅ EDIT MODAL — Select2 widget'larının net görünmesi için
+       ============================================================ */
+.transfer-edit-modal .edit-source-workplace-select + .select2-container,
+.transfer-edit-modal .edit-target-workplace-select + .select2-container,
+.transfer-edit-modal .edit-source-bank-select + .select2-container,
+.transfer-edit-modal .edit-target-bank-select + .select2-container,
+.transfer-edit-modal .edit-source-cash-select + .select2-container,
+.transfer-edit-modal .edit-target-cash-select + .select2-container {
+  width: 100% !important;
+  display: block;
+}
+
+.transfer-edit-modal .edit-source-workplace-select + .select2-container .select2-selection,
+.transfer-edit-modal .edit-target-workplace-select + .select2-container .select2-selection,
+.transfer-edit-modal .edit-source-bank-select + .select2-container .select2-selection,
+.transfer-edit-modal .edit-target-bank-select + .select2-container .select2-selection,
+.transfer-edit-modal .edit-source-cash-select + .select2-container .select2-selection,
+.transfer-edit-modal .edit-target-cash-select + .select2-container .select2-selection {
+  min-height: 36px !important;
+  height: auto !important;
+  border: 1.5px solid #94a3b8 !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  padding: 2px 4px;
+}
+
+.transfer-edit-modal .edit-source-workplace-select + .select2-container .select2-selection:hover,
+.transfer-edit-modal .edit-target-workplace-select + .select2-container .select2-selection:hover,
+.transfer-edit-modal .edit-source-bank-select + .select2-container .select2-selection:hover,
+.transfer-edit-modal .edit-target-bank-select + .select2-container .select2-selection:hover,
+.transfer-edit-modal .edit-source-cash-select + .select2-container .select2-selection:hover,
+.transfer-edit-modal .edit-target-cash-select + .select2-container .select2-selection:hover {
+  border-color: #3b82f6 !important;
+  box-shadow:
+    0 2px 6px rgba(59, 130, 246, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Focus / Open durumunda mavi vurgu */
+.transfer-edit-modal .edit-source-workplace-select + .select2-container--open .select2-selection,
+.transfer-edit-modal .edit-target-workplace-select + .select2-container--open .select2-selection,
+.transfer-edit-modal .edit-source-bank-select + .select2-container--open .select2-selection,
+.transfer-edit-modal .edit-target-bank-select + .select2-container--open .select2-selection,
+.transfer-edit-modal .edit-source-cash-select + .select2-container--open .select2-selection,
+.transfer-edit-modal .edit-target-cash-select + .select2-container--open .select2-selection {
+  border-color: #2563eb !important;
+  box-shadow:
+    0 0 0 3px rgba(37, 99, 235, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+}
+
+/* Seçilen değer (rendered) */
+.transfer-edit-modal
+  .edit-source-workplace-select
+  + .select2-container
+  .select2-selection__rendered,
+.transfer-edit-modal
+  .edit-target-workplace-select
+  + .select2-container
+  .select2-selection__rendered,
+.transfer-edit-modal .edit-source-bank-select + .select2-container .select2-selection__rendered,
+.transfer-edit-modal .edit-target-bank-select + .select2-container .select2-selection__rendered,
+.transfer-edit-modal .edit-source-cash-select + .select2-container .select2-selection__rendered,
+.transfer-edit-modal .edit-target-cash-select + .select2-container .select2-selection__rendered {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 32px !important;
+  color: #1e293b !important;
+  padding-left: 8px !important;
+  padding-right: 28px !important;
+}
+
+/* Aşağı ok */
+.transfer-edit-modal .edit-source-workplace-select + .select2-container .select2-selection__arrow,
+.transfer-edit-modal .edit-target-workplace-select + .select2-container .select2-selection__arrow,
+.transfer-edit-modal .edit-source-bank-select + .select2-container .select2-selection__arrow,
+.transfer-edit-modal .edit-target-bank-select + .select2-container .select2-selection__arrow,
+.transfer-edit-modal .edit-source-cash-select + .select2-container .select2-selection__arrow,
+.transfer-edit-modal .edit-target-cash-select + .select2-container .select2-selection__arrow {
+  height: 36px !important;
+  width: 24px !important;
+  right: 4px !important;
+}
+
+.transfer-edit-modal .edit-source-workplace-select + .select2-container .select2-selection__arrow b,
+.transfer-edit-modal .edit-target-workplace-select + .select2-container .select2-selection__arrow b,
+.transfer-edit-modal .edit-source-bank-select + .select2-container .select2-selection__arrow b,
+.transfer-edit-modal .edit-target-bank-select + .select2-container .select2-selection__arrow b,
+.transfer-edit-modal .edit-source-cash-select + .select2-container .select2-selection__arrow b,
+.transfer-edit-modal .edit-target-cash-select + .select2-container .select2-selection__arrow b {
+  border-color: #64748b transparent transparent transparent !important;
+  border-width: 6px 5px 0 5px !important;
+}
+
+/* Kaynak tarafı (sol) — kırmızımsı vurgu */
+.transfer-edit-modal .edit-source-workplace-select + .select2-container .select2-selection,
+.transfer-edit-modal .edit-source-bank-select + .select2-container .select2-selection,
+.transfer-edit-modal .edit-source-cash-select + .select2-container .select2-selection {
+  border-left: 4px solid #ef4444 !important;
+}
+/* Hedef tarafı (sağ) — yeşil vurgu */
+.transfer-edit-modal .edit-target-workplace-select + .select2-container .select2-selection,
+.transfer-edit-modal .edit-target-bank-select + .select2-container .select2-selection,
+.transfer-edit-modal .edit-target-cash-select + .select2-container .select2-selection {
+  border-left: 4px solid #10b981 !important;
+}
+
+/* Dropdown menü stili — Select2 açıldığında option'lar */
+body .select2-container--bootstrap4.select2-container--open .select2-dropdown {
+  border: 1.5px solid #2563eb !important;
+  border-radius: 6px !important;
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.12),
+    0 4px 8px rgba(0, 0, 0, 0.08) !important;
+  overflow: hidden;
+}
+
+body .select2-container--bootstrap4 .select2-results__option {
+  padding: 7px 12px !important;
+  font-size: 12px !important;
+  color: #1e293b !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+body .select2-container--bootstrap4 .select2-results__option:last-child {
+  border-bottom: none !important;
+}
+
+body .select2-container--bootstrap4 .select2-results__option--highlighted[aria-selected] {
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+
+body .select2-container--bootstrap4 .select2-results__option[aria-selected="true"] {
+  background: #dbeafe !important;
+  color: #1e3a8a !important;
+  font-weight: 700 !important;
+}
+
+/* Arama kutusu */
+body .select2-container--bootstrap4 .select2-search--dropdown .select2-search__field {
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 4px !important;
+  padding: 6px 8px !important;
+  font-size: 12px !important;
+}
+body .select2-container--bootstrap4 .select2-search--dropdown .select2-search__field:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
+  outline: none !important;
+}

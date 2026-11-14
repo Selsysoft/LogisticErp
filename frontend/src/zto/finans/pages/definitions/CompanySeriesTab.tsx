@@ -4,7 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "../../../../api/client";
 import { useDocumentSeries } from "../../../../pages/organization/api";
-import type { DocumentSeries } from "../../../../pages/organization/types";
+import type { DocumentSeries, DocumentType } from "../../../../pages/organization/types";
 import { ZtoAlert, ZtoDataTable, ZtoModal } from "../../../components";
 import { errorMessage, seriesPrefixInput, seriesSample } from "../../../components/definitionLogic";
 import { validateSeries } from "./definitionForms";
@@ -12,6 +12,14 @@ import { useCan } from "./definitionHooks";
 
 const column = createColumnHelper<DocumentSeries>();
 const RED = { color: "red" } as const;
+
+/** Belge türü → etiket anahtarı (12.2: VRM ve SVR serileri de listelenir). */
+const DOC_TYPE_LABEL: Record<DocumentType, string> = {
+  FREIGHT_INVOICE: "companies.docFreight",
+  WAREHOUSE_INVOICE: "companies.docWarehouse",
+  FUND_TRANSFER: "companies.docFundTransfer",
+  INTERCOMPANY_TRANSFER: "companies.docIntercompanyTransfer",
+};
 
 export type CompanySeriesTabProps = { companyId: string };
 
@@ -29,11 +37,10 @@ export function CompanySeriesTab({ companyId }: CompanySeriesTabProps) {
 
   const columns = useMemo(
     () => [
-      column.accessor(
-        (row) =>
-          t(row.docType === "FREIGHT_INVOICE" ? "companies.docFreight" : "companies.docWarehouse"),
-        { id: "docType", header: t("companies.seriesDocType") },
-      ),
+      column.accessor((row) => t(DOC_TYPE_LABEL[row.docType]), {
+        id: "docType",
+        header: t("companies.seriesDocType"),
+      }),
       column.accessor(
         (row) => (row.year === null ? t("companies.seriesAllYears") : String(row.year)),
         {

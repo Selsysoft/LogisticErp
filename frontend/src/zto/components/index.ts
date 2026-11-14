@@ -88,6 +88,13 @@ export {
   type ZtoPopoverProps,
   type ZtoTooltipProps,
 } from "./ZtoTooltip";
+export {
+  ZtoSearchableSelect,
+  type SearchableGroup,
+  type SearchableItem,
+  type SearchableOption,
+  type ZtoSearchableSelectProps,
+} from "./ZtoSearchableSelect";
 export type { ZtoChartProps, ZtoChartType, ZtoLegendPosition, ZtoValueFormat } from "./ZtoChart";
 
 /**

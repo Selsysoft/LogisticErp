@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import type { StatementLine } from "../../../../pages/finance/types";
+import type { AccountInvoiceGap, StatementLine } from "../../../../pages/finance/types";
 import {
   balanceMark,
   effectiveDate,
   groupStatement,
   groupStatementChunked,
+  missingInvoiceRows,
   periodLabel,
   showsDetailToggle,
   statementNo,
@@ -141,5 +142,41 @@ describe("ekstre modeli", () => {
     expect(showsDetailToggle("GENEL")).toBe(true);
     expect(showsDetailToggle("MUSTERI")).toBe(false);
     expect(showsDetailToggle(null)).toBe(false);
+  });
+});
+
+describe("missingInvoiceRows (12.2 §5.14 ekstre)", () => {
+  const gap = (extra: Partial<AccountInvoiceGap>): AccountInvoiceGap => ({
+    accountId: "a1",
+    side: "PAYABLE",
+    companyId: null,
+    currency: "TRY",
+    ledgerTotal: 150,
+    invoiceTotal: 100,
+    missing: 50,
+    ...extra,
+  });
+  const gaps = [
+    gap({ currency: "USD", side: "RECEIVABLE", missing: 7 }),
+    gap({ side: "RECEIVABLE", missing: 3 }),
+    gap({}),
+    gap({ currency: "EUR", missing: 0.5 }),
+    gap({ companyId: "c2", missing: 20 }),
+  ];
+
+  it("konsolide: para birimi sırası, önce PAYABLE; tolerans altı yok", () => {
+    expect(missingInvoiceRows(gaps, null)).toEqual([
+      { key: "TRY|PAYABLE", currency: "TRY", side: "PAYABLE", missing: 50 },
+      { key: "TRY|RECEIVABLE", currency: "TRY", side: "RECEIVABLE", missing: 3 },
+      { key: "USD|RECEIVABLE", currency: "USD", side: "RECEIVABLE", missing: 7 },
+    ]);
+  });
+
+  it("şirket seçili ve gizli para birimi", () => {
+    expect(missingInvoiceRows(gaps, "c2").map((r) => r.missing)).toEqual([20]);
+    expect(missingInvoiceRows(gaps, null, (c) => c !== "TRY").map((r) => r.key)).toEqual([
+      "USD|RECEIVABLE",
+    ]);
+    expect(missingInvoiceRows(undefined, null)).toEqual([]);
   });
 });

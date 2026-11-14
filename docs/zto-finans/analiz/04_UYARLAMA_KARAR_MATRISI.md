@@ -141,14 +141,14 @@ Faz 0 envanter promptları (A, B, C) ve ana promptun §4.1 sayfa listesi matrisl
 | Z04 | `document_series` | Şirket başına belge serisi (önek + yıl + sıra), `UNIQUE(company_id, number)`; navlun/depo faturası numaraları buraya taşınır | MX5 V22d | 12.1a — **uygulandı: `V25__document_series`** |
 | Z05 | `user_branch_scope` | `user_branch`, kullanıcı başına iş yeri kısıtı | MX5 V22e | 12.1a — **uygulandı: `V26__user_branch_scope`** |
 | Z06 | `account_profile` | `account` +17 kolon (profil, limit, `sub_group`, `active`; **`represents_company_id` ve `company_id` Z06'ya girmez, 12.1a'da V24'te (Z03) eklendi**, bkz. `uygulama/12.1a_TASARIM.md` §0.3 S-8); `account_group` + tohum; `account_bank_account` (IBAN **veya** hesap no zorunlu CHECK; aktif kartlarda IBAN tekil; son işlem tarihi hesaplanır); izin `FINANCE_EMPLOYEE_VIEW` | MX1 + MX2 + MX5 D-kararı + MX8 §1.9 | 12.1 — **uygulandı: tenant `V27__account_profile`** (bireysel carinin TCKN'si şifreli kolonlar dahil; `uygulama/12.1_TASARIM.md` §1.1) |
-| Z07 | `fund_account_details` | `fund_account` ek alanlar, `fund_transaction.category`, `fund_opening` | MX2 | 12.2 |
+| Z07 | `fund_account_details` | `fund_account` ek alanlar, `fund_transaction.category`, `fund_opening` | MX2 | 12.2 — **uygulandı: tenant `V31__fund_account_details`** (hesap türü, şifreli + maskeli hesap no, banka şube adı, açıklama, aktif, güncelleme sayacı; `fund_opening`; `uygulama/12.2_TASARIM.md` §1.1) |
 | Z08 | `instrument_extensions` | Çek/senet ek alanları, 4 yeni durum | MX3 | 12.3 |
 | Z09 | `check_book` | `check_book`, `check_leaf` | MX3 | 12.3 |
 | Z10 | `account_document` | Borç/Alacak Ekle belgesi + vergi satırı; belge türlerine "Ceza (bize kesilen)", "Ceza / Kesinti (karşı tarafa kesilen)", **"Kur Farkı"** (§6.2-Y8'e bağlı) | MX1 + §6.1-K2 | 12.1 — **uygulandı: `V28__account_document`** ("Kur Farkı" tohumlu, 12.8'e kadar seçilemez) |
 | Z11 | `account_rollover` | Sezon devri | MX1 | 12.1 — **uygulandı: `V29__account_rollover`** |
 | Z12 | `account_transfer` | Cari transfer + `account_transfer_instrument` | MX1 + §6.1-K3 | 12.1 — **uygulandı: `V30__account_transfer`** (+ `account_transfer_line`, `instrument_movement.movement_type`) |
-| Z13 | `fund_transfer` | Transfer merkezi, döviz bozumu, maliyet, kaynak; **yalnız aynı şirket içinde** (MX5) | MX2 | 12.2 |
-| Z14 | `fin_income_expense` | Faiz geliri, kur farkı, banka masrafı defteri | MX2 | 12.2 |
+| Z13 | `fund_transfer` | Transfer merkezi, döviz bozumu, maliyet, kaynak; **yalnız aynı şirket içinde** (MX5) | MX2 | 12.2 — **uygulandı: `V32__fund_transfer`** (+ `fund_transfer_cost`, `fund_transfer_source`, şirketler arası virman `intercompany_transfer` (MX5 D8), şirket başına `FUND_TRANSFER` (VRM) / `INTERCOMPANY_TRANSFER` (SVR) serileri; §1.2) |
+| Z14 | `fin_income_expense` | Faiz geliri, kur farkı, banka masrafı defteri | MX2 | 12.2 — **uygulandı: `V33__fin_income_expense`** (tek yazıcı `IncomeExpenseService`; döviz bozumu kur farkı FX_DIFF, transfer masrafı BANK_CHARGE; §1.3) |
 | Z15 | `settlement_details` | Belge no, kanal (`CREDIT_CARD` dahil), karşı tarafın IBAN'ı (`account_bank_account` FK), düzeltme zinciri, iptal gerekçesi | MX7 V2xQ1 | 12.2a |
 | Z16 | `settlement_allocation` | Tahsilat/ödemenin navlun, depo, açılış ve alış faturalarıyla bilgi amaçlı eşleşmesi (yaşlandırma FIFO kalır). **§6.2-Y5'e bağlı** | MX7 V2xQ2 | 12.2a |
 | Z17 | `time_deposit` | Vadeli mevduat + olaylar | MX2 | 12.6 |
@@ -175,6 +175,7 @@ Faz 0 envanter promptları (A, B, C) ve ana promptun §4.1 sayfa listesi matrisl
 | Z38 | `partner_vehicle` | Ortağa atanan araç/dorse/sürücü | MX9 S4 | 12.11 |
 | Z39 | `driver_identity` | Sürücü kimlik no (şifreli), uyruk — yalnız izinli ortağa ve e-İrsaliye UBL'ine | MX9 S5 | 12.11 |
 | Z40 | `legacy_edocument_cleanup` | `edocument_settings` tablosu ve `freight_invoice_number_seq` / `warehouse_invoice_number_seq` DROP (SQL `uygulama/12.1_TASARIM.md` §1.6'da hazır) | 12.1a §1.2 | **Ertelendi** (12.1 OK-21): 12.1a + 12.1 üretime çıktıktan sonraki ilk backend adımında (12.2+), o adımın sıradaki boş V numarasıyla. 12.1'de yalnız ölü `EDocumentSettings` entity/repository silindi |
+| Z41 | `account_document_invoice_flag` | `account_document_type.counts_as_invoice` (eksik fatura hesabında "fatura sayılan" belge türü; Sevk İrsaliyesi hayır, Yurt Dışı Fatura evet) | 12.2 K-12.2-4 (yeni, 2026-11-14) | 12.2 — **uygulandı: `V34__account_document_invoice_flag`** (§1.4). Z40 12.2'de de ertelendi (koşul: 12.1a + 12.1 üretimde) |
 
 ### 4.2 Admin şeması
 
@@ -247,6 +248,7 @@ Kullanıcı gereksinimi (2026-11-13): bir kiracı (lojistik firması) kendisine 
 11. BankAccounts (MX8): güncellemede IBAN tekillik kontrolü yok; `maxlength` 26 yabancı IBAN'ı engelliyor.
 12. Uyumsoft (MX9): SOAP katmanı doğrulanmamış iskelet (16 `TODO(WSDL)`); **şifreleme anahtarı için koda gömülü varsayılan** (`UyumsoftController.cs:36`) — ZTO Fabrika'da da düzeltilmeli. Blackrose'da anahtar yoksa uygulama açılmaz.
 13. WorkPlace (MX5): Google Maps API anahtarı view'larda açık (`Views/WorkPlace/Add.cshtml:106`, `Edit.cshtml:87`) — ZTO Fabrika'da da kısıtlanmalı/taşınmalı.
+14. Banka / kasa / transfer merkezi (12.2 keşfi; ayrıntı `uygulama/12.2_TASARIM.md` §3.2, §5.5–§5.11): bakiye ve hesap sayısı kartları tür süzgecine bağlı (B1); para birimi simgesi sabit (B3); ileri tarihli hareket uyarısı hiç görünmüyor (B5); "FİLTRELENEN" dönem başını içermiyor (B6); CSV iş yeri/şirket süzgecini yok sayıyor (B7); "Temizle" ilk varsayılanlara dönmüyor (B8); hareket tablosu sırası yanlış (B9); yürüyen bakiye istemcide ve süzgeçten sonra hesaplanıyor (B10); şirketler arası neden satırı ölü kod (B11); transfer özeti Virman/EFT/Havale'yi ayrı sayıyor (B12); KMV TL yerine kaynak para biriminde (B13); çapraz kur arayüzü ulaşılamaz ve ekstre sekmeleri sayfasız (B14); arama temizliği tek sekmeyi yeniliyor (B15); "Önceki Döviz Bozum Kaynakları" colspan hatası (B16); son hareketlerde ileri tarihliler (B18); "Dönem Başı Bakiyesi" etiketi başlangıç bakiyesini gösteriyor (B20, etiket birebir, not). Blackrose'da hepsi düzeltilmiş olarak yazıldı; ZTO'da tür başına 7 transfer öneki yerine şirket başına tek seri (OK-12.2-6).
 
 ## 8. Blackrose'da ayrıca düzeltilecek hata
 
@@ -267,7 +269,7 @@ Adım numaraları `docs/fazlar/FAZ_12_ZTO_Finans_Eklemeleri.md` ile aynıdır (2
 | 12.0 | Ön yüz altyapısı: kapsamlı ZTO CSS, modal/tablo/select, ortak şube seçim bileşeni, i18n ad alanları, "ZTO Finans" menüsü ve açılış sayfası; §8 düzeltmesi | — | — |
 | 12.1a | İş yeri / şube / çoklu şirket; "Şirketler" ekranı; kullanıcı iş yeri kısıtı | Z01–Z05, ZA1 | 12.0 |
 | 12.1 | Cari (+ cari IBAN ekranları) | Z06, Z10–Z12 | 12.1a |
-| 12.2 | Banka/kasa, transfer merkezi | Z07, Z13, Z14 | 12.1 |
+| 12.2 | Banka/kasa, transfer merkezi (✅ 2026-11-14; V31–V34, `uygulama/12.2_TASARIM.md`) | Z07, Z13, Z14 (+ Z41) | 12.1 |
 | 12.2a | Ödemeler, Tahsilatlar, günlük raporlar, ortak ödeme/tahsilat modalları | Z15, Z16 | 12.2 |
 | 12.3 | Çek/senet/koçan | Z08, Z09 | 12.2a |
 | 12.4 | Ödeme planı + PaymentApproval/Index + PaymentManagement ekranları | Z19 | 12.3 |

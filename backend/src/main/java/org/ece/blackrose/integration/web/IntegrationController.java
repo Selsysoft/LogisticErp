@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.finance.domain.Account;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
+import org.ece.blackrose.finance.domain.FinanceTypes.FundKind;
 import org.ece.blackrose.finance.domain.FundTransaction;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.FundAccountRepository;
@@ -499,8 +500,8 @@ public class IntegrationController {
             .filter(account -> payees.contains(account.getType()))
             .map(account -> new Option(account.getId(), account.getName()))
             .toList(),
-        funds.search(scope.filter(null, null)).stream()
-            .filter(fund -> "BANK".equals(fund.getKind().name()))
+        // Yalnız aktif banka hesapları (12.2 §3.1.4).
+        funds.searchFiltered(scope.filter(null, null), FundKind.BANK, null, true, null).stream()
             .map(fund -> new FundOptionResponse(fund.getId(), fund.getName(), fund.getCompanyId()))
             .toList());
   }

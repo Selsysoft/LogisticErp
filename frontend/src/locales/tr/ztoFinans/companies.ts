@@ -109,4 +109,6 @@ export default {
   seriesSaved: "Seri güncellendi.",
   docFreight: "Navlun Faturası",
   docWarehouse: "Depo Faturası",
+  docFundTransfer: "Banka/Kasa Transferi",
+  docIntercompanyTransfer: "Şirketler Arası Virman",
 } as const;

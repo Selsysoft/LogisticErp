@@ -4,8 +4,10 @@ import {
   documentFormSchema,
   emptyDocumentValues,
   numberOf,
+  remainingAfterSave,
   summaryError,
   toDocumentBody,
+  unreflectedInvoiceAmount,
   valuesFromDocument,
 } from "./documentLogic";
 import { apiErrorOf, sourceRouteOf } from "./transactionsLogic";
@@ -158,5 +160,27 @@ describe("hata yardımcıları", () => {
     expect(sourceRouteOf(["/finance/instruments"])).toBe("/finance/instruments");
     expect(sourceRouteOf(["//evil.com"])).toBeNull();
     expect(sourceRouteOf([])).toBeNull();
+  });
+});
+
+describe("12.2 eksik fatura: bu belge kaydedilince kalan (§5.14)", () => {
+  const invoice = { countsAsInvoice: true, reflect: false, net: 30 };
+
+  it("yalnız yansıtılmayan fatura belgesi eksiği azaltır", () => {
+    expect(unreflectedInvoiceAmount(invoice)).toBe(30);
+    expect(unreflectedInvoiceAmount({ ...invoice, reflect: true })).toBe(0);
+    expect(unreflectedInvoiceAmount({ ...invoice, countsAsInvoice: false })).toBe(0);
+    expect(unreflectedInvoiceAmount({ ...invoice, net: Number.NaN })).toBe(0);
+    expect(unreflectedInvoiceAmount({ ...invoice, net: -5 })).toBe(0);
+  });
+
+  it("kalan = eksik − yeni katkı (+ revizede eski katkı); eksiye düşmez", () => {
+    expect(remainingAfterSave(50, invoice)).toBe(20);
+    expect(remainingAfterSave(50, { ...invoice, reflect: true })).toBe(50);
+    expect(remainingAfterSave(50, { ...invoice, net: 80 })).toBe(0);
+    expect(
+      remainingAfterSave(50, invoice, { countsAsInvoice: true, reflect: false, net: 30 }),
+    ).toBe(50);
+    expect(remainingAfterSave(50, invoice, null)).toBe(20);
   });
 });

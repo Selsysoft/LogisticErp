@@ -56,7 +56,8 @@ class TenantProvisioningIT extends AbstractIntegrationTest {
                     .formatted(schema),
                 Long.class,
                 company.get("id")))
-        .isEqualTo(2);
+        // V25 (NF, DF) + V32 (VRM, SVR; Faz 12.2).
+        .isEqualTo(4);
     assertThat(
             jdbc.queryForObject(
                 "select count(*) from \"%s\".company_edocument_settings".formatted(schema),

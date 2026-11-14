@@ -18,6 +18,7 @@ import org.ece.blackrose.finance.repository.AccountRepositories.AccountTransferR
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountTransactionRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.CrossLedgerRow;
 import org.ece.blackrose.finance.repository.FinanceRepositories.LedgerDetailRow;
+import org.ece.blackrose.finance.repository.FundRepositories.IntercompanyTransferRepository;
 import org.ece.blackrose.finance.web.AccountDtos.AccountDocumentResponse;
 import org.ece.blackrose.finance.web.AccountDtos.AccountTransactionDetailResponse;
 import org.ece.blackrose.finance.web.AccountDtos.AccountTransactionFacetsResponse;
@@ -69,13 +70,16 @@ public class AccountTransactionQueryService {
   private final AccountDocumentService documents;
   private final AccountAccess access;
   private final BranchScopeService scope;
+  private final IntercompanyTransferRepository intercompanyTransfers;
 
   public AccountTransactionQueryService(
       AccountTransactionRepository transactions,
       AccountTransferRepository transfers,
       AccountDocumentService documents,
       AccountAccess access,
-      BranchScopeService scope) {
+      BranchScopeService scope,
+      IntercompanyTransferRepository intercompanyTransfers) {
+    this.intercompanyTransfers = intercompanyTransfers;
     this.transactions = transactions;
     this.transfers = transfers;
     this.documents = documents;
@@ -188,7 +192,20 @@ public class AccountTransactionQueryService {
   /** Taban kaynak ve (varsa) uygulamadaki sayfası; var olmayan rota üretilmez. */
   @Transactional(readOnly = true)
   public TransactionSourceResponse source(UUID id) {
-    return sourceOf(visibleRow(id));
+    LedgerDetailRow row = visibleRow(id);
+    if ("SETTLEMENT".equals(row.getBaseSourceType())) {
+      // Şirketler arası virmanın bacağı: etiket virman koduyla, rota transfer merkezi (12.2 §3.9).
+      var link = intercompanyTransfers.findBySettlement(row.getBaseSourceId());
+      if (link.isPresent()) {
+        String code = link.get().getCode();
+        return new TransactionSourceResponse(
+            "SETTLEMENT",
+            row.getBaseSourceId(),
+            "Şirketler arası virman " + code,
+            FundTransferService.route(code, link.get().getTransferDate()));
+      }
+    }
+    return sourceOf(row);
   }
 
   /** Detay ve kaynak için hareket: yoksa, silinmişse ya da cari okunamıyorsa 404. */

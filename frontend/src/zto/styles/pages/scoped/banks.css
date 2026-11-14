@@ -1,0 +1,1244 @@
+/*
+ * Kaynak: ZtoFabrika/wwwroot/css/zt/timedeposits/index.css:1-403 + Views/BankIntroduction/Index.cshtml:44-825
+ * (:1347-1849 talimat bloğu alınmaz, 12.4)
+ * Birebir kopya (12.2_TASARIM §5.4); değişiklikler: Razor kaçışı @@ → @, bu dosyada tanımlı
+ * @keyframes adları paket genelinde çakışmasın diye zto-<sayfa>- önekli (check:zto-css);
+ * Kasalar aynı timedeposits/index.css'i yükler: kurallar SHARED_SCOPES ile hem .zto-page-banks hem
+ * .zto-page-cashes köküne yazılır
+ * Sayfa kapsamı .zto-finans.zto-page-banks + .zto-finans.zto-page-cashes (prefixTransform scopeForFile).
+ */
+/* --- wwwroot/css/zt/timedeposits/index.css:1-403 --- */
+/* ERP PROFESYONEL STİLLER */
+.erp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+  background: #ffffff;
+}
+
+.erp-btn i {
+  font-size: 13px;
+}
+
+.erp-btn-success {
+  color: #166534;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.erp-btn-success:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.erp-btn-primary {
+  color: #1e40af;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.erp-btn-primary:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
+.erp-btn-secondary {
+  color: #475569;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.erp-btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e0;
+  color: #475569;
+}
+
+.erp-btn-info {
+  color: #0369a1;
+  border-color: #bae6fd;
+  background: #f0f9ff;
+}
+
+.erp-btn-info:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+.erp-btn-warning {
+  color: #92400e;
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.erp-btn-warning:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+  color: #92400e;
+}
+
+.erp-header-icon {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  margin-right: 6px;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  color: #495057;
+  font-size: 16px;
+}
+
+.erp-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #6c757d;
+}
+
+.erp-breadcrumb .separator {
+  color: #cbd5e0;
+  font-weight: 300;
+}
+
+.erp-info-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #495057;
+  transition: all 0.2s ease;
+}
+
+.erp-info-chip:hover {
+  background: #e9ecef;
+  border-color: #cbd5e0;
+}
+
+.erp-info-chip.chip-success {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.erp-info-chip.chip-warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.erp-info-chip.chip-primary {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+/* FİLTRE KARTI */
+.erp-filter-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.filter-field {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12px;
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.filter-field:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  height: 100%;
+  align-items: flex-end;
+}
+
+.filter-btn {
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 5px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-filter-apply {
+  background: #3b82f6;
+  color: white;
+  border-color: #2563eb;
+}
+
+.btn-filter-apply:hover {
+  background: #2563eb;
+}
+
+.btn-filter-clear {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #cbd5e0;
+}
+
+.btn-filter-clear:hover {
+  background: #e2e8f0;
+}
+
+/* İSTATİSTİK KARTLARI */
+.erp-stat-card {
+  border-radius: 6px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.erp-stat-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.erp-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--card-color-start), var(--card-color-end));
+  z-index: 1;
+}
+
+.erp-stat-card.card-total {
+  --card-color-start: #3b82f6;
+  --card-color-end: #06b6d4;
+}
+
+.erp-stat-card.card-count {
+  --card-color-start: #10b981;
+  --card-color-end: #84cc16;
+}
+
+.erp-stat-card.card-average {
+  --card-color-start: #f59e0b;
+  --card-color-end: #f97316;
+}
+
+.erp-stat-card.card-methods {
+  --card-color-start: #8b5cf6;
+  --card-color-end: #d946ef;
+}
+
+.erp-stat-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px 12px 15px;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+}
+
+.erp-stat-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--card-color-start), var(--card-color-end));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.erp-stat-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 3px;
+  display: block;
+}
+
+.erp-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.erp-stat-currency {
+  font-size: 12px;
+  font-weight: 600;
+  color: #718096;
+}
+
+.erp-stat-subtext {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* MODAL STİLLERİ */
+.erp-modal .modal-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-bottom: 1px solid #cbd5e0;
+  padding: 12px 20px;
+}
+
+.erp-modal .modal-header .modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.erp-modal .modal-header .modal-title i {
+  color: #3b82f6;
+}
+
+.erp-modal .modal-body {
+  padding: 20px;
+  background: #f8fafc;
+}
+
+.required-field::after {
+  content: "*";
+  color: #ef4444;
+  margin-left: 3px;
+}
+
+/* TABLO STİLLERİ */
+.table-compact {
+  font-size: 13px;
+}
+
+.table-compact thead th {
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  color: #475569;
+}
+
+.table-compact tbody td {
+  padding: 6px 10px;
+  vertical-align: middle;
+}
+
+.table-compact .btn-group-sm .btn {
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .erp-btn span {
+    display: none !important;
+  }
+
+  .erp-breadcrumb {
+    font-size: 10px;
+  }
+
+  .erp-info-chip {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+
+  .table-compact {
+    font-size: 12px;
+  }
+}
+/* --- Views/BankIntroduction/Index.cshtml:44-825 --- */
+/* Hesap Tipi Badge Stilleri */
+.account-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.type-vadesiz {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+}
+
+.type-kredi {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.type-mevduat {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.type-yatirim {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+}
+
+/* Grup Header */
+.account-group-header {
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  padding: 12px 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.account-group-title {
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.account-group-count {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.account-group-total {
+  font-size: 16px;
+  font-weight: 700;
+  max-width: 420px;
+  width: 420px;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  flex: 0 1 420px;
+  overflow: hidden;
+}
+
+.group-total-list {
+  display: block;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  width: 100%;
+  max-width: 100%;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.group-total-list::-webkit-scrollbar {
+  height: 6px;
+}
+
+.group-total-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 999px;
+}
+
+.group-total-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.group-total-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.group-total-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  margin-right: 4px;
+}
+
+.group-total-item:last-child {
+  margin-right: 0;
+}
+
+.group-total-symbol {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* Hesap Kartı */
+.account-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+}
+
+.account-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+  z-index: 10;
+}
+
+/* Dropdown için z-index düzeltmesi */
+.account-actions {
+  position: relative;
+  z-index: 100;
+}
+
+.account-actions .dropdown-menu {
+  z-index: 1050;
+}
+
+/* Dropdown açıkken kartı üstte tut */
+.account-actions .show {
+  z-index: 1050;
+}
+
+/* Blackrose: SHARED_SCOPES iki kökü seçici listesi yapar; küçültücü :has() içeren listeyi :is() ile
+   sardığından (kapsam denetimi) bu kural yalnız Bankalar köküne açıkça yazıldı (.account-card Kasalar'da yok). */
+.zto-finans.zto-page-banks .account-card:has(.show) {
+  z-index: 100;
+  /* Blackrose: ⋮ menüsü position: fixed; :hover transform'u menüyü kart kökenine kaydırıyordu. */
+  transform: none;
+  transition: none;
+}
+
+/* Hızlı İşlem Butonları */
+.quick-action-btn {
+  transition: all 0.2s ease;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.quick-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.quick-action-btn:active {
+  transform: translateY(0);
+}
+
+.quick-action-btn.btn-success:hover {
+  background: #059669;
+  border-color: #059669;
+}
+
+.quick-action-btn.btn-primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.quick-action-btn.btn-info:hover {
+  background: #0891b2;
+  border-color: #0891b2;
+}
+
+.quick-action-btn.btn-warning:hover {
+  background: #d97706;
+  border-color: #d97706;
+}
+
+.quick-action-btn.btn-secondary:hover {
+  background: #4b5563;
+  border-color: #4b5563;
+}
+
+.quick-action-btn.btn-purple:hover {
+  background: #7c3aed !important;
+  border-color: #7c3aed !important;
+}
+
+/* Dropdown Menu Stilleri */
+.account-actions .dropdown-menu {
+  min-width: 240px;
+  padding: 8px 0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e2e8f0;
+}
+
+.account-actions .dropdown-item {
+  padding: 8px 16px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.account-actions .dropdown-item:hover {
+  background: #f1f5f9;
+}
+
+.account-actions .dropdown-item i {
+  width: 18px;
+  min-width: 18px;
+  text-align: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.account-actions .dropdown-divider {
+  margin: 6px 0;
+}
+
+.account-card.type-kredi {
+  border-left: 4px solid #f59e0b;
+  background: #fffbeb;
+}
+
+.account-card.type-mevduat {
+  border-left: 4px solid #10b981;
+  background: #f0fdf4;
+}
+
+.account-card.type-yatirim {
+  border-left: 4px solid #8b5cf6;
+  background: #faf5ff;
+}
+
+.account-card.type-vadesiz {
+  border-left: 4px solid #3b82f6;
+}
+
+.account-info {
+  flex: 1;
+}
+
+.account-info-clickable {
+  cursor: pointer;
+}
+
+.account-info-clickable:hover .account-name {
+  color: #1d4ed8;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.account-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.account-details {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 3px;
+}
+
+.account-balance {
+  text-align: right;
+  min-width: 150px;
+}
+
+.balance-value {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.balance-label {
+  font-size: 10px;
+  color: #64748b;
+}
+
+/* Tab stil */
+.type-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.type-tabs-refresh {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  background: #0b5ed7;
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.type-tabs-refresh:hover {
+  background: #0a58ca;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  transform: translateY(-2px);
+}
+
+.type-tabs-refresh.is-loading i {
+  animation: zto-banks-spin-refresh 0.8s linear infinite;
+}
+
+.type-tabs-refresh.is-loading {
+  box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.2);
+}
+
+.account-list-container {
+  position: relative;
+  transition:
+    opacity 0.25s ease,
+    filter 0.25s ease,
+    transform 0.25s ease;
+}
+
+.account-list-container.is-refreshing {
+  opacity: 0.55;
+  filter: blur(0.6px);
+  transform: translateY(2px);
+  pointer-events: none;
+}
+
+.account-list-container.is-refreshing::after {
+  content: "Hesaplar guncelleniyor...";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #1d4ed8;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(219, 234, 254, 0.6),
+    rgba(255, 255, 255, 0.2)
+  );
+  animation: zto-banks-shimmer-loading 1s linear infinite;
+  border-radius: 10px;
+  z-index: 20;
+}
+
+.account-list-container.is-refreshed {
+  animation: zto-banks-refresh-pop 0.45s ease;
+}
+
+@keyframes zto-banks-shimmer-loading {
+  from {
+    background-position: -220px 0;
+  }
+
+  to {
+    background-position: 220px 0;
+  }
+}
+
+@keyframes zto-banks-spin-refresh {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes zto-banks-refresh-pop {
+  0% {
+    transform: scale(0.995);
+    filter: brightness(0.96);
+  }
+
+  60% {
+    transform: scale(1.004);
+    filter: brightness(1.03);
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.type-tab {
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid transparent;
+}
+
+.type-tab.all {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.type-tab.all:hover,
+.type-tab.all.active {
+  background: #475569;
+  color: white;
+}
+
+.type-tab.vadesiz {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.type-tab.vadesiz:hover,
+.type-tab.vadesiz.active {
+  background: #3b82f6;
+  color: white;
+}
+
+.type-tab.kredi {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.type-tab.kredi:hover,
+.type-tab.kredi.active {
+  background: #f59e0b;
+  color: white;
+}
+
+.type-tab.mevduat {
+  background: #f0fdf4;
+  color: #059669;
+}
+
+.type-tab.mevduat:hover,
+.type-tab.mevduat.active {
+  background: #10b981;
+  color: white;
+}
+
+.type-tab.yatirim {
+  background: #faf5ff;
+  color: #7c3aed;
+}
+
+.type-tab.yatirim:hover,
+.type-tab.yatirim.active {
+  background: #8b5cf6;
+  color: white;
+}
+
+.type-tab .count {
+  background: rgba(255, 255, 255, 0.3);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+}
+
+.type-tab.active .count {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Arama Çubuğu Stilleri */
+#accountSearchInput:focus {
+  box-shadow: none;
+  border-color: #3b82f6;
+}
+
+.search-highlight {
+  background-color: #fff3cd !important;
+  color: #856404 !important;
+  font-weight: bold;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.search-no-results {
+  text-align: center;
+  padding: 40px 20px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  margin: 20px 0;
+}
+
+.search-no-results i {
+  font-size: 48px;
+  color: #6c757d;
+  margin-bottom: 15px;
+}
+
+.search-result-count {
+  font-size: 12px;
+  color: #6c757d;
+  padding: 5px 10px;
+  background: #e9ecef;
+  border-radius: 20px;
+  display: inline-block;
+  margin-bottom: 15px;
+}
+
+/* Filtre durumu göstergesi */
+.filter-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 10px 15px;
+  background: #e7f5ff;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+
+.filter-indicator .close-filter {
+  margin-left: auto;
+  cursor: pointer;
+  color: #6c757d;
+}
+
+.filter-indicator .close-filter:hover {
+  color: #dc3545;
+}
+
+/* Arama çubuğu için özel stil */
+.search-container .input-group {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.search-container .input-group:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+}
+
+.search-container .input-group-text {
+  background: transparent;
+  border: none;
+}
+
+.search-container .form-control {
+  border: none;
+  box-shadow: none;
+}
+
+.search-container .form-control:focus {
+  box-shadow: none;
+}
+
+.filters-toolbar {
+  display: grid;
+  grid-template-columns: minmax(290px, 360px) 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.search-compact-card .card-body {
+  padding: 10px;
+}
+
+.search-compact-help {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+.dynamic-filter-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stat-main-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.stat-main-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.stat-items-wrapper {
+  max-height: 100px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  border-radius: 7px;
+  padding: 5px 7px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  background: #f8fafc;
+  border: 1px solid transparent;
+}
+
+.stat-item:hover {
+  background: #eef2ff;
+}
+
+.stat-item.active {
+  background: #dbeafe;
+  border-color: #60a5fa;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.stat-item-empty {
+  opacity: 0.45;
+}
+
+.stat-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-item-value {
+  min-width: 22px;
+  text-align: right;
+  font-weight: 700;
+}
+
+/* ✅ Dinamik filtre satır arka plan progress (icon renginin saydam hali, sayıya oranlı) */
+.stat-item {
+  position: relative;
+  overflow: hidden;
+}
+.stat-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--pct, 0%);
+  background: var(--bar, transparent);
+  border-radius: 7px;
+  z-index: 0;
+  transition: width 0.45s ease;
+}
+.stat-item-label,
+.stat-item-value {
+  position: relative;
+  z-index: 1;
+}
+/* ✅ Kredi hesabı (eski 'Tanımsız') satırı — sarı/amber vurgu */
+.stat-item-credit .stat-item-label,
+.stat-item-credit .stat-item-value {
+  color: #92400e;
+  font-weight: 600;
+}
+
+/* ✅ Vadesiz hesap kartı bakiye dağılım progress (açık gri, aynı para birimi toplamına oran) */
+.account-progress-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  z-index: -1;
+  background: rgba(148, 163, 184, 0.14);
+  border-radius: 10px 0 0 10px;
+  transition: width 0.5s ease;
+  pointer-events: none;
+}
+
+/* ✅ Banka kartı mini sparkline (bakiyenin solunda, yeşil alan + alt gölge) */
+.account-spark {
+  width: 92px;
+  height: 38px;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+.account-spark svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.dynamic-filter-indicator {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 1200px) {
+  .dynamic-filter-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  .filters-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 576px) {
+  .dynamic-filter-cards {
+    grid-template-columns: 1fr;
+  }
+}
+.erp-stat-content {
+  border-radius: 6px;
+  padding: 5px 20px 5px 20px;
+
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  position: relative;
+}
+.erp-stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.erp-currency-compact-list {
+  display: grid;
+  gap: 2px;
+  margin-top: 2px;
+  height: 36px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+.erp-currency-compact-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+.erp-currency-compact-item .amount {
+  font-weight: 700;
+}
+
+.erp-currency-compact-item .meta {
+  opacity: 0.75;
+  font-size: 10px;
+}
+
+.erp-currency-compact-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.erp-currency-compact-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 999px;
+}
+
+.erp-currency-compact-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.erp-currency-compact-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+.btn-divider {
+  width: 1px;
+  height: 28px;
+  background: linear-gradient(180deg, transparent 0%, #cbd5e1 20%, #cbd5e1 80%, transparent 100%);
+  margin: 0 4px;
+  margin-right: 12px;
+  align-self: center;
+}

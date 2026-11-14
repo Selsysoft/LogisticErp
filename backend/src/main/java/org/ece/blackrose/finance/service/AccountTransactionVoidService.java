@@ -7,6 +7,7 @@ import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.finance.domain.AccountTransaction;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountTransactionRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.LedgerDetailRow;
+import org.ece.blackrose.finance.repository.FundRepositories.IntercompanyTransferRepository;
 import org.ece.blackrose.tenant.TenantClock;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * ZTO "Sil" yönlendiricisi (12.1 §3.8): hareket silinmez, kaynağına göre kendi modülünün iptali
  * çağrılır ve oluşan ters kayıt döner. Sefer, depo, araç ve çek kayıtları kendi modülünden iptal
- * edilir (409 + kaynak rotası).
+ * edilir (409 + kaynak rotası); şirketler arası virmanın bacakları transfer merkezinden (12.2).
  */
 @Service
 public class AccountTransactionVoidService {
@@ -28,6 +29,7 @@ public class AccountTransactionVoidService {
   private final SettlementService settlements;
   private final AccountService accounts;
   private final PurchaseInvoiceService invoices;
+  private final IntercompanyTransferRepository intercompanyTransfers;
   private final TenantClock clock;
 
   @SuppressWarnings("java:S107")
@@ -38,6 +40,7 @@ public class AccountTransactionVoidService {
       SettlementService settlements,
       AccountService accounts,
       PurchaseInvoiceService invoices,
+      IntercompanyTransferRepository intercompanyTransfers,
       TenantClock clock) {
     this.transactions = transactions;
     this.queries = queries;
@@ -45,6 +48,7 @@ public class AccountTransactionVoidService {
     this.settlements = settlements;
     this.accounts = accounts;
     this.invoices = invoices;
+    this.intercompanyTransfers = intercompanyTransfers;
     this.clock = clock;
   }
 
@@ -72,7 +76,22 @@ public class AccountTransactionVoidService {
     UUID sourceId = row.getSourceId();
     switch (row.getSourceType()) {
       case AccountDocumentService.SOURCE -> documents.cancel(sourceId, effective, text);
-      case "SETTLEMENT" -> settlements.reverse(sourceId, effective, text);
+      case "SETTLEMENT" -> {
+        // Şirketler arası virmanın bacağı yalnız virmandan iptal edilir (12.2 §3.9).
+        intercompanyTransfers
+            .findBySettlement(sourceId)
+            .ifPresent(
+                link -> {
+                  throw new BusinessException(
+                      HttpStatus.CONFLICT,
+                      "TRANSACTION_SOURCE_MANAGED",
+                      "Bu kayıt kendi modülünden iptal edilir.",
+                      List.of(
+                          "route="
+                              + FundTransferService.route(link.getCode(), link.getTransferDate())));
+                });
+        settlements.reverse(sourceId, effective, text);
+      }
       case LedgerService.SOURCE_MANUAL, "OPENING", "OPENING_INVOICE" ->
           accounts.reverseManual(id, effective, text);
       case "PURCHASE_INVOICE" -> invoices.cancel(sourceId, effective);

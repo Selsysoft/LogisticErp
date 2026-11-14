@@ -1,5 +1,7 @@
 # MX-2 — Banka / Kasa / Vadeli Mevduat / Alış Carisi: ZTO → Blackrose eşleme matrisi
 
+> **12.2 uygulandı (2026-11-14); uygulama belgesi [`docs/zto-finans/uygulama/12.2_TASARIM.md`](../../uygulama/12.2_TASARIM.md).** BankIntroduction, CashIntroduction, BankTransactions, CashTransactions, BankStatement (transfer merkezi, döviz bozumu, ExchangeBreakReport tablo görünümü) bu ekin üzerinden yazıldı; §2.5 Vadeli Mevduat 12.6'ya kaldı. Uygulamada değişen noktalar belge §0.5 S-1…S-19'dadır (migration adları tenant V31–V34, şirket başına tek transfer serisi, çapraz kur yok, `FUND_OPENING`/`FUND_TRANSFER` kaynak adları, şirketler arası virman `intercompany_transfer`); bu ekle çelişkide uygulama belgesi geçerlidir.
+
 Kapsam: BankIntroduction, BankTransactions, BankStatement, CashIntroduction, CashTransactions, TimeDeposits, PurchaseCurrentAccount.
 Kökler:
 - ZTO = `f:\visual studio zto\ZtoFabrika2026\ZtoFabrika`

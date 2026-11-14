@@ -258,7 +258,8 @@ public class FleetController {
                         || account.getType() == AccountType.CARRIER)
             .map(account -> new Option(account.getId(), account.getName()))
             .toList(),
-        funds.search(scope.filter(null, null)).stream()
+        // Pasif hesaplar seçim listelerinde yok (12.2 §3.1.4).
+        funds.searchFiltered(scope.filter(null, null), null, null, true, null).stream()
             .map(
                 fund ->
                     new FundOption(

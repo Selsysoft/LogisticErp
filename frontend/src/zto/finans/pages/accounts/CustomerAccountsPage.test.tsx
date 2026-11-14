@@ -241,4 +241,34 @@ describe("CustomerAccountsPage (ZTO CustomerAccounts/Index)", { timeout: 30_000 
     expect(dialog.textContent).toContain("Cari Hesap Detayı");
     expect(await within(dialog).findByText(/Cari kart güncellendi/)).toBeTruthy();
   });
+
+  it("12.2 eksik fatura işareti, Eksik Faturalı süzgeci ve Transfer Merkezi bağlantısı", async () => {
+    fakeApi.on("GET", /^\/finance\/accounts\/invoice-gaps/, [
+      {
+        accountId: "a1",
+        side: "PAYABLE",
+        companyId: null,
+        currency: "TRY",
+        ledgerTotal: 150,
+        invoiceTotal: 100,
+        missing: 50,
+      },
+    ]);
+    renderAt("/zto-finans/cari-kartlar", ROUTES);
+    await screen.findByText("Ankara Lastik");
+    const mark = await screen.findByRole("img", { name: "Eksik fatura: 50,00 ₺" });
+    expect(mark.getAttribute("tabindex")).toBe("0");
+    expect(mark.querySelector("i.fas.fa-exclamation-circle.text-danger.ml-1")).not.toBeNull();
+    expect(bodyRows()).toHaveLength(2);
+
+    const toggle = screen.getByRole("switch", { name: "Eksik Faturalı" });
+    fireEvent.click(toggle);
+    await waitFor(() => expect(bodyRows()).toHaveLength(1));
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    expect(bodyRows()[0].textContent).toContain("Ankara Lastik");
+
+    fireEvent.click(screen.getByRole("button", { name: /Finansal İşlemler/ }));
+    const link = screen.getByRole("menuitem", { name: /Banka Transferi & Virman & Döviz Bozum/ });
+    expect(link.getAttribute("href")).toBe("/zto-finans/transfer-merkezi");
+  });
 });

@@ -1015,6 +1015,8 @@ class AccountTransferIT extends AccountTestSupport {
     }
     body.put("money", Map.of("amount", amount, "currency", "TRY"));
     body.put("date", TODAY.toString());
+    // 12.2 B4: şirket dağılımı uyarısı onaylı (409 CONFIRMATION_REQUIRED olmasın).
+    body.put("confirmWarnings", true);
     return body;
   }
 

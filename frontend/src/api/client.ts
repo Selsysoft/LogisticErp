@@ -24,7 +24,7 @@ export interface TokenResponse {
   expiresInSeconds: number;
 }
 
-type Method = "GET" | "POST" | "PUT" | "DELETE";
+type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /** Sunucuya ulaşılamaması oturumun bittiği anlamına gelmez; çevrimdışı sürücü sistemden düşmemeli. */
 export type RefreshResult = "ok" | "rejected" | "unreachable";

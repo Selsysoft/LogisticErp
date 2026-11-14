@@ -127,7 +127,8 @@ public class AccountDocumentService {
                     type.isPenalty(),
                     type.isDefault(),
                     type.isSelectable(),
-                    type.getSortOrder()))
+                    type.getSortOrder(),
+                    type.isCountsAsInvoice()))
         .toList();
   }
 

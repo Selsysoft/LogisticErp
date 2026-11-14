@@ -209,11 +209,28 @@ describe("Detay modalı yardımcıları", () => {
       branch: "fa-city",
       company: "fa-landmark",
       "customer-account": "fa-file-invoice-dollar",
+      bank: "fa-university",
+      cash: "fa-cash-register",
     });
     expect(entityAccent("workplace")).toBe("blue");
     expect(entityAccent("branch")).toBe("blue");
     expect(entityAccent("company")).toBe("indigo");
     expect(entityAccent("customer-account")).toBeNull();
+  });
+
+  it("12.2 banka (mavi) ve kasa (amber) detay görünümü (_Details.cshtml:53-54, :80-81)", () => {
+    expect(entityAccent("bank")).toBe("blue");
+    expect(entityAccent("cash")).toBe("amber");
+    expect(detailsVariant("bank")).toEqual({
+      rootClass: "definition-details definition-details--vivid dd-accent-blue",
+      heroClass: "definition-details__hero definition-details__hero--vivid",
+      icon: "fa-university",
+      customerAccount: false,
+    });
+    expect(detailsVariant("cash").rootClass).toBe(
+      "definition-details definition-details--vivid dd-accent-amber",
+    );
+    expect(detailsVariant("cash").icon).toBe("fa-cash-register");
   });
 
   it("lastActor ve actorText", () => {

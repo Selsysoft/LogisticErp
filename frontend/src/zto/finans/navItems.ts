@@ -148,7 +148,9 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("BankIntroduction", "Index", 63),
         step: "12.2",
-        implemented: false,
+        implemented: true,
+        // Alt yollar (yeni, :id, :id/duzenle) öğeyi etkin yapar.
+        matchPrefix: true,
       },
       {
         id: "allBankTransactions",
@@ -158,7 +160,7 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("BankTransactions", "Index", 69),
         step: "12.2",
-        implemented: false,
+        implemented: true,
       },
       {
         id: "cashes",
@@ -168,7 +170,9 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("CashIntroduction", "Index", 75),
         step: "12.2",
-        implemented: false,
+        implemented: true,
+        // Alt yollar (yeni, :id, :id/duzenle) öğeyi etkin yapar.
+        matchPrefix: true,
       },
       {
         id: "allCashTransactions",
@@ -178,7 +182,7 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("CashTransactions", "Index", 81),
         step: "12.2",
-        implemented: false,
+        implemented: true,
       },
       {
         id: "transferCenter",
@@ -188,7 +192,7 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("BankStatement", "Index", 87),
         step: "12.2",
-        implemented: false,
+        implemented: true,
       },
     ],
   },
@@ -590,6 +594,11 @@ export const ZTO_SLUGS = {
   companies: "tanimlar/sirketler",
   accounts: "cari-kartlar",
   newAccount: "cari-kartlar/yeni",
+  banks: "bankalar",
+  cashes: "kasalar",
+  bankTransactions: "banka-hareketleri",
+  cashTransactions: "kasa-hareketleri",
+  transferCenter: "transfer-merkezi",
 } as const;
 
 /** Uygulama kabuğu dışındaki yazdırma sayfaları (ZTO `Layout = null`, yeni sekme). */
@@ -637,6 +646,129 @@ export type StatementQuery = {
 /** Ekstre yazdırma sayfası (ZTO AccountTransaction/Statement/{id}; `window.open(…, "_blank")`). */
 export function statementPath(id: string, query: StatementQuery = {}): string {
   return `${ZTO_PRINT_BASE}/cari-ekstre/${segment(id)}${queryOf(query)}`;
+}
+
+// ---------------------------------------------------------------------------------------------
+// 12.2 banka / kasa / transfer merkezi yolları (12.2_TASARIM §5.3)
+// ---------------------------------------------------------------------------------------------
+
+export type ZtoFundKind = "BANK" | "CASH";
+
+/** Yeni banka hesabı (ZTO BankIntroduction/Add). */
+export function newBankPath(): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.banks}/yeni`;
+}
+
+/** Banka hesabı detayı (ZTO BankIntroduction/Details/{id}). */
+export function bankDetailPath(id: string): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.banks}/${segment(id)}`;
+}
+
+/** Banka hesabı düzenle (ZTO BankIntroduction/Edit/{id}). */
+export function bankEditPath(id: string): string {
+  return `${bankDetailPath(id)}/duzenle`;
+}
+
+/** Yeni kasa (ZTO CashIntroduction/Add). */
+export function newCashPath(): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.cashes}/yeni`;
+}
+
+/** Kasa düzenle (ZTO CashIntroduction/Edit/{id}); kasa detayı sayfa değil, CI-1 modalıdır. */
+export function cashEditPath(id: string): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.cashes}/${segment(id)}/duzenle`;
+}
+
+export type FundTransactionsQuery = { fundId?: string; branchId?: string; currency?: string };
+
+/** Banka / Kasa Hareketleri (ZTO BankTransactions/Index, CashTransactions/Index). */
+export function fundTransactionsPath(kind: ZtoFundKind, query: FundTransactionsQuery = {}): string {
+  const slug = kind === "BANK" ? ZTO_SLUGS.bankTransactions : ZTO_SLUGS.cashTransactions;
+  return `${ZTO_FINANS_BASE}/${slug}${queryOf(query)}`;
+}
+
+/** Transfer Merkezi sekmeleri: Yeni Transfer, Transferler, Tüm Banka / Kasa Ekstreleri. */
+export type TransferCenterTab = "new" | "transfers" | "bank" | "cash";
+
+/**
+ * ZTO transfer türü URL değerleri (bsjs:120-236 `handleTabAndTransferFromQuery`): asıl adlar ve
+ * takma adlar; bilinmeyen değer Virman sayılır (`resolveVirmanSubType`).
+ */
+export const TRANSFER_TYPE_PARAMS = [
+  "virman",
+  "eft",
+  "havale",
+  "exchange",
+  "dovizbozum",
+  "bankcash",
+  "bankadankasaya",
+  "cashbank",
+  "kasadanbankaya",
+  "cashcash",
+  "kasadankasaya",
+] as const;
+export type TransferTypeParam = (typeof TRANSFER_TYPE_PARAMS)[number];
+
+/** Takma ad → asıl ad (`dovizbozum` → `exchange`, …). */
+export const TRANSFER_TYPE_ALIASES: Readonly<Record<string, TransferTypeParam>> = {
+  dovizbozum: "exchange",
+  bankadankasaya: "bankcash",
+  kasadanbankaya: "cashbank",
+  kasadankasaya: "cashcash",
+};
+
+/** URL'deki tür değerinin asıl adı (küçük harf; takma ad çözülür); bilinmeyen → "virman". */
+export function canonicalTransferType(value: string | null | undefined): TransferTypeParam {
+  const lower = (value ?? "").trim().toLowerCase();
+  if (lower in TRANSFER_TYPE_ALIASES) return TRANSFER_TYPE_ALIASES[lower];
+  return (TRANSFER_TYPE_PARAMS as readonly string[]).includes(lower)
+    ? (lower as TransferTypeParam)
+    : "virman";
+}
+
+export type TransferCenterQuery = {
+  tab?: TransferCenterTab;
+  transferType?: TransferTypeParam;
+  /** "Gönder" bağlantıları: kaynak = bu hesap. */
+  sourceFundId?: string;
+  sourceBranchId?: string;
+  /** "Al" / "… Bu Bankaya/Kasaya" bağlantıları: hedef = bu hesap; hedef iş yeri önce seçilir (F4). */
+  targetFundId?: string;
+  targetBranchId?: string;
+  direction?: string;
+};
+
+/** Transfer Merkezi (ZTO BankStatement/Index) derin bağlantısı. */
+export function transferCenterPath(query: TransferCenterQuery = {}): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.transferCenter}${queryOf({
+    tab: query.tab,
+    transferType: query.transferType,
+    sourceFundId: query.sourceFundId,
+    sourceBranchId: query.sourceBranchId,
+    targetFundId: query.targetFundId,
+    targetBranchId: query.targetBranchId,
+    direction: query.direction,
+  })}`;
+}
+
+/** Döviz Bozum & Tahsilat İzlenebilirliği (ZTO BankStatement/ExchangeBreakReport; yeni sekme). */
+export function exchangeBreakReportPath(range: { from?: string; to?: string } = {}): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.transferCenter}/doviz-bozum-raporu${queryOf(range)}`;
+}
+
+/** Banka / Kasa ekstresi yazdırma sayfası (ZTO BankExtract / CashExtract; kabuk dışı, yeni sekme). */
+export function fundExtractPath(
+  kind: ZtoFundKind,
+  id: string,
+  range: { from?: string; to?: string } = {},
+): string {
+  const page = kind === "BANK" ? "banka-ekstre" : "kasa-ekstre";
+  return `${ZTO_PRINT_BASE}/${page}/${segment(id)}${queryOf(range)}`;
+}
+
+/** FIFO faaliyet raporu yazdırma sayfası (ZTO BankTransactions/CashTransactions ActivityReport). */
+export function fundActivityPath(id: string, range: { from: string; to: string }): string {
+  return `${ZTO_PRINT_BASE}/faaliyet-raporu/${segment(id)}${queryOf(range)}`;
 }
 
 function queryOf(query: Record<string, string | undefined>): string {

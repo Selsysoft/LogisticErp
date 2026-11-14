@@ -74,7 +74,8 @@ class AccountServiceTest {
             mock(PersonalDataProtector.class),
             mock(AuditService.class),
             mock(AuditLogRepository.class),
-            mock(TenantClock.class));
+            mock(TenantClock.class),
+            mock(InvoiceCoverageService.class));
     group = mock(AccountGroup.class);
     when(group.issueNextCode()).thenAnswer(call -> "MUS-%06d".formatted(next.getAndIncrement()));
   }

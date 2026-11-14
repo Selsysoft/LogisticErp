@@ -59,6 +59,7 @@ export default {
     opening: "Açılış (devir öncesi)",
     active: "Aktif",
     currencyAll: "Tümü",
+    missingInvoice: "Eksik fatura",
   },
   summary: {
     calc: "Mahsuplaşma",
@@ -74,6 +75,7 @@ export default {
     needDebt: "değerinde borç girişi gerekli!",
     matches: "Borç ve fatura eşleşiyor",
     invoiceInfo: "Borç ve resmi fatura karşılaştırması",
+    invoiceGap: "Kalan {{amount}} için fatura bilgisi eksik.",
   },
   breakdown: {
     title: "Devir Kırılımı",
@@ -226,6 +228,7 @@ export default {
     debtError: "Borç kaydı eklenirken bir hata oluştu!",
     creditError: "Alacak kaydı eklenirken bir hata oluştu!",
     networkError: "Sunucu ile iletişim sırasında bir hata oluştu!",
+    remainingAfterSave: "Bu belge kaydedilince kalan: {{amount}}",
   },
   remove: {
     title: "Silme Onayı",
@@ -513,5 +516,7 @@ export default {
     taxNet: "Net",
     empty: "Seçilen aralıkta hareket yok.",
     unknownWorkplace: "İş Yeri Belirtilmedi",
+    missingInvoice: "Fatura bilgisi eksik",
+    missingSide: { PAYABLE: "CARİ ALACAĞI", RECEIVABLE: "CARİ BORCU" },
   },
 } as const;

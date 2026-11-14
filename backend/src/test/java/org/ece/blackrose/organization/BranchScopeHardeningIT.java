@@ -965,6 +965,8 @@ class BranchScopeHardeningIT extends AbstractIntegrationTest {
     }
     body.put("money", Map.of("amount", "10", "currency", "TRY"));
     body.put("date", today());
+    // 12.2 B4: şirket dağılımı uyarısı onaylı (409 CONFIRMATION_REQUIRED olmasın).
+    body.put("confirmWarnings", true);
     return body;
   }
 

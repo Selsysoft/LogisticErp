@@ -174,6 +174,22 @@ public class CompanyService {
             null,
             seriesPrefix(company.getCode(), "DF", makeDefault),
             6));
+    // Transfer merkezi ve şirketler arası virman serileri (12.2; V32 göç anındaki şirketleri
+    // tohumlar).
+    series.save(
+        new DocumentSeries(
+            company.getId(),
+            DocumentType.FUND_TRANSFER,
+            null,
+            seriesPrefix(company.getCode(), "VRM", makeDefault),
+            6));
+    series.save(
+        new DocumentSeries(
+            company.getId(),
+            DocumentType.INTERCOMPANY_TRANSFER,
+            null,
+            seriesPrefix(company.getCode(), "SVR", makeDefault),
+            6));
     intercompany.ensureAll();
     audit.record(AuditEvent.COMPANY_CREATED, company.getCode(), null);
     return toResponse(company);

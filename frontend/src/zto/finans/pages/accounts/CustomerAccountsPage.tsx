@@ -23,6 +23,8 @@ import {
   useFinanceMutation,
 } from "../../../../pages/finance/accountApi";
 import { today as localToday, useCan, useMultiCompany } from "../../../../pages/finance/common";
+import { useInvoiceGaps } from "../../../../pages/finance/fundApi";
+import { missingByAccount } from "../../../../pages/finance/settlementWarnings";
 import type { Account, CurrencyAmount } from "../../../../pages/finance/types";
 import { flattenTree, useBranchTree } from "../../../branch/branchTree";
 import {
@@ -31,6 +33,7 @@ import {
   ZtoBranchMultiSelect,
   ZtoDataTable,
   ZtoDefinitionDetailsModal,
+  ZtoTooltip,
   currencySymbol,
   formatDate,
   formatN2,
@@ -47,6 +50,7 @@ import {
   accountEditPath,
   accountTransactionsPath,
   statementPath,
+  transferCenterPath,
 } from "../../navItems";
 import { useZtoRootClass } from "../../ZtoRootClassContext";
 import { ZtoTopPanel } from "../../ZtoTopPanel";
@@ -64,6 +68,7 @@ import {
   groupAction,
   groupCollator,
   groupFilterOptions,
+  invoiceGapAmounts,
   plannedTry,
   planDateClass,
   rowClassOf,
@@ -298,6 +303,25 @@ function PairCell({
   );
 }
 
+/**
+ * Eksik fatura işareti (12.2 K-12.2-4, Blackrose eki; ZTO görsel dili): kırmızı ünlem + ipucu.
+ * Yalnız renk değil: `aria-label` ve klavyeyle odaklanabilir kapsayıcı (ipucu odakta da açılır).
+ */
+function InvoiceGapMark({ row }: { row: AccountRow }) {
+  const { t } = useTranslation("ztoFinans");
+  if (row.invoiceGap.length === 0) return null;
+  const label = t("accounts.row.invoiceGap", {
+    amount: invoiceGapAmounts(row.invoiceGap, (a, c) => `${formatN2(a)} ${currencySymbol(c)}`),
+  });
+  return (
+    <ZtoTooltip content={label}>
+      <span className="account-invoice-gap" tabIndex={0} role="img" aria-label={label}>
+        <i className="fas fa-exclamation-circle text-danger ml-1" aria-hidden="true" />
+      </span>
+    </ZtoTooltip>
+  );
+}
+
 function PlannedCell({ planned, label }: { planned: CurrencyAmount[]; label: string }) {
   return (
     <div className="account-financial-pair__item" data-label={label}>
@@ -348,6 +372,7 @@ export function CustomerAccountsPage() {
   const [hideZeroDebt, setHideZeroDebt] = useState(false);
   const [hideCustomers, setHideCustomers] = useState(false);
   const [onlyRedBalance, setOnlyRedBalance] = useState(false);
+  const [missingInvoice, setMissingInvoice] = useState(false);
   const [showPassive, setShowPassive] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [mode, setMode] = useState<TotalsMode>("CURRENCY");
@@ -363,6 +388,9 @@ export function CustomerAccountsPage() {
     includePlanSummary: true,
   });
   const tree = useBranchTree("all", true);
+  // Eksik faturalı cariler: aktif şirket için tek istek (K-12.2-4 "cari listesi").
+  const gaps = useInvoiceGaps({});
+  const invoiceGaps = useMemo(() => missingByAccount(gaps.data ?? []), [gaps.data]);
   const history = useAccountHistory(detail?.account.id, { enabled: !!detail?.history });
 
   const names = useMemo(() => {
@@ -397,6 +425,7 @@ export function CustomerAccountsPage() {
         },
         branchName: (id) => names.branch.get(id)?.name,
         companyName: (id) => names.company.get(id),
+        invoiceGaps,
       },
       { signal: controller.signal },
     )
@@ -406,12 +435,12 @@ export function CustomerAccountsPage() {
       })
       .catch(() => undefined);
     return () => controller.abort();
-  }, [list.data, mode, names, today]);
+  }, [list.data, mode, names, today, invoiceGaps]);
 
   const filters = useDeferredValue<QuickFilters>(
     useMemo(
-      () => ({ plan: planFilter, hideZeroDebt, hideCustomers, onlyRedBalance }),
-      [planFilter, hideZeroDebt, hideCustomers, onlyRedBalance],
+      () => ({ plan: planFilter, hideZeroDebt, hideCustomers, onlyRedBalance, missingInvoice }),
+      [planFilter, hideZeroDebt, hideCustomers, onlyRedBalance, missingInvoice],
     ),
   );
   const visible = useMemo(() => applyQuickFilters(rows, filters, today), [rows, filters, today]);
@@ -594,6 +623,7 @@ export function CustomerAccountsPage() {
               data-label={c("balance")}
             >
               <RotatingAmounts row={row} field="balance" />
+              <InvoiceGapMark row={row} />
             </div>
             <PlannedCell planned={row.planned} label={c("planned")} />
           </>
@@ -745,6 +775,7 @@ export function CustomerAccountsPage() {
     setHideZeroDebt(false);
     setHideCustomers(false);
     setOnlyRedBalance(NO_QUICK_FILTERS.onlyRedBalance);
+    setMissingInvoice(NO_QUICK_FILTERS.missingInvoice);
   };
 
   const loading = list.isPending || building || (list.isFetching && rows.length === 0);
@@ -846,12 +877,12 @@ export function CustomerAccountsPage() {
                 icon="fas fa-money-bill-alt text-success mr-2"
                 label={t("accounts.buttons.treasury")}
               />
-              <PhaseMenuItem
-                step="12.2"
+              <MenuItem
                 className="dropdown-item"
                 style={{ fontSize: 11 }}
                 icon="fas fa-exchange-alt text-info mr-2"
                 label={t("accounts.buttons.bankTransfer")}
+                to={transferCenterPath()}
               />
             </ZtoMenuButton>
             <ZtoMenuButton
@@ -947,7 +978,13 @@ export function CustomerAccountsPage() {
             <span className="filter-label" id="quickFiltersLabel">
               {t("accounts.filters.quick")}
             </span>
-            <div className="d-flex gap-2" role="group" aria-labelledby="quickFiltersLabel">
+            {/* flex-wrap: Blackrose eki üçüncü düğme ("Eksik Faturalı") dar sütunda yandaki
+                sütunun üstüne taşıyordu (12.2 son kapı e2e). */}
+            <div
+              className="d-flex flex-wrap gap-2"
+              role="group"
+              aria-labelledby="quickFiltersLabel"
+            >
               <button
                 type="button"
                 id="btnHideZeroDebt"
@@ -990,6 +1027,25 @@ export function CustomerAccountsPage() {
                 />
                 <span className="btn-toggle-text d-none d-lg-inline">
                   {t("accounts.filters.customers")}
+                </span>
+              </button>
+              <button
+                type="button"
+                id="btnMissingInvoice"
+                className={missingInvoice ? "btn-toggle-filter active" : "btn-toggle-filter"}
+                role="switch"
+                aria-checked={missingInvoice}
+                aria-label={t("accounts.filters.missingInvoice")}
+                title={t(
+                  missingInvoice
+                    ? "accounts.filters.missingInvoiceOn"
+                    : "accounts.filters.missingInvoiceOff",
+                )}
+                onClick={() => setMissingInvoice((value) => !value)}
+              >
+                <i className="fas fa-file-invoice" aria-hidden="true" />
+                <span className="btn-toggle-text d-none d-lg-inline">
+                  {t("accounts.filters.missingInvoice")}
                 </span>
               </button>
             </div>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type {
   Account,
   AccountDocumentType,
+  AccountInvoiceGap,
   AccountRollover,
   AccountTransactionRow,
   BalanceBreakdownRow,
@@ -18,6 +19,8 @@ import {
   effectiveLimits,
   extraBadge,
   invoiceGap,
+  invoiceGapLines,
+  invoiceGapView,
   isCustomerType,
   isDocumentRow,
   isoToTr,
@@ -26,6 +29,7 @@ import {
   limitStatus,
   newestFirst,
   nextTabIndex,
+  pickInvoiceGap,
   round2,
   rowsOfTab,
   runningBalances,
@@ -448,5 +452,73 @@ describe("sezon işaretçileri", () => {
     expect(seasonMarkers(desc, desc, seasons, [{ id: "amount", desc: true }], "date")).toEqual([]);
     expect(seasonMarkers([], desc, seasons, [{ id: "date", desc: true }], "date")).toEqual([]);
     expect(seasonMarkers(desc, desc, seasons, [], "date")).toEqual([]);
+  });
+});
+
+describe("12.2 sunucu tabanlı eksik fatura (§5.14)", () => {
+  const gap = (extra: Partial<AccountInvoiceGap>): AccountInvoiceGap => ({
+    accountId: "a1",
+    side: "PAYABLE",
+    companyId: null,
+    currency: "TRY",
+    ledgerTotal: 150,
+    invoiceTotal: 100,
+    missing: 50,
+    ...extra,
+  });
+  const gaps = [
+    gap({ companyId: "A", ledgerTotal: 100, invoiceTotal: 100, missing: 0 }),
+    gap({ companyId: "B", ledgerTotal: 50, invoiceTotal: 0, missing: 50 }),
+    gap({}),
+    gap({ side: "RECEIVABLE", companyId: "B", ledgerTotal: 10, invoiceTotal: 30, missing: -20 }),
+  ];
+
+  it("invoiceGapView: alan yoksa 12.1 hesabı; varsa sunucu farkı ve tutarları", () => {
+    expect(
+      invoiceGapView(undefined, "PAYABLE", "TRY", null, { ledgerTotal: 1000, invoiceTotal: 800 }),
+    ).toMatchObject({ status: "warning", diff: 200, ledgerTotal: 1000, invoiceTotal: 800 });
+    expect(
+      invoiceGapView(gaps, "PAYABLE", "TRY", null, { ledgerTotal: 999, invoiceTotal: 0 }),
+    ).toMatchObject({ status: "warning", diff: 50, ledgerTotal: 150, invoiceTotal: 100 });
+    expect(
+      invoiceGapView(gaps, "PAYABLE", "TRY", "A", { ledgerTotal: 9, invoiceTotal: 0 }),
+    ).toMatchObject({ status: "success", diff: 0, ledgerTotal: 100 });
+    expect(
+      invoiceGapView(gaps, "RECEIVABLE", "TRY", "B", { ledgerTotal: 0, invoiceTotal: 0 }),
+    ).toMatchObject({ status: "info", diff: -20 });
+    expect(
+      invoiceGapView([], "PAYABLE", "USD", null, { ledgerTotal: 500, invoiceTotal: 0 }),
+    ).toMatchObject({ status: "success", diff: 0, ledgerTotal: 0, invoiceTotal: 0 });
+  });
+
+  it("pickInvoiceGap: şirket → yoksa konsolide; konsolide yoksa şirketler toplanır", () => {
+    expect(pickInvoiceGap(gaps, "PAYABLE", "TRY", "B")?.missing).toBe(50);
+    expect(pickInvoiceGap(gaps, "PAYABLE", "TRY", "Z")?.companyId).toBeNull();
+    expect(pickInvoiceGap(gaps.slice(0, 2), "PAYABLE", "TRY", "Z")).toBeNull();
+    expect(pickInvoiceGap(gaps.slice(0, 2), "PAYABLE", "TRY", null)).toMatchObject({
+      companyId: null,
+      ledgerTotal: 150,
+      invoiceTotal: 100,
+      missing: 50,
+    });
+    expect(pickInvoiceGap(gaps, "PAYABLE", "USD", null)).toBeNull();
+  });
+
+  it("invoiceGapLines: konsolide çok şirkette şirket başına, aksi tek satır; yalnız > 1", () => {
+    expect(invoiceGapLines(gaps, "PAYABLE", "TRY", null, true)).toEqual([
+      { key: "PAYABLE-B", companyId: "B", missing: 50 },
+    ]);
+    expect(invoiceGapLines(gaps, "PAYABLE", "TRY", null, false)).toEqual([
+      { key: "PAYABLE-all", companyId: null, missing: 50 },
+    ]);
+    expect(invoiceGapLines(gaps, "PAYABLE", "TRY", "B", true)).toEqual([
+      { key: "PAYABLE-B", companyId: null, missing: 50 },
+    ]);
+    expect(invoiceGapLines(gaps, "PAYABLE", "TRY", "A", true)).toEqual([]);
+    expect(invoiceGapLines([gaps[2]], "PAYABLE", "TRY", null, true)).toEqual([
+      { key: "PAYABLE-all", companyId: null, missing: 50 },
+    ]);
+    expect(invoiceGapLines(gaps, "RECEIVABLE", "TRY", null, true)).toEqual([]);
+    expect(invoiceGapLines(undefined, "PAYABLE", "TRY", null, true)).toEqual([]);
   });
 });

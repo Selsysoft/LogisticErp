@@ -5,12 +5,13 @@ import { Trans, useTranslation } from "react-i18next";
 import {
   createDocument,
   reviseDocument,
+  useAccountBalances,
   useAccountDocument,
   useDocumentTypes,
   useFinanceMutation,
   useIdempotencyKey,
 } from "../../../../pages/finance/accountApi";
-import { today, useCurrencies } from "../../../../pages/finance/common";
+import { today, useBranches, useCurrencies } from "../../../../pages/finance/common";
 import type { Account, DocumentSide } from "../../../../pages/finance/types";
 import { fieldA11yProps, fieldStateOf, useFormErrorAnnouncer } from "../../../a11y";
 import {
@@ -25,12 +26,19 @@ import {
   documentFormSchema,
   emptyDocumentValues,
   numberOf,
+  remainingAfterSave,
   summaryError,
   toDocumentBody,
   valuesFromDocument,
   type DocumentFormValues,
 } from "./documentLogic";
-import { apiErrorOf, computeTax, documentTypeOptions, isCustomerType } from "./transactionsLogic";
+import {
+  apiErrorOf,
+  computeTax,
+  documentTypeOptions,
+  isCustomerType,
+  pickInvoiceGap,
+} from "./transactionsLogic";
 
 export type DocumentModalProps = {
   show: boolean;
@@ -124,6 +132,68 @@ export function DocumentModal({
   });
   const symbol = currencySymbol(values.currency ?? defaultCurrency);
   const footerNet = invoiceSection ? tax.netPayable : numberOf(values.amount ?? "") || 0;
+
+  // 12.2 eksik fatura (§5.14 "fatura girişi"): seçilen tür fatura sayılıyorsa carinin iş yeri şirketindeki
+  // eksik tutar ve bu belge kaydedilince kalan (yansıtılmayan belgede net ödenecek tutar düşer).
+  const countsAsInvoice = selectedType?.countsAsInvoice === true;
+  const branches = useBranches();
+  const balances = useAccountBalances(show && countsAsInvoice ? account.id : undefined, {
+    groupBy: "CURRENCY",
+    companyId: null,
+  });
+  const branchCompany = branches.data?.find((b) => b.id === values.branchId)?.companyId ?? null;
+  const gapRow = balances.data?.invoiceGaps
+    ? pickInvoiceGap(
+        balances.data.invoiceGaps,
+        side,
+        values.currency ?? defaultCurrency,
+        branchCompany,
+      )
+    : null;
+  const missing = gapRow?.missing ?? 0;
+  const previousDoc = documentId ? document.data : undefined;
+  const previousType = previousDoc
+    ? (types.data ?? []).find((x) => x.side === side && x.code === previousDoc.documentType)
+    : undefined;
+  const remaining = remainingAfterSave(
+    missing,
+    {
+      countsAsInvoice,
+      reflect: invoiceSection ? values.reflectToLedger !== false : true,
+      net: footerNet,
+    },
+    previousDoc && previousDoc.status === "OPEN"
+      ? {
+          countsAsInvoice: previousType?.countsAsInvoice === true,
+          reflect: previousDoc.reflectToLedger,
+          net: previousDoc.tax?.netPayable ?? previousDoc.amount,
+        }
+      : null,
+  );
+  // Canlı bölge pencere açıkken hep DOM'da (boşken Bootstrap `sr-only`); ilk eksik fatura notu
+  // eklendiğinde duyurulur (F-12.2-R7). Görünür düzen değişmez.
+  const showGapNote = countsAsInvoice && missing > 1;
+  const gapNote = (
+    <div
+      className={showGapNote ? "col-12 mb-2" : "sr-only"}
+      id={`${p}InvoiceGapNote`}
+      role="status"
+    >
+      {showGapNote && (
+        <>
+          <small className="text-danger d-block">
+            <i className="fas fa-exclamation-circle mr-1" aria-hidden="true" />
+            {t("transactions.summary.invoiceGap", { amount: `${formatN2(missing)} ${symbol}` })}
+          </small>
+          <small className="text-danger d-block">
+            {t("transactions.document.remainingAfterSave", {
+              amount: `${formatN2(remaining)} ${symbol}`,
+            })}
+          </small>
+        </>
+      )}
+    </div>
+  );
 
   const mutation = useFinanceMutation(
     (body: DocumentFormValues) => {
@@ -627,9 +697,11 @@ export function DocumentModal({
             </div>
             {debt && reflectBox}
             {debt && invoiceFields}
+            {debt && gapNote}
             {descriptionField}
           </div>
           {!debt && invoiceFields}
+          {!debt && <div className="row">{gapNote}</div>}
           <div className={debt ? "alert mb-0 alert-info" : "alert mb-0 alert-success"}>
             <i className="fas fa-info-circle mr-2" aria-hidden="true" />
             <strong>{t("transactions.document.note")}:</strong>{" "}

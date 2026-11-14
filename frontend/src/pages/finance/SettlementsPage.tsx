@@ -1,7 +1,8 @@
-import { Button, ToggleButton, ToggleButtonGroup } from "@mui/material";
+import { Alert, Button, Stack, ToggleButton, ToggleButtonGroup } from "@mui/material";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { apiGet, apiRequest } from "../../api/client";
 import { useActiveCompanyId } from "../../auth/companyStore";
 import { ErrorState } from "../../components/ErrorState";
@@ -9,33 +10,75 @@ import {
   DataTable,
   FieldDef,
   FormDialog,
+  formatAmount,
   formatDate,
   formatMoney,
   QueryState,
   SectionHeader,
+  SubmitCancelled,
   today,
   useAccounts,
   useBranchOptions,
   useCan,
+  useCompanyName,
+  useConfirm,
   useCurrencies,
   useFunds,
+  useMultiCompany,
   usePaging,
+  type Column,
 } from "./common";
-import { companyOfBranch, fundsOfCompany } from "./branchOptions";
+import { companyOfBranch, defaultBranchValue, fundsOfCompany } from "./branchOptions";
 import { withCompany } from "./companyQuery";
-import { ExpenseItem, Instrument, Page, Settlement } from "./types";
+import { useSettlementCheck } from "./fundApi";
+import {
+  allocationWarningText,
+  checkKey,
+  invoiceGapText,
+  isConfirmationRequired,
+  isMissing,
+  parseConfirmationDetails,
+  parseNewSettlement,
+  settlementCheckBody,
+  type SettlementCheckBody,
+  type MoneyFormat,
+  type Translate,
+} from "./settlementWarnings";
+import {
+  ExpenseItem,
+  Instrument,
+  Page,
+  Settlement,
+  SettlementBody,
+  SettlementCheck,
+} from "./types";
 
 type Kind = "payments" | "collections";
+type Adding = { method: string; key: string; fundAccountId?: string };
+
+const money: MoneyFormat = (amount, currency) => `${formatAmount(amount)} ${currency}`;
 
 export function SettlementsPage() {
   const { t } = useTranslation();
   const client = useQueryClient();
   const canPost = useCan("FINANCE_PAYMENT_CREATE");
-  const [kind, setKind] = useState<Kind>("payments");
-  const [adding, setAdding] = useState<{ method: string; key: string } | null>(null);
+  const [params, setParams] = useSearchParams();
+  // ZTO Banka/Kasa Hareketleri "Yeni Ödeme/Tahsilat" (OK-12.2-22): `?new=…&method=…&fundAccountId=…`
+  // ile pencere fon ön seçili açılır. İlk çizimde okunur; kapanınca parametreler silinir.
+  const [initial] = useState(() => parseNewSettlement(params));
+  const [kind, setKind] = useState<Kind>(
+    initial?.type === "COLLECTION" ? "collections" : "payments",
+  );
+  const [adding, setAdding] = useState<Adding | null>(() =>
+    initial && canPost
+      ? { method: initial.method, key: crypto.randomUUID(), fundAccountId: initial.fundAccountId }
+      : null,
+  );
   const paging = usePaging();
   const accounts = useAccounts();
   const companyId = useActiveCompanyId();
+  const multiCompany = useMultiCompany();
+  const companyName = useCompanyName();
 
   const list = useQuery({
     queryKey: ["finance", kind, paging.page, paging.size, companyId],
@@ -55,6 +98,57 @@ export function SettlementsPage() {
   });
   const accountName = (id: string | null) =>
     accounts.data?.find((account) => account.id === id)?.name ?? "—";
+
+  const closeDialog = () => {
+    setAdding(null);
+    if (params.has("new")) {
+      const next = new URLSearchParams(params);
+      ["new", "method", "fundAccountId"].forEach((key) => next.delete(key));
+      setParams(next, { replace: true });
+    }
+  };
+
+  const columns: Column<Settlement>[] = [
+    { header: t("finance.field.date"), render: (r) => formatDate(r.settlementDate) },
+    ...(multiCompany
+      ? [
+          {
+            header: t("finance.field.company"),
+            render: (r: Settlement) => companyName(r.companyId),
+          },
+        ]
+      : []),
+    { header: t("finance.field.account"), render: (r) => accountName(r.accountId) },
+    { header: t("finance.field.method"), render: (r) => t(`finance.method.${r.method}`) },
+    { header: t("finance.field.description"), render: (r) => r.description },
+    {
+      header: t("finance.field.status"),
+      render: (r) => t(`finance.settlementStatus.${r.status}`),
+    },
+    {
+      header: t("finance.field.amount"),
+      align: "right",
+      render: (r) => formatMoney(r.money),
+    },
+    {
+      header: t("common.actions"),
+      align: "right",
+      render: (r) =>
+        canPost &&
+        r.status === "POSTED" &&
+        r.method !== "CHECK" &&
+        !r.planId && (
+          <Button
+            size="small"
+            color="error"
+            disabled={reverse.isPending}
+            onClick={() => reverse.mutate(r.id)}
+          >
+            {t("finance.action.reverse")}
+          </Button>
+        ),
+    },
+  ];
 
   return (
     <>
@@ -94,39 +188,7 @@ export function SettlementsPage() {
         <DataTable
           rows={list.data.content}
           rowKey={(row) => row.id}
-          columns={[
-            { header: t("finance.field.date"), render: (r) => formatDate(r.settlementDate) },
-            { header: t("finance.field.account"), render: (r) => accountName(r.accountId) },
-            { header: t("finance.field.method"), render: (r) => t(`finance.method.${r.method}`) },
-            { header: t("finance.field.description"), render: (r) => r.description },
-            {
-              header: t("finance.field.status"),
-              render: (r) => t(`finance.settlementStatus.${r.status}`),
-            },
-            {
-              header: t("finance.field.amount"),
-              align: "right",
-              render: (r) => formatMoney(r.money),
-            },
-            {
-              header: t("common.actions"),
-              align: "right",
-              render: (r) =>
-                canPost &&
-                r.status === "POSTED" &&
-                r.method !== "CHECK" &&
-                !r.planId && (
-                  <Button
-                    size="small"
-                    color="error"
-                    disabled={reverse.isPending}
-                    onClick={() => reverse.mutate(r.id)}
-                  >
-                    {t("finance.action.reverse")}
-                  </Button>
-                ),
-            },
-          ]}
+          columns={columns}
           pagination={{
             count: list.data.totalElements,
             page: paging.page,
@@ -141,9 +203,10 @@ export function SettlementsPage() {
           kind={kind}
           method={adding.method}
           idempotencyKey={adding.key}
-          onClose={() => setAdding(null)}
+          fundAccountId={adding.fundAccountId}
+          onClose={closeDialog}
           onSaved={() => {
-            setAdding(null);
+            closeDialog();
             void client.invalidateQueries({ queryKey: ["finance"] });
           }}
         />
@@ -152,16 +215,60 @@ export function SettlementsPage() {
   );
 }
 
+/**
+ * Şirket dağılımı ve eksik fatura notu (§5.13): küçük kırmızı satır CONFIRM uyarısı, sarı satırlar
+ * tahsilat bilgisi (INFO) ve eksik fatura. Canlı bölge `FormDialog`'un her zaman çizilen not
+ * sarmalayıcısıdır (`role="status"`); metin orada değişince duyurulur (F-12.2-R7).
+ */
+function SettlementNotice({ check }: { check: SettlementCheck | undefined }) {
+  const { t } = useTranslation();
+  const companyName = useCompanyName();
+  const translate: Translate = (key, values) => t(key, values);
+  const warnings = check?.warnings ?? [];
+  const gaps = (check?.invoiceGaps ?? []).filter(isMissing);
+  if (warnings.length === 0 && gaps.length === 0) {
+    return null;
+  }
+  return (
+    <Stack spacing={0.5}>
+      {warnings.map((warning) => (
+        <Alert
+          key={`${warning.code}-${warning.currency}-${warning.companyId}`}
+          severity={warning.severity === "CONFIRM" ? "error" : "warning"}
+          variant="outlined"
+          role="note"
+          sx={{ py: 0, fontSize: 13 }}
+        >
+          {allocationWarningText(warning, companyName, money, translate)}
+        </Alert>
+      ))}
+      {gaps.map((gap) => (
+        <Alert
+          key={`gap-${gap.side}-${gap.currency}-${gap.companyId ?? ""}`}
+          severity="warning"
+          variant="outlined"
+          role="note"
+          sx={{ py: 0, fontSize: 13 }}
+        >
+          {invoiceGapText(gap, money, translate)}
+        </Alert>
+      ))}
+    </Stack>
+  );
+}
+
 function SettlementDialog({
   kind,
   method,
   idempotencyKey,
+  fundAccountId,
   onClose,
   onSaved,
 }: {
   kind: Kind;
   method: string;
   idempotencyKey: string;
+  fundAccountId?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -170,8 +277,31 @@ function SettlementDialog({
   const { branches, optionsFor } = useBranchOptions();
   const funds = useFunds();
   const currencies = useCurrencies();
+  const companyName = useCompanyName();
   const isPayment = kind === "payments";
   const isCheck = method === "CHECK";
+  const type = isPayment ? "PAYMENT" : "COLLECTION";
+  const confirm = useConfirm({
+    title: t("finance.warning.confirmTitle"),
+    confirm: t("finance.warning.confirmOk"),
+    cancel: t("finance.warning.confirmCancel"),
+  });
+
+  // Uyarı önizlemesi: gövde yalnız ilgili alanlardan kurulan anahtar değişince güncellenir (§5.13).
+  const [checkBody, setCheckBody] = useState<SettlementCheckBody | null>(null);
+  const lastKey = useRef<string | null>(null);
+  const onValuesChange = useCallback(
+    (values: Record<string, string | boolean>) => {
+      const key = checkKey({ ...values, method });
+      if (key === lastKey.current) {
+        return;
+      }
+      lastKey.current = key;
+      setCheckBody(settlementCheckBody(values, method as SettlementBody["method"], today()));
+    },
+    [method],
+  );
+  const check = useSettlementCheck(type, checkBody);
 
   const expenseItems = useQuery({
     queryKey: ["finance", "expense-items"],
@@ -184,6 +314,11 @@ function SettlementDialog({
     select: (page) => page.content,
   });
 
+  const preset = useMemo(
+    () => funds.data?.find((fund) => fund.id === fundAccountId),
+    [funds.data, fundAccountId],
+  );
+  const branchChoices = optionsFor();
   const fields: FieldDef[] = [
     {
       name: "accountId",
@@ -197,7 +332,9 @@ function SettlementDialog({
       label: t("finance.field.branch"),
       type: "select",
       required: true,
-      options: optionsFor(),
+      options: branchChoices,
+      // Fon ön seçiliyse fonun iş yeri (seçeneklerde yoksa boş).
+      defaultValue: preset ? defaultBranchValue(branchChoices, preset.branchId) : "",
     },
   ];
   if (!isCheck) {
@@ -206,10 +343,12 @@ function SettlementDialog({
       label: t("finance.field.fund"),
       type: "select",
       required: true,
-      // Yalnız seçili iş yerinin şirketinin fonları (başka şirketin fonu 422 COMPANY_MISMATCH).
+      defaultValue: preset && preset.kind === method && preset.active !== false ? preset.id : "",
+      // Yalnız seçili iş yerinin şirketinin aktif fonları (başka şirketin fonu 422 COMPANY_MISMATCH,
+      // pasif fon 422 FUND_INACTIVE).
       optionsFrom: (values) =>
         fundsOfCompany(funds.data, companyOfBranch(branches.data, String(values.branchId ?? "")))
-          .filter((fund) => fund.kind === method)
+          .filter((fund) => fund.kind === method && fund.active !== false)
           .map((fund) => ({ value: fund.id, label: `${fund.name} (${fund.currency})` })),
     });
   }
@@ -220,7 +359,7 @@ function SettlementDialog({
       label: t("finance.field.currency"),
       type: "select",
       required: true,
-      defaultValue: "TRY",
+      defaultValue: preset?.currency ?? "TRY",
       options: (currencies.data ?? []).map((c) => ({ value: c.code, label: c.code })),
     },
     {
@@ -283,25 +422,29 @@ function SettlementDialog({
     return null;
   }
 
+  const translate: Translate = (key, values) => t(key, values);
+  const post = (body: Record<string, unknown>) =>
+    apiRequest("POST", `/finance/${kind}`, body, { "Idempotency-Key": idempotencyKey });
+
   return (
-    <FormDialog
-      title={`${isPayment ? t("finance.action.newPayment") : t("finance.action.newCollection")} · ${t(`finance.method.${method}`)}`}
-      fields={fields}
-      onClose={onClose}
-      onSubmit={(values) => {
-        const newInstrument =
-          isCheck && !values.instrumentId
-            ? {
-                kind: values.instrumentKind,
-                number: values.number,
-                bankName: values.bankName || null,
-                dueDate: values.dueDate || null,
-              }
-            : null;
-        return apiRequest(
-          "POST",
-          `/finance/${kind}`,
-          {
+    <>
+      <FormDialog
+        title={`${isPayment ? t("finance.action.newPayment") : t("finance.action.newCollection")} · ${t(`finance.method.${method}`)}`}
+        fields={fields}
+        onClose={onClose}
+        onValuesChange={onValuesChange}
+        notice={() => (checkBody ? <SettlementNotice check={check.data} /> : null)}
+        onSubmit={async (values) => {
+          const newInstrument =
+            isCheck && !values.instrumentId
+              ? {
+                  kind: values.instrumentKind,
+                  number: values.number,
+                  bankName: values.bankName || null,
+                  dueDate: values.dueDate || null,
+                }
+              : null;
+          const body = {
             method,
             accountId: values.accountId || null,
             branchId: values.branchId,
@@ -313,11 +456,35 @@ function SettlementDialog({
             date: values.date,
             description: values.description || null,
             exchangeRate: values.exchangeRate || null,
-          },
-          { "Idempotency-Key": idempotencyKey },
-        );
-      }}
-      onSaved={onSaved}
-    />
+          };
+          try {
+            return await post(body);
+          } catch (error) {
+            // 409 CONFIRMATION_REQUIRED: onay penceresi; "Tamam" → aynı Idempotency-Key ile
+            // confirmWarnings=true yeniden gönderim, "Vazgeç" → pencere açık kalır (K-12.2-3).
+            const warning = parseConfirmationDetails(error);
+            if (!isConfirmationRequired(error)) {
+              throw error;
+            }
+            const ok = await confirm.ask(
+              <>
+                <Alert severity="error" variant="outlined" role="note" sx={{ fontSize: 13, mb: 1 }}>
+                  {warning
+                    ? allocationWarningText(warning, companyName, money, translate)
+                    : (error as Error).message || t("finance.error.CONFIRMATION_REQUIRED")}
+                </Alert>
+                {t("finance.warning.confirmQuestion")}
+              </>,
+            );
+            if (!ok) {
+              throw new SubmitCancelled();
+            }
+            return post({ ...body, confirmWarnings: true });
+          }
+        }}
+        onSaved={onSaved}
+      />
+      {confirm.dialog}
+    </>
   );
 }

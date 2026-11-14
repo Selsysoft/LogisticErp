@@ -6,7 +6,12 @@
 
 export type TaxIdType = "VKN" | "TCKN";
 export type BranchGroupType = "MAIN" | "SUB";
-export type DocumentType = "FREIGHT_INVOICE" | "WAREHOUSE_INVOICE";
+export type DocumentType =
+  | "FREIGHT_INVOICE"
+  | "WAREHOUSE_INVOICE"
+  /** 12.2: transfer merkezi (VRM) ve şirketler arası virman (SVR) serileri. */
+  | "FUND_TRANSFER"
+  | "INTERCOMPANY_TRANSFER";
 export type EDocumentProfile = "TICARIFATURA" | "TEMELFATURA" | "EARSIVFATURA";
 
 /** Şema `CompanyResponse`. */

@@ -59,6 +59,14 @@ export default {
     low: "Az (üst sınır)",
     medium: "Orta (üst sınır)",
     high: "Yoğun (üst sınır)",
+    // 12.2 fon tanımı ek alanları (§5.13).
+    accountNo: "Hesap no",
+    bankBranchName: "Banka şube adı",
+    openingBalance: "Başlangıç bakiyesi",
+    openingBalanceHint: "Eksi değer eksi açılış demektir (eksi bakiyeye izin gerekir).",
+    openingDate: "Başlangıç tarihi",
+    active: "Aktif",
+    category: "Kategori",
   },
   action: {
     newAccount: "Cari ekle",
@@ -83,8 +91,46 @@ export default {
     add: "Ekle",
     refreshRates: "Kurları güncelle",
     close: "Kapat",
+    activate: "Aktifleştir",
+    deactivate: "Pasifleştir",
   },
   empty: "Kayıt yok.",
+  // 12.2 MUI fon ekranı (§5.13).
+  fund: {
+    all: "Tümü",
+    companyTotal: "{{company}} toplamı",
+    intercompanyHint: "Şirketler arası aktarım için ZTO Transfer Merkezi'ni kullanın.",
+    transferCenter: "Transfer Merkezi",
+  },
+  // 12.2 ödeme/tahsilat şirket dağılımı ve eksik fatura uyarıları (§5.13, K-12.2-3, K-12.2-4).
+  warning: {
+    payment:
+      "Bu şirketin cariye borcu {{companyOutstanding}}; ödeme {{amount}}, borçtan {{excess}} fazla.",
+    others: "Diğer şirketlerdeki borç: {{list}}.",
+    otherHidden: "Diğer şirketlerde/iş yerlerinde de borç var.",
+    partialScope: "Yetkili olmadığınız iş yerlerindeki bakiye nedeniyle onay gerekiyor.",
+    collection:
+      "Bu şirketteki cari borcu {{companyOutstanding}}; tahsilat {{amount}}, borçtan {{excess}} fazla.",
+    gapPayable:
+      "Cari alacağı {{ledgerTotal}}, girilen fatura {{invoiceTotal}}: kalan {{missing}} için fatura bilgisi eksik.",
+    gapReceivable:
+      "Cari borcu {{ledgerTotal}}, kesilen fatura {{invoiceTotal}}: kalan {{missing}} için fatura bilgisi eksik.",
+    invoiceEntryNote:
+      "Bu fatura kaydedildiğinde cari alacağına da eklenir; eksik tutar faturasız kalemlerden (sefer maliyeti, açılış vb.) doğar.",
+    missingChip: "Eksik fatura: {{amount}}",
+    confirmTitle: "Uyarı",
+    confirmQuestion: "Yine de kaydetmek istiyor musunuz?",
+    confirmCancel: "Vazgeç",
+    confirmOk: "Tamam",
+  },
+  // 12.2 bilinen hata kodlarının yerel iletileri (§5.15; 12.1a açık kalanı FUND_IS_COMPANY_DEFAULT).
+  error: {
+    FUND_INACTIVE: "Pasif banka/kasa hesabıyla işlem yapılamaz.",
+    CONFIRMATION_REQUIRED:
+      "Bu ödeme, carinin seçilen şirketteki borcunu aşıyor; onaylayarak devam edebilirsiniz.",
+    FUND_IS_COMPANY_DEFAULT:
+      "Bu hesap şirketin varsayılan banka hesabı; önce şirket kartında başka bir hesap seçin.",
+  },
   noBranch: "İşlem yapmak için önce Tanımlar sekmesinden şube ekleyin.",
   openingBalance: "Dönem başı bakiye",
   openingInvoice: {
@@ -184,6 +230,16 @@ export default {
   },
   direction: { DEBIT: "Borç", CREDIT: "Alacak", IN: "Giriş", OUT: "Çıkış" },
   fundKind: { BANK: "Banka", CASH: "Kasa" },
+  // 12.2 fon hesap türü (ZTO BankIntroduction AccountType; tasarımda `accountType`, cari türü anahtarlarıyla
+  // karışmasın diye ayrı ad).
+  fundAccountType: {
+    DEMAND: "Vadesiz",
+    CREDIT: "Kredi",
+    DEPOSIT: "Vadeli Mevduat",
+    INVESTMENT: "Yatırım",
+  },
+  // 12.2 manuel fon hareketi kategorisi.
+  category: { EXPENSE: "Masraf", INCOME: "Gelir", OTHER: "Diğer" },
   method: { CASH: "Nakit", BANK: "Banka", CHECK: "Çek/Senet" },
   instrumentKind: { CHECK: "Çek", NOTE: "Senet" },
   instrumentDirection: { RECEIVED: "Alınan", ISSUED: "Verilen" },
@@ -235,6 +291,10 @@ export default {
     ACCOUNT_DOCUMENT: "Borç/Alacak belgesi",
     ACCOUNT_TRANSFER_OUT: "Cari taşıma (çıkış)",
     ACCOUNT_TRANSFER_IN: "Cari taşıma (giriş)",
+    // 12.2 fon kaynakları (§5.15).
+    FUND_OPENING: "Açılış bakiyesi",
+    FUND_TRANSFER: "Transfer",
+    FUND_TRANSFER_COST: "Transfer masrafı",
   },
   // 12.1 hareket türü (§3.5; ZTO sekme ve rozet adları).
   kind: { DEBT: "Borç", PAYMENT: "Ödeme", RECEIVABLE: "Alacak", COLLECTION: "Tahsilat" },

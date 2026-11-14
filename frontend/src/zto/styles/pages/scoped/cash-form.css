@@ -1,0 +1,32 @@
+/*
+ * Kaynak: ZtoFabrika/Views/CashIntroduction/Add.cshtml:14-44 (Edit.cshtml:14-44 aynı blok)
+ * Birebir kopya (12.2_TASARIM §5.4); değişiklikler: Razor kaçışı @@ → @, bu dosyada tanımlı
+ * @keyframes adları paket genelinde çakışmasın diye zto-<sayfa>- önekli (check:zto-css);
+ * '.loading' kuralı (url('~/factory.gif'), ZTO'da da çözülmeyen yol; derlemede bulunamaz) alınmadı
+ * Sayfa kapsamı .zto-finans.zto-page-cash-form (prefixTransform scopeForFile).
+ */
+/* --- Views/CashIntroduction/Add.cshtml:14-44 --- */
+.custom-card {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  background-color: white;
+}
+
+.tooltip-text {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  white-space: normal;
+  width: 250px;
+  font-size: 12px;
+  line-height: 1.4;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}

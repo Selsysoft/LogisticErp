@@ -48,6 +48,9 @@ public class AccountDocumentType extends AuditableEntity {
   private int sortOrder;
   private boolean active;
 
+  /** Eksik fatura hesabında fatura sayılır (V34; {@code invoiceSection}'dan bağımsız). */
+  private boolean countsAsInvoice;
+
   protected AccountDocumentType() {}
 
   /** Tür bu cari türüne açık mı (ZTO: müşteride ceza/kesinti listesi, diğerlerinde faturalar). */
@@ -94,5 +97,9 @@ public class AccountDocumentType extends AuditableEntity {
 
   public boolean isActive() {
     return active;
+  }
+
+  public boolean isCountsAsInvoice() {
+    return countsAsInvoice;
   }
 }

@@ -12,6 +12,8 @@ import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.AgingType;
 import org.ece.blackrose.finance.domain.FinanceTypes.BalanceGroupBy;
 import org.ece.blackrose.finance.domain.FinanceTypes.DateBasis;
+import org.ece.blackrose.finance.domain.FinanceTypes.FundAccountType;
+import org.ece.blackrose.finance.domain.FinanceTypes.FundKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.HeatmapPeriod;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.PlanStatus;
@@ -23,6 +25,8 @@ import org.ece.blackrose.finance.repository.FinanceRepositories.ExpenseTypeRepos
 import org.ece.blackrose.finance.service.AccountService;
 import org.ece.blackrose.finance.service.AccountService.AccountListQuery;
 import org.ece.blackrose.finance.service.AccountService.StatementQuery;
+import org.ece.blackrose.finance.service.FundQueryService;
+import org.ece.blackrose.finance.service.FundQueryService.FundSearch;
 import org.ece.blackrose.finance.service.FundService;
 import org.ece.blackrose.finance.service.InstrumentService;
 import org.ece.blackrose.finance.service.PaymentPlanService;
@@ -62,12 +66,11 @@ import org.ece.blackrose.finance.web.FinanceDtos.SaveExpenseItemRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SaveExpenseTypeRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SaveFinanceSettingsRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SaveThresholdRequest;
+import org.ece.blackrose.finance.web.FinanceDtos.SettlementCheckResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.SettlementRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SettlementResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.StatementResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.ThresholdResponse;
-import org.ece.blackrose.finance.web.FinanceDtos.TransferRequest;
-import org.ece.blackrose.finance.web.FinanceDtos.TransferResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.UpdateFundRequest;
 import org.ece.blackrose.organization.BranchScopeService;
 import org.springframework.data.domain.PageRequest;
@@ -100,6 +103,7 @@ public class FinanceController {
 
   private final AccountService accounts;
   private final FundService funds;
+  private final FundQueryService fundQueries;
   private final InstrumentService instruments;
   private final SettlementService settlements;
   private final PurchaseInvoiceService invoices;
@@ -116,6 +120,7 @@ public class FinanceController {
   public FinanceController(
       AccountService accounts,
       FundService funds,
+      FundQueryService fundQueries,
       InstrumentService instruments,
       SettlementService settlements,
       PurchaseInvoiceService invoices,
@@ -130,6 +135,7 @@ public class FinanceController {
     this.scope = scope;
     this.accounts = accounts;
     this.funds = funds;
+    this.fundQueries = fundQueries;
     this.instruments = instruments;
     this.settlements = settlements;
     this.invoices = invoices;
@@ -263,10 +269,23 @@ public class FinanceController {
 
   // Banka ve kasa
 
+  /**
+   * Süzgeçli hesap listesi (12.2 §4.1); sıra tür, hesap türü, banka adı, ad. {@code asOf} boşsa
+   * bugün ({@code currentBalance}, {@code futureNet}).
+   */
   @GetMapping("/funds")
   @PreAuthorize(VIEW)
-  List<FundResponse> listFunds(@RequestParam(required = false) UUID companyId) {
-    return funds.list(companyId);
+  List<FundResponse> listFunds(
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(name = "branchId", required = false) List<UUID> branchIds,
+      @RequestParam(required = false) FundKind kind,
+      @RequestParam(required = false) FundAccountType accountType,
+      @RequestParam(required = false) Boolean active,
+      @RequestParam(required = false) String currency,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate asOf) {
+    return fundQueries.list(
+        new FundSearch(companyId, branchIds, kind, accountType, active, currency, asOf));
   }
 
   @PostMapping("/funds")
@@ -303,15 +322,6 @@ public class FinanceController {
   FundTransactionResponse reverseFundTransaction(
       @PathVariable UUID id, @Valid @RequestBody ReverseRequest request) {
     return mapper.toResponse(funds.reverseManual(id, request.date(), request.description()));
-  }
-
-  @PostMapping("/funds/transfers")
-  @ResponseStatus(HttpStatus.CREATED)
-  @PreAuthorize(POST)
-  TransferResponse transfer(
-      @Valid @RequestBody TransferRequest request,
-      @RequestHeader(name = IDEMPOTENCY_HEADER, required = false) String idempotencyKey) {
-    return funds.transfer(request, idempotencyKey);
   }
 
   @GetMapping("/funds/{id}/statement")
@@ -386,6 +396,18 @@ public class FinanceController {
     scope.requireNew(request.branchId());
     return mapper.toResponse(
         settlements.createByUser(SettlementType.COLLECTION, request, idempotencyKey));
+  }
+
+  /**
+   * Ödeme/tahsilat önizlemesi (12.2 §4.5): şirket dağılımı uyarısı ve eksik fatura; yazmaz. Kayıt
+   * uçlarıyla aynı kapı ve doğrulamalar.
+   */
+  @PostMapping("/settlements/check")
+  @PreAuthorize(POST)
+  SettlementCheckResponse checkSettlement(
+      @RequestParam SettlementType type, @Valid @RequestBody SettlementRequest request) {
+    scope.requireNew(request.branchId());
+    return settlements.check(type, request);
   }
 
   @PostMapping("/settlements/{id}/reverse")

@@ -343,6 +343,11 @@ export type AccountRow = {
   zeroBalance: boolean;
   isCustomer: boolean;
   active: boolean;
+  /**
+   * 12.2 (K-12.2-4): eksik fatura tutarı, para birimi başına (iki taraf toplanır; yalnız > 1). Boş →
+   * eksik yok.
+   */
+  invoiceGap: CurrencyAmount[];
 };
 
 export type RowContext = {
@@ -351,6 +356,8 @@ export type RowContext = {
   branchLabel: (branchId: string) => string | undefined;
   branchName: NameLookup;
   companyName: NameLookup;
+  /** Cari → eksik fatura (`missingByAccount(useInvoiceGaps)`); yoksa hiçbir satırda eksik yok. */
+  invoiceGaps?: ReadonlyMap<string, CurrencyAmount[]>;
 };
 
 export function buildRow(account: Account, ctx: RowContext): AccountRow {
@@ -379,7 +386,16 @@ export function buildRow(account: Account, ctx: RowContext): AccountRow {
     zeroBalance: entries.every((e) => e.balance.value === 0),
     isCustomer: account.type === "CUSTOMER",
     active: account.active,
+    invoiceGap: ctx.invoiceGaps?.get(account.id) ?? [],
   };
+}
+
+/** Bakiye hücresi ipucu: "Eksik fatura: 50,00 ₺, 10,00 $" için tutar kısmı. */
+export function invoiceGapAmounts(
+  gap: readonly CurrencyAmount[],
+  format: (amount: number, currency: string) => string,
+): string {
+  return gap.map((item) => format(item.amount, item.currency)).join(", ");
 }
 
 /**
@@ -407,6 +423,8 @@ export type QuickFilters = {
   hideZeroDebt: boolean;
   hideCustomers: boolean;
   onlyRedBalance: boolean;
+  /** 12.2 "Eksik Faturalı": yalnız eksik faturası olan cariler (Blackrose eki). */
+  missingInvoice: boolean;
 };
 
 export const NO_QUICK_FILTERS: QuickFilters = {
@@ -414,6 +432,7 @@ export const NO_QUICK_FILTERS: QuickFilters = {
   hideZeroDebt: false,
   hideCustomers: false,
   onlyRedBalance: false,
+  missingInvoice: false,
 };
 
 export function applyQuickFilters(
@@ -425,7 +444,8 @@ export function applyQuickFilters(
     filters.plan === "" &&
     !filters.hideZeroDebt &&
     !filters.hideCustomers &&
-    !filters.onlyRedBalance
+    !filters.onlyRedBalance &&
+    !filters.missingInvoice
   ) {
     return rows.slice();
   }
@@ -434,7 +454,8 @@ export function applyQuickFilters(
       matchesPlanFilter(row.account.planSummary, filters.plan, today) &&
       !(filters.hideZeroDebt && row.zeroBalance) &&
       !(filters.hideCustomers && row.isCustomer) &&
-      (!filters.onlyRedBalance || row.hasDebtBalance),
+      (!filters.onlyRedBalance || row.hasDebtBalance) &&
+      (!filters.missingInvoice || row.invoiceGap.length > 0),
   );
 }
 

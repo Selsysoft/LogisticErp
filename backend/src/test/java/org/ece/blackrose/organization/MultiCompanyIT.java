@@ -279,16 +279,17 @@ class MultiCompanyIT extends AbstractIntegrationTest {
         422,
         "COMPANY_MISMATCH");
 
-    // Şirketler arası fon transferi 12.2'ye kadar yok.
-    expect(
-        save(
+    // Şirket içi transfer merkezi şirketler arası çalışmaz (12.2: Şirketler Arası Virman ile).
+    save(
             w,
             post(FINANCE + "/funds/transfers"),
             Map.of(
-                "fromFundId", w.cashA(), "toFundId", w.cashB(), "money", money("1"), "date", date)),
-        422,
-        "COMPANY_MISMATCH");
-
+                "fromFundId", w.cashA(), "toFundId", w.cashB(), "money", money("1"), "date", date))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.code").value("COMPANY_MISMATCH"))
+        .andExpect(
+            jsonPath("$.message")
+                .value("Şirketler arası aktarım 'Şirketler Arası Virman' ile yapılır."));
     // Çek: başka şirketin kasasına tahsil ve başka şirketin portföyünden ciro edilemez.
     JsonNode check = checkCollection(w, w.customer(), w.branchA(), "CK-2", "200");
     String instrument = check.get("instrumentId").asText();
@@ -306,6 +307,7 @@ class MultiCompanyIT extends AbstractIntegrationTest {
     endorseFromB.put("instrumentId", instrument);
     endorseFromB.put("money", money("200"));
     endorseFromB.put("date", date);
+    endorseFromB.put("confirmWarnings", true);
     expect(save(w, post(FINANCE + "/payments"), endorseFromB), 422, "COMPANY_MISMATCH");
 
     // (#14) A iş yerinden A'nın grup carisine ödeme ya da elle hareket yazılamaz; B'den serbest.
@@ -423,6 +425,42 @@ class MultiCompanyIT extends AbstractIntegrationTest {
                         .param("companyId", w.companyB())))
                 .get("dueThisWeek"))
         .isEmpty();
+
+    // Şirketler arası virman: A'da B'nin grup carisine ödeme, B'de A'nın grup carisinden tahsilat.
+    JsonNode virman =
+        body(
+            save(
+                    w,
+                    post(FINANCE + "/intercompany-transfers"),
+                    Map.of(
+                        "transferType",
+                        "CASH_TO_CASH",
+                        "reasonType",
+                        "DEBT_PAID",
+                        "fromFundId",
+                        w.cashA(),
+                        "toFundId",
+                        w.cashB(),
+                        "money",
+                        money("1"),
+                        "date",
+                        date))
+                .andExpect(status().isCreated()));
+    assertThat(virman.get("code").asText()).startsWith("SVR-");
+    assertThat(
+            jdbc.queryForObject(
+                ("select account_id::text from \"%s\".settlement where id = ?::uuid")
+                    .formatted(w.schema()),
+                String.class,
+                virman.get("paymentSettlementId").asText()))
+        .isEqualTo(w.groupB());
+    assertThat(
+            jdbc.queryForObject(
+                ("select account_id::text from \"%s\".settlement where id = ?::uuid")
+                    .formatted(w.schema()),
+                String.class,
+                virman.get("collectionSettlementId").asText()))
+        .isEqualTo(w.groupA());
   }
 
   @Test
@@ -821,6 +859,8 @@ class MultiCompanyIT extends AbstractIntegrationTest {
     body.put("fundAccountId", fund);
     body.put("money", money(amount));
     body.put("date", TODAY.toString());
+    // 12.2 B4: şirket dağılımı uyarısı onaylı (409 CONFIRMATION_REQUIRED olmasın).
+    body.put("confirmWarnings", true);
     return body;
   }
 

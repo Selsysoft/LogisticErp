@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.common.money.Money;
+import org.ece.blackrose.finance.domain.FinanceTypes.FundCategory;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundDirection;
 import org.ece.blackrose.finance.domain.FundAccount;
 import org.ece.blackrose.finance.domain.FundTransaction;
@@ -21,6 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class FundLedgerService {
 
+  /**
+   * Tek fon hareketi isteği. {@code category} kaynak türünden türetilemeyen sınıftır (manuel
+   * masraf/gelir/diğer, transfer masrafı, açılış); diğer akışlarda null.
+   */
   public record FundPosting(
       UUID fundAccountId,
       FundDirection direction,
@@ -29,7 +34,31 @@ public class FundLedgerService {
       String description,
       String sourceType,
       UUID sourceId,
-      BigDecimal manualRate) {}
+      BigDecimal manualRate,
+      FundCategory category) {
+
+    /** Kategorisiz hareket (12.2 öncesi çağıranlar). */
+    public FundPosting(
+        UUID fundAccountId,
+        FundDirection direction,
+        Money money,
+        LocalDate date,
+        String description,
+        String sourceType,
+        UUID sourceId,
+        BigDecimal manualRate) {
+      this(
+          fundAccountId,
+          direction,
+          money,
+          date,
+          description,
+          sourceType,
+          sourceId,
+          manualRate,
+          null);
+    }
+  }
 
   private final FundTransactionRepository transactions;
   private final FundAccountRepository funds;
@@ -86,7 +115,8 @@ public class FundLedgerService {
             posting.date(),
             posting.description(),
             posting.sourceType(),
-            posting.sourceId()));
+            posting.sourceId(),
+            posting.category()));
   }
 
   /** Kaynak belgenin tüm banka/kasa hareketlerini aynı kurla ters çevirir. */
@@ -124,7 +154,8 @@ public class FundLedgerService {
                       date,
                       description,
                       LedgerService.SOURCE_REVERSAL,
-                      original.getId()));
+                      original.getId(),
+                      original.getCategory()));
             });
   }
 

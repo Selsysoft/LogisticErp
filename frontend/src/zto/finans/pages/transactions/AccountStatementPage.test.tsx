@@ -176,4 +176,36 @@ describe("AccountStatementPage", () => {
     fireEvent.click(document.querySelector(".currency-toggle") as HTMLInputElement);
     await waitFor(() => expect(document.querySelectorAll(".currency-section")).toHaveLength(0));
   });
+
+  it('12.2 Genel Özet\'te para birimi başına "Fatura bilgisi eksik" satırı', async () => {
+    fakeApi.on("GET", /^\/finance\/accounts\/a1\/balances/, {
+      groupBy: "CURRENCY",
+      splitDate: null,
+      rows: [],
+      payableInvoiceTotals: [],
+      receivableInvoiceTotals: [],
+      invoiceGaps: [
+        {
+          accountId: "a1",
+          side: "PAYABLE",
+          companyId: null,
+          currency: "TRY",
+          ledgerTotal: 150,
+          invoiceTotal: 100,
+          missing: 50,
+        },
+      ],
+    });
+    open("/zto-finans-yazdir/cari-ekstre/a1");
+    await screen.findByText("📍 Merkez");
+    const row = (await waitFor(() => {
+      const found = document.querySelector(".grand-summary-table .missing-invoice-row");
+      if (!found) throw new Error("satır yok");
+      return found;
+    })) as HTMLElement;
+    expect(row.textContent).toContain("Fatura bilgisi eksik");
+    expect(row.textContent).toContain("50,00 ₺");
+    expect(row.textContent).toContain("CARİ ALACAĞI");
+    expect(row.querySelector(".text-danger")).not.toBeNull();
+  });
 });

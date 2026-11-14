@@ -74,8 +74,10 @@ class AccountDocumentIT extends AccountTestSupport {
         body(
             send(w.t(), null, get(FINANCE + "/accounts/" + supplier + "/balances"))
                 .andExpect(status().isOk()));
+    // 12.2 §3.7 (S-16/S-19): defter tabanı — yansıtılan belgenin net ödenecek tutarı 1030 +
+    // yansıtılmayanın net ödenecek tutarı 600 (12.1'de KDV dahil taban 1080 + 600 = 1680).
     assertThat(balances.get("payableInvoiceTotals").get(0).get("amount").decimalValue())
-        .isEqualByComparingTo("1680");
+        .isEqualByComparingTo("1630");
 
     // Fatura dışı tür her zaman yansır.
     Map<String, Object> expense = doc("PAYABLE", "MASRAF_YANSITMASI", "75", w.a1());

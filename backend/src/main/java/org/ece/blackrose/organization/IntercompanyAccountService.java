@@ -13,7 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Grup şirketi (intercompany) carileri: kiracıda en az iki aktif şirket varken her aktif şirketi
  * temsil eden ortak bir cari ({@code GS-<kod>}, {@code represents_company_id}). Bu kartlar yalnız
  * buradan açılır ve şirket kartıyla eşitlenir; elle değiştirilemez ve silinemez ({@link Account}).
- * 12.1a'da para hareketi yoktur.
+ * 12.2'den itibaren yalnız şirketler arası virman ({@code IntercompanyTransferService},
+ * 12.2_TASARIM §3.4) bu carilere hareket yazar.
  */
 @Service
 public class IntercompanyAccountService {

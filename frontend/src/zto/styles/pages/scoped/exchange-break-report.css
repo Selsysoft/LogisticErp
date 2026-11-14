@@ -1,0 +1,278 @@
+/*
+ * Kaynak: ZtoFabrika/Views/BankStatement/ExchangeBreakReport.cshtml <style> :7-93 (tablo, istatistik, araç
+ * çubuğu; SVG ağaç kuralları da kopyalanır, 12.2b kullanır).
+ * Birebir kopya (12.2_TASARIM §5.4); değişiklik: Razor kaçışı @@ → @. ZTO betiğinin jQuery ile açtığı
+ * görünürlük (#eb-stats flex, #eb-table-wrap block, tablo kipinde #eb-container gizli) bileşende satır
+ * içi stille verilir (12.2'de yalnız tablo görünümü; SVG ağaç 12.2b). Sayfa kapsamı
+ * .zto-finans.zto-page-exchange-break-report.
+ */
+#eb-wrap {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 200px);
+  min-height: 720px;
+}
+#eb-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 0 8px;
+}
+#eb-stats {
+  display: none;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 6px 16px;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.eb-stat .lbl {
+  color: #6c757d;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.eb-stat .val {
+  font-weight: 700;
+  font-size: 14px;
+}
+#eb-container {
+  flex: 1;
+  background: #f0f2f5;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  cursor: grab;
+}
+#eb-container:active {
+  cursor: grabbing;
+}
+#eb-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+#eb-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  color: #6c757d;
+  font-size: 14px;
+}
+#eb-msg .spinner-border {
+  width: 2rem;
+  height: 2rem;
+}
+
+.eb-zoom {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 20;
+}
+.eb-zoom button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #adb5bd;
+  background: #fff;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+.eb-zoom button:hover {
+  background: #e9ecef;
+}
+
+.eb-legend {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(255, 255, 255, 0.93);
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 11px;
+  z-index: 20;
+  line-height: 1.7;
+}
+.leg-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 2px solid;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+#eb-tip {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  z-index: 9999;
+  max-width: 320px;
+  display: none;
+}
+#eb-tip table {
+  border-collapse: collapse;
+  width: 100%;
+}
+#eb-tip td {
+  padding: 2px 5px;
+}
+#eb-tip td:first-child {
+  color: #666;
+  white-space: nowrap;
+}
+#eb-tip td:last-child {
+  font-weight: 600;
+}
+
+#eb-table-wrap {
+  display: none;
+  flex: 1;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  overflow: auto;
+  background: #fff;
+}
+#eb-table {
+  width: 100%;
+  margin-bottom: 0;
+  font-size: 11px;
+}
+#eb-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #f8f9fa;
+  white-space: nowrap;
+}
+#eb-table td {
+  vertical-align: middle;
+}
+.eb-col-cell {
+  background: #eef5ff;
+}
+.eb-dir-head td {
+  background: #fff4e5;
+  font-weight: 700;
+  color: #7a4d00;
+}
+.eb-dir-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: #fce4ec;
+  color: #9f1239;
+  font-weight: 600;
+}
+.eb-transfer-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: #fff8e1;
+  color: #92400e;
+  font-weight: 600;
+}
+
+#eb-table-tools {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #dee2e6;
+  background: #fafbfc;
+}
+#eb-table-tools .left-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#eb-table-tools .right-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#eb-table-tools input[type="search"] {
+  width: 220px;
+}
+#eb-page-info {
+  font-size: 11px;
+  color: #6c757d;
+}
+.eb-progress-wrap {
+  min-width: 150px;
+}
+.eb-progress {
+  height: 10px;
+  background: #e9ecef;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.eb-progress > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+.eb-progress-meta {
+  margin-top: 4px;
+  font-size: 10px;
+  color: #495057;
+  line-height: 1.35;
+}
+
+@media print {
+  #eb-toolbar,
+  .py-4.bg-light.mt-auto,
+  #eb-container,
+  #eb-tip,
+  .no-print {
+    display: none !important;
+  }
+
+  body,
+  .container-fluid {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #eb-wrap,
+  #eb-table-wrap {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  #eb-table {
+    font-size: 10px !important;
+  }
+
+  #eb-table thead th {
+    position: static !important;
+  }
+}

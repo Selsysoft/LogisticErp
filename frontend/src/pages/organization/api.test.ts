@@ -6,6 +6,7 @@ import {
   branchListPath,
   companyListPath,
   invalidateOrganization,
+  isDefaultBankCandidate,
   ORGANIZATION_KEYS,
 } from "./api";
 
@@ -54,5 +55,23 @@ describe("invalidateOrganization", () => {
       "branchGroups",
       "companies",
     ]);
+  });
+});
+
+describe("isDefaultBankCandidate (12.2 §5.13)", () => {
+  it("yalnız aktif vadesiz banka; alanı olmayan eski yanıt uygun sayılır", () => {
+    expect(isDefaultBankCandidate({ kind: "BANK", active: true, accountType: "DEMAND" })).toBe(
+      true,
+    );
+    expect(isDefaultBankCandidate({ kind: "BANK" })).toBe(true);
+    expect(isDefaultBankCandidate({ kind: "CASH", active: true, accountType: "DEMAND" })).toBe(
+      false,
+    );
+    expect(isDefaultBankCandidate({ kind: "BANK", active: false, accountType: "DEMAND" })).toBe(
+      false,
+    );
+    expect(isDefaultBankCandidate({ kind: "BANK", active: true, accountType: "CREDIT" })).toBe(
+      false,
+    );
   });
 });

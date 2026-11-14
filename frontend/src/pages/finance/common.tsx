@@ -20,11 +20,11 @@ import {
   Typography,
 } from "@mui/material";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Control, Controller, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import { apiGet } from "../../api/client";
+import { ApiError, apiGet } from "../../api/client";
 import { hasPermission, useAuthStore } from "../../auth/authStore";
 import {
   activeCompanies,
@@ -40,6 +40,8 @@ import { withCompany } from "./companyQuery";
 import { Account, Branch, Fund, Money, Page } from "./types";
 
 const AMOUNT_PATTERN = /^\d+([.,]\d{1,4})?$/;
+/** İşaretli tutar (12.2 açılış bakiyesi: eksi açılış izinli). */
+const SIGNED_AMOUNT_PATTERN = /^-?\d+([.,]\d{1,4})?$/;
 
 export function today() {
   const now = new Date();
@@ -92,6 +94,16 @@ export function useBranches() {
 /** Kiracıda ≥2 aktif şirket var mı (şirket sütunları ve "Şirket › İş yeri" etiketleri). */
 export function useMultiCompany() {
   return useAuthStore((state) => isMultiCompany(state.me?.companies));
+}
+
+/** Şirket kimliği → kısa ad (görünür şirketler; bilinmiyorsa "—"). */
+export function useCompanyName() {
+  const companies = useAuthStore((state) => state.me?.companies);
+  return useCallback(
+    (id: string | null | undefined) =>
+      (id ? companies?.find((company) => company.id === id)?.shortName : undefined) ?? "—",
+    [companies],
+  );
 }
 
 /**
@@ -184,7 +196,8 @@ export interface Option {
 export interface FieldDef {
   name: string;
   label: string;
-  type?: "text" | "amount" | "date" | "datetime" | "select" | "checkbox" | "integer";
+  type?:
+    "text" | "amount" | "signedAmount" | "date" | "datetime" | "select" | "checkbox" | "integer";
   options?: Option[];
   /** Seçenekler formdaki diğer değerlere bağlıysa (örn. iş yerinin şirketine göre fonlar). */
   optionsFrom?: (values: Record<string, string | boolean>) => Option[];
@@ -207,8 +220,10 @@ function schemaFor(
       continue;
     }
     let value: z.ZodType<string, string> = z.string();
-    if (field.type === "amount") {
-      const pattern = z.string().regex(AMOUNT_PATTERN, amountMessage);
+    if (field.type === "amount" || field.type === "signedAmount") {
+      const pattern = z
+        .string()
+        .regex(field.type === "amount" ? AMOUNT_PATTERN : SIGNED_AMOUNT_PATTERN, amountMessage);
       value = field.required ? pattern : pattern.or(z.literal(""));
     } else if (field.required) {
       value = z.string().min(1, requiredMessage);
@@ -216,6 +231,53 @@ function schemaFor(
     shape[field.name] = value;
   }
   return z.object(shape);
+}
+
+/**
+ * `FormDialog.onSubmit` bunu fırlatırsa pencere açık kalır ve hata gösterilmez (örn. kullanıcı onay
+ * penceresinde "Vazgeç" dedi; 12.2 §5.13).
+ */
+export class SubmitCancelled extends Error {
+  constructor() {
+    super("SUBMIT_CANCELLED");
+    this.name = "SubmitCancelled";
+  }
+}
+
+/** Boş canlı bölge: görünmez ve akış dışı, erişilebilirlik ağacında kalır (Stack boşluğu oluşmaz). */
+const HIDDEN_REGION = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  margin: -1,
+  padding: 0,
+  border: 0,
+  overflow: "hidden",
+  clipPath: "inset(50%)",
+  whiteSpace: "nowrap",
+} as const;
+
+/**
+ * Form değerlerine bağlı not alanı: yalnız bu bileşen değer değişiminde yeniden çizilir. Sarmalayıcı
+ * tek kibar canlı bölgedir (`role="status"`) ve içerik yokken de DOM'da kalır; böylece ilk uyarı
+ * eklendiğinde ekran okuyucu duyurur (canlı bölge içerik değişmeden önce var olmalı — F-12.2-R7).
+ */
+function FormNotice({
+  control,
+  defaults,
+  notice,
+}: {
+  control: Control<FormValues>;
+  defaults: FormValues;
+  notice: (values: FormValues) => ReactNode;
+}) {
+  const watched = useWatch({ control });
+  const content = notice({ ...defaults, ...(watched as FormValues) });
+  return (
+    <div data-testid="form-notice" role="status" style={content ? undefined : HIDDEN_REGION}>
+      {content || null}
+    </div>
+  );
 }
 
 /** Tanımdan oluşan form penceresi: finans ekranlarının ortak giriş kalıbı. */
@@ -226,6 +288,8 @@ export function FormDialog({
   onClose,
   onSubmit,
   onSaved,
+  notice,
+  onValuesChange,
 }: {
   title: string;
   fields: FieldDef[];
@@ -233,6 +297,13 @@ export function FormDialog({
   onClose: () => void;
   onSubmit: (values: Record<string, string>, flags: Record<string, boolean>) => Promise<unknown>;
   onSaved: () => void;
+  /** Formun altında, gönder düğmesinin üstünde gösterilen değerlere bağlı not (12.2 §5.13). */
+  notice?: (values: FormValues) => ReactNode;
+  /**
+   * Alan değişince çağrılır (açılışta bir kez de ilk değerlerle). Yalnız react-hook-form aboneliğiyle
+   * çalışır; çizim gövdesinden çağrılmaz, üstün `setState`'i döngü kurmaz (12.2 §5.13 F8).
+   */
+  onValuesChange?: (values: FormValues) => void;
 }) {
   const { t } = useTranslation();
   const schema = useMemo(
@@ -250,9 +321,22 @@ export function FormDialog({
     control,
     handleSubmit,
     watch,
+    getValues,
     setValue,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: defaults });
+  // Geri çağrı ref'te: üst bileşenin her çizimde yeni fonksiyon vermesi aboneliği yenilemez.
+  const onValuesChangeRef = useRef(onValuesChange);
+  onValuesChangeRef.current = onValuesChange;
+  const listensValues = Boolean(onValuesChange);
+  useEffect(() => {
+    if (!listensValues) {
+      return;
+    }
+    const subscription = watch((values) => onValuesChangeRef.current?.(values as FormValues));
+    onValuesChangeRef.current?.(getValues());
+    return () => subscription.unsubscribe();
+  }, [watch, getValues, listensValues]);
   // Yalnız bağımlı seçenekli formlar değerleri izler; diğerlerinde yeniden çizim değişmez.
   const dependent = fields.some((field) => field.optionsFrom);
   const current = dependent ? watch() : defaults;
@@ -288,13 +372,17 @@ export function FormDialog({
         if (typeof value === "boolean") {
           flags[field.name] = value;
         } else {
-          strings[field.name] = field.type === "amount" ? normalizeAmount(value) : value.trim();
+          strings[field.name] =
+            field.type === "amount" || field.type === "signedAmount"
+              ? normalizeAmount(value)
+              : value.trim();
         }
       }
       return onSubmit(strings, flags);
     },
     onSuccess: onSaved,
   });
+  const failed = save.isError && !(save.error instanceof SubmitCancelled);
 
   return (
     <Dialog open fullWidth maxWidth="sm" onClose={onClose}>
@@ -302,7 +390,7 @@ export function FormDialog({
         <DialogTitle>{title}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            {save.isError && <ErrorState error={save.error} />}
+            {failed && <ErrorState error={save.error} />}
             {fields.map((field) => (
               <Controller
                 key={field.name}
@@ -342,7 +430,10 @@ export function FormDialog({
                           field.type === "date" || field.type === "datetime"
                             ? { shrink: true }
                             : undefined,
-                        htmlInput: field.type === "amount" ? { inputMode: "decimal" } : undefined,
+                        htmlInput:
+                          field.type === "amount" || field.type === "signedAmount"
+                            ? { inputMode: "decimal" }
+                            : undefined,
                       }}
                     >
                       {field.type === "select" &&
@@ -360,6 +451,7 @@ export function FormDialog({
                 }
               />
             ))}
+            {notice && <FormNotice control={control} defaults={defaults} notice={notice} />}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -371,6 +463,103 @@ export function FormDialog({
       </form>
     </Dialog>
   );
+}
+
+/**
+ * Onay penceresi (12.2 §5.13; yalnız ödeme uyarısı kullanır). MUI `Dialog` başlığa `aria-labelledby`
+ * ile bağlanır; ilk odak güvenli düğmede ("Vazgeç"), kapanınca odak açan öğeye MUI tarafından döner.
+ */
+export function ConfirmDialog({
+  open,
+  title,
+  children,
+  confirmLabel,
+  cancelLabel,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  title: string;
+  children: ReactNode;
+  confirmLabel: string;
+  cancelLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const titleId = useId();
+  const bodyId = useId();
+  return (
+    <Dialog
+      open={open}
+      onClose={onCancel}
+      aria-labelledby={titleId}
+      aria-describedby={bodyId}
+      maxWidth="xs"
+      fullWidth
+    >
+      <DialogTitle id={titleId}>{title}</DialogTitle>
+      <DialogContent id={bodyId}>{children}</DialogContent>
+      <DialogActions>
+        <Button autoFocus onClick={onCancel}>
+          {cancelLabel}
+        </Button>
+        <Button variant="contained" color="error" onClick={onConfirm}>
+          {confirmLabel}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+/**
+ * Onay penceresini söz (Promise) olarak açar: `ask(content)` kullanıcı "Tamam" derse true, "Vazgeç"
+ * ya da Escape ile false döner. Pencere `dialog` öğesiyle birlikte çizilir.
+ */
+export function useConfirm(labels: { title: string; confirm: string; cancel: string }) {
+  const [content, setContent] = useState<ReactNode | null>(null);
+  const resolver = useRef<((ok: boolean) => void) | null>(null);
+  const settle = useCallback((ok: boolean) => {
+    resolver.current?.(ok);
+    resolver.current = null;
+    setContent(null);
+  }, []);
+  const ask = useCallback((next: ReactNode) => {
+    resolver.current?.(false);
+    setContent(next);
+    return new Promise<boolean>((resolve) => {
+      resolver.current = resolve;
+    });
+  }, []);
+  // Bileşen kapanırken bekleyen söz "Vazgeç" sayılır (asılı kalmaz).
+  useEffect(() => () => resolver.current?.(false), []);
+  const dialog = (
+    <ConfirmDialog
+      open={content !== null}
+      title={labels.title}
+      confirmLabel={labels.confirm}
+      cancelLabel={labels.cancel}
+      onConfirm={() => settle(true)}
+      onCancel={() => settle(false)}
+    >
+      {content}
+    </ConfirmDialog>
+  );
+  return { ask, dialog };
+}
+
+/**
+ * Bilinen finans hata kodları için yerel ileti (`finance.error.<KOD>`); bilinmeyen kodda hata aynen.
+ * `ErrorState` iletiyi `message`'tan okuduğu için kopya `ApiError` döner.
+ */
+export function localizeFinanceError(
+  error: unknown,
+  translate: (key: string) => string | null,
+): unknown {
+  if (!(error instanceof ApiError)) {
+    return error;
+  }
+  const message = translate(`finance.error.${error.body.code}`);
+  return message ? new ApiError(error.status, { ...error.body, message }) : error;
 }
 
 export interface Column<T> {

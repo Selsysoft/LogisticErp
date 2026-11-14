@@ -22,3 +22,19 @@
 @import "./scoped/account-statement.css";
 @import "./scoped/all-transactions-page.css";
 @import "./quick-cari.css";
+/*
+ * 12.2 sayfa CSS'leri (12.2_TASARIM §5.4): banka/kasa tanım ve hareket ekranları, yazdırma sayfaları
+ * (FE-1), transfer merkezi ve döviz bozum raporu (FE-2). banks.css kuralları SHARED_SCOPES ile hem
+ * .zto-page-banks hem .zto-page-cashes köküne yazılır (prefixTransform.ts).
+ */
+@import "./scoped/banks.css";
+@import "./scoped/bank-form.css";
+@import "./scoped/bank-detail.css";
+@import "./scoped/cashes.css";
+@import "./scoped/cash-form.css";
+@import "./scoped/bank-transactions.css";
+@import "./scoped/cash-transactions.css";
+@import "./scoped/fund-extract.css";
+@import "./scoped/fund-activity-report.css";
+@import "./scoped/transfer-center.css";
+@import "./scoped/exchange-break-report.css";

@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 import org.ece.blackrose.common.audit.AuditableEntity;
 import org.ece.blackrose.common.money.Money;
+import org.ece.blackrose.finance.domain.FinanceTypes.FundCategory;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundDirection;
 
 /** Değiştirilemez banka/kasa hareketi. */
@@ -34,8 +35,15 @@ public class FundTransaction extends AuditableEntity {
   private String sourceType;
   private UUID sourceId;
 
+  /**
+   * Kaynak türünden türetilemeyen sınıf (manuel masraf/gelir/diğer, masraf, açılış); yoksa null.
+   */
+  @Enumerated(EnumType.STRING)
+  private FundCategory category;
+
   protected FundTransaction() {}
 
+  /** Kategorisiz hareket (12.2 öncesi kurucu). */
   public FundTransaction(
       UUID fundAccountId,
       UUID companyId,
@@ -48,6 +56,34 @@ public class FundTransaction extends AuditableEntity {
       String description,
       String sourceType,
       UUID sourceId) {
+    this(
+        fundAccountId,
+        companyId,
+        direction,
+        money,
+        exchangeRate,
+        rateDate,
+        tlAmount,
+        transactionDate,
+        description,
+        sourceType,
+        sourceId,
+        null);
+  }
+
+  public FundTransaction(
+      UUID fundAccountId,
+      UUID companyId,
+      FundDirection direction,
+      Money money,
+      BigDecimal exchangeRate,
+      LocalDate rateDate,
+      BigDecimal tlAmount,
+      LocalDate transactionDate,
+      String description,
+      String sourceType,
+      UUID sourceId,
+      FundCategory category) {
     this.id = UUID.randomUUID();
     this.fundAccountId = fundAccountId;
     this.companyId = companyId;
@@ -61,6 +97,7 @@ public class FundTransaction extends AuditableEntity {
     this.description = description;
     this.sourceType = sourceType;
     this.sourceId = sourceId;
+    this.category = category;
   }
 
   public Money getMoney() {
@@ -109,5 +146,9 @@ public class FundTransaction extends AuditableEntity {
 
   public UUID getCompanyId() {
     return companyId;
+  }
+
+  public FundCategory getCategory() {
+    return category;
   }
 }

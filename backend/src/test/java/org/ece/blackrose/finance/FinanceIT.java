@@ -790,10 +790,10 @@ class FinanceIT extends AbstractIntegrationTest {
                         .param("to", DATE))
                 .andExpect(status().isOk()));
     assertThat(statement.get("lines").findValuesAsText("sourceType"))
-        .containsExactly("MANUAL", "TRANSFER");
+        .containsExactly("MANUAL", "FUND_TRANSFER");
     String transferLine = statement.get("lines").get(1).get("id").asText();
 
-    // Virmanın bir bacağını ters çevirmek iki hesabı da eski haline getirir.
+    // Transfer bacağını ters çevirmek bütün transferi iptal eder (12.2 §3.1.7).
     reverse(t, "/api/v1/finance/funds/transactions/" + transferLine + "/reverse")
         .andExpect(status().isOk());
     assertThat(fundBalance(t, bank)).isEqualByComparingTo("1000");
@@ -804,6 +804,37 @@ class FinanceIT extends AbstractIntegrationTest {
             reverse(t, "/api/v1/finance/funds/transactions/" + deposit + "/reverse")
                 .andExpect(status().isOk()));
     assertThat(fundBalance(t, bank)).isEqualByComparingTo("0");
+
+    // Ekstre satırı para birimini, kuru/TL'yi ve iptal bayraklarını taşır (F-12.2-2).
+    JsonNode lines =
+        body(send(
+                    t,
+                    get("/api/v1/finance/funds/" + bank + "/statement")
+                        .param("from", DATE)
+                        .param("to", DATE))
+                .andExpect(status().isOk()))
+            .get("lines");
+    assertThat(lines).hasSize(4);
+    JsonNode first = lines.get(0);
+    assertThat(first.get("id").asText()).isEqualTo(deposit);
+    assertThat(first.get("currency").asText()).isEqualTo("TRY");
+    assertThat(first.get("tlAmount").decimalValue()).isEqualByComparingTo("1000");
+    assertThat(first.get("sign").asInt()).isEqualTo(1);
+    assertThat(first.get("reversed").asBoolean()).isTrue();
+    assertThat(first.get("reversal").asBoolean()).isFalse();
+    assertThat(lines.get(1).get("reversed").asBoolean()).isTrue();
+    assertThat(lines.get(1).get("sign").asInt()).isEqualTo(-1);
+    assertThat(lines.findValuesAsText("currency")).containsOnly("TRY");
+    long reversalLines = 0;
+    for (JsonNode line : lines) {
+      if (line.get("reversal").asBoolean()) {
+        reversalLines++;
+        assertThat(line.get("sourceType").asText()).isEqualTo("REVERSAL");
+        assertThat(line.get("reversed").asBoolean()).isFalse();
+      }
+    }
+    assertThat(reversalLines).isEqualTo(2);
+
     reverse(t, "/api/v1/finance/funds/transactions/" + reversal.get("id").asText() + "/reverse")
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("TRANSACTION_NOT_MANUAL"));
@@ -1255,11 +1286,14 @@ class FinanceIT extends AbstractIntegrationTest {
 
   private ResultActions settlement(String t, String resource, Map<String, Object> body, String key)
       throws Exception {
+    // 12.2 B4: şirket dağılımı uyarısı onaylı (409 CONFIRMATION_REQUIRED olmasın).
+    Map<String, Object> confirmed = new HashMap<>(body);
+    confirmed.putIfAbsent("confirmWarnings", true);
     MockHttpServletRequestBuilder request =
         org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
                 "/api/v1/finance/" + resource)
             .contentType(MediaType.APPLICATION_JSON)
-            .content(json.writeValueAsString(body));
+            .content(json.writeValueAsString(confirmed));
     if (key != null) {
       request.header("Idempotency-Key", key);
     }

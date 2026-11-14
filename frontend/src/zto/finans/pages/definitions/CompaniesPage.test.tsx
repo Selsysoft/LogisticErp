@@ -90,6 +90,16 @@ const SERIES: DocumentSeries[] = [
     padding: 6,
     sample: "BETA-DF-2026-000001",
   },
+  {
+    id: "s3",
+    companyId: "c2",
+    docType: "FUND_TRANSFER",
+    year: 2027,
+    prefix: "BETA-VRM",
+    nextValue: 1,
+    padding: 6,
+    sample: "BETA-VRM-2026-000001",
+  },
 ];
 
 beforeEach(() => {
@@ -359,6 +369,9 @@ describe("CompanyFormPage", { timeout: 30_000 }, () => {
     );
     expect(heads).toEqual(["Belge Türü", "Yıl", "Önek", "Sıradaki No", "Örnek", "İşlemler"]);
     expect(screen.getByText("Navlun Faturası")).toBeTruthy();
+    // 12.2: transfer serisi kendi etiketiyle (önceden "Depo Faturası"na düşüyordu).
+    expect(screen.getByText("Banka/Kasa Transferi")).toBeTruthy();
+    expect(screen.getAllByText("Depo Faturası")).toHaveLength(1);
     expect(screen.getByText("Tüm yıllar")).toBeTruthy();
     expect(screen.getByText("2026")).toBeTruthy();
     expect(document.querySelector("#seriesTable_filter")).toBeNull();

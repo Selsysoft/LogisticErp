@@ -1,0 +1,984 @@
+/*
+ * Kaynak: ZtoFabrika/Views/CashIntroduction/Index.cshtml:147-1060 (timedeposits/index.css banks.css'te,
+ * SHARED_SCOPES ile bu köke de yazılır)
+ * Birebir kopya (12.2_TASARIM §5.4); değişiklikler: Razor kaçışı @@ → @, bu dosyada tanımlı
+ * @keyframes adları paket genelinde çakışmasın diye zto-<sayfa>- önekli (check:zto-css).
+ * Sayfa kapsamı .zto-finans.zto-page-cashes (prefixTransform scopeForFile).
+ */
+/* --- Views/CashIntroduction/Index.cshtml:147-1060 --- */
+/* Kasa Kartı Stilleri */
+.cash-group-header {
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  padding: 12px 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cash-group-title {
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.cash-group-count {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.cash-group-total {
+  width: 420px;
+  flex: 0 1 420px;
+  overflow: hidden;
+}
+
+.group-total-list {
+  display: block;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  text-align: right;
+  padding-bottom: 2px;
+}
+
+.group-total-list::-webkit-scrollbar {
+  height: 7px;
+}
+
+.group-total-list::-webkit-scrollbar-track {
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.group-total-list::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 999px;
+}
+
+.group-total-list::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.group-total-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 4px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.group-total-item:last-child {
+  margin-right: 0;
+}
+
+.group-total-symbol {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* Kasa Kartı */
+.cash-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-left: 4px solid #f59e0b;
+  position: relative; /* ✅ Ekle */
+  z-index: 1; /* ✅ Ekle */
+}
+
+.cash-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+  border-color: #f59e0b;
+  z-index: 10; /* ✅ Ekle */
+}
+
+/* ✅ Dropdown için z-index düzeltmesi */
+.cash-card:has(.show) {
+  z-index: 100 !important;
+  /* Blackrose: ⋮ menüsü position: fixed (ZtoMenuButton); :hover transform'u kartı fixed için
+     kapsayıcı blok yapıp menüyü ekran dışına itiyordu (12.2 son kapı e2e). Menü açıkken kaldırılır. */
+  transform: none;
+  transition: none;
+}
+
+.cash-actions {
+  margin-left: 15px;
+  position: relative; /* ✅ Ekle */
+}
+
+.cash-actions .dropdown-menu {
+  z-index: 1050 !important;
+  min-width: 240px;
+  padding: 8px 0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e2e8f0;
+}
+
+.cash-actions .dropdown-item {
+  padding: 8px 16px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.cash-actions .dropdown-item:hover {
+  background: #f1f5f9;
+}
+
+.cash-actions .dropdown-item i {
+  width: 18px;
+  min-width: 18px;
+  text-align: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.cash-actions .dropdown-divider {
+  margin: 6px 0;
+}
+
+/* ✅ Grup header'ı dropdown'un altında kalmasın */
+.cash-group-header {
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  padding: 12px 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  position: relative; /* ✅ Ekle */
+  z-index: 0; /* ✅ Ekle - düşük tutulacak */
+}
+
+.cash-info {
+  flex: 1;
+}
+
+.cash-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cash-details {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.cash-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cash-balance {
+  text-align: right;
+  min-width: 150px;
+  padding-left: 15px;
+}
+
+.balance-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #d97706;
+}
+
+.balance-label {
+  font-size: 10px;
+  color: #64748b;
+}
+
+/* WorkPlace'a göre renk */
+.cash-card[data-workplace="1"] {
+  border-left-color: #3b82f6;
+}
+
+.cash-card[data-workplace="2"] {
+  border-left-color: #10b981;
+}
+
+.cash-card[data-workplace="3"] {
+  border-left-color: #8b5cf6;
+}
+
+.cash-card[data-workplace="4"] {
+  border-left-color: #ef4444;
+}
+
+/* Badge Stilleri */
+.workplace-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.branch-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+/* Boş Durum */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 10px;
+  border: 2px dashed #e2e8f0;
+}
+
+.empty-state-icon {
+  font-size: 60px;
+  color: #fbbf24;
+  margin-bottom: 20px;
+}
+
+.empty-state-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 10px;
+}
+
+.empty-state-description {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 25px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Currency Badge */
+.currency-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .cash-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .cash-balance {
+    text-align: left;
+    width: 100%;
+    padding-left: 0;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 10px;
+  }
+}
+/* Detay Modal Stilleri - Inline Override */
+#cashDetailModal .modal-body {
+  background-color: #f8fafc !important;
+  padding: 20px !important;
+}
+
+#cashDetailModal .modal-content {
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+#cashDetailModal .card {
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  margin-bottom: 15px !important;
+  border-radius: 8px !important;
+}
+
+#cashDetailModal .card-header {
+  background: white !important;
+  border-bottom: 2px solid #f1f5f9 !important;
+  font-weight: 600 !important;
+  padding: 12px 15px !important;
+}
+
+#cashDetailModal .card-body {
+  background: white !important;
+  padding: 15px !important;
+}
+
+#cashDetailModal .table {
+  margin-bottom: 0 !important;
+  background: white !important;
+}
+
+#cashDetailModal .table thead {
+  background: #f8fafc !important;
+}
+
+#cashDetailModal .table thead th {
+  border-top: none !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  color: #64748b !important;
+  padding: 10px !important;
+}
+
+#cashDetailModal .table td {
+  vertical-align: middle !important;
+  font-size: 12px !important;
+  padding: 10px !important;
+}
+
+#cashDetailModal .badge {
+  font-size: 10px !important;
+  padding: 4px 8px !important;
+}
+
+/* Bakiye kartı özel stili */
+#cashDetailContent > .card:first-child {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
+  border-left: 4px solid #f59e0b !important;
+}
+
+#cashDetailContent > .card:first-child h5 {
+  margin-bottom: 10px !important;
+}
+
+#cashDetailContent > .card:first-child h3 {
+  font-size: 28px !important;
+  font-weight: 700 !important;
+}
+
+/* Table responsive */
+#cashDetailModal .table-responsive {
+  border-radius: 0 0 8px 8px !important;
+  overflow: hidden !important;
+}
+
+/* Button stil */
+#cashDetailModal .btn-warning {
+  border-radius: 8px !important;
+  padding: 12px !important;
+  font-weight: 600 !important;
+}
+
+/* Empty state */
+#cashDetailModal .text-center.py-5 {
+  background: white !important;
+  border-radius: 8px !important;
+  padding: 40px !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #cashDetailModal .modal-lg {
+    max-width: 95% !important;
+    margin: 10px !important;
+  }
+
+  #cashDetailModal .modal-body {
+    padding: 15px !important;
+  }
+
+  #cashDetailContent > .card:first-child .row {
+    text-align: center !important;
+  }
+
+  #cashDetailContent > .card:first-child .col-md-6 {
+    margin-bottom: 10px !important;
+  }
+
+  #cashDetailContent > .card:first-child .text-right {
+    text-align: center !important;
+  }
+}
+
+/* Kayıt ve Erişim Bilgileri (audit) şeridi */
+.cash-audit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.cash-audit-chip,
+.cash-audit-financial {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fafaf9;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-width: 0;
+}
+
+.cash-audit-financial {
+  margin-top: 10px;
+  background: linear-gradient(135deg, #fffbeb, #fff);
+  border-color: #fde68a;
+}
+
+.cash-audit-icon {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.cash-audit-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cash-audit-body small {
+  color: #94a3b8;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cash-audit-body strong {
+  font-size: 12px;
+  color: #334155;
+}
+
+.cash-audit-body time {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.cash-audit-count {
+  margin-left: auto;
+  background: #fef3c7;
+  color: #b45309;
+  border-radius: 999px;
+  min-width: 26px;
+  padding: 2px 8px;
+  text-align: center;
+  font-size: 11px;
+  cursor: help;
+}
+
+.cash-detail-truncate {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+@media (max-width: 768px) {
+  .cash-audit-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.type-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.type-tab {
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid transparent;
+}
+
+.type-tab.all {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.type-tab.workplace {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.type-tab.branch {
+  background: #f0fdf4;
+  color: #059669;
+}
+
+.type-tab.currency {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.type-tab:hover,
+.type-tab.active {
+  color: #fff;
+  text-decoration: none;
+}
+
+.type-tab.all:hover,
+.type-tab.all.active {
+  background: #475569;
+}
+.type-tab.workplace:hover,
+.type-tab.workplace.active {
+  background: #3b82f6;
+}
+.type-tab.branch:hover,
+.type-tab.branch.active {
+  background: #10b981;
+}
+.type-tab.currency:hover,
+.type-tab.currency.active {
+  background: #f59e0b;
+}
+
+.type-tab .count {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+}
+
+.type-tabs-refresh {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  background: #0b5ed7;
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.type-tabs-refresh:hover {
+  background: #0a58ca;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  transform: translateY(-2px);
+}
+
+.type-tabs-refresh.is-loading i {
+  animation: zto-cashes-spin-refresh 0.8s linear infinite;
+}
+
+.type-tabs-refresh.is-loading {
+  box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.2);
+}
+
+.account-list-container {
+  position: relative;
+  transition:
+    opacity 0.25s ease,
+    filter 0.25s ease,
+    transform 0.25s ease;
+}
+
+.account-list-container.is-refreshing {
+  opacity: 0.55;
+  filter: blur(0.6px);
+  transform: translateY(2px);
+  pointer-events: none;
+}
+
+.account-list-container.is-refreshing::after {
+  content: "Kasalar guncelleniyor...";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  z-index: 1000;
+  white-space: nowrap;
+  animation: zto-cashes-shimmer-loading 1s linear infinite;
+}
+
+.account-list-container.is-refreshed {
+  animation: zto-cashes-refresh-pop 0.45s ease;
+}
+
+@keyframes zto-cashes-shimmer-loading {
+  0% {
+    background-position: 0% 50%;
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    background-position: 100% 50%;
+    opacity: 0.7;
+  }
+}
+
+@keyframes zto-cashes-spin-refresh {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes zto-cashes-refresh-pop {
+  0% {
+    transform: scale(0.995);
+    filter: brightness(1);
+  }
+  60% {
+    transform: scale(1.004);
+    filter: brightness(1.03);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.search-container .input-group {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.search-container .input-group:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+}
+
+.search-container .input-group-text,
+.search-container .form-control {
+  border: none;
+  box-shadow: none;
+}
+
+.search-result-count {
+  font-size: 12px;
+  color: #6c757d;
+  padding: 5px 10px;
+  background: #e9ecef;
+  border-radius: 20px;
+  display: inline-block;
+  margin-bottom: 15px;
+}
+
+.search-no-results {
+  text-align: center;
+  padding: 30px 20px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  margin: 12px 0;
+}
+
+/* Dinamik filtreler (BankIntroduction ile aynı yapı) */
+.filters-toolbar {
+  display: grid;
+  grid-template-columns: minmax(290px, 360px) 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.search-compact-card .card-body {
+  padding: 10px;
+}
+
+.search-compact-help {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+.dynamic-filter-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stat-main-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.stat-main-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.stat-items-wrapper {
+  max-height: 100px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  border-radius: 7px;
+  padding: 5px 7px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  background: #f8fafc;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.stat-item:hover {
+  background: #eef2ff;
+}
+
+.stat-item.active {
+  background: #dbeafe;
+  border-color: #60a5fa;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.stat-item-empty {
+  opacity: 0.45;
+}
+
+.stat-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-item-value {
+  min-width: 22px;
+  text-align: right;
+  font-weight: 700;
+}
+
+/* ✅ Dinamik filtre satır arka plan progress (icon renginin saydam hali, sayıya oranlı) */
+.stat-item {
+  position: relative;
+  overflow: hidden;
+}
+.stat-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--pct, 0%);
+  background: var(--bar, transparent);
+  border-radius: 7px;
+  z-index: 0;
+  transition: width 0.45s ease;
+}
+.stat-item-label,
+.stat-item-value {
+  position: relative;
+  z-index: 1;
+}
+
+/* ✅ Kasa kartı bakiye dağılım progress (açık gri, aynı para birimi toplamına oran) */
+.account-progress-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  z-index: -1;
+  background: rgba(148, 163, 184, 0.14);
+  border-radius: 10px 0 0 10px;
+  transition: width 0.5s ease;
+  pointer-events: none;
+}
+
+/* ✅ Kasa kartı mini sparkline (bakiyenin solunda, yeşil/kırmızı alan + alt gölge) */
+.account-spark {
+  width: 92px;
+  height: 38px;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+.account-spark svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.dynamic-filter-indicator {
+  margin-bottom: 10px;
+}
+
+.search-highlight {
+  background-color: #fff3cd !important;
+  color: #856404 !important;
+  font-weight: bold;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.erp-currency-compact-list {
+  display: grid;
+  gap: 2px;
+  margin-top: 2px;
+  max-height: 68px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+.erp-currency-compact-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+.erp-currency-compact-item .amount {
+  font-weight: 700;
+}
+
+.erp-currency-compact-item .meta {
+  opacity: 0.75;
+  font-size: 10px;
+}
+
+.erp-currency-compact-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.erp-currency-compact-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 999px;
+}
+
+.erp-currency-compact-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.erp-currency-compact-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.filter-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 10px 15px;
+  background: #e7f5ff;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+
+.filter-indicator .close-filter {
+  margin-left: auto;
+  cursor: pointer;
+  color: #6c757d;
+}
+
+.filter-indicator .close-filter:hover {
+  color: #dc3545;
+}
+
+@media (max-width: 1200px) {
+  .dynamic-filter-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  .filters-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 576px) {
+  .dynamic-filter-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.btn-divider {
+  width: 1px;
+  height: 28px;
+  background: linear-gradient(180deg, transparent 0%, #cbd5e1 20%, #cbd5e1 80%, transparent 100%);
+  margin: 0 4px;
+  margin-right: 12px;
+  align-self: center;
+}

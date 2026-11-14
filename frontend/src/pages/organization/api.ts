@@ -132,12 +132,24 @@ export function useDocumentSeries(id: string | undefined) {
   });
 }
 
+/**
+ * "Varsayılan Banka Hesabı" seçimine uygun fon (12.2 §5.13): aktif vadesiz banka hesabı. Alanları
+ * içermeyen eski yanıt aktif ve vadesiz sayılır.
+ */
+export function isDefaultBankCandidate(
+  fund: Pick<Fund, "kind"> & Partial<Pick<Fund, "active" | "accountType">>,
+): boolean {
+  return (
+    fund.kind === "BANK" && fund.active !== false && (fund.accountType ?? "DEMAND") === "DEMAND"
+  );
+}
+
 /** Şirketin banka hesapları ("Varsayılan Banka Hesabı" seçimi; FINANCE_VIEW gerekir). */
 export function useCompanyBankFunds(companyId: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: ["finance", "funds", "company", companyId],
     queryFn: () => apiGet<Fund[]>(`/finance/funds?companyId=${encodeURIComponent(companyId!)}`),
-    select: (funds) => funds.filter((fund) => fund.kind === "BANK"),
+    select: (funds) => funds.filter(isDefaultBankCandidate),
     enabled: enabled && !!companyId,
   });
 }

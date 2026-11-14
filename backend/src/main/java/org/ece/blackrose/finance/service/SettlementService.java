@@ -1,18 +1,25 @@
 package org.ece.blackrose.finance.service;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.common.money.Money;
+import org.ece.blackrose.finance.domain.Account;
 import org.ece.blackrose.finance.domain.FinanceTypes.Direction;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundDirection;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentDirection;
+import org.ece.blackrose.finance.domain.FinanceTypes.InvoiceSide;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementMethod;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementType;
@@ -21,14 +28,21 @@ import org.ece.blackrose.finance.domain.Instrument;
 import org.ece.blackrose.finance.domain.Settlement;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.ExpenseItemRepository;
+import org.ece.blackrose.finance.repository.FinanceRepositories.FundAccountRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.SettlementRepository;
+import org.ece.blackrose.finance.repository.FundRepositories.FundTransferSourceRepository;
+import org.ece.blackrose.finance.repository.FundRepositories.IntercompanyTransferRepository;
 import org.ece.blackrose.finance.service.FundLedgerService.FundPosting;
 import org.ece.blackrose.finance.service.LedgerService.Posting;
 import org.ece.blackrose.finance.web.FinanceDtos.DailyReportResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.DailyTotal;
+import org.ece.blackrose.finance.web.FinanceDtos.SettlementCheckResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.SettlementRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SettlementResponse;
+import org.ece.blackrose.finance.web.FinanceDtos.SettlementWarningResponse;
 import org.ece.blackrose.finance.web.FinanceMapper;
+import org.ece.blackrose.identity.domain.AuditEvent;
+import org.ece.blackrose.identity.service.AuditService;
 import org.ece.blackrose.organization.BranchFilter;
 import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.organization.CompanyResolver;
@@ -47,6 +61,9 @@ public class SettlementService {
 
   static final String SOURCE_SETTLEMENT = "SETTLEMENT";
 
+  /** Şirketler arası virmanın sunucu ürettiği settlement anahtarlarının öneki (SEC-12.2-03). */
+  static final String INTERCOMPANY_KEY_PREFIX = "ict:";
+
   private final SettlementRepository settlements;
   private final AccountRepository accounts;
   private final ExpenseItemRepository expenseItems;
@@ -59,6 +76,14 @@ public class SettlementService {
   private final BranchScopeService scope;
   private final AccountAccess access;
   private final CompanyIdentityRule identityRule;
+  private final FundAccountRepository fundAccounts;
+  private final IntercompanyTransferRepository intercompanyTransfers;
+  private final FundTransferSourceRepository transferSources;
+  private final SettlementWarningService warnings;
+  private final InvoiceCoverageService invoiceCoverage;
+  private final AuditService audit;
+
+  @PersistenceContext private EntityManager entityManager;
 
   @SuppressWarnings("java:S107")
   public SettlementService(
@@ -73,8 +98,20 @@ public class SettlementService {
       CompanyResolver companies,
       BranchScopeService scope,
       AccountAccess access,
-      CompanyIdentityRule identityRule) {
+      CompanyIdentityRule identityRule,
+      FundAccountRepository fundAccounts,
+      IntercompanyTransferRepository intercompanyTransfers,
+      FundTransferSourceRepository transferSources,
+      SettlementWarningService warnings,
+      InvoiceCoverageService invoiceCoverage,
+      AuditService audit) {
+    this.warnings = warnings;
+    this.invoiceCoverage = invoiceCoverage;
+    this.audit = audit;
     this.scope = scope;
+    this.fundAccounts = fundAccounts;
+    this.intercompanyTransfers = intercompanyTransfers;
+    this.transferSources = transferSources;
     this.access = access;
     this.identityRule = identityRule;
     this.companies = companies;
@@ -94,19 +131,72 @@ public class SettlementService {
   }
 
   /**
-   * Kullanıcı girişli ödeme/tahsilat (MUI uçları): carinin kartı {@code FOR SHARE} ile kilitlenir;
-   * pasif cari 422 {@code ACCOUNT_INACTIVE}, cari–şirket kimlik kuralı 422 {@code COMPANY_MISMATCH}
-   * kilit altında son durumla denetlenir (12.1 §3.1, SEC-12.1-04). Türetilmiş akışlar (plan
-   * ödemesi, araç gideri, sürücü avansı) doğrudan {@link #create} çağırır (OK-28).
+   * Kullanıcı girişli ödeme/tahsilat (MUI uçları; 12.2 §3.6 sırası): {@code ict:} önekli anahtar
+   * 400 {@code IDEMPOTENCY_KEY_INVALID}; aynı anahtarla tekrar ilk kaydı döner (uyarı çalışmaz);
+   * carinin kartı {@code FOR SHARE} ile kilitlenir (pasif cari 422 {@code ACCOUNT_INACTIVE}, kimlik
+   * kuralı 422 {@code COMPANY_MISMATCH}; 12.1 §3.1, SEC-12.1-04); pasif fon 422 {@code
+   * FUND_INACTIVE}; doğrulamalar; şirket dağılımı aşımında onay yoksa 409 {@code
+   * CONFIRMATION_REQUIRED}, onaylı kayıtta {@code SETTLEMENT_ALLOCATION_OVERRIDE} denetimi.
+   * Türetilmiş akışlar (plan ödemesi, araç gideri, sürücü avansı, şirketler arası virman) doğrudan
+   * {@link #create} çağırır (OK-28).
    */
   @Transactional
   public Settlement createByUser(
       SettlementType type, SettlementRequest request, String idempotencyKey) {
+    if (idempotencyKey != null
+        && idempotencyKey.toLowerCase(Locale.ROOT).startsWith(INTERCOMPANY_KEY_PREFIX)) {
+      throw bad("IDEMPOTENCY_KEY_INVALID", "Bu işlem anahtarı kullanılamaz.");
+    }
+    if (idempotencyKey != null && settlements.findByIdempotencyKey(idempotencyKey).isPresent()) {
+      return create(type, request, idempotencyKey, null);
+    }
     if (request.accountId() != null) {
       identityRule.require(
           access.usableLocked(request.accountId()), companies.companyOf(request.branchId()));
     }
-    return create(type, request, idempotencyKey, null);
+    if (request.method() != SettlementMethod.CHECK && request.fundAccountId() != null) {
+      FundService.requireActive(funds.findVisible(request.fundAccountId()));
+    }
+    UUID companyId = validate(type, request);
+    Optional<SettlementWarningResponse> confirmation =
+        SettlementWarningService.confirmation(warnings.check(type, request, companyId));
+    if (confirmation.isPresent() && !Boolean.TRUE.equals(request.confirmWarnings())) {
+      throw SettlementWarningService.confirmationRequired(confirmation.get());
+    }
+    Settlement settlement = insert(type, request, companyId, idempotencyKey, null);
+    confirmation.ifPresent(
+        warning ->
+            audit.record(
+                AuditEvent.SETTLEMENT_ALLOCATION_OVERRIDE,
+                "SETTLEMENT:" + settlement.getId(),
+                SettlementWarningService.auditDetails(warning)));
+    return settlement;
+  }
+
+  /**
+   * Ödeme/tahsilat önizlemesi (§4.5; yazmaz). Kayıtla aynı kapı (SEC-12.2-01): cari okunabilir
+   * olmalı (izinsiz personel carisi 404), kimlik kuralı (422 {@code COMPANY_MISMATCH}) ve kayıt
+   * doğrulamaları; ardından şirket dağılımı uyarısı ve ödemenin şirketi + para birimi için eksik
+   * fatura (ödemede PAYABLE, tahsilatta RECEIVABLE; kullanıcının kapsamıyla). İş yeri kapsamı
+   * controller'da ({@code requireNew}).
+   */
+  @Transactional(readOnly = true)
+  public SettlementCheckResponse check(SettlementType type, SettlementRequest request) {
+    if (request.accountId() != null) {
+      Account account = access.readable(request.accountId());
+      identityRule.require(account, companies.companyOf(request.branchId()));
+    }
+    UUID companyId = validate(type, request);
+    if (request.accountId() == null) {
+      return new SettlementCheckResponse(List.of(), List.of());
+    }
+    return new SettlementCheckResponse(
+        warnings.check(type, request, companyId),
+        invoiceCoverage.missingFor(
+            request.accountId(),
+            companyId,
+            request.money().currency(),
+            type == SettlementType.PAYMENT ? InvoiceSide.PAYABLE : InvoiceSide.RECEIVABLE));
   }
 
   /** Aynı anahtarla gelen ikinci istek ilk kaydı döner. */
@@ -121,7 +211,16 @@ public class SettlementService {
         return existing.get();
       }
     }
-    UUID companyId = validate(type, request);
+    return insert(type, request, validate(type, request), idempotencyKey, planId);
+  }
+
+  /** Doğrulanmış isteğin kaydı: settlement, cari ve fon hareketleri. */
+  private Settlement insert(
+      SettlementType type,
+      SettlementRequest request,
+      UUID companyId,
+      String idempotencyKey,
+      UUID planId) {
     Money money = request.money();
     UUID instrumentId = registerInstrument(type, request, companyId, money);
     Settlement settlement =
@@ -168,9 +267,33 @@ public class SettlementService {
     return settlement;
   }
 
-  /** Çekli kayıtlar ters çevrilmez; çek kendi yaşam döngüsüyle (karşılıksız vb.) yönetilir. */
+  /**
+   * Kullanıcı iptali. Çekli ve plana bağlı kayıtlar ters çevrilmez; şirketler arası virmanın bacağı
+   * virmandan (409 {@code SETTLEMENT_LINKED_TO_INTERCOMPANY}), geçerli bir döviz bozumunun kaynağı
+   * olan tahsilat önce bozum iptal edilerek (409 {@code SETTLEMENT_USED_IN_FX_EXCHANGE}) iptal
+   * edilir.
+   */
   @Transactional
   public Settlement reverse(UUID id, LocalDate date, String description) {
+    return doReverse(id, date, description, false);
+  }
+
+  /**
+   * Yalnız {@code IntercompanyTransferService}: şirketler arası bağ denetimi atlanır; döviz bozumu
+   * kaynak denetimi, çek ve plan denetimleri aynen uygulanır (12.2 §3.9, F5).
+   */
+  @Transactional
+  public Settlement reverseLinked(UUID id, LocalDate date, String description) {
+    return doReverse(id, date, description, true);
+  }
+
+  /**
+   * Kilit sırası (12.2 §3.10, F8): settlement kilitsiz okunur → fon {@code FOR UPDATE} → settlement
+   * {@code FOR UPDATE} (durum yeniden okunur) → bağ denetimleri → defter tersleri. Döviz bozumu
+   * oluşturma da fon → settlement sırasıyla kilitlediğinden iki yol kilitlenmeye girmez.
+   */
+  private Settlement doReverse(
+      UUID id, LocalDate date, String description, boolean skipIntercompanyCheck) {
     Settlement settlement =
         settlements
             .findById(id)
@@ -193,6 +316,26 @@ public class SettlementService {
           HttpStatus.CONFLICT,
           "SETTLEMENT_LINKED_TO_PLAN",
           "Ödeme planına bağlı kayıt ters çevrilemez.");
+    }
+    if (settlement.getFundAccountId() != null) {
+      fundAccounts.findForUpdate(settlement.getFundAccountId());
+    }
+    entityManager.refresh(settlement, LockModeType.PESSIMISTIC_WRITE);
+    if (settlement.getStatus() == SettlementStatus.REVERSED) {
+      return settlement;
+    }
+    if (!skipIntercompanyCheck && intercompanyTransfers.existsBySettlement(id)) {
+      throw new BusinessException(
+          HttpStatus.CONFLICT,
+          "SETTLEMENT_LINKED_TO_INTERCOMPANY",
+          "Şirketler arası virmana bağlı kayıt transfer merkezinden iptal edilir.");
+    }
+    if (transferSources.existsActiveBySettlementId(id)) {
+      throw new BusinessException(
+          HttpStatus.CONFLICT,
+          "SETTLEMENT_USED_IN_FX_EXCHANGE",
+          "Döviz bozumunda kaynak olarak kullanılan tahsilat iptal edilemez; önce bozumu iptal"
+              + " edin.");
     }
     ledger.reverseSource(SOURCE_SETTLEMENT, id, date, description);
     fundLedger.reverseSource(SOURCE_SETTLEMENT, id, date, description);

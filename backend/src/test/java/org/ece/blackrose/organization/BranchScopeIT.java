@@ -817,6 +817,8 @@ class BranchScopeIT extends AbstractIntegrationTest {
     body.put("instrumentId", instrument);
     body.put("money", money("30"));
     body.put("date", TODAY.toString());
+    // 12.2 B4: şirket dağılımı uyarısı onaylı (409 CONFIRMATION_REQUIRED olmasın).
+    body.put("confirmWarnings", true);
     return body;
   }
 
@@ -829,6 +831,8 @@ class BranchScopeIT extends AbstractIntegrationTest {
     body.put("fundAccountId", fund);
     body.put("money", money(amount));
     body.put("date", TODAY.toString());
+    // 12.2 B4: şirket dağılımı uyarısı onaylı (409 CONFIRMATION_REQUIRED olmasın).
+    body.put("confirmWarnings", true);
     return body;
   }
 

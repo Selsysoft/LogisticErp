@@ -1,0 +1,576 @@
+/*
+ * Kaynak: ZtoFabrika/Views/BankStatement/BankExtract.cshtml:36-465 + Views/CashTransactions/CashExtract.cshtml:33-345
+ * (aynı metinli kurallar bir kez; farklı olanlar .fund-extract-bank / .fund-extract-cash sarmalayıcısıyla öneklenir)
+ * Birebir kopya (12.2_TASARIM §5.4); değişiklikler: Razor kaçışı @@ → @, bu dosyada tanımlı
+ * @keyframes adları paket genelinde çakışmasın diye zto-<sayfa>- önekli (check:zto-css);
+ * @page { size: A4 … } paket dışı: CSS paketinde @page kalamaz (check:zto-css); FundExtractPage
+ * yalnız rota bağlıyken <style> ile ekler
+ * Sayfa kapsamı .zto-finans.zto-page-fund-extract (prefixTransform scopeForFile).
+ */
+/* --- BankExtract.cshtml:36-465 (.fund-extract-bank) + CashExtract.cshtml:33-345 (.fund-extract-cash); ortak kurallar önceksiz --- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #000;
+  background: transparent;
+  padding: 15px;
+  position: relative;
+}
+
+.extract-container {
+  max-width: 960px;
+  margin: 0 auto;
+  background: transparent;
+  position: relative;
+  z-index: 1;
+}
+.header {
+  border-bottom: 3px double #000;
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.company-name {
+  font-size: 20px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.statement-info {
+  text-align: right;
+  font-size: 11px;
+}
+
+.statement-title {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.statement-title h1 {
+  font-size: 26px;
+  font-weight: bold;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  border: 3px solid #000;
+  display: inline-block;
+  padding: 10px 40px;
+  margin-bottom: 8px;
+}
+
+.statement-subtitle {
+  font-size: 13px;
+  font-weight: bold;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-top: 5px;
+}
+.fund-extract-bank .bank-box {
+  border: 2px solid #000;
+  margin-bottom: 20px;
+}
+
+.fund-extract-bank .bank-box-header {
+  background: #000;
+  color: #fff;
+  padding: 8px 15px;
+  font-weight: bold;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.fund-extract-bank .bank-box-content {
+  padding: 15px;
+}
+
+.fund-extract-bank .bank-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.fund-extract-bank .bank-row {
+  display: flex;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.fund-extract-bank .bank-row:last-child {
+  margin-bottom: 0;
+}
+
+.fund-extract-bank .bank-label {
+  width: 130px;
+  font-weight: bold;
+}
+
+.fund-extract-bank .bank-value {
+  flex: 1;
+}
+.transactions-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  font-size: 11px;
+}
+
+.transactions-table thead th {
+  background: #000;
+  color: #fff;
+  padding: 10px 8px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid #000;
+}
+
+.transactions-table tbody td {
+  padding: 7px 8px;
+  border: 1px solid #ccc;
+  vertical-align: middle;
+}
+
+.transactions-table tbody tr:nth-child(even) {
+  background: #f9f9f9;
+}
+
+.transactions-table .col-no {
+  width: 36px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.transactions-table .col-date {
+  width: 85px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.transactions-table .col-type {
+  width: 130px;
+  text-align: center;
+}
+
+.transactions-table .col-debit {
+  width: 110px;
+  text-align: right;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  font-weight: bold;
+  color: #166534;
+}
+
+.transactions-table .col-credit {
+  width: 110px;
+  text-align: right;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  font-weight: bold;
+  color: #991b1b;
+}
+
+.transactions-table .col-balance {
+  width: 130px;
+  text-align: right;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.transactions-table .col-currency {
+  width: 50px;
+  text-align: center;
+}
+
+.transactions-table .col-desc {
+  min-width: 150px;
+}
+
+.col-debit-val {
+  color: #166534;
+}
+.col-credit-val {
+  color: #991b1b;
+}
+.col-balance-positive {
+  color: #166534;
+}
+.col-balance-negative {
+  color: #991b1b;
+}
+.type-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+.type-in {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+.type-out {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+.fund-extract-bank .type-virman {
+  background: #dbeafe;
+  color: #1e3a8a;
+  border: 1px solid #93c5fd;
+}
+.fund-extract-bank .type-eft {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #a5b4fc;
+}
+.fund-extract-bank .type-havale {
+  background: #fce7f3;
+  color: #9d174d;
+  border: 1px solid #f9a8d4;
+}
+.fund-extract-bank .type-doviz {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+.type-default {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+.type-opening {
+  background: #e2e8f0;
+  color: #1e293b;
+  border: 1px solid #94a3b8;
+}
+.opening-row td {
+  background: #f8fafc !important;
+  font-weight: 700;
+  border-top: 2px solid #000 !important;
+  border-bottom: 2px solid #94a3b8 !important;
+}
+.summary-section {
+  border: 3px solid #000;
+  margin-top: 25px;
+}
+
+.summary-header {
+  background: #000;
+  color: #fff;
+  padding: 10px 15px;
+  font-weight: bold;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-align: center;
+}
+
+.summary-content {
+  padding: 20px;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summary-table td {
+  padding: 12px 15px;
+  border-bottom: 1px dashed #ccc;
+  font-size: 13px;
+}
+
+.summary-table tr:last-child td {
+  border-bottom: none;
+  border-top: 3px solid #000;
+  padding-top: 15px;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.summary-table .label {
+  text-align: left;
+  font-weight: bold;
+}
+
+.summary-table .value {
+  text-align: right;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.value-positive {
+  color: #166534;
+}
+.value-negative {
+  color: #991b1b;
+}
+.watermark {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  opacity: 0.08;
+  z-index: 0;
+  width: 40%;
+  pointer-events: none;
+}
+.print-actions {
+  position: fixed;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 8px;
+  z-index: 1000;
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  flex-wrap: wrap;
+  max-width: 700px;
+}
+
+.date-filter {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 10px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.date-filter input[type="date"] {
+  padding: 5px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 11px;
+  background: white;
+}
+
+.date-filter label {
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background: #ccc;
+  margin: 0 4px;
+}
+
+.btn {
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.btn-print {
+  background: #000;
+  color: #fff;
+}
+
+.btn-print:hover {
+  background: #333;
+}
+
+.btn-download {
+  background: #1e3a8a;
+  color: #fff;
+}
+
+.btn-download:hover {
+  background: #1d4ed8;
+}
+.legend {
+  margin-top: 15px;
+  padding: 10px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  font-size: 9px;
+}
+
+.legend-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+.footer {
+  margin-top: 30px;
+  padding-top: 15px;
+  border-top: 1px solid #000;
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #666;
+}
+@media print {
+  .fund-extract-bank {
+    padding: 5px;
+  }
+
+  .fund-extract-bank .print-actions {
+    display: none;
+  }
+
+  .fund-extract-bank .extract-container {
+    max-width: 100%;
+  }
+
+  .fund-extract-bank .transactions-table thead th {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .fund-extract-bank .summary-header {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .fund-extract-bank .bank-box-header {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .fund-extract-bank .col-debit-val {
+    color: #166534 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .fund-extract-bank .col-credit-val {
+    color: #991b1b !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .fund-extract-bank .type-in {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .fund-extract-bank .type-out {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+.fund-extract-cash .cash-box {
+  border: 2px solid #000;
+  margin-bottom: 20px;
+}
+
+.fund-extract-cash .cash-box-header {
+  background: #000;
+  color: #fff;
+  padding: 8px 15px;
+  font-weight: bold;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.fund-extract-cash .cash-box-content {
+  padding: 15px;
+}
+
+.fund-extract-cash .cash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.fund-extract-cash .cash-row {
+  display: flex;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.fund-extract-cash .cash-label {
+  width: 130px;
+  font-weight: bold;
+}
+
+.fund-extract-cash .cash-value {
+  flex: 1;
+}
+
+@media print {
+  .fund-extract-cash {
+    padding: 5px;
+  }
+  .fund-extract-cash .print-actions {
+    display: none;
+  }
+  .fund-extract-cash .extract-container {
+    max-width: 100%;
+  }
+
+  .fund-extract-cash .transactions-table thead th,
+  .fund-extract-cash .summary-header,
+  .fund-extract-cash .cash-box-header {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .fund-extract-cash .col-debit-val {
+    color: #166534 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .fund-extract-cash .col-credit-val {
+    color: #991b1b !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .fund-extract-cash .type-in {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .fund-extract-cash .type-out {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

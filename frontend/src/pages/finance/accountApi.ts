@@ -699,12 +699,6 @@ function idempotency(key: string | undefined): Record<string, string> | undefine
 
 const path = encodeURIComponent;
 
-/**
- * `api/client.ts` `Method` birliği PATCH içermiyor (FE0'ın dosyası değil; koordinatöre bildirildi).
- * fetch PATCH'i olduğu gibi gönderir; tip yalnız derleme içindir.
- */
-const PATCH = "PATCH" as unknown as Parameters<typeof apiRequest>[0];
-
 export function createAccount(body: SaveAccountBody) {
   return apiRequest<Account>("POST", "/finance/accounts", body);
 }
@@ -714,7 +708,7 @@ export function updateProfile(id: string, body: AccountProfileBody) {
 }
 
 export function setAccountActive(id: string, active: boolean) {
-  return apiRequest<Account>(PATCH, `/finance/accounts/${path(id)}/active`, { active });
+  return apiRequest<Account>("PATCH", `/finance/accounts/${path(id)}/active`, { active });
 }
 
 export function setLimits(id: string, body: LimitBody) {
@@ -734,7 +728,7 @@ export function updateBankAccount(id: string, body: SaveBankAccountBody) {
 }
 
 export function setBankAccountActive(id: string, active: boolean) {
-  return apiRequest<AccountBankAccount>(PATCH, `/finance/bank-accounts/${path(id)}/active`, {
+  return apiRequest<AccountBankAccount>("PATCH", `/finance/bank-accounts/${path(id)}/active`, {
     active,
   });
 }

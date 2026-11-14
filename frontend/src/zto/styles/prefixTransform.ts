@@ -64,11 +64,42 @@ export const PAGE_SCOPE_ALIASES: Readonly<Record<string, string>> = {
   "all-transactions-page": "all-transactions",
 };
 
-/** Dosyanın kapsamı: sayfa kapsamlı dosyada `.zto-finans.zto-page-<ad>`, diğerlerinde `.zto-finans`. */
-export function scopeForFile(file: string | undefined): string {
+/**
+ * Birden çok sayfanın paylaştığı sayfa CSS'leri (12.2 §5.4): ZTO Kasalar sayfası bankalarınkiyle aynı
+ * `css/zt/timedeposits/index.css`'i yükler; dosya bir kez kopyalanır (`banks.css`) ve her kuralı iki
+ * kök sınıfa yazılır (`.zto-page-banks` ve `.zto-page-cashes`). Anahtar dosya adı, değer kök adları.
+ */
+export const SHARED_SCOPES: Readonly<Record<string, readonly string[]>> = {
+  banks: ["banks", "cashes"],
+};
+
+/**
+ * Dosyanın kapsamları: sayfa kapsamlı dosyada `.zto-finans.zto-page-<ad>` (paylaşılan dosyada her kök
+ * için bir tane), diğerlerinde `.zto-finans`.
+ */
+export function scopesForFile(file: string | undefined): string[] {
   const match = file ? SCOPED_PAGE.exec(file) : null;
-  if (!match) return ZTO_SCOPE;
-  return `${ZTO_SCOPE}.zto-page-${PAGE_SCOPE_ALIASES[match[1]] ?? match[1]}`;
+  if (!match) return [ZTO_SCOPE];
+  const pages = SHARED_SCOPES[match[1]] ?? [PAGE_SCOPE_ALIASES[match[1]] ?? match[1]];
+  return pages.map((page) => `${ZTO_SCOPE}.zto-page-${page}`);
+}
+
+/** Dosyanın (ilk) kapsamı: sayfa kapsamlı dosyada `.zto-finans.zto-page-<ad>`, diğerlerinde `.zto-finans`. */
+export function scopeForFile(file: string | undefined): string {
+  return scopesForFile(file)[0];
+}
+
+/**
+ * Seçicileri kapsamların her biri altına alır. Zaten `.zto-finans` ile başlayan seçici bir kez kalır
+ * (PostCSS değişen kuralı yeniden ziyaret ettiğinde paylaşılan kapsamda çoğalmasın); tek kapsamda
+ * sonuç `scopeSelector` eşlemesiyle birebir aynıdır.
+ */
+export function scopeSelectors(selectors: readonly string[], scopes: readonly string[]): string[] {
+  return selectors.flatMap((selector) =>
+    SCOPE_HEAD.test(selector.trim())
+      ? [selector.trim()]
+      : scopes.map((scope) => scopeSelector(selector, scope)),
+  );
 }
 
 const KEYFRAMES = /keyframes$/i;
@@ -83,8 +114,8 @@ function scopeRule(rule: Rule, fallbackFile: string | undefined) {
   if (parent?.type === "atrule" && KEYFRAMES.test((parent as { name: string }).name)) {
     return;
   }
-  const scope = scopeForFile(rule.source?.input.file ?? fallbackFile);
-  rule.selectors = rule.selectors.map((selector) => scopeSelector(selector, scope));
+  const scopes = scopesForFile(rule.source?.input.file ?? fallbackFile);
+  rule.selectors = scopeSelectors(rule.selectors, scopes);
 }
 
 /**

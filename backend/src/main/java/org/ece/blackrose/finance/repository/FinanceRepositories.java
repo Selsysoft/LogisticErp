@@ -16,7 +16,10 @@ import org.ece.blackrose.finance.domain.ExpenseType;
 import org.ece.blackrose.finance.domain.FinanceCurrency;
 import org.ece.blackrose.finance.domain.FinanceSettings;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
+import org.ece.blackrose.finance.domain.FinanceTypes.FundAccountType;
+import org.ece.blackrose.finance.domain.FinanceTypes.FundKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentStatus;
+import org.ece.blackrose.finance.domain.FinanceTypes.InvoiceSide;
 import org.ece.blackrose.finance.domain.FinanceTypes.PlanStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementType;
 import org.ece.blackrose.finance.domain.FundAccount;
@@ -546,6 +549,21 @@ public final class FinanceRepositories {
     BigDecimal getAmount();
   }
 
+  /** Eksik fatura satırı (12.2 §3.7); {@code companyId} şirketler toplandığında null. */
+  public interface InvoiceCoverageRow {
+    UUID getAccountId();
+
+    UUID getCompanyId();
+
+    String getCurrency();
+
+    String getSide();
+
+    BigDecimal getLedgerTotal();
+
+    BigDecimal getInvoiceTotal();
+  }
+
   public interface BranchFacetRow {
     UUID getId();
 
@@ -822,48 +840,125 @@ public final class FinanceRepositories {
     }
 
     /**
-     * Resmi fatura toplamı (12.1 §3.6, ZTO "Resmi Fatura"): açık Borç Ekle fatura türü belgelerin
-     * KDV dahil toplamı (yansıtılmayanlar dahil) ve iptal edilmemiş alış faturaları, para birimi
-     * başına.
+     * Eksik fatura (12.2 §3.7): cari × (şirket) × para birimi × taraf için defter toplamı ve fatura
+     * toplamı. Defter satırları taban kaynağa bağlanır (ters kayıt ve taşıma çıkışı eksi); PAYABLE
+     * = {@code DEBT} türü, RECEIVABLE = {@code RECEIVABLE} türü, açılış bakiyesi hariç. Fatura
+     * sayılan taban: {@code counts_as_invoice} cari belgesi, alış faturası ve açılış faturası
+     * (PAYABLE); navlun, depo ve açılış faturası (RECEIVABLE). Yansıtılmayan fatura belgeleri net
+     * ödenecek tutarlarıyla eklenir. {@code side = ''} iki taraf.
      */
     @Query(
         value =
             """
-            select x.currency as "currency", coalesce(sum(x.total), 0) as "amount"
+            select x.account_id as "accountId",
+                   case when :byCompany = true then x.company_id end as "companyId",
+                   x.currency as "currency", x.side as "side",
+                   coalesce(sum(x.ledger), 0) as "ledgerTotal",
+                   coalesce(sum(x.invoice), 0) as "invoiceTotal"
             from (
-              select d.currency, tx.total_incl_vat as total
+              select k.account_id, k.company_id, k.currency,
+                     case k.kind when 'DEBT' then 'PAYABLE' else 'RECEIVABLE' end as side,
+                     k.sign * k.amount as ledger,
+                     case when (k.base_type = 'ACCOUNT_DOCUMENT' and k.document_invoice)
+                            or (k.kind = 'DEBT'
+                                and k.base_type in ('PURCHASE_INVOICE', 'OPENING_INVOICE'))
+                            or (k.kind = 'RECEIVABLE'
+                                and k.base_type in ('FREIGHT_INVOICE', 'WAREHOUSE_INVOICE',
+                                                    'OPENING_INVOICE'))
+                          then k.sign * k.amount else 0 end as invoice
+              from (
+                select t.account_id, t.company_id, t.currency, t.amount,
+            """
+                + KIND
+                + " as kind, "
+                + SIGN
+                + " as sign, "
+                + BASE_TYPE
+                + """
+                 as base_type, coalesce(ty.counts_as_invoice, false) as document_invoice
+                from account_transaction t
+            """
+                + KIND_JOINS
+                + " left join account_document d on"
+                + BASE_TYPE
+                + "= 'ACCOUNT_DOCUMENT' and d.id ="
+                + BASE_ID
+                + "and d.deleted = false"
+                + """
+                 left join account_document_type ty on ty.side = d.side and ty.code = d.document_type
+                 join account a on a.id = t.account_id
+                where t.deleted = false and a.deleted = false
+                  and (:allAccounts = true or t.account_id in (:accountIds))
+                  and (:employeeVisible = true or a.type <> 'EMPLOYEE')
+                  and (cast(:asOf as date) is null or t.transaction_date <= cast(:asOf as date))
+                  and (:allCompanies = true or t.company_id = :companyId)
+                  and (:allBranches = true or t.branch_id in (:branchIds))
+              ) k
+              where k.kind in ('DEBT', 'RECEIVABLE') and k.base_type <> 'OPENING'
+              union all
+              select d.account_id, d.company_id, d.currency, d.side, 0,
+                     coalesce(tx.net_payable, d.amount)
               from account_document d
               join account_document_type ty on ty.side = d.side and ty.code = d.document_type
-              join account_document_tax tx on tx.document_id = d.id and tx.deleted = false
-              where d.account_id = :accountId and d.deleted = false and d.side = 'PAYABLE'
-                and d.status = 'OPEN' and ty.invoice_section
+              left join account_document_tax tx on tx.document_id = d.id and tx.deleted = false
+              join account a on a.id = d.account_id
+              where d.deleted = false and d.reflect_to_ledger = false and d.status = 'OPEN'
+                and ty.counts_as_invoice and a.deleted = false
+                and (:allAccounts = true or d.account_id in (:accountIds))
+                and (:employeeVisible = true or a.type <> 'EMPLOYEE')
+                and (cast(:asOf as date) is null or d.document_date <= cast(:asOf as date))
                 and (:allCompanies = true or d.company_id = :companyId)
                 and (:allBranches = true or d.branch_id in (:branchIds))
-              union all
-              select p.currency, p.total_amount as total
-              from purchase_invoice p
-              where p.account_id = :accountId and p.deleted = false and p.status <> 'CANCELLED'
-                and (:allCompanies = true or p.company_id = :companyId)
-                and (:allBranches = true or p.branch_id in (:branchIds))
             ) x
-            group by x.currency
-            order by x.currency
+            where (:side = '' or x.side = :side)
+            group by 1, 2, 3, 4
+            having (:onlyMissing = false
+                    or coalesce(sum(x.ledger), 0) - coalesce(sum(x.invoice), 0) > 1)
+            order by 1, 2 nulls first, 3, 4
+            limit :limit
             """,
         nativeQuery = true)
-    List<CurrencyAmountRow> payableInvoiceTotals(
-        @Param("accountId") UUID accountId,
+    List<InvoiceCoverageRow> invoiceCoverage(
+        @Param("allAccounts") boolean allAccounts,
+        @Param("accountIds") Collection<UUID> accountIds,
+        @Param("byCompany") boolean byCompany,
+        @Param("side") String side,
+        @Param("onlyMissing") boolean onlyMissing,
+        @Param("asOf") LocalDate asOf,
+        @Param("employeeVisible") boolean employeeVisible,
         @Param("allCompanies") boolean allCompanies,
         @Param("companyId") UUID companyId,
         @Param("allBranches") boolean allBranches,
-        @Param("branchIds") Collection<UUID> branchIds);
+        @Param("branchIds") Collection<UUID> branchIds,
+        @Param("limit") int limit);
 
-    default List<CurrencyAmountRow> payableInvoiceTotals(UUID accountId, BranchFilter filter) {
-      return payableInvoiceTotals(
-          accountId,
+    /**
+     * {@code accountIds} null ise görünür tüm cariler; {@code byCompany} false ise şirketler
+     * toplanır ({@code companyId = null}); {@code side} null ise iki taraf.
+     */
+    @SuppressWarnings("java:S107")
+    default List<InvoiceCoverageRow> invoiceCoverage(
+        Collection<UUID> accountIds,
+        BranchFilter filter,
+        boolean byCompany,
+        InvoiceSide side,
+        boolean onlyMissing,
+        LocalDate asOf,
+        boolean employeeVisible,
+        int limit) {
+      return invoiceCoverage(
+          accountIds == null,
+          accountIds == null || accountIds.isEmpty() ? List.of(BranchFilter.NONE) : accountIds,
+          byCompany,
+          side == null ? "" : side.name(),
+          onlyMissing,
+          asOf,
+          employeeVisible,
           filter.companyId() == null,
           companyOrNone(filter),
           filter.allBranches(),
-          filter.branchIds());
+          filter.branchIds(),
+          limit);
     }
 
     /**
@@ -1432,6 +1527,24 @@ public final class FinanceRepositories {
 
     String getSourceType();
 
+    String getCurrency();
+
+    BigDecimal getExchangeRate();
+
+    BigDecimal getTlAmount();
+
+    UUID getCompanyId();
+
+    UUID getSourceId();
+
+    String getCreatedBy();
+
+    Object getCreatedAt();
+
+    Boolean getReversal();
+
+    Boolean getReversed();
+
     BigDecimal getRunningBalance();
   }
 
@@ -1462,9 +1575,50 @@ public final class FinanceRepositories {
     }
 
     /**
+     * Süzgeçli fon listesi (12.2_TASARIM §2.3); boş süzgeç atlanır. Sıra ZTO BankIntroduction: tür,
+     * hesap türü, banka adı, ad.
+     */
+    @Query(
+        """
+        select f from FundAccount f
+        where (:companyId is null or f.companyId = :companyId)
+          and (:allBranches = true or f.branchId in :branchIds)
+          and (:kind is null or f.kind = :kind)
+          and (:accountType is null or f.accountType = :accountType)
+          and (:active is null or f.active = :active)
+          and (:currency is null or f.currency = :currency)
+        order by f.kind, f.accountType, f.bankName, f.name
+        """)
+    List<FundAccount> searchFiltered(
+        @Param("companyId") UUID companyId,
+        @Param("allBranches") boolean allBranches,
+        @Param("branchIds") Collection<UUID> branchIds,
+        @Param("kind") FundKind kind,
+        @Param("accountType") FundAccountType accountType,
+        @Param("active") Boolean active,
+        @Param("currency") String currency);
+
+    default List<FundAccount> searchFiltered(
+        BranchFilter filter,
+        FundKind kind,
+        FundAccountType accountType,
+        Boolean active,
+        String currency) {
+      return searchFiltered(
+          filter.companyId(),
+          filter.allBranches(),
+          filter.branchIds(),
+          kind,
+          accountType,
+          active,
+          currency);
+    }
+
+    /**
      * Hesap "kullanılmış" mı: hareketi, çeke atanmışlığı (hareket oluşmadan da), ödeme/tahsilatı,
-     * araç gideri, banka ekstresi satırı ya da bir şirketin varsayılan hesabı olması. Silinmişler
-     * dahildir; kullanılmış hesabın şirketi değiştirilemez.
+     * araç gideri, banka ekstresi satırı, bir şirketin varsayılan hesabı olması, transfer (kaynak,
+     * hedef ya da masraf fonu), şirketler arası virman ya da açılış belgesi. Silinmişler dahildir;
+     * kullanılmış hesabın şirketi değiştirilemez.
      */
     @Query(
         value =
@@ -1475,9 +1629,24 @@ public final class FinanceRepositories {
                 or exists (select 1 from vehicle_expense where fund_account_id = :id)
                 or exists (select 1 from bank_statement_line where fund_account_id = :id)
                 or exists (select 1 from company where default_fund_account_id = :id)
+                or exists (select 1 from fund_transfer
+                           where source_fund_id = :id or target_fund_id = :id)
+                or exists (select 1 from fund_transfer_cost where fund_account_id = :id)
+                or exists (select 1 from intercompany_transfer
+                           where from_fund_id = :id or to_fund_id = :id)
+                or exists (select 1 from fund_opening where fund_account_id = :id)
             """,
         nativeQuery = true)
     boolean isUsed(@Param("id") UUID id);
+
+    /**
+     * Birden çok fonu kimlik sırasıyla kilitler (transfer ve virmanda karşılıklı iki istek
+     * kilitlenmesin diye sıra sabittir; 12.2_TASARIM §3.10). Kilitlenen kimlikleri döner.
+     */
+    @Query(
+        value = "select id from fund_account where id in (:ids) order by id for update",
+        nativeQuery = true)
+    List<UUID> lockAll(@Param("ids") Collection<UUID> ids);
 
     /** Hesap, silinmemiş bir şirketin varsayılan banka hesabı mı (silmeyi engeller). */
     @Query(
@@ -1523,14 +1692,24 @@ public final class FinanceRepositories {
     @Query(
         value =
             """
-            select id as "id", transaction_date as "transactionDate", direction as "direction",
-                   amount as "amount", description as "description", source_type as "sourceType",
-                   sum(case when direction = 'IN' then amount else -amount end)
-                     over (order by transaction_date, created_at, id) as "runningBalance"
-            from fund_transaction
-            where fund_account_id = :id and transaction_date between :from and :to
-              and deleted = false
-            order by transaction_date, created_at, id
+            select t.id as "id", t.transaction_date as "transactionDate",
+                   t.direction as "direction", t.amount as "amount",
+                   t.description as "description", t.source_type as "sourceType",
+                   t.currency as "currency", t.exchange_rate as "exchangeRate",
+                   t.tl_amount as "tlAmount", t.company_id as "companyId",
+                   t.source_id as "sourceId", t.created_by as "createdBy",
+                   t.created_at as "createdAt",
+                   (t.source_type = 'REVERSAL') as "reversal",
+                   exists (select 1 from fund_transaction x
+                           where x.source_type = 'REVERSAL' and x.source_id = t.id
+                             and x.fund_account_id = t.fund_account_id and x.deleted = false)
+                     as "reversed",
+                   sum(case when t.direction = 'IN' then t.amount else -t.amount end)
+                     over (order by t.transaction_date, t.created_at, t.id) as "runningBalance"
+            from fund_transaction t
+            where t.fund_account_id = :id and t.transaction_date between :from and :to
+              and t.deleted = false
+            order by t.transaction_date, t.created_at, t.id
             """,
         countQuery =
             """
@@ -1587,6 +1766,11 @@ public final class FinanceRepositories {
   public interface SettlementRepository extends JpaRepository<Settlement, UUID> {
 
     Optional<Settlement> findByIdempotencyKey(String idempotencyKey);
+
+    /** İptal ile döviz bozumu kaynağı kullanımı yarışmasın diye satır kilidi (§3.10). */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Settlement s where s.id = :id")
+    Optional<Settlement> findForUpdate(@Param("id") UUID id);
 
     @Query(
         """

@@ -202,4 +202,137 @@ public final class FinanceTypes {
     PURCHASE,
     SALES
   }
+
+  // --- Faz 12.2 (banka/kasa, transfer merkezi, uyarılar; 12.2_TASARIM §2.1)
+
+  /** Banka hesabı türü (ZTO AccountType). Kasa yalnız {@link #DEMAND} olur (V31 CHECK). */
+  public enum FundAccountType {
+    DEMAND,
+    CREDIT,
+    DEPOSIT,
+    INVESTMENT
+  }
+
+  public enum FundOpeningStatus {
+    POSTED,
+    REVERSED
+  }
+
+  /** Şirket içi transfer türü; şirketler arası virmanda {@link #VIREMENT} ve FX yoktur. */
+  public enum FundTransferType {
+    VIREMENT,
+    EFT,
+    WIRE,
+    FX_EXCHANGE,
+    BANK_TO_CASH,
+    CASH_TO_BANK,
+    CASH_TO_CASH
+  }
+
+  /** Döviz bozumunda kurun uygulanışı: hedef = kaynak × kur ya da kaynak ÷ kur. */
+  public enum RateOperation {
+    MULTIPLY,
+    DIVIDE
+  }
+
+  /** Döviz bozumunda kullanıcının girdiği iki değerden üçüncünün hesaplanışı. */
+  public enum FxCalcMode {
+    SOURCE_RATE,
+    RATE_TARGET,
+    SOURCE_TARGET
+  }
+
+  public enum TransferStatus {
+    POSTED,
+    REVERSED
+  }
+
+  public enum TransferCostKind {
+    COMMISSION,
+    FEE,
+    KMV
+  }
+
+  /** Döviz bozumunun kaynağı: tahsilat ya da önceki bozum. */
+  public enum TransferSourceKind {
+    SETTLEMENT,
+    TRANSFER
+  }
+
+  /** Şirketler arası virmanın nedeni (açıklama metnini belirler). */
+  public enum IntercompanyReason {
+    DEBT_PAID,
+    LOAN_GIVEN
+  }
+
+  /** Fon hareketinin kaynak türünden türetilemeyen sınıfı ({@code fund_transaction.category}). */
+  public enum FundCategory {
+    EXPENSE,
+    INCOME,
+    OTHER,
+    OPENING,
+    COMMISSION,
+    FEE,
+    KMV
+  }
+
+  public enum IncomeExpenseDirection {
+    INCOME,
+    EXPENSE;
+
+    public IncomeExpenseDirection opposite() {
+      return this == INCOME ? EXPENSE : INCOME;
+    }
+  }
+
+  public enum IncomeExpenseCategory {
+    INTEREST,
+    FX_DIFF,
+    BANK_CHARGE
+  }
+
+  /** ZTO "MUHASEBE TİPİ"; sorguda taban satırdan türetilir (12.2_TASARIM §3.2.6). */
+  public enum FundAccountingType {
+    INTERCOMPANY,
+    ACCOUNT_PAYMENT,
+    ACCOUNT_COLLECTION,
+    EXPENSE,
+    VIREMENT,
+    EFT,
+    WIRE,
+    FX_EXCHANGE,
+    BANK_TO_CASH,
+    CASH_TO_BANK,
+    CASH_TO_CASH,
+    TRANSFER_COST,
+    LEGACY_TRANSFER,
+    CHECK_COLLECTION,
+    NOTE_COLLECTION,
+    CHECK_PAYMENT,
+    NOTE_PAYMENT,
+    INCOME,
+    OTHER,
+    OPENING,
+    /** 12.5'te veri üretir; 12.2'de süzgeç seçeneği olarak durur. */
+    CREDIT_DRAWDOWN,
+    /** 12.9'da veri üretir; 12.2'de süzgeç seçeneği olarak durur. */
+    NET_SALARY
+  }
+
+  public enum SettlementWarningCode {
+    COMPANY_ALLOCATION_EXCEEDED,
+    INVOICE_MISSING
+  }
+
+  /** {@link #CONFIRM}: kayıt için onay gerekir; {@link #INFO}: yalnız bilgi. */
+  public enum WarningSeverity {
+    CONFIRM,
+    INFO
+  }
+
+  /** Eksik fatura hesabının tarafı: cari alacağı (PAYABLE) ya da cari borcu (RECEIVABLE). */
+  public enum InvoiceSide {
+    PAYABLE,
+    RECEIVABLE
+  }
 }

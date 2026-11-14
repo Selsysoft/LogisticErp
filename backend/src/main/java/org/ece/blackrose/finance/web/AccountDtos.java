@@ -28,6 +28,7 @@ import org.ece.blackrose.finance.domain.FinanceTypes.DocumentAudience;
 import org.ece.blackrose.finance.domain.FinanceTypes.DocumentPaymentMethod;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentStatus;
+import org.ece.blackrose.finance.domain.FinanceTypes.InvoiceSide;
 import org.ece.blackrose.finance.domain.FinanceTypes.TransactionKind;
 
 /** Faz 12.1 cari uçlarının yeni DTO'ları (12.1_TASARIM §4). */
@@ -183,7 +184,8 @@ public final class AccountDtos {
       boolean penalty,
       boolean isDefault,
       boolean selectable,
-      int sortOrder) {}
+      int sortOrder,
+      boolean countsAsInvoice) {}
 
   /** Fatura bölümü; tutarlar sunucuda yeniden hesaplanır, istemcinin toplamları alınmaz. */
   public record AccountDocumentTaxRequest(
@@ -345,11 +347,30 @@ public final class AccountDtos {
       BigDecimal receivable,
       BigDecimal collection) {}
 
+  /**
+   * Kırılımlı bakiye. Fatura toplamları defter tabanlıdır (12.2 §3.7, S-16/S-19); {@code
+   * invoiceGaps} şirket başına satırlar ve {@code companyId = null} konsolide satırdır.
+   */
   public record AccountBalanceBreakdownResponse(
       BalanceGroupBy groupBy,
       LocalDate splitDate,
       List<BalanceBreakdownRowResponse> rows,
-      List<CurrencyAmountResponse> payableInvoiceTotals) {}
+      List<CurrencyAmountResponse> payableInvoiceTotals,
+      List<CurrencyAmountResponse> receivableInvoiceTotals,
+      List<AccountInvoiceGapResponse> invoiceGaps) {}
+
+  /**
+   * Eksik fatura satırı (12.2 §4.6): PAYABLE = cari alacağı / girilen fatura, RECEIVABLE = cari
+   * borcu / kesilen fatura; {@code missing = ledgerTotal − invoiceTotal} (eksi: fatura fazlası).
+   */
+  public record AccountInvoiceGapResponse(
+      UUID accountId,
+      InvoiceSide side,
+      UUID companyId,
+      String currency,
+      BigDecimal ledgerTotal,
+      BigDecimal invoiceTotal,
+      BigDecimal missing) {}
 
   public record AccountInvoiceRowResponse(
       String kind,

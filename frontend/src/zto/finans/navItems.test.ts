@@ -6,15 +6,28 @@ import {
   accountTransactionsPath,
   activeItemIds,
   bankAccountEditPath,
+  bankDetailPath,
+  bankEditPath,
+  canonicalTransferType,
+  cashEditPath,
+  exchangeBreakReportPath,
   EXCLUDED_ZTO_ITEMS,
+  fundActivityPath,
+  fundExtractPath,
+  fundTransactionsPath,
   isActive,
   isFinanceMenuItem,
   isModalAction,
   isNavigable,
   itemPath,
   newBankAccountPath,
+  newBankPath,
+  newCashPath,
   statementPath,
   stepOf,
+  TRANSFER_TYPE_ALIASES,
+  TRANSFER_TYPE_PARAMS,
+  transferCenterPath,
   visibleSections,
   ZTO_FINANS_BASE,
   ZTO_NAV_SECTIONS,
@@ -96,12 +109,17 @@ describe("ZTO finans menü kaydı", () => {
     for (const item of ztoItems) expect(STEPS, item.id).toContain(item.step);
   });
 
-  it("uygulanmış ekranlar: 12.1 cari ekranları, 12.1a tanım ekranları ve vitrin", () => {
+  it("uygulanmış ekranlar: 12.1 cari, 12.2 banka/kasa, 12.1a tanım ekranları ve vitrin", () => {
     expect(items.filter((i) => i.implemented).map((i) => i.id)).toEqual([
       "allTransactions",
       "quickTransaction",
       "accounts",
       "newAccount",
+      "banks",
+      "allBankTransactions",
+      "cashes",
+      "allCashTransactions",
+      "transferCenter",
       "workPlaces",
       "branchGroups",
       "companies",
@@ -115,12 +133,26 @@ describe("ZTO finans menü kaydı", () => {
       companies: "tanimlar/sirketler",
       accounts: "cari-kartlar",
       newAccount: "cari-kartlar/yeni",
+      banks: "bankalar",
+      cashes: "kasalar",
+      bankTransactions: "banka-hareketleri",
+      cashTransactions: "kasa-hareketleri",
+      transferCenter: "transfer-merkezi",
     });
     const accounts = items.find((i) => i.id === "accounts")!;
     expect(accounts.matchPrefix).toBe(true);
     const add = items.find((i) => i.id === "newAccount")!;
     expect(add.permission).toBe("FINANCE_MANAGE");
     expect(add.action).toBe("add");
+    // 12.2: beş Banka & Kasa öğesi sayfa bağlantısı; Bankalar ve Kasalar alt yollarda da etkin.
+    const bankCash = ZTO_NAV_SECTIONS.find((s) => s.id === "bankCash")!.items;
+    expect(bankCash.map((i) => [i.slug, i.step, isNavigable(i), i.matchPrefix ?? false])).toEqual([
+      ["bankalar", "12.2", true, true],
+      ["banka-hareketleri", "12.2", true, false],
+      ["kasalar", "12.2", true, true],
+      ["kasa-hareketleri", "12.2", true, false],
+      ["transfer-merkezi", "12.2", true, false],
+    ]);
     // Tüm Planlamalar 12.4'te (plan modalları).
     expect(items.find((i) => i.id === "allPlans")!.implemented).toBe(false);
   });
@@ -221,6 +253,19 @@ describe("activeItemIds (en uzun eşleşme, 12.1 §5.4 F12)", () => {
     expect(ids("/zto-finans/cari-kartlar/abc/banka-hesaplari/yeni")).toEqual(["accounts"]);
   });
 
+  it("12.2: Bankalar/Kasalar alt yolları; hareket sayfaları kendi öğesi", () => {
+    expect(ids("/zto-finans/bankalar")).toEqual(["banks"]);
+    expect(ids("/zto-finans/bankalar/yeni")).toEqual(["banks"]);
+    expect(ids("/zto-finans/bankalar/f1")).toEqual(["banks"]);
+    expect(ids("/zto-finans/bankalar/f1/duzenle")).toEqual(["banks"]);
+    expect(ids("/zto-finans/kasalar/k1/duzenle")).toEqual(["cashes"]);
+    expect(ids("/zto-finans/banka-hareketleri")).toEqual(["allBankTransactions"]);
+    expect(ids("/zto-finans/kasa-hareketleri")).toEqual(["allCashTransactions"]);
+    expect(ids("/zto-finans/transfer-merkezi")).toEqual(["transferCenter"]);
+    // Banka hesapları (cari) yolu Bankalar'ı etkin yapmaz.
+    expect(ids("/zto-finans/banka-hesaplari/b1/duzenle")).toEqual([]);
+  });
+
   it("modal öğesi etkin olmaz; eşleşme yoksa boş", () => {
     expect(ids("/zto-finans/cari-hareketler")).toEqual(["allTransactions"]);
     expect(ids("/zto-finans/tanimlar/is-yerleri/yeni")).toEqual(["workPlaces"]);
@@ -254,6 +299,95 @@ describe("yol yardımcıları", () => {
       }),
     ).toBe(
       "/zto-finans-yazdir/cari-ekstre/a1?from=2026-01-01&to=2026-12-31&currency=TRY&branchId=b1&companyId=c1&dateBasis=DOCUMENT",
+    );
+  });
+});
+
+describe("12.2 yol yardımcıları", () => {
+  it("banka ve kasa tanım yolları", () => {
+    expect(newBankPath()).toBe("/zto-finans/bankalar/yeni");
+    expect(bankDetailPath("f 1")).toBe("/zto-finans/bankalar/f%201");
+    expect(bankEditPath("f1")).toBe("/zto-finans/bankalar/f1/duzenle");
+    expect(newCashPath()).toBe("/zto-finans/kasalar/yeni");
+    expect(cashEditPath("k1")).toBe("/zto-finans/kasalar/k1/duzenle");
+  });
+
+  it("banka / kasa hareketleri", () => {
+    expect(fundTransactionsPath("BANK")).toBe("/zto-finans/banka-hareketleri");
+    expect(fundTransactionsPath("CASH", { fundId: "k1", branchId: "", currency: "TRY" })).toBe(
+      "/zto-finans/kasa-hareketleri?fundId=k1&currency=TRY",
+    );
+    expect(fundTransactionsPath("BANK", { fundId: "f1", branchId: "b1" })).toBe(
+      "/zto-finans/banka-hareketleri?fundId=f1&branchId=b1",
+    );
+  });
+
+  it("transfer merkezi derin bağlantısı (ZTO 'Gönder' kaynak, 'Al' hedef + hedef iş yeri)", () => {
+    expect(transferCenterPath()).toBe("/zto-finans/transfer-merkezi");
+    expect(
+      transferCenterPath({
+        tab: "new",
+        transferType: "eft",
+        sourceFundId: "f1",
+        sourceBranchId: "b1",
+      }),
+    ).toBe(
+      "/zto-finans/transfer-merkezi?tab=new&transferType=eft&sourceFundId=f1&sourceBranchId=b1",
+    );
+    expect(
+      transferCenterPath({
+        tab: "new",
+        transferType: "havale",
+        targetFundId: "f2",
+        targetBranchId: "b2",
+        direction: "in",
+      }),
+    ).toBe(
+      "/zto-finans/transfer-merkezi?tab=new&transferType=havale&targetFundId=f2&targetBranchId=b2&direction=in",
+    );
+    expect(transferCenterPath({ tab: "transfers" })).toBe(
+      "/zto-finans/transfer-merkezi?tab=transfers",
+    );
+  });
+
+  it("ZTO tür adları ve takma adları; bilinmeyen Virman", () => {
+    expect(TRANSFER_TYPE_PARAMS).toEqual([
+      "virman",
+      "eft",
+      "havale",
+      "exchange",
+      "dovizbozum",
+      "bankcash",
+      "bankadankasaya",
+      "cashbank",
+      "kasadanbankaya",
+      "cashcash",
+      "kasadankasaya",
+    ]);
+    for (const [alias, canonical] of Object.entries(TRANSFER_TYPE_ALIASES)) {
+      expect(canonicalTransferType(alias)).toBe(canonical);
+      expect(TRANSFER_TYPE_PARAMS).toContain(alias);
+    }
+    expect(canonicalTransferType("DovizBozum")).toBe("exchange");
+    expect(canonicalTransferType(" EFT ")).toBe("eft");
+    expect(canonicalTransferType("cashcash")).toBe("cashcash");
+    expect(canonicalTransferType("bilinmeyen")).toBe("virman");
+    expect(canonicalTransferType("")).toBe("virman");
+    expect(canonicalTransferType(null)).toBe("virman");
+    expect(canonicalTransferType(undefined)).toBe("virman");
+  });
+
+  it("yazdırma ve rapor yolları", () => {
+    expect(fundExtractPath("BANK", "f1")).toBe("/zto-finans-yazdir/banka-ekstre/f1");
+    expect(fundExtractPath("CASH", "k1", { from: "2026-11-01", to: "2026-11-14" })).toBe(
+      "/zto-finans-yazdir/kasa-ekstre/k1?from=2026-11-01&to=2026-11-14",
+    );
+    expect(fundActivityPath("f1", { from: "2026-10-14", to: "2026-11-14" })).toBe(
+      "/zto-finans-yazdir/faaliyet-raporu/f1?from=2026-10-14&to=2026-11-14",
+    );
+    expect(exchangeBreakReportPath()).toBe("/zto-finans/transfer-merkezi/doviz-bozum-raporu");
+    expect(exchangeBreakReportPath({ from: "2026-11-07", to: "2026-11-15" })).toBe(
+      "/zto-finans/transfer-merkezi/doviz-bozum-raporu?from=2026-11-07&to=2026-11-15",
     );
   });
 });

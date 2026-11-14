@@ -174,4 +174,39 @@ describe("AccountTransactionsPage", { timeout: 60_000 }, () => {
     await within(modal).findByText("Bu kayıt kendi modülünden iptal edilir.");
     expect(fakeApi.log("POST")).toEqual(["/finance/accounts/transactions/r1/void"]);
   });
+
+  it("12.2 eksik fatura: Borç kartı altında kalan ve başlıkta rozet (sunucu invoiceGaps)", async () => {
+    api();
+    fakeApi.on("GET", /^\/finance\/accounts\/a1\/balances/, (call: { path: string }) => ({
+      groupBy: call.path.includes("BRANCH") ? "BRANCH" : "CURRENCY",
+      splitDate: null,
+      rows: [balanceRow({})],
+      payableInvoiceTotals: [{ currency: "TRY", amount: 100 }],
+      receivableInvoiceTotals: [],
+      invoiceGaps: [
+        {
+          accountId: "a1",
+          side: "PAYABLE",
+          companyId: null,
+          currency: "TRY",
+          ledgerTotal: 150,
+          invoiceTotal: 100,
+          missing: 50,
+        },
+      ],
+    }));
+    open();
+    expect(
+      await screen.findByText(
+        "Kalan 50,00 ₺ için fatura bilgisi eksik.",
+        { exact: false },
+        { timeout: 20_000 },
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Eksik fatura").className).toContain("badge-danger");
+    // Popover sunucu tabanıyla (Toplam Borç = defter tabanı 150, Resmi Fatura 100).
+    fireEvent.click(screen.getByRole("button", { name: "Borç ve resmi fatura karşılaştırması" }));
+    expect(await screen.findByText("150,00 ₺")).toBeTruthy();
+    expect(screen.getByText("50,00 ₺")).toBeTruthy();
+  });
 });

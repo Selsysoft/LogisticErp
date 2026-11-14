@@ -18,6 +18,7 @@ import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.finance.domain.AccountTransaction;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountTransactionRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.LedgerDetailRow;
+import org.ece.blackrose.finance.repository.FundRepositories.IntercompanyTransferRepository;
 import org.ece.blackrose.tenant.TenantClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,7 +55,14 @@ class AccountTransactionVoidServiceTest {
     when(clock.today()).thenReturn(TODAY);
     service =
         new AccountTransactionVoidService(
-            transactions, queries, documents, settlements, accounts, invoices, clock);
+            transactions,
+            queries,
+            documents,
+            settlements,
+            accounts,
+            invoices,
+            mock(IntercompanyTransferRepository.class),
+            clock);
     when(transactions.findBySourceTypeAndSourceId(LedgerService.SOURCE_REVERSAL, id))
         .thenReturn(Optional.of(reversal));
   }

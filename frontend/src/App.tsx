@@ -240,6 +240,41 @@ const ZtoCompanyFormPage = lazyPage(
   () => import("./zto/finans/pages/definitions/CompanyFormPage"),
   "CompanyFormPage",
 );
+// ZTO banka / kasa / transfer merkezi ekranları (12.2 §5.3).
+const ZtoBanksPage = lazyPage(() => import("./zto/finans/pages/funds/BanksPage"), "BanksPage");
+const ZtoBankFormPage = lazyPage(
+  () => import("./zto/finans/pages/funds/BankFormPage"),
+  "BankFormPage",
+);
+const ZtoBankDetailPage = lazyPage(
+  () => import("./zto/finans/pages/funds/BankDetailPage"),
+  "BankDetailPage",
+);
+const ZtoCashesPage = lazyPage(() => import("./zto/finans/pages/funds/CashesPage"), "CashesPage");
+const ZtoCashFormPage = lazyPage(
+  () => import("./zto/finans/pages/funds/CashFormPage"),
+  "CashFormPage",
+);
+const ZtoFundTransactionsPage = lazyPage(
+  () => import("./zto/finans/pages/fundTransactions/FundTransactionsPage"),
+  "FundTransactionsPage",
+);
+const ZtoFundExtractPage = lazyPage(
+  () => import("./zto/finans/pages/fundTransactions/FundExtractPage"),
+  "FundExtractPage",
+);
+const ZtoFundActivityReportPage = lazyPage(
+  () => import("./zto/finans/pages/fundTransactions/FundActivityReportPage"),
+  "FundActivityReportPage",
+);
+const ZtoTransferCenterPage = lazyPage(
+  () => import("./zto/finans/pages/transferCenter/TransferCenterPage"),
+  "TransferCenterPage",
+);
+const ZtoExchangeBreakReportPage = lazyPage(
+  () => import("./zto/finans/pages/transferCenter/ExchangeBreakReportPage"),
+  "ExchangeBreakReportPage",
+);
 // Bileşen vitrini yalnız geliştirme ortamında; üretim paketine girmez.
 const ZtoShowcasePage = import.meta.env.DEV
   ? lazyPage(() => import("./zto/finans/pages/ShowcasePage"), "ShowcasePage")
@@ -291,6 +326,43 @@ export function App() {
                       söküldükçe portal kapsayıcısı (ref → state) sonsuz güncelleme döngüsüne girer. */}
                   <Suspense fallback={null}>
                     <ZtoAccountStatementPage />
+                  </Suspense>
+                </ZtoFinansRoot>
+              </RequirePermission>
+            }
+          />
+          {/* 12.2 yazdırma sayfaları (ZTO BankExtract/CashExtract/ActivityReport): aynı kabuk dışı desen. */}
+          <Route
+            path="/zto-finans-yazdir/banka-ekstre/:id"
+            element={
+              <RequirePermission permission="FINANCE_VIEW">
+                <ZtoFinansRoot className="zto-print zto-page-fund-extract">
+                  <Suspense fallback={null}>
+                    <ZtoFundExtractPage kind="BANK" />
+                  </Suspense>
+                </ZtoFinansRoot>
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/zto-finans-yazdir/kasa-ekstre/:id"
+            element={
+              <RequirePermission permission="FINANCE_VIEW">
+                <ZtoFinansRoot className="zto-print zto-page-fund-extract">
+                  <Suspense fallback={null}>
+                    <ZtoFundExtractPage kind="CASH" />
+                  </Suspense>
+                </ZtoFinansRoot>
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/zto-finans-yazdir/faaliyet-raporu/:id"
+            element={
+              <RequirePermission permission="FINANCE_VIEW">
+                <ZtoFinansRoot className="zto-print zto-page-fund-activity-report">
+                  <Suspense fallback={null}>
+                    <ZtoFundActivityReportPage />
                   </Suspense>
                 </ZtoFinansRoot>
               </RequirePermission>
@@ -363,6 +435,54 @@ export function App() {
                     <ZtoBankAccountFormPage mode="edit" />
                   </ZtoRequirePermission>
                 }
+              />
+              <Route path="bankalar" element={<ZtoBanksPage />} />
+              <Route
+                path="bankalar/yeni"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_MANAGE">
+                    <ZtoBankFormPage mode="add" />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route path="bankalar/:id" element={<ZtoBankDetailPage />} />
+              <Route
+                path="bankalar/:id/duzenle"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_MANAGE">
+                    <ZtoBankFormPage mode="edit" />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route path="kasalar" element={<ZtoCashesPage />} />
+              <Route
+                path="kasalar/yeni"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_MANAGE">
+                    <ZtoCashFormPage mode="add" />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="kasalar/:id/duzenle"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_MANAGE">
+                    <ZtoCashFormPage mode="edit" />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="banka-hareketleri"
+                element={<ZtoFundTransactionsPage key="BANK" kind="BANK" />}
+              />
+              <Route
+                path="kasa-hareketleri"
+                element={<ZtoFundTransactionsPage key="CASH" kind="CASH" />}
+              />
+              <Route path="transfer-merkezi" element={<ZtoTransferCenterPage />} />
+              <Route
+                path="transfer-merkezi/doviz-bozum-raporu"
+                element={<ZtoExchangeBreakReportPage />}
               />
               <Route
                 path="tanimlar/is-yerleri"

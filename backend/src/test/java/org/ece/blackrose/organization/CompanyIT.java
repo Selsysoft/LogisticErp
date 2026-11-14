@@ -476,13 +476,19 @@ class CompanyIT extends AbstractIntegrationTest {
 
     int year = tenantToday().getYear();
     JsonNode series = body(send(t, get(COMPANIES + "/" + a + "/document-series")));
-    assertThat(series).hasSize(2);
+    // Varsayılan şirket: V25 (NF, DF) + V32 (VRM, SVR; Faz 12.2) serileri, belge türü sırasıyla.
+    assertThat(series).hasSize(4);
     assertThat(series.get(0).get("docType").asText()).isEqualTo("FREIGHT_INVOICE");
     assertThat(series.get(0).get("sample").asText()).isEqualTo("NF-%d-000001".formatted(year));
-    assertThat(series.get(1).get("sample").asText()).isEqualTo("DF-%d-000001".formatted(year));
+    assertThat(series.get(1).get("sample").asText()).isEqualTo("VRM-%d-000001".formatted(year));
+    assertThat(series.get(2).get("sample").asText()).isEqualTo("SVR-%d-000001".formatted(year));
+    assertThat(series.get(3).get("sample").asText()).isEqualTo("DF-%d-000001".formatted(year));
     JsonNode bSeries = body(send(t, get(COMPANIES + "/" + b + "/document-series")));
+    assertThat(bSeries).hasSize(4);
     assertThat(bSeries.get(0).get("prefix").asText()).isEqualTo("SIR2-NF");
-    assertThat(bSeries.get(1).get("prefix").asText()).isEqualTo("SIR2-DF");
+    assertThat(bSeries.get(1).get("prefix").asText()).isEqualTo("SIR2-VRM");
+    assertThat(bSeries.get(2).get("prefix").asText()).isEqualTo("SIR2-SVR");
+    assertThat(bSeries.get(3).get("prefix").asText()).isEqualTo("SIR2-DF");
 
     String seriesId = series.get(0).get("id").asText();
     String seriesPath = COMPANIES + "/" + a + "/document-series/" + seriesId;

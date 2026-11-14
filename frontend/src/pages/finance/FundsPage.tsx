@@ -1,62 +1,236 @@
-import { Alert, Button, Link, Stack, TextField } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Link,
+  Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+} from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import { apiGet, apiRequest } from "../../api/client";
+import { ErrorState } from "../../components/ErrorState";
+import { transferCenterPath } from "../../zto/finans/navItems";
 import {
+  type Column,
   DataTable,
   FormDialog,
   formatAmount,
   formatDate,
+  localizeFinanceError,
   QueryState,
   SectionHeader,
   shiftDays,
   today,
   useBranchOptions,
   useCan,
+  useCompanyName,
   useCurrencies,
   useFunds,
+  useMultiCompany,
   usePaging,
 } from "./common";
-import { Fund, Statement } from "./types";
+import { useFund, useSetFundActive } from "./fundApi";
+import { Fund, FundKind, Statement } from "./types";
 
 type Dialog = "fund" | "transfer" | "manual" | null;
+type KindFilter = "ALL" | FundKind;
 
 /** Transfer hedefleri: kaynak fon hariç, kaynak seçiliyse yalnız onun şirketinin fonları. */
 export function transferTargets(funds: Fund[] | undefined, fromFundId: string) {
   const from = funds?.find((fund) => fund.id === fromFundId);
   return (funds ?? [])
-    .filter((fund) => fund.id !== from?.id && (!from || fund.companyId === from.companyId))
+    .filter(
+      (fund) =>
+        fund.id !== from?.id &&
+        fund.active !== false &&
+        (!from || fund.companyId === from.companyId),
+    )
     .map((fund) => ({ value: fund.id, label: `${fund.name} (${fund.currency})` }));
 }
 
+/** Fon listesi satırı ya da şirket × para birimi toplam satırı (≥ 2 şirkette). */
+export type FundListRow =
+  | { type: "fund"; key: string; fund: Fund }
+  | { type: "total"; key: string; companyId: string; currency: string; balance: number };
+
+/**
+ * Banka/Kasa süzgeci ve ≥ 2 şirkette şirket grupları (12.2 §5.13): fonlar şirkete göre kararlı
+ * sırada, her şirket grubunun sonunda para birimi başına bakiye toplamı.
+ */
+export function fundListRows(
+  funds: readonly Fund[],
+  kind: KindFilter,
+  groupByCompany: boolean,
+): FundListRow[] {
+  const visible = funds.filter((fund) => kind === "ALL" || fund.kind === kind);
+  if (!groupByCompany) {
+    return visible.map((fund) => ({ type: "fund", key: fund.id, fund }));
+  }
+  const order: string[] = [];
+  const groups = new Map<string, Fund[]>();
+  for (const fund of visible) {
+    const list = groups.get(fund.companyId);
+    if (list) {
+      list.push(fund);
+    } else {
+      order.push(fund.companyId);
+      groups.set(fund.companyId, [fund]);
+    }
+  }
+  const rows: FundListRow[] = [];
+  for (const companyId of order) {
+    const list = groups.get(companyId) ?? [];
+    const totals = new Map<string, number>();
+    for (const fund of list) {
+      rows.push({ type: "fund", key: fund.id, fund });
+      totals.set(
+        fund.currency,
+        Math.round(((totals.get(fund.currency) ?? 0) + Number(fund.balance)) * 100) / 100,
+      );
+    }
+    for (const [currency, balance] of [...totals].sort(([a], [b]) => a.localeCompare(b))) {
+      rows.push({
+        type: "total",
+        key: `total-${companyId}-${currency}`,
+        companyId,
+        currency,
+        balance,
+      });
+    }
+  }
+  return rows;
+}
+
 export function FundsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const client = useQueryClient();
   const canManage = useCan("FINANCE_MANAGE");
   const canPost = useCan("FINANCE_PAYMENT_CREATE");
+  const multiCompany = useMultiCompany();
+  const companyName = useCompanyName();
   const { branches, optionsFor, companyId } = useBranchOptions();
   // Liste aktif şirketin fonları (konsolidede tümü); transfer seçenekleri de aynı listeden.
   const funds = useFunds(companyId);
   const currencies = useCurrencies();
   const [dialog, setDialog] = useState<Dialog>(null);
+  const [kind, setKind] = useState<KindFilter>("ALL");
   // Çift tıklama veya yeniden deneme ikinci transfer üretmesin diye pencere başına tek anahtar.
   const [transferKey, setTransferKey] = useState("");
+  const setActive = useSetFundActive();
 
   const close = () => setDialog(null);
   const saved = () => {
     close();
     void client.invalidateQueries({ queryKey: ["finance"] });
   };
-  const fundOptions = (funds.data ?? []).map((fund) => ({
-    value: fund.id,
-    label: `${fund.name} (${fund.currency})`,
-  }));
+  // Pasif fonla yeni hareket yapılamaz (422 FUND_INACTIVE); seçeneklerde yalnız aktifler.
+  const fundOptions = (funds.data ?? [])
+    .filter((fund) => fund.active !== false)
+    .map((fund) => ({
+      value: fund.id,
+      label: `${fund.name} (${fund.currency})`,
+    }));
+  const translateKnown = (key: string) => (i18n.exists(key) ? t(key) : null);
+
+  const fundColumn = (
+    header: string,
+    render: (fund: Fund) => ReactNode,
+    align?: "right",
+  ): Column<FundListRow> => ({
+    header,
+    align,
+    render: (row) => (row.type === "fund" ? render(row.fund) : null),
+  });
+  const columns: Column<FundListRow>[] = [
+    ...(multiCompany
+      ? [
+          {
+            header: t("finance.field.company"),
+            render: (row: FundListRow) =>
+              row.type === "fund" ? (
+                companyName(row.fund.companyId)
+              ) : (
+                <strong>
+                  {t("finance.fund.companyTotal", { company: companyName(row.companyId) })}
+                </strong>
+              ),
+          },
+        ]
+      : []),
+    fundColumn(t("finance.field.code"), (fund) => fund.code),
+    fundColumn(t("finance.field.name"), (fund) => (
+      <>
+        <Link component={RouterLink} to={`/finance/funds/${fund.id}`}>
+          {fund.name}
+        </Link>
+        {fund.active === false && (
+          <Chip
+            size="small"
+            variant="outlined"
+            label={t("finance.definitions.passive")}
+            sx={{ ml: 1 }}
+          />
+        )}
+      </>
+    )),
+    fundColumn(t("finance.field.kind"), (fund) => t(`finance.fundKind.${fund.kind}`)),
+    fundColumn(t("finance.field.bankName"), (fund) => fund.bankName),
+    fundColumn(t("finance.field.iban"), (fund) => fund.iban),
+    {
+      header: t("finance.field.balance"),
+      align: "right",
+      render: (row) =>
+        row.type === "fund" ? (
+          `${formatAmount(row.fund.balance)} ${row.fund.currency}`
+        ) : (
+          <strong>{`${formatAmount(row.balance)} ${row.currency}`}</strong>
+        ),
+    },
+    ...(canManage
+      ? [
+          {
+            header: t("common.actions"),
+            align: "right" as const,
+            render: (row: FundListRow) =>
+              row.type === "fund" && (
+                <Button
+                  size="small"
+                  color={row.fund.active === false ? "primary" : "warning"}
+                  disabled={setActive.isPending}
+                  onClick={() =>
+                    setActive.mutate({ id: row.fund.id, active: row.fund.active === false })
+                  }
+                >
+                  {row.fund.active === false
+                    ? t("finance.action.activate")
+                    : t("finance.action.deactivate")}
+                </Button>
+              ),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <>
       <SectionHeader title={t("finance.tabs.funds")}>
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={kind}
+          aria-label={t("finance.field.kind")}
+          onChange={(_, value: KindFilter | null) => value && setKind(value)}
+        >
+          <ToggleButton value="ALL">{t("finance.fund.all")}</ToggleButton>
+          <ToggleButton value="BANK">{t("finance.fundKind.BANK")}</ToggleButton>
+          <ToggleButton value="CASH">{t("finance.fundKind.CASH")}</ToggleButton>
+        </ToggleButtonGroup>
         {canPost && (
           <>
             <Button
@@ -84,30 +258,15 @@ export function FundsPage() {
           {t("finance.noBranch")}
         </Alert>
       )}
+      {setActive.isError && (
+        <ErrorState error={localizeFinanceError(setActive.error, translateKnown)} />
+      )}
       <QueryState isPending={funds.isPending} error={funds.error} />
       {funds.data && (
         <DataTable
-          rows={funds.data}
-          rowKey={(fund) => fund.id}
-          columns={[
-            { header: t("finance.field.code"), render: (fund) => fund.code },
-            {
-              header: t("finance.field.name"),
-              render: (fund) => (
-                <Link component={RouterLink} to={`/finance/funds/${fund.id}`}>
-                  {fund.name}
-                </Link>
-              ),
-            },
-            { header: t("finance.field.kind"), render: (f) => t(`finance.fundKind.${f.kind}`) },
-            { header: t("finance.field.bankName"), render: (fund) => fund.bankName },
-            { header: t("finance.field.iban"), render: (fund) => fund.iban },
-            {
-              header: t("finance.field.balance"),
-              align: "right",
-              render: (fund) => `${formatAmount(fund.balance)} ${fund.currency}`,
-            },
-          ]}
+          rows={fundListRows(funds.data, kind, multiCompany)}
+          rowKey={(row) => row.key}
+          columns={columns}
         />
       )}
       {dialog === "fund" && (
@@ -143,20 +302,53 @@ export function FundsPage() {
               options: optionsFor(),
             },
             { name: "bankName", label: t("finance.field.bankName") },
+            { name: "bankBranchName", label: t("finance.field.bankBranchName") },
+            { name: "accountNo", label: t("finance.field.accountNo") },
             { name: "iban", label: t("finance.field.iban") },
+            { name: "description", label: t("finance.field.description") },
+            {
+              name: "openingBalance",
+              label: t("finance.field.openingBalance"),
+              type: "signedAmount",
+              helperText: t("finance.field.openingBalanceHint"),
+            },
+            {
+              name: "openingDate",
+              label: t("finance.field.openingDate"),
+              type: "date",
+              defaultValue: today(),
+            },
             {
               name: "allowNegative",
               label: t("finance.field.allowNegative"),
               type: "checkbox",
             },
+            {
+              name: "active",
+              label: t("finance.field.active"),
+              type: "checkbox",
+              defaultValue: true,
+            },
           ]}
           onClose={close}
           onSubmit={(values, flags) =>
             apiRequest("POST", "/finance/funds", {
-              ...values,
+              code: values.code,
+              name: values.name,
+              kind: values.kind,
+              currency: values.currency,
+              branchId: values.branchId,
               bankName: values.bankName || null,
+              bankBranchName: values.bankBranchName || null,
+              accountNo: values.accountNo || null,
               iban: values.iban || null,
+              description: values.description || null,
+              // MUI yalnız vadesiz hesap açar; kredi/mevduat ilgili adımlarda (12.5/12.6).
+              accountType: "DEMAND",
+              openingBalance: values.openingBalance ? Number(values.openingBalance) : null,
+              openingDate: values.openingBalance && values.openingDate ? values.openingDate : null,
               allowNegative: flags.allowNegative,
+              active: flags.active,
             })
           }
           onSaved={saved}
@@ -198,6 +390,14 @@ export function FundsPage() {
               helperText: t("finance.field.rateHint"),
             },
           ]}
+          notice={() => (
+            <Alert severity="info" variant="outlined" role="note" sx={{ py: 0, fontSize: 13 }}>
+              {t("finance.fund.intercompanyHint")}{" "}
+              <Link component={RouterLink} to={transferCenterPath()}>
+                {t("finance.fund.transferCenter")}
+              </Link>
+            </Alert>
+          )}
           onClose={close}
           onSubmit={(values) => {
             const source = funds.data?.find((fund) => fund.id === values.fromFundId);
@@ -240,6 +440,15 @@ export function FundsPage() {
                 label: t(`finance.direction.${value}`),
               })),
             },
+            {
+              name: "category",
+              label: t("finance.field.category"),
+              type: "select",
+              options: ["EXPENSE", "INCOME", "OTHER"].map((value) => ({
+                value,
+                label: t(`finance.category.${value}`),
+              })),
+            },
             { name: "amount", label: t("finance.field.amount"), type: "amount", required: true },
             {
               name: "date",
@@ -265,6 +474,7 @@ export function FundsPage() {
               date: values.date,
               description: values.description || null,
               exchangeRate: values.exchangeRate || null,
+              ...(values.category ? { category: values.category } : {}),
             });
           }}
           onSaved={saved}
@@ -277,8 +487,10 @@ export function FundsPage() {
 export function FundDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams();
-  const funds = useFunds();
-  const fund = funds.data?.find((item) => item.id === id);
+  const multiCompany = useMultiCompany();
+  const companyName = useCompanyName();
+  // Fon adı tekil detaydan (şirket süzgecinden bağımsız; 12.2 §5.13).
+  const fund = useFund(id).data;
   const [from, setFrom] = useState(shiftDays(today(), -90));
   const [to, setTo] = useState(today());
   const paging = usePaging(50);
@@ -297,6 +509,12 @@ export function FundDetailPage() {
       <SectionHeader
         title={fund ? `${fund.name} · ${formatAmount(fund.balance)} ${fund.currency}` : ""}
       >
+        {fund && multiCompany && (
+          <Chip size="small" variant="outlined" label={companyName(fund.companyId)} />
+        )}
+        {fund?.active === false && (
+          <Chip size="small" variant="outlined" label={t("finance.definitions.passive")} />
+        )}
         <TextField
           size="small"
           type="date"
@@ -314,6 +532,17 @@ export function FundDetailPage() {
           slotProps={{ inputLabel: { shrink: true } }}
         />
       </SectionHeader>
+      {fund && (fund.accountNo || fund.bankBranchName || fund.description) && (
+        <Box sx={{ mb: 2, color: "text.secondary", fontSize: 14 }}>
+          {[
+            fund.bankBranchName && `${t("finance.field.bankBranchName")}: ${fund.bankBranchName}`,
+            fund.accountNo && `${t("finance.field.accountNo")}: ${fund.accountNo}`,
+            fund.description,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </Box>
+      )}
       <QueryState isPending={statement.isPending} error={statement.error} />
       {statement.data && (
         <Stack spacing={1}>

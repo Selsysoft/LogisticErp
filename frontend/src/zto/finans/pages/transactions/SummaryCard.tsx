@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   AccountBalanceBreakdown,
@@ -7,10 +7,11 @@ import type {
 } from "../../../../pages/finance/types";
 import { ZtoPopover, formatN2, formatNumber } from "../../../components";
 import {
-  invoiceGap,
   kindTotals,
   settlement,
   summaryOrder,
+  type GapLine,
+  type InvoiceGapView,
   type KindTotals,
 } from "./transactionsLogic";
 
@@ -27,31 +28,53 @@ export type SummaryCardProps = {
   customer: boolean;
   totals: KindTotals;
   symbol: string;
-  /** Resmi fatura toplamı (seçili para birimi; yalnız müşteri olmayanda). */
-  invoiceTotal: number;
+  /** Borç kartı popover'ı: borç ↔ resmi fatura (12.2'de sunucu `invoiceGaps`; seçili para birimi). */
+  invoice: InvoiceGapView;
+  /** 12.2 K-12.2-4: Borç (PAYABLE) ve Alacak (RECEIVABLE) kartlarının altındaki eksik fatura satırları. */
+  gapLines?: Partial<Record<"PAYABLE" | "RECEIVABLE", GapLine[]>>;
+  /** Şirket başına satırlarda şirket adı. */
+  companyName?: (companyId: string) => string;
+};
+
+/** Mini kartın tarafı: Borç → PAYABLE (cari alacağı), Alacak → RECEIVABLE (cari borcu). */
+const GAP_SIDE: Partial<Record<TransactionKind, "PAYABLE" | "RECEIVABLE">> = {
+  DEBT: "PAYABLE",
+  RECEIVABLE: "RECEIVABLE",
 };
 
 /**
  * Tek satır kombine kart (ZTO Transactions.cshtml:325-730): 4 mini istatistik (`N0`), Mahsuplaşma ve net
- * durum; müşteri olmayanda Borç kartında resmi fatura popover'ı.
+ * durum; müşteri olmayanda Borç kartında resmi fatura popover'ı. 12.2: kartın altında tam genişlikte
+ * "Borç: Kalan … için fatura bilgisi eksik." (Blackrose eki, ZTO görsel dili `small.text-danger`).
  */
-export function SummaryCard({ customer, totals, symbol, invoiceTotal }: SummaryCardProps) {
+export function SummaryCard({
+  customer,
+  totals,
+  symbol,
+  invoice,
+  gapLines,
+  companyName,
+}: SummaryCardProps) {
   const { t } = useTranslation("ztoFinans");
   const { receivableNet, payableNet, status } = settlement(customer, totals);
-  const gap = invoiceGap(totals.DEBT, invoiceTotal);
+  const gap = invoice;
+  const gapNotes = summaryOrder(customer).flatMap((kind) => {
+    const side = GAP_SIDE[kind];
+    return (side ? (gapLines?.[side] ?? []) : []).map((line) => ({ kind, line }));
+  });
 
   const invoicePopover = (
     <div className="invoice-tooltip-content">
       <div className="tooltip-info-row">
         <span className="label-text">{t("transactions.summary.totalDebt")}:</span>
         <span className="value-text">
-          {formatN2(totals.DEBT)} {symbol}
+          {formatN2(gap.ledgerTotal)} {symbol}
         </span>
       </div>
       <div className="tooltip-info-row">
         <span className="label-text">{t("transactions.summary.officialInvoice")}:</span>
         <span className="value-text">
-          {formatN2(invoiceTotal)} {symbol}
+          {formatN2(gap.invoiceTotal)} {symbol}
         </span>
       </div>
       <div className="tooltip-divider" />
@@ -199,11 +222,36 @@ export function SummaryCard({ customer, totals, symbol, invoiceTotal }: SummaryC
               </div>
             </div>
           </div>
+          {gapNotes.length > 0 && (
+            // Dar mini kart içinde metin harf harf kırılıyordu (son kapı e2e); notlar kartın
+            // altında tam genişlikte, kart türü etiketiyle.
+            <div className="invoice-gap-notes" style={GAP_NOTES}>
+              {gapNotes.map(({ kind, line }) => (
+                <small key={`${kind}-${line.key}`} className="text-danger invoice-gap-note">
+                  <i className="fas fa-exclamation-circle mr-1" aria-hidden="true" />
+                  {t(`transactions.kind.${kind}`)}:{" "}
+                  {line.companyId && companyName ? `${companyName(line.companyId)}: ` : ""}
+                  {t("transactions.summary.invoiceGap", {
+                    amount: `${formatN2(line.missing)} ${symbol}`,
+                  })}
+                </small>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
+const GAP_NOTES: CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "2px 16px",
+  padding: "6px 12px 0",
+  fontSize: 11,
+  lineHeight: 1.3,
+};
 
 /** Devir Kırılımı — Genel Toplam (TR:651-735): devir öncesi / sonrası / genel; kapalı açılır. */
 export function RolloverBreakdown({

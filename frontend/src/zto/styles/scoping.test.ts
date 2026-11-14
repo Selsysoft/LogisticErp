@@ -7,6 +7,9 @@ import {
   isZtoStyleFile,
   PAGE_SCOPE_ALIASES,
   scopeForFile,
+  scopeSelectors,
+  scopesForFile,
+  SHARED_SCOPES,
   scopeSelector,
   transform,
   ZTO_SCOPE,
@@ -157,7 +160,8 @@ describe("12.1 sayfa CSS iskeletleri", () => {
       read("pages/_index.css").matchAll(/^@import "([^"]+)";/gm),
       (m) => m[1],
     );
-    expect(imports.slice(-8)).toEqual([
+    const start = imports.indexOf("./scoped/customer-accounts.css");
+    expect(imports.slice(start, start + 8)).toEqual([
       "./scoped/customer-accounts.css",
       "./scoped/account-form.css",
       "./scoped/bank-accounts.css",
@@ -167,9 +171,78 @@ describe("12.1 sayfa CSS iskeletleri", () => {
       "./scoped/all-transactions-page.css",
       "./quick-cari.css",
     ]);
-    for (const file of imports.slice(-8)) {
+    for (const file of imports.slice(start, start + 8)) {
       expect(read(`pages/${file.slice(2)}`)).toMatch(/Kaynak: /);
     }
+  });
+});
+
+describe("12.2 sayfa CSS iskeletleri ve paylaşılan kapsam (§5.4)", () => {
+  const PAGES = [
+    "banks",
+    "bank-form",
+    "bank-detail",
+    "cashes",
+    "cash-form",
+    "bank-transactions",
+    "cash-transactions",
+    "fund-extract",
+    "fund-activity-report",
+    "transfer-center",
+    "exchange-break-report",
+  ];
+
+  it("_index.css 12.1 bloğundan sonra on bir dosyayı sırayla içe aktarır; her dosyada kaynak", () => {
+    const imports = Array.from(
+      read("pages/_index.css").matchAll(/^@import "([^"]+)";/gm),
+      (m) => m[1],
+    );
+    expect(imports.slice(-PAGES.length)).toEqual(PAGES.map((p) => `./scoped/${p}.css`));
+    expect(imports.indexOf("./quick-cari.css")).toBeLessThan(imports.indexOf("./scoped/banks.css"));
+    for (const page of PAGES) {
+      expect(read(`pages/scoped/${page}.css`)).toMatch(/Kaynak: ZtoFabrika\//);
+    }
+  });
+
+  it("banks.css iki köke yazılır; diğer dosyalar tek kök", () => {
+    expect(SHARED_SCOPES).toEqual({ banks: ["banks", "cashes"] });
+    const banks = "F:/p/frontend/src/zto/styles/pages/scoped/banks.css";
+    expect(scopesForFile(banks)).toEqual([
+      ".zto-finans.zto-page-banks",
+      ".zto-finans.zto-page-cashes",
+    ]);
+    expect(scopeForFile(banks)).toBe(".zto-finans.zto-page-banks");
+    expect(scopesForFile("F:/p/frontend/src/zto/styles/pages/scoped/cashes.css")).toEqual([
+      ".zto-finans.zto-page-cashes",
+    ]);
+    expect(scopesForFile(undefined)).toEqual([".zto-finans"]);
+  });
+
+  it("scopeSelectors: her kapsam için bir seçici; kapsamlı seçici bir kez", () => {
+    const scopes = [".zto-finans.zto-page-banks", ".zto-finans.zto-page-cashes"];
+    expect(scopeSelectors([".card", "body.x y", " .zto-finans .z "], scopes)).toEqual([
+      ".zto-finans.zto-page-banks .card",
+      ".zto-finans.zto-page-cashes .card",
+      ".zto-finans.zto-page-banks.x y",
+      ".zto-finans.zto-page-cashes.x y",
+      ".zto-finans .z",
+    ]);
+    expect(scopeSelectors([".a", "html"], [".zto-finans"])).toEqual([
+      ".zto-finans .a",
+      ".zto-finans",
+    ]);
+  });
+
+  it("paylaşılan dosyadaki kural iki köke yazılır ve yeniden ziyarette çoğalmaz", async () => {
+    const css = await scope(
+      ".account-card { color: red } @media print { .x { margin: 0 } }",
+      "F:/p/frontend/src/zto/styles/pages/scoped/banks.css",
+    );
+    expect(css).toContain(
+      ".zto-finans.zto-page-banks .account-card, .zto-finans.zto-page-cashes .account-card {",
+    );
+    expect(css).toContain(".zto-finans.zto-page-banks .x, .zto-finans.zto-page-cashes .x {");
+    expect(css.match(/zto-page-banks \.account-card/g)).toHaveLength(1);
   });
 });
 

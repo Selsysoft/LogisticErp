@@ -135,9 +135,16 @@ describe(
       expect(modal.querySelector(".modal-dialog")?.className).toContain("modal-lg");
       expect(within(modal).getByText("Bir cari arayın ve seçin")).toBeTruthy();
 
-      const input = within(modal).getByPlaceholderText("Cari ara — ad veya kod yazın...");
-      fireEvent.change(input, { target: { value: "şah" } });
-      const option = await within(modal).findByRole("option", {}, { timeout: 20_000 });
+      // Yük altında modal geç gelen bir sorgu yanıtıyla yeniden çizilip girdiyi sıfırlayabilir;
+      // bu yüzden yazma + seçenek bekleme birlikte yeniden denenir.
+      const option = await waitFor(
+        async () => {
+          const input = within(modal).getByPlaceholderText("Cari ara — ad veya kod yazın...");
+          fireEvent.change(input, { target: { value: "şah" } });
+          return within(modal).findByRole("option", {}, { timeout: 3_000 });
+        },
+        { timeout: 20_000 },
+      );
       fireEvent.click(option);
       const transactions = await within(modal).findByRole(
         "link",

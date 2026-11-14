@@ -1,6 +1,7 @@
 package org.ece.blackrose.finance.web;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,6 +19,8 @@ import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.CompanyType;
 import org.ece.blackrose.finance.domain.FinanceTypes.DensityLevel;
 import org.ece.blackrose.finance.domain.FinanceTypes.Direction;
+import org.ece.blackrose.finance.domain.FinanceTypes.FundAccountType;
+import org.ece.blackrose.finance.domain.FinanceTypes.FundCategory;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundDirection;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentDirection;
@@ -29,7 +32,10 @@ import org.ece.blackrose.finance.domain.FinanceTypes.PlanStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementMethod;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementType;
+import org.ece.blackrose.finance.domain.FinanceTypes.SettlementWarningCode;
+import org.ece.blackrose.finance.domain.FinanceTypes.WarningSeverity;
 import org.ece.blackrose.finance.web.AccountDtos.AccountCompanyLimitResponse;
+import org.ece.blackrose.finance.web.AccountDtos.AccountInvoiceGapResponse;
 import org.ece.blackrose.finance.web.AccountDtos.AccountPlanSummaryResponse;
 import org.ece.blackrose.finance.web.AccountDtos.CurrencyAmountResponse;
 import org.ece.blackrose.finance.web.AccountDtos.SaveBankAccountRequest;
@@ -267,6 +273,12 @@ public final class FinanceDtos {
       BigDecimal daysOver90,
       BigDecimal total) {}
 
+  /**
+   * Yeni banka/kasa hesabı. 12.2: hesap türü (kullanıcı yolunda yalnız DEMAND), hesap no (şifreli
+   * saklanır), banka şube adı, açıklama, aktiflik ve işaretli açılış bakiyesi (12.2_TASARIM §4.1).
+   * {@code openingRate} döviz cinsi açılışın elle kuru (TL'de yok sayılır; o tarihte kur yoksa
+   * zorunlu — OK-12.2-37).
+   */
   public record CreateFundRequest(
       @NotBlank @Size(max = 50) String code,
       @NotBlank @Size(max = 200) String name,
@@ -275,15 +287,41 @@ public final class FinanceDtos {
       @NotNull UUID branchId,
       @Size(max = 100) String bankName,
       @Size(max = 34) String iban,
-      boolean allowNegative) {}
+      boolean allowNegative,
+      FundAccountType accountType,
+      @Size(max = 40) String accountNo,
+      @Size(max = 100) String bankBranchName,
+      @Size(max = 500) String description,
+      Boolean active,
+      @Digits(integer = 15, fraction = 2) BigDecimal openingBalance,
+      LocalDate openingDate,
+      @Positive BigDecimal openingRate) {}
 
+  /**
+   * Hesap düzenleme. {@code accountNo}, {@code bankBranchName}, {@code description} verildiği gibi
+   * yazılır (null siler, {@code bankName}/{@code iban} gibi); {@code active} ve {@code
+   * openingBalance} null ise değişmez. {@code openingRate} döviz cinsi açılışın elle kuru (TL'de
+   * yok sayılır; kur tablosu boşken zorunlu — OK-12.2-37).
+   */
   public record UpdateFundRequest(
       @NotBlank @Size(max = 200) String name,
       @NotNull UUID branchId,
       @Size(max = 100) String bankName,
       @Size(max = 34) String iban,
-      boolean allowNegative) {}
+      boolean allowNegative,
+      @Size(max = 40) String accountNo,
+      @Size(max = 100) String bankBranchName,
+      @Size(max = 500) String description,
+      Boolean active,
+      @Digits(integer = 15, fraction = 2) BigDecimal openingBalance,
+      LocalDate openingDate,
+      @Positive BigDecimal openingRate) {}
 
+  /**
+   * Banka/kasa hesabı. {@code balance} tüm tarihlerin bakiyesi; {@code currentBalance} {@code asOf}
+   * dahil, {@code futureCount}/{@code futureNet} {@code asOf} sonrası hareketler. {@code accountNo}
+   * her zaman maskelidir.
+   */
   public record FundResponse(
       UUID id,
       String code,
@@ -295,14 +333,27 @@ public final class FinanceDtos {
       String bankName,
       String iban,
       boolean allowNegative,
-      BigDecimal balance) {}
+      BigDecimal balance,
+      FundAccountType accountType,
+      String accountNo,
+      String bankBranchName,
+      String description,
+      boolean active,
+      BigDecimal currentBalance,
+      int futureCount,
+      BigDecimal futureNet,
+      BigDecimal openingBalance,
+      LocalDate openingDate,
+      long transactionCount) {}
 
+  /** Manuel hareket; {@code category} EXPENSE/INCOME/OTHER (boşsa OTHER). */
   public record ManualFundTransactionRequest(
       @NotNull FundDirection direction,
       @NotNull @Valid Money money,
       @NotNull LocalDate date,
       @Size(max = 500) String description,
-      @Positive BigDecimal exchangeRate) {}
+      @Positive BigDecimal exchangeRate,
+      FundCategory category) {}
 
   public record TransferRequest(
       @NotNull UUID fromFundId,
@@ -321,7 +372,9 @@ public final class FinanceDtos {
       LocalDate transactionDate,
       String description,
       String sourceType,
-      UUID sourceId) {}
+      UUID sourceId,
+      UUID companyId,
+      FundCategory category) {}
 
   public record TransferResponse(UUID transferId) {}
 
@@ -369,6 +422,10 @@ public final class FinanceDtos {
       UUID toAccountId,
       UUID accountTransferId) {}
 
+  /**
+   * Ödeme/tahsilat. {@code confirmWarnings} yalnız kullanıcı kayıt uçlarında anlamlıdır: şirket
+   * dağılımı uyarısı (12.2 §3.6) onaylandıysa {@code true}.
+   */
   public record SettlementRequest(
       @NotNull SettlementMethod method,
       UUID accountId,
@@ -380,7 +437,62 @@ public final class FinanceDtos {
       @NotNull @Valid Money money,
       @NotNull LocalDate date,
       @Size(max = 500) String description,
-      @Positive BigDecimal exchangeRate) {}
+      @Positive BigDecimal exchangeRate,
+      Boolean confirmWarnings) {
+
+    /** Türetilmiş akışlar (plan ödemesi, araç gideri, sürücü avansı, virman): onay alanı yok. */
+    @SuppressWarnings("java:S107")
+    public SettlementRequest(
+        SettlementMethod method,
+        UUID accountId,
+        UUID branchId,
+        UUID fundAccountId,
+        UUID expenseItemId,
+        UUID instrumentId,
+        NewInstrument instrument,
+        Money money,
+        LocalDate date,
+        String description,
+        BigDecimal exchangeRate) {
+      this(
+          method,
+          accountId,
+          branchId,
+          fundAccountId,
+          expenseItemId,
+          instrumentId,
+          instrument,
+          money,
+          date,
+          description,
+          exchangeRate,
+          null);
+    }
+  }
+
+  // --- 12.2 §4.5 ödeme/tahsilat uyarıları
+
+  /** {@code POST /settlements/check} yanıtı (yazmaz). */
+  public record SettlementCheckResponse(
+      List<SettlementWarningResponse> warnings, List<AccountInvoiceGapResponse> invoiceGaps) {}
+
+  /**
+   * Şirket dağılımı uyarısı. Tutarlar kullanıcının kapsamındaki iş yerlerinden; kapsam dışı kısım
+   * yalnız {@code partialScope}/{@code otherHiddenExists} bayraklarıyla bildirilir (SEC-12.2-02).
+   */
+  public record SettlementWarningResponse(
+      SettlementWarningCode code,
+      WarningSeverity severity,
+      String currency,
+      UUID companyId,
+      BigDecimal companyOutstanding,
+      BigDecimal amount,
+      BigDecimal excess,
+      List<CompanyOutstandingResponse> others,
+      boolean partialScope,
+      boolean otherHiddenExists) {}
+
+  public record CompanyOutstandingResponse(UUID companyId, BigDecimal outstanding) {}
 
   public record SettlementResponse(
       UUID id,

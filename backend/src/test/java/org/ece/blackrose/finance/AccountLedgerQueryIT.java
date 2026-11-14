@@ -595,6 +595,8 @@ class AccountLedgerQueryIT extends AccountTestSupport {
     body.put("fundAccountId", w.fundA1());
     body.put("money", Map.of("amount", amount, "currency", "TRY"));
     body.put("date", TODAY.toString());
+    // 12.2 B4: şirket dağılımı uyarısı onaylı (409 CONFIRMATION_REQUIRED olmasın).
+    body.put("confirmWarnings", true);
     return id(sendJson(w.t(), null, post(FINANCE + path), body));
   }
 

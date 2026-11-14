@@ -38,6 +38,8 @@ import {
   currencyButtons,
   defaultSeason,
   effectiveLimits,
+  invoiceGapLines,
+  invoiceGapView,
   isCustomerType,
   kindTotals,
   newestFirst,
@@ -242,6 +244,21 @@ export function AccountTransactionsPage() {
     activeCompanies(companies).find((c) => c.id === activeCompanyId)?.shortName ?? null;
   const invoiceTotal =
     summary.data?.payableInvoiceTotals.find((x) => x.currency === currency)?.amount ?? 0;
+  // 12.2 (§5.14): eksik fatura sunucu `invoiceGaps`'inden; şirket seçiliyse o şirket, konsolidede ≥ 2
+  // şirkette şirket başına satırlar. Alan yoksa (eski sunucu) 12.1 hesabı.
+  const gapCompany = multiCompany ? activeCompanyId : null;
+  const invoiceGaps = summary.data?.invoiceGaps;
+  const invoice = invoiceGapView(invoiceGaps, "PAYABLE", currency, gapCompany, {
+    ledgerTotal: totals.DEBT,
+    invoiceTotal,
+  });
+  const gapLines = {
+    PAYABLE: invoiceGapLines(invoiceGaps, "PAYABLE", currency, gapCompany, multiCompany),
+    RECEIVABLE: invoiceGapLines(invoiceGaps, "RECEIVABLE", currency, gapCompany, multiCompany),
+  };
+  const hasGap = gapLines.PAYABLE.length > 0 || gapLines.RECEIVABLE.length > 0;
+  const companyShortName = (cid: string) =>
+    activeCompanies(companies).find((c) => c.id === cid)?.shortName ?? "-";
   const tabs = tabOrder(customer);
   const options = seasonOptions(seasons, {
     all: t("transactions.header.allSeasons"),
@@ -326,6 +343,12 @@ export function AccountTransactionsPage() {
                           </span>
                         </div>
                       )}
+                      {hasGap && (
+                        <span className="badge badge-danger">
+                          <i className="fas fa-exclamation-circle mr-1" aria-hidden="true" />
+                          {t("transactions.header.missingInvoice")}
+                        </span>
+                      )}
                     </div>
                     <div
                       id="currencyButtonsContainer"
@@ -401,7 +424,9 @@ export function AccountTransactionsPage() {
                       customer={customer}
                       totals={totals}
                       symbol={symbol}
-                      invoiceTotal={invoiceTotal}
+                      invoice={invoice}
+                      gapLines={gapLines}
+                      companyName={companyShortName}
                     />
                     {activeSeason && breakdown.data && (
                       <RolloverBreakdown

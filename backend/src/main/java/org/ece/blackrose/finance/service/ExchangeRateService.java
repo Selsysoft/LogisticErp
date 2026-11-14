@@ -2,6 +2,7 @@ package org.ece.blackrose.finance.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Optional;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.common.money.Money;
 import org.ece.blackrose.common.money.MoneyRounding;
@@ -54,6 +55,19 @@ public class ExchangeRateService {
                         money.currency() + " için kur bulunamadı. Lütfen kuru elle girin."));
     return new Conversion(
         rate.getRate(), rate.getRateDate(), round(money.amount().multiply(rate.getRate())));
+  }
+
+  /**
+   * Salt okuma: {@link #convert}'in kullanacağı kur (tarih ya da öncesindeki son kur); TL için 1.
+   * İstisna fırlatmaz — işlem içinde kur yokluğunu yazımdan önce denetlemek için (12.2 §3.3.1 F7).
+   */
+  public Optional<BigDecimal> findRate(String currency, LocalDate date) {
+    if (LOCAL_CURRENCY.equals(currency)) {
+      return Optional.of(BigDecimal.ONE);
+    }
+    return rates
+        .findFirstByCurrencyAndRateDateLessThanEqualOrderByRateDateDesc(currency, date)
+        .map(ExchangeRate::getRate);
   }
 
   private BigDecimal round(BigDecimal value) {
