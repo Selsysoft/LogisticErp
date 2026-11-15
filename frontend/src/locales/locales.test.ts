@@ -55,6 +55,8 @@ function sourceFiles(dir: string): string[] {
 const TWELVE_ONE_PARTS = ["accounts", "transactions", "allTransactions", "quickCari"] as const;
 /** 12.2 ekranlarının ztoFinans parçaları (12.2 §5.15; FE-0 iskelet, FE-1/FE-2 doldurur). */
 const TWELVE_TWO_PARTS = ["funds", "fundTransactions", "transferCenter"] as const;
+/** 12.2a ekranlarının ztoFinans parçaları (12.2a §5.15; FE-0 iskelet, FE-1/FE-2 doldurur). */
+const TWELVE_TWO_A_PARTS = ["payments", "collections", "settlementModals", "dailyReport"] as const;
 
 const translationLeaves = flatten(tr.translation);
 const ztoLeaves = flatten(tr.ztoFinans);
@@ -142,6 +144,11 @@ describe("translation ad alanı (eski i18n.ts'ten bölünen)", () => {
     expect(i18n.t("common.a11y.statementCaption", { branch: "Merkez", currency: "TRY" })).toBe(
       "Merkez — TRY ekstresi",
     );
+    // 12.2a (§5.15, Rev 1 F8).
+    expect(i18n.t("common.a11y.fxProgress")).toBe("Döviz bozum oranı");
+    expect(i18n.t("common.a11y.phase123")).toBe("Faz 12.3'te");
+    expect(i18n.t("common.a11y.phase124")).toBe("Faz 12.4'te");
+    expect(i18n.t("common.a11y.maskedEmployee")).toBe("Personel (gizli)");
   });
 });
 
@@ -167,10 +174,14 @@ describe("ztoFinans ad alanı", () => {
       "funds",
       "fundTransactions",
       "transferCenter",
+      "payments",
+      "collections",
+      "settlementModals",
+      "dailyReport",
     ]);
     expect(i18n.options.ns).toEqual(["translation", "ztoFinans"]);
     // 12.2 parçaları kayıtlı nesneler (boş olabilir; sahipleri doldurur).
-    for (const part of TWELVE_TWO_PARTS) {
+    for (const part of [...TWELVE_TWO_PARTS, ...TWELVE_TWO_A_PARTS]) {
       expect(typeof tr.ztoFinans[part], part).toBe("object");
     }
     // 12.1 parçaları (FE0 iskelet, sahipleri doldurur): kayıtlı ve boş değil.
@@ -219,7 +230,9 @@ describe("ztoFinans ad alanı", () => {
       ztoLeaves
         .filter(
           ([k]) =>
-            ![...TWELVE_ONE_PARTS, ...TWELVE_TWO_PARTS].some((part) => k.startsWith(`${part}.`)),
+            ![...TWELVE_ONE_PARTS, ...TWELVE_TWO_PARTS, ...TWELVE_TWO_A_PARTS].some((part) =>
+              k.startsWith(`${part}.`),
+            ),
         )
         .filter(([, v]) => variables(v).length > 0)
         .map(([k, v]) => [k, variables(v)]),

@@ -11,11 +11,14 @@ import java.util.Optional;
 import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.common.money.Money;
+import org.ece.blackrose.finance.domain.FinanceTypes.SettlementStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementType;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementWarningCode;
 import org.ece.blackrose.finance.domain.FinanceTypes.WarningSeverity;
+import org.ece.blackrose.finance.domain.Settlement;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountTransactionRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.KindBalanceRow;
+import org.ece.blackrose.finance.repository.FinanceRepositories.SettlementRepository;
 import org.ece.blackrose.finance.web.FinanceDtos.CompanyOutstandingResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.SettlementRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SettlementWarningResponse;
@@ -41,11 +44,15 @@ public class SettlementWarningService {
 
   private final AccountTransactionRepository transactions;
   private final BranchScopeService scope;
+  private final SettlementRepository settlements;
 
   public SettlementWarningService(
-      AccountTransactionRepository transactions, BranchScopeService scope) {
+      AccountTransactionRepository transactions,
+      BranchScopeService scope,
+      SettlementRepository settlements) {
     this.transactions = transactions;
     this.scope = scope;
+    this.settlements = settlements;
   }
 
   /** Şirket başına, tek para birimindeki borç/alacak toplamı. */
@@ -57,15 +64,56 @@ public class SettlementWarningService {
    */
   public List<SettlementWarningResponse> check(
       SettlementType type, SettlementRequest request, UUID companyId) {
+    return check(type, request, companyId, null);
+  }
+
+  /**
+   * Düzeltme önizlemesi (12.2a §3.4): {@code excluded} aynı cariye aynı para biriminde POSTED
+   * ödemeyse ve cari satırı taşınmamışsa (Rev 1 F-2), şirket bakiyesinde eski ödeme geri alınmış
+   * gibi borcu {@code excluded.amount} kadar azaltılır; kapsam dışı iş yerindeki kayıt yalnız karar
+   * bakiyesinde düşülür.
+   */
+  public List<SettlementWarningResponse> check(
+      SettlementType type, SettlementRequest request, UUID companyId, Settlement excluded) {
     if (request.accountId() == null) {
       return List.of();
     }
     String currency = request.money().currency();
     Map<UUID, CompanyBalance> full =
         balances(request.accountId(), currency, BranchFilter.all(null));
+    boolean limited = scope.limited();
     Map<UUID, CompanyBalance> shown =
-        scope.limited() ? balances(request.accountId(), currency, scope.filter(null, null)) : full;
+        limited ? balances(request.accountId(), currency, scope.filter(null, null)) : full;
+    if (excludes(excluded, request)) {
+      BigDecimal amount = excluded.getMoney().amount();
+      full = withoutPayment(full, excluded.getCompanyId(), amount);
+      if (!limited) {
+        shown = full;
+      } else if (scope.allowedOrNull().contains(excluded.getBranchId())) {
+        shown = withoutPayment(shown, excluded.getCompanyId(), amount);
+      }
+    }
     return evaluate(type, companyId, request.money(), full, shown).map(List::of).orElse(List.of());
+  }
+
+  private boolean excludes(Settlement excluded, SettlementRequest request) {
+    return excluded != null
+        && excluded.getType() == SettlementType.PAYMENT
+        && excluded.getStatus() == SettlementStatus.POSTED
+        && excluded.getAccountId() != null
+        && excluded.getAccountId().equals(request.accountId())
+        && excluded.getMoney().currency().equals(request.money().currency())
+        && !settlements.isTransferred(excluded.getId());
+  }
+
+  /** Şirketin borç (DEBIT) toplamından ödeme tutarını düşer; kopya döner. */
+  static Map<UUID, CompanyBalance> withoutPayment(
+      Map<UUID, CompanyBalance> balances, UUID companyId, BigDecimal amount) {
+    Map<UUID, CompanyBalance> copy = new HashMap<>(balances);
+    CompanyBalance current =
+        copy.getOrDefault(companyId, new CompanyBalance(BigDecimal.ZERO, BigDecimal.ZERO));
+    copy.put(companyId, new CompanyBalance(current.debit().subtract(amount), current.credit()));
+    return copy;
   }
 
   private Map<UUID, CompanyBalance> balances(UUID accountId, String currency, BranchFilter filter) {

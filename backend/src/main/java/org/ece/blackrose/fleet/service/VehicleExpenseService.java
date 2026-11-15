@@ -137,7 +137,7 @@ public class VehicleExpenseService {
     scope.requireVisible(expense.getBranchId());
     String description = "Araç gideri iptali";
     if (expense.getSettlementId() != null) {
-      settlements.reverse(expense.getSettlementId(), date, description);
+      settlements.reverseManaged(expense.getSettlementId(), date, description);
     } else {
       ledger.reverseSource(SOURCE_VEHICLE_EXPENSE, id, date, description);
     }

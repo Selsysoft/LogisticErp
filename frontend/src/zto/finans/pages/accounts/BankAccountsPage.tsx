@@ -10,12 +10,14 @@ import {
   useFinanceMutation,
 } from "../../../../pages/finance/accountApi";
 import { useCan } from "../../../../pages/finance/common";
-import type { AccountBankAccount } from "../../../../pages/finance/types";
+import { useSettlementList } from "../../../../pages/finance/settlementApi";
+import type { AccountBankAccount, Page, SettlementListItem } from "../../../../pages/finance/types";
 import {
   ZtoDataTable,
   currencySymbol,
   formatDate,
   formatDateTime,
+  formatMoneyValue,
   useZtoConfirm,
   useZtoSnackbar,
 } from "../../../components";
@@ -350,9 +352,10 @@ export function BankAccountsPage() {
         }}
       >
         {panel?.kind === "transactions" && (
-          <p className="text-muted" style={{ fontSize: 12 }}>
-            {b("transactionsLater")}
-          </p>
+          <BankTransactions
+            bankId={panel.bank.id}
+            labelledBy="bankAccountTransactionsPanel-title"
+          />
         )}
       </SidePanel>
       {confirmModal}
@@ -429,6 +432,106 @@ function SidePanel({
       </div>
       <div className="details-panel-body">{children}</div>
     </div>
+  );
+}
+
+/** "Banka Hesabı İşlemleri" panelinde her türden en çok bu kadar kayıt okunur (12.2a §5.13). */
+const BANK_TRANSACTIONS_SIZE = 50;
+
+/**
+ * Ödeme ve tahsilat sayfalarını tek listede birleştirir: tarih azalan, aynı günde oluşturma azalan,
+ * son olarak kimlik (kararlı sıra). `truncated`: iki türden biri sayfa sınırını aştı.
+ */
+function mergeBankTransactions(
+  payments: Page<SettlementListItem> | undefined,
+  collections: Page<SettlementListItem> | undefined,
+): { rows: SettlementListItem[]; truncated: boolean } {
+  const rows = [...(payments?.content ?? []), ...(collections?.content ?? [])].sort(
+    (a, b) =>
+      b.settlementDate.localeCompare(a.settlementDate) ||
+      b.createdAt.localeCompare(a.createdAt) ||
+      a.id.localeCompare(b.id),
+  );
+  const over = (page: Page<SettlementListItem> | undefined) =>
+    !!page && page.totalElements > page.content.length;
+  return { rows, truncated: over(payments) || over(collections) };
+}
+
+/**
+ * Seçili cari banka hesabına bağlı ödeme ve tahsilatlar (12.2a §5.13, OK-12.2a-20; Blackrose eki —
+ * ZTO `#bankAccountTransactionsContent` boştur): `GET /payments` ve `/collections`
+ * `counterpartyBankAccountId` süzgeçli, yalnız geçerli (POSTED) kayıtlar (OK-12.2a-26). ZTO küçük tablo
+ * stili (`table-sm table-bordered`); yatay kaydırmalı kapsayıcı klavyeyle kaydırılabilir bölge (MWG
+ * responsive-table).
+ */
+function BankTransactions({ bankId, labelledBy }: { bankId: string; labelledBy: string }) {
+  const { t } = useTranslation("ztoFinans");
+  const query = {
+    counterpartyBankAccountId: bankId,
+    status: "POSTED" as const,
+    size: BANK_TRANSACTIONS_SIZE,
+  };
+  const payments = useSettlementList("PAYMENT", query);
+  const collections = useSettlementList("COLLECTION", query);
+  const b = (key: string, options?: Record<string, unknown>) => t(`accounts.bank.${key}`, options);
+  if (payments.isPending || collections.isPending) {
+    return (
+      <p className="text-muted" style={{ fontSize: 12 }} role="status">
+        <i className="fas fa-spinner fa-spin mr-1" aria-hidden="true" />
+        {b("transactionsLoading")}
+      </p>
+    );
+  }
+  if (payments.isError || collections.isError) {
+    return (
+      <div className="alert alert-danger" role="alert">
+        {errorMessage(payments.error ?? collections.error, b("transactionsLoadFailed"))}
+      </div>
+    );
+  }
+  const { rows, truncated } = mergeBankTransactions(payments.data, collections.data);
+  if (rows.length === 0) {
+    return (
+      <p className="text-muted" style={{ fontSize: 12 }}>
+        {b("transactionsEmpty")}
+      </p>
+    );
+  }
+  const c = (key: string) => b(`txColumns.${key}`);
+  return (
+    <>
+      <div className="table-responsive" role="region" aria-labelledby={labelledBy} tabIndex={0}>
+        <table className="table table-sm table-bordered" style={{ fontSize: 11 }}>
+          <thead>
+            <tr>
+              <th scope="col">{c("date")}</th>
+              <th scope="col">{c("type")}</th>
+              <th scope="col">{c("branch")}</th>
+              <th scope="col" className="text-right">
+                {c("amount")}
+              </th>
+              <th scope="col">{c("documentNo")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td>{formatDate(row.settlementDate)}</td>
+                <td>{b(`txType.${row.type}`)}</td>
+                <td>{row.branchName}</td>
+                <td className="text-right">{formatMoneyValue(row.money)}</td>
+                <td>{row.documentNo ?? "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {truncated && (
+        <p className="text-muted mb-0" style={{ fontSize: 11 }}>
+          {b("transactionsTruncated", { count: BANK_TRANSACTIONS_SIZE })}
+        </p>
+      )}
+    </>
   );
 }
 

@@ -53,8 +53,9 @@ public class AccountTransactionVoidService {
   }
 
   /**
-   * Hareketi kaynağı üzerinden iptal eder ve ters kaydı döner. Tarih boşsa bugün; açıklama boşsa
-   * "ZTO ekranından silindi: {tür}"; açıklama 500 karakteri aşmaz.
+   * Hareketi kaynağı üzerinden iptal eder ve ters kaydı döner. Tarih boşsa bugün (ödeme/tahsilatta
+   * {@code max(bugün, kayıt tarihi)}); açıklama boşsa "ZTO ekranından silindi: {tür}"; açıklama 500
+   * karakteri aşmaz.
    */
   @Transactional
   public AccountTransaction voidTransaction(UUID id, LocalDate date, String description) {
@@ -90,7 +91,9 @@ public class AccountTransactionVoidService {
                           "route="
                               + FundTransferService.route(link.getCode(), link.getTransferDate())));
                 });
-        settlements.reverse(sourceId, effective, text);
+        // Tarihsiz silme ileri tarihli kayıtta iptal tarihi kuralına takılmasın (12.2a §3.5):
+        // varsayılan max(bugün, kayıt tarihi); settlement'ın cari satırı kayıt tarihindedir.
+        settlements.reverse(sourceId, date == null ? settlementDefault(row) : date, text);
       }
       case LedgerService.SOURCE_MANUAL, "OPENING", "OPENING_INVOICE" ->
           accounts.reverseManual(id, effective, text);
@@ -117,6 +120,12 @@ public class AccountTransactionVoidService {
                     HttpStatus.CONFLICT,
                     "TRANSACTION_NOT_REVERSED",
                     "Hareket kaynağından iptal edilemedi."));
+  }
+
+  private LocalDate settlementDefault(LedgerDetailRow row) {
+    LocalDate today = clock.today();
+    LocalDate recorded = row.getTransactionDate();
+    return recorded != null && recorded.isAfter(today) ? recorded : today;
   }
 
   static String kindLabel(String kind) {

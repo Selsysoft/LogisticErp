@@ -59,8 +59,12 @@ const LOCAL = new Set([
 
 interface Property {
   $ref?: string;
-  type?: string;
+  /** OpenAPI 3.1: null'lanabilir alan `type: ["string", "null"]` (12.2a §4.4). */
+  type?: string | string[];
   enum?: unknown[];
+  /** OpenAPI 3.1: null'lanabilir `$ref` `anyOf: [{$ref}, {type: "null"}]`. */
+  anyOf?: Property[];
+  oneOf?: Property[];
 }
 
 interface Schema {
@@ -88,6 +92,8 @@ interface ApiType {
   fields: string[];
   /** Alan adı -> kaba tip; birleşik veya belirsiz tipler (any, karışık) yer almaz. */
   kinds: Record<string, Kind>;
+  /** `| null` ya da `?` taşıyan alanlar. */
+  nullable: Set<string>;
 }
 
 /** TypeScript tipini JSON'daki kaba karşılığına indirger; null/undefined birleşimden atılır. */
@@ -108,8 +114,31 @@ function kindOf(checker: ts.TypeChecker, type: ts.Type): Kind | undefined {
   return kinds.size === 1 ? [...kinds][0] : undefined;
 }
 
+/** `{type: "null"}` dalı mı (3.1 `anyOf`/`oneOf` içinde). */
+function isNullBranch(property: Property): boolean {
+  return (
+    property.type === "null" ||
+    (Array.isArray(property.type) && property.type.every((t) => t === "null"))
+  );
+}
+
+/**
+ * OpenAPI 3.1 biçimiyle null'lanabilir işaretli mi: `type` dizisi "null" içerir ya da `anyOf`/`oneOf`
+ * dallarından biri `{type: "null"}` (12.2a §4.4, OK-12.2a-15; 3.1'de `nullable` anahtarı yazılmaz).
+ */
+function isMarkedNullable(property: Property): boolean {
+  if (Array.isArray(property.type)) return property.type.includes("null");
+  return [...(property.anyOf ?? []), ...(property.oneOf ?? [])].some(isNullBranch);
+}
+
 /** Şemadaki alanın kaba tipi; enum ve tarih metindir, başka şemaya bağlantı nesnedir. */
 function schemaKind(property: Property): Kind | undefined {
+  const branches = (property.anyOf ?? property.oneOf)?.filter((branch) => !isNullBranch(branch));
+  if (branches) return branches.length === 1 ? schemaKind(branches[0]) : undefined;
+  if (Array.isArray(property.type)) {
+    const types = property.type.filter((t) => t !== "null");
+    return types.length === 1 ? schemaKind({ ...property, type: types[0] }) : undefined;
+  }
   if (property.$ref) {
     const target = schemas[property.$ref.split("/").pop() ?? ""];
     return target?.enum || target?.type === "string" ? "string" : "object";
@@ -149,14 +178,24 @@ function exportedInterfaces(): ApiType[] {
       if (!symbol) return;
       const properties = checker.getPropertiesOfType(checker.getDeclaredTypeOfSymbol(symbol));
       const kinds: Record<string, Kind> = {};
+      const nullable = new Set<string>();
       for (const property of properties) {
-        const kind = kindOf(checker, checker.getTypeOfSymbolAtLocation(property, node));
+        const type = checker.getTypeOfSymbolAtLocation(property, node);
+        const kind = kindOf(checker, type);
         if (kind) kinds[property.getName()] = kind;
+        const parts = type.isUnion() ? type.types : [type];
+        if (
+          property.flags & ts.SymbolFlags.Optional ||
+          parts.some((part) => part.flags & (ts.TypeFlags.Null | ts.TypeFlags.Undefined))
+        ) {
+          nullable.add(property.getName());
+        }
       }
       result.push({
         key: `${module}/${node.name.text}`,
         fields: properties.map((property) => property.getName()),
         kinds,
+        nullable,
       });
     });
   }
@@ -217,5 +256,98 @@ describe("API sözleşmesi", () => {
       }
     }
     expect(mismatched).toEqual([]);
+  });
+});
+
+/**
+ * Şema alanları (12.2a §4.4, OK-12.2a-15): springdoc OpenAPI 3.1 üretir; yeni null'lanabilir yanıt
+ * alanları `types = {…, "null"}` / `anyOf: [{$ref}, {type: "null"}]` ile işaretlenir (mevcut alanlar
+ * işaretsiz kalır — opt-in). İşaretli her alan TS'de `| null` ya da `?` taşımalı; boş geçmeyi önlemek
+ * için en az 25 işaretli alan beklenir (12.2a yeni alanları bunu aşar). B4 bitene kadar kırmızı
+ * olabilir (§7).
+ */
+describe("API sözleşmesi: opt-in null'lanabilirlik ve ondalık metin (12.2a §4, §4.4)", () => {
+  const types = exportedInterfaces();
+  /** Şema adı -> o şemaya bağlanan TS arayüzleri. */
+  const bySchema = new Map<string, ApiType[]>();
+  for (const type of types) {
+    if (LOCAL.has(type.key)) continue;
+    const name = schemaFor(type.key);
+    if (!name) continue;
+    bySchema.set(name, [...(bySchema.get(name) ?? []), type]);
+  }
+
+  const marked: Array<[schema: string, field: string]> = Object.entries(schemas).flatMap(
+    ([name, schema]) =>
+      Object.entries(schema.properties ?? {})
+        .filter(([, property]) => isMarkedNullable(property))
+        .map(([field]) => [name, field] as [string, string]),
+  );
+
+  it("şemada null işaretli en az 25 alan var (alt sınır)", () => {
+    expect(marked.length).toBeGreaterThanOrEqual(25);
+  });
+
+  it("null işaretli her alan TS arayüzünde | null ya da ? taşır", () => {
+    const strict: string[] = [];
+    for (const [schema, field] of marked) {
+      for (const type of bySchema.get(schema) ?? []) {
+        if (type.fields.includes(field) && !type.nullable.has(field)) {
+          strict.push(`${type.key}.${field} (${schema})`);
+        }
+      }
+    }
+    expect(strict).toEqual([]);
+  });
+
+  it("işaret biçimleri: type dizisi ve anyOf/oneOf null dalı tanınır, kaba tip korunur", () => {
+    expect(isMarkedNullable({ type: ["string", "null"] })).toBe(true);
+    expect(
+      isMarkedNullable({ anyOf: [{ $ref: "#/components/schemas/Money" }, { type: "null" }] }),
+    ).toBe(true);
+    expect(isMarkedNullable({ oneOf: [{ type: "integer" }, { type: ["null"] }] })).toBe(true);
+    expect(isMarkedNullable({ type: "string" })).toBe(false);
+    expect(isMarkedNullable({ anyOf: [{ type: "string" }, { type: "integer" }] })).toBe(false);
+    expect(schemaKind({ type: ["string", "null"] })).toBe("string");
+    expect(schemaKind({ type: ["integer", "null"] })).toBe("number");
+    expect(schemaKind({ type: ["string", "integer"] })).toBeUndefined();
+    expect(schemaKind({ anyOf: [{ type: "boolean" }, { type: "null" }] })).toBe("boolean");
+    expect(schemaKind({ anyOf: [{ type: "string" }, { type: "integer" }] })).toBeUndefined();
+  });
+
+  /**
+   * Para alanları JSON'da ondalık metin (Rev 1 F-5/SEC-04): `Money.amount` ve §4'ün "decimal"
+   * alanları şemada `type: string`, TS'de `string`. Kur/TL karşılığı number kalır (kapsam dışı).
+   */
+  const DECIMAL_FIELDS: Array<[tsKey: string, field: string]> = [
+    ["finance/Money", "amount"],
+    ["finance/OpenInvoice", "total"],
+    ["finance/OpenInvoice", "allocated"],
+    ["finance/OpenInvoice", "remaining"],
+    ["finance/SettlementListItem", "fxUsed"],
+    ["finance/SettlementListItem", "fxRemaining"],
+    ["finance/DailyFundBalance", "balanceAtDate"],
+    ["finance/DailyFundBalance", "balanceNow"],
+    ["finance/DailyInstrumentMovement", "total"],
+  ];
+
+  it("Money ve ondalık para alanları TS'de string", () => {
+    const wrong = DECIMAL_FIELDS.filter(([key, field]) => {
+      const type = types.find((t) => t.key === key);
+      return !type || type.kinds[field] !== "string";
+    }).map(([key, field]) => `${key}.${field}`);
+    expect(wrong).toEqual([]);
+  });
+
+  it("Money ve ondalık para alanları şemada type: string", () => {
+    const wrong = DECIMAL_FIELDS.flatMap(([key, field]) => {
+      const name = schemaFor(key);
+      const property = name ? schemas[name]?.properties?.[field] : undefined;
+      const kind = property && schemaKind(property);
+      return kind === "string"
+        ? []
+        : [`${key}.${field} (${name ?? "şema yok"}: ${kind ?? "alan yok"})`];
+    });
+    expect(wrong).toEqual([]);
   });
 });

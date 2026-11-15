@@ -1,0 +1,1689 @@
+/*
+ * Kaynak: ZtoFabrika/wwwroot/css/zt/customeraccountcollection/collections.css (1-1982; modal kuralları
+ * settlement-modals.css'te) + Views/CustomerAccountCollection/Collections.cshtml <style> :61-70,
+ * :456-475, :622-632 (12.2a_TASARIM §5.4).
+ * Birebir kopya; alınan aralıklar: collections.css :1-663 (başlık, süzgeç, tablo, rozet, istatistik
+ * kartları), :1020-1055 ve :1060-1594 (tahsilat özel stilleri, eylem çubuğu, detay paneli, genel
+ * alert/rozet/kart ayarları), :1673-1779 ve :1784-1968 (.ss-* SearchableSelect). Alınmayanlar:
+ * :664-1019 (MODAL STİLLERİ, .field-group*, .required-field, cari alacak akordeonu, modal kaydırma
+ * düzeltmesi, Select2, #customerBankSection), :1056-1059 #remainingCreditInfo, :1595-1672 para birimi
+ * düğmeleri ve çek durum seçimi, :1780-1782 .modal/.erp-modal .ss-dropdown, :1969-1982 seçim kilidi
+ * örtüsü (hepsi ödeme/tahsilat modallarının; settlement-modals.css).
+ * accounttransaction/transactions.css (Collections.cshtml:614, collections.css'ten önce yüklenir) alınmadı:
+ * sayfanın kendi sınıfları (erp-*, filter-*, table-compact, rozetler, .ss-*) collections.css'te yeniden
+ * tanımlıdır ve sonra yüklendiği için ZTO'da da kazanır; kalan seçicilerin çoğu Cari Hareketler'e özgüdür
+ * (account-transactions.css'te kopyası var). Kapsamsız genel kurallar (.row, .col-md-6/.col-12,
+ * .card-header renk/dolgu, .card-body arka plan, .form-control yükseklik; transactions.css :923, :1168-1175,
+ * :1300-1314) bilinçli olarak taşınmadı: collections.css :1279-1300 ve :1458-1472 aynı kuralları ZTO'nun
+ * kendi "✅ DÜZELTME" notuyla #requestedColumnsContent kapsamına almış ("Bunlar modal layout'unu
+ * bozuyordu"); başka sayfanın dosyasından sızan bu kurallar ZTO hatası sayıldı (12.2a FE-1 sapması).
+ * Değişiklikler: Razor kaçışı yok; @keyframes ssDropdownIn → zto-col-ssDropdownIn (check:zto-css).
+ * Sayfa kapsamı .zto-finans.zto-page-collections.
+ */
+/* --- Views/CustomerAccountCollection/Collections.cshtml <style> :61-70 --- */
+.btn-divider {
+  width: 1px;
+  height: 28px;
+  background: linear-gradient(180deg, transparent 0%, #cbd5e1 20%, #cbd5e1 80%, transparent 100%);
+  margin: 0 4px;
+  margin-right: 12px;
+  align-self: center;
+}
+/* --- Views/CustomerAccountCollection/Collections.cshtml <style> :456-475 (Günlük Tahsilat Raporu modalı) --- */
+.dcr-wp-search {
+  position: relative;
+  margin-bottom: 8px;
+}
+.dcr-wp-search i {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 12px;
+}
+.dcr-wp-search input {
+  font-size: 12.5px;
+  padding-left: 31px;
+  border-radius: 8px;
+}
+.dcr-wp-list {
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px;
+  background: #f8fafc;
+}
+.dcr-branch {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+.dcr-branch-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  background: #eef2ff;
+  border-bottom: 1px solid #e2e8f0;
+}
+.dcr-branch-head:hover {
+  background: #e0e7ff;
+}
+.dcr-branch-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-weight: 700;
+  color: #3730a3;
+  font-size: 12.5px;
+  cursor: pointer;
+  flex: 1 1 auto;
+}
+.dcr-branch-label input {
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
+}
+.dcr-branch-label i.fa-code-branch {
+  color: #6366f1;
+  font-size: 11px;
+}
+.dcr-branch-count {
+  color: #64748b;
+  font-weight: 600;
+  font-size: 11px;
+}
+.dcr-chev {
+  color: #6366f1;
+  font-size: 12px;
+  transition: transform 0.15s;
+}
+.dcr-branch.collapsed .dcr-chev {
+  transform: rotate(-90deg);
+}
+.dcr-branch.collapsed .dcr-branch-body {
+  display: none;
+}
+.dcr-branch-body {
+  padding: 5px 10px 8px 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 3px 10px;
+}
+.dcr-wp-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 12px;
+  color: #334155;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.dcr-wp-item input {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+}
+.dcr-wp-item.hidden,
+.dcr-branch.hidden {
+  display: none;
+}
+/* --- wwwroot/css/zt/customeraccountcollection/collections.css :1-663 --- */
+/* Açıklama sütunu: 2 satır sonra kes */
+.desc-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 450px;
+  word-break: break-word;
+}
+
+/* Tutar sütununu genişlet */
+#collectionsTable th:nth-child(5),
+#collectionsTable td:nth-child(5) {
+  min-width: 140px;
+  width: 160px;
+  max-width: 200px;
+  white-space: nowrap;
+}
+/* ============================================ */
+/* PROFESYONEL ERP HEADER STİLLERİ */
+/* ============================================ */
+
+.card-header.bg-white {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.eventspointer {
+  pointer-events: none;
+}
+
+.erp-header-icon {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  margin-right: 6px;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  color: #495057;
+  font-size: 16px;
+}
+
+.erp-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #6c757d;
+}
+
+.erp-breadcrumb .separator {
+  color: #cbd5e0;
+  font-weight: 300;
+}
+
+.erp-breadcrumb i {
+  font-size: 10px;
+  margin-right: 3px;
+}
+
+.erp-info-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #495057;
+  transition: all 0.2s ease;
+}
+
+.erp-info-chip:hover {
+  background: #e9ecef;
+  border-color: #cbd5e0;
+}
+
+.erp-info-chip i {
+  font-size: 10px;
+}
+
+.erp-info-chip.chip-success {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.erp-info-chip.chip-warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.erp-info-chip.chip-danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.erp-info-chip.chip-primary {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.erp-info-chip.chip-info {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+
+/* ERP Butonlar */
+.erp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+  background: #ffffff;
+}
+
+.erp-btn i {
+  font-size: 13px;
+}
+
+.erp-btn-success {
+  color: #166534;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.erp-btn-success:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.erp-btn-danger {
+  color: #991b1b;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.erp-btn-danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.erp-btn-primary {
+  color: #1e40af;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.erp-btn-primary:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
+.erp-btn-secondary {
+  color: #475569;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.erp-btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e0;
+  color: #475569;
+}
+
+.erp-btn-info {
+  color: #0369a1;
+  border-color: #bae6fd;
+  background: #f0f9ff;
+}
+
+.erp-btn-info:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+.erp-btn-warning {
+  color: #92400e;
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.erp-btn-warning:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+  color: #92400e;
+}
+
+.erp-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+}
+
+.erp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .card-header.bg-white {
+    padding: 8px 15px !important;
+  }
+
+  .erp-header-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+
+  .card-header h6 {
+    font-size: 13px !important;
+  }
+
+  .erp-breadcrumb {
+    font-size: 10px;
+  }
+
+  .erp-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+
+  .erp-btn span {
+    display: none !important;
+  }
+
+  .erp-btn i {
+    margin: 0;
+  }
+}
+
+@media print {
+  .erp-btn,
+  .erp-info-chip {
+    display: none !important;
+  }
+
+  .card-header.bg-white {
+    border-bottom: 2px solid #000;
+  }
+}
+
+/* ============================================ */
+/* FİLTRELEME PANELİ */
+/* ============================================ */
+
+.erp-filter-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.filter-field {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12px;
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.filter-field:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  height: 100%;
+  align-items: flex-end;
+}
+
+.filter-btn {
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 5px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-filter-apply {
+  background: #3b82f6;
+  color: white;
+  border-color: #2563eb;
+}
+
+.btn-filter-apply:hover {
+  background: #2563eb;
+}
+
+.btn-filter-clear {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #cbd5e0;
+}
+
+.btn-filter-clear:hover {
+  background: #e2e8f0;
+}
+
+@media (max-width: 768px) {
+  .erp-filter-card .col-md-3,
+  .erp-filter-card .col-md-2 {
+    margin-bottom: 10px;
+  }
+
+  .filter-actions {
+    margin-top: 10px;
+    justify-content: flex-start;
+  }
+}
+
+/* ============================================ */
+/* TABLO STİLLERİ */
+/* ============================================ */
+
+.table-compact {
+  font-size: 13px;
+}
+
+.table-compact thead th {
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  color: #475569;
+}
+
+.table-compact tbody td {
+  padding: 6px 10px;
+  vertical-align: middle;
+}
+
+.table-compact .btn-sm {
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+.dataTables_wrapper .dataTables_length select {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.dataTables_wrapper .dataTables_info {
+  font-size: 12px;
+  padding-top: 8px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  font-size: 12px;
+}
+
+.badge {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-success {
+  background: #10b981;
+}
+
+.badge-primary {
+  background: #3b82f6;
+}
+
+.badge-info {
+  background: #06b6d4;
+}
+
+.badge-warning {
+  background: #f59e0b;
+}
+
+.badge-secondary {
+  background: #94a3b8;
+}
+
+/* ============================================ */
+/* İSTATİSTİK KARTLARI */
+/* ============================================ */
+
+.erp-stat-card {
+  border-radius: 6px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.erp-stat-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.erp-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--card-color-start), var(--card-color-end));
+  z-index: 1;
+}
+
+.erp-stat-card.card-total {
+  --card-color-start: #3b82f6;
+  --card-color-end: #06b6d4;
+}
+
+.erp-stat-card.card-count {
+  --card-color-start: #10b981;
+  --card-color-end: #84cc16;
+}
+
+.erp-stat-card.card-average {
+  --card-color-start: #f59e0b;
+  --card-color-end: #f97316;
+}
+
+.erp-stat-card.card-methods {
+  --card-color-start: #8b5cf6;
+  --card-color-end: #d946ef;
+}
+
+/* transactions.css'den gelen card tipleri */
+.erp-stat-card.card-alacak {
+  --card-color-start: #28a745;
+  --card-color-end: #20c997;
+}
+
+.erp-stat-card.card-tahsilat {
+  --card-color-start: #007bff;
+  --card-color-end: #17a2b8;
+}
+
+.erp-stat-card.card-borc {
+  --card-color-start: #dc3545;
+  --card-color-end: #fd7e14;
+}
+
+.erp-stat-card.card-odeme {
+  --card-color-start: #ffc107;
+  --card-color-end: #fd7e14;
+}
+
+.erp-stat-card.card-bakiye-positive {
+  --card-color-start: #ffc107;
+  --card-color-end: #ff6b6b;
+}
+
+.erp-stat-card.card-bakiye-negative {
+  --card-color-start: #28a745;
+  --card-color-end: #20c997;
+}
+
+.erp-stat-card.card-bakiye-zero {
+  --card-color-start: #6c757d;
+  --card-color-end: #495057;
+}
+
+.erp-stat-card.card-info {
+  --card-color-start: #6c757d;
+  --card-color-end: #495057;
+}
+
+.erp-stat-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px 12px 15px;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+}
+
+.erp-stat-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--card-color-start), var(--card-color-end));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.erp-stat-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 3px;
+  display: block;
+}
+
+.erp-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.erp-stat-currency {
+  font-size: 12px;
+  font-weight: 600;
+  color: #718096;
+}
+
+.erp-stat-subtext {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.erp-stat-progress {
+  height: 2px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.erp-stat-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--card-color-start), var(--card-color-end));
+  transition: width 0.6s ease;
+}
+
+.erp-stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+.erp-stat-badge.badge-customer-debt {
+  background: #fff5f5;
+  color: #c53030;
+  border: 1px solid #feb2b2;
+}
+
+.erp-stat-badge.badge-customer-credit {
+  background: #e6fffa;
+  color: #276749;
+  border: 1px solid #9ae6b4;
+}
+
+.erp-stat-badge.badge-supplier-debt {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.erp-stat-badge.badge-supplier-overpay {
+  background: #e6fffa;
+  color: #276749;
+  border: 1px solid #9ae6b4;
+}
+
+.erp-stat-badge.badge-balanced {
+  background: #f7fafc;
+  color: #4a5568;
+  border: 1px solid #cbd5e0;
+}
+
+@media (max-width: 1200px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .erp-stat-content {
+    padding: 10px 10px 10px 13px;
+  }
+}
+
+/* --- wwwroot/css/zt/customeraccountcollection/collections.css :1020-1055, :1060-1594 --- */
+/* ============================================ */
+/* TAHSİLAT ÖZEL STİLLER */
+/* ============================================ */
+
+.collection-success {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.05), rgba(16, 185, 129, 0.02));
+}
+
+.collection-info {
+  background: linear-gradient(90deg, rgba(6, 182, 212, 0.05), rgba(6, 182, 212, 0.02));
+}
+
+.collection-warning {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.05), rgba(245, 158, 11, 0.02));
+}
+
+.badge-collection-tamamlandı {
+  background: #10b981;
+  color: white;
+}
+
+.badge-collection-beklemede {
+  background: #f59e0b;
+  color: white;
+}
+
+.badge-collection-iptal {
+  background: #ef4444;
+  color: white;
+}
+
+.badge-collection-iade {
+  background: #8b5cf6;
+  color: white;
+}
+
+.collection-modal-header {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.collection-modal-header .modal-title i {
+  color: white;
+}
+
+.btn-collection-success {
+  background: #10b981;
+  border-color: #059669;
+  color: white;
+}
+
+.btn-collection-success:hover {
+  background: #059669;
+  border-color: #047857;
+  color: white;
+}
+
+.btn-collection-info {
+  background: #06b6d4;
+  border-color: #0891b2;
+  color: white;
+}
+
+.btn-collection-info:hover {
+  background: #0891b2;
+  border-color: #0e7490;
+  color: white;
+}
+
+/* ============================================ */
+/* ERP ACTION TOOLBAR */
+/* ============================================ */
+
+.erp-action-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 15px;
+  background: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.icon-box {
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.icon-box i {
+  font-size: 1.2rem;
+}
+
+.toolbar-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.toolbar-label i {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.erp-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background: #ffffff;
+}
+
+.erp-action-btn i {
+  font-size: 14px;
+}
+
+.erp-action-btn.btn-success {
+  color: #166534;
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.erp-action-btn.btn-success:hover {
+  background: #dcfce7;
+  border-color: #4ade80;
+  color: #15803d;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
+}
+
+.erp-action-btn.btn-primary {
+  color: #1e40af;
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.erp-action-btn.btn-primary:hover {
+  background: #dbeafe;
+  border-color: #60a5fa;
+  color: #1e3a8a;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.erp-action-btn.btn-danger {
+  color: #991b1b;
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.erp-action-btn.btn-danger:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+  color: #7f1d1d;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
+.erp-action-btn.btn-warning {
+  color: #92400e;
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.erp-action-btn.btn-warning:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+  color: #78350f;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+}
+
+.erp-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.erp-action-btn:disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.erp-action-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+}
+
+.erp-action-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .erp-action-toolbar {
+    padding: 8px 12px;
+  }
+
+  .toolbar-label {
+    font-size: 11px;
+  }
+
+  .erp-action-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .erp-action-btn span {
+    display: none;
+  }
+
+  .erp-action-btn i {
+    margin: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar-label {
+    display: none;
+  }
+
+  .erp-action-toolbar {
+    justify-content: center;
+  }
+}
+
+@media print {
+  .erp-action-toolbar {
+    display: none !important;
+  }
+}
+
+/* ============================================ */
+/* DETAY PANELİ - #requestedColumnsContent     */
+/* ✅ DÜZELTME: .row ve .col scope'ları sadece  */
+/* bu konteyner içinde geçerli                 */
+/* ============================================ */
+
+#requestedColumnsContent {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+#requestedColumnsContent .row {
+  margin-bottom: 5px;
+  align-items: stretch;
+}
+
+#requestedColumnsContent .col-md-6,
+#requestedColumnsContent .col-12 {
+  padding: 8px;
+}
+
+/* ✅ DÜZELTME: .col-12 .info-item sadece #requestedColumnsContent içinde */
+#requestedColumnsContent .col-12 .info-item {
+  background: #f8fafc;
+  border-left: 4px solid #28a745;
+}
+
+#requestedColumnsContent .col-12 .info-item:hover {
+  background: #f1f5f9;
+}
+
+.info-item {
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  height: 100%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.info-item:hover {
+  border-color: #dee2e6;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.info-label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 13px;
+  display: block;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.info-value {
+  color: #212529;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  word-break: break-word;
+  min-height: 21px;
+}
+
+.info-value:empty::before {
+  content: "Belirtilmemiş";
+  color: #adb5bd;
+  font-style: italic;
+  font-weight: normal;
+}
+
+/* Ürün resmi */
+.product-img-wrapper {
+  width: 45px;
+  height: 45px;
+  overflow: hidden;
+  position: relative;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.product-img {
+  width: 85%;
+  height: 85%;
+  object-fit: contain;
+}
+
+.product-with-image {
+  display: flex;
+  align-items: center;
+  min-height: 45px;
+}
+
+.product-text-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-grow: 1;
+}
+
+.product-main-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #212529;
+  line-height: 1.3;
+}
+
+.product-sub-name {
+  font-size: 13px;
+  color: #6c757d;
+  margin-top: 3px;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  #requestedColumnsContent {
+    padding: 15px;
+  }
+
+  .info-item {
+    padding: 12px;
+  }
+
+  .product-img-wrapper {
+    width: 40px;
+    height: 40px;
+    margin-right: 10px;
+  }
+
+  .product-main-name {
+    font-size: 14px;
+  }
+
+  .product-sub-name {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 576px) {
+  #requestedColumnsContent {
+    padding: 12px;
+  }
+
+  .info-item {
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+
+  .info-label {
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+
+  .info-value {
+    font-size: 13px;
+  }
+
+  .product-img-wrapper {
+    width: 35px;
+    height: 35px;
+    margin-right: 8px;
+  }
+
+  .product-with-image {
+    min-height: 40px;
+  }
+}
+
+/* ============================================ */
+/* ✅ DÜZELTME: .card ve .card-body global      */
+/* override'ları KALDIRILDI                     */
+/* Bunlar modal layout'unu bozuyordu:           */
+/*   .card { overflow: hidden; }                */
+/*   .card-body { padding: 20px; background.. } */
+/*   .card-header { color: white; ... }         */
+/* Bootstrap'in kendi card stilleri kullanılır  */
+/* ============================================ */
+
+/* ============================================ */
+/* ✅ DÜZELTME: .alert global override KALDIRILDI */
+/* Bootstrap'in kendi alert stilleri kullanılır  */
+/* Sadece özel alert tipleri override edilir     */
+/* ============================================ */
+
+.alert-warning {
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  color: #856404;
+}
+
+.alert-danger {
+  background: #f8d7da;
+  border-left: 4px solid #dc3545;
+  color: #721c24;
+}
+
+.alert i {
+  font-size: 16px;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+/* İlaç Tedarikçisi renk teması */
+.modal-header.bg-primary {
+  background: linear-gradient(135deg, #0062cc 0%, #004085 100%) !important;
+}
+
+.card-header.bg-primary {
+  background: linear-gradient(135deg, #0062cc 0%, #004085 100%) !important;
+}
+
+.card-header.bg-info {
+  background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%) !important;
+}
+
+.spinner-border.text-primary {
+  color: #0062cc !important;
+}
+
+#pesticideSupplierDetailsTable th {
+  background-color: #17a2b8;
+  color: white;
+  border-color: #17a2b8;
+  font-weight: 600;
+}
+
+#pesticideSupplierDetailsTable tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.card.border-primary {
+  border: 1px solid #0062cc;
+  box-shadow: 0 2px 4px rgba(0, 98, 204, 0.1);
+}
+
+.card.border-info {
+  border: 1px solid #17a2b8;
+  box-shadow: 0 2px 4px rgba(23, 162, 184, 0.1);
+}
+
+/* Kompakt tabs/buttons */
+.nav-tabs .nav-link {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.btn-group .btn {
+  padding: 2px 6px !important;
+  font-size: 13px;
+}
+
+/* Badge özel */
+.badge.badge-info {
+  background-color: #17a2b8 !important;
+  color: white;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+}
+
+.badge.badge-primary {
+  background-color: #007bff !important;
+  color: white;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+}
+
+.badge + .badge {
+  margin-left: 0.25rem;
+}
+
+td .badge {
+  vertical-align: middle;
+  display: inline-block;
+}
+
+/* Custom dropdown */
+.custom-select-wrapper {
+  position: relative;
+}
+
+.custom-dropdown-menu .dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.custom-dropdown-menu .dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.custom-dropdown-menu .dropdown-item.selected {
+  background-color: #ffe0e0;
+  color: #ff6b6b;
+  font-weight: 600;
+}
+
+/* Gradient button */
+.btn-gradient-purple:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s ease;
+}
+
+/* --- wwwroot/css/zt/customeraccountcollection/collections.css :1673-1779, :1784-1968 --- */
+/* ============================================================ */
+/* SEARCHABLE SELECT - ERP Tema Uyumlu                         */
+/* ============================================================ */
+
+.searchable-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.searchable-select-wrapper select.searchable-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.ss-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  min-height: 34px;
+  padding: 5px 10px;
+  background: #ffffff;
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+  font-size: 13px;
+  color: #1e293b;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.ss-trigger:hover {
+  border-color: #94a3b8;
+}
+
+.ss-trigger.ss-open,
+.ss-trigger:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  outline: none;
+}
+
+.ss-trigger.ss-placeholder {
+  color: #94a3b8;
+}
+
+.ss-trigger.ss-disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
+  border-color: #e2e8f0;
+}
+
+.ss-trigger.ss-disabled:hover {
+  border-color: #e2e8f0;
+}
+
+.ss-trigger.is-invalid {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.ss-trigger:not(.ss-placeholder) {
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.ss-trigger-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.ss-trigger-icon {
+  flex-shrink: 0;
+  color: #94a3b8;
+  font-size: 11px;
+  transition: transform 0.2s ease;
+  line-height: 1;
+}
+
+.ss-trigger.ss-open .ss-trigger-icon {
+  transform: rotate(180deg);
+  color: #3b82f6;
+}
+
+.ss-dropdown {
+  position: fixed;
+  z-index: 99999;
+  background: #ffffff;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 2px 6px rgba(0, 0, 0, 0.06);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 200px;
+  isolation: isolate;
+}
+
+.ss-dropdown.ss-open {
+  display: flex;
+  animation: zto-col-ssDropdownIn 0.15s ease-out;
+}
+
+@keyframes zto-col-ssDropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ss-search-box {
+  padding: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
+.ss-search-input {
+  width: 100%;
+  padding: 6px 10px 6px 30px;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #1e293b;
+  background: #ffffff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E")
+    no-repeat 9px center;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  outline: none;
+}
+
+.ss-search-input::placeholder {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.ss-search-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.ss-options-list {
+  overflow-y: auto;
+  max-height: 220px;
+  padding: 4px 0;
+  flex: 1;
+}
+
+.ss-options-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.ss-options-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.ss-options-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.ss-options-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.ss-option {
+  padding: 7px 12px;
+  font-size: 13px;
+  color: #1e293b;
+  cursor: pointer;
+  transition: background-color 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  line-height: 1.4;
+}
+
+.ss-option:hover {
+  background-color: #eff6ff;
+  color: #1e40af;
+}
+
+.ss-option.ss-selected {
+  background-color: #dbeafe;
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.ss-option.ss-selected::after {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
+  flex-shrink: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%231e40af' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E")
+    no-repeat center;
+}
+
+.ss-option:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+  background-color: #eff6ff;
+}
+
+.ss-option .ss-highlight {
+  background-color: #fef08a;
+  color: #713f12;
+  border-radius: 2px;
+  padding: 0 1px;
+  font-weight: 700;
+}
+
+.ss-no-results {
+  padding: 16px 12px;
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.ss-no-results::before {
+  content: "";
+  display: block;
+  width: 28px;
+  height: 28px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E")
+    no-repeat center;
+}
+
+.ss-footer {
+  border-top: 1px solid #e2e8f0;
+  padding: 5px 8px;
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
+.ss-clear-btn {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #64748b;
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+
+.ss-clear-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+@media (max-width: 768px) {
+  .ss-options-list {
+    max-height: 160px;
+  }
+
+  .ss-option {
+    padding: 9px 12px;
+    font-size: 13px;
+  }
+
+  .ss-trigger {
+    min-height: 38px;
+  }
+
+  .btn-group-toggle .btn i {
+    margin-right: 5px;
+  }
+} /* ZTO kaynağında bu @media kapanmıyor (tarayıcı dosya sonunda kapatır); kopya burada kapatılır. */
+/* --- Views/CustomerAccountCollection/Collections.cshtml <style> :622-632 --- */
+.ss-optgroup-label {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  background: #f1f5f9;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}

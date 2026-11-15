@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -378,6 +379,12 @@ class FinanceIT extends AbstractIntegrationTest {
       sum = sum.add(total.get("total").decimalValue());
     }
     assertThat(sum).isEqualByComparingTo("45");
+    // 12.2a §3.8: satırlar liste satırı üst kümesi; fon bakiyeleri yalnız seçili iş yerlerinden.
+    assertThat(filtered.get("rows").get(0).get("displayMethod").asText()).isEqualTo("CASH");
+    List<String> funds = new ArrayList<>();
+    filtered.get("fundBalances").forEach(f -> funds.add(f.get("fundAccountId").asText()));
+    assertThat(funds).containsExactlyInAnyOrder(cashA, cashB);
+    assertThat(filtered.get("instrumentFundMovements")).isEmpty();
 
     JsonNode all =
         body(
@@ -387,6 +394,20 @@ class FinanceIT extends AbstractIntegrationTest {
                     .param("type", "COLLECTION")
                     .param("date", DATE)));
     assertThat(all.get("rows").size()).isEqualTo(4);
+    assertThat(all.get("fundBalances").size()).isEqualTo(3);
+
+    JsonNode sorted =
+        body(
+            send(
+                t,
+                get("/api/v1/finance/reports/daily")
+                    .param("type", "COLLECTION")
+                    .param("date", DATE)
+                    .param("sort", "TIME_DESC")
+                    .param("fundAccountIds", cashC)));
+    assertThat(sorted.get("rows").size()).isEqualTo(1);
+    assertThat(new BigDecimal(sorted.get("rows").get(0).get("money").get("amount").asText()))
+        .isEqualByComparingTo("40");
   }
 
   @Test

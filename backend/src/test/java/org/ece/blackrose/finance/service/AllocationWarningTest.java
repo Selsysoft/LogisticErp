@@ -22,8 +22,10 @@ import org.ece.blackrose.finance.domain.FinanceTypes.SettlementMethod;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementType;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementWarningCode;
 import org.ece.blackrose.finance.domain.FinanceTypes.WarningSeverity;
+import org.ece.blackrose.finance.domain.Settlement;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountTransactionRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.KindBalanceRow;
+import org.ece.blackrose.finance.repository.FinanceRepositories.SettlementRepository;
 import org.ece.blackrose.finance.service.SettlementWarningService.CompanyBalance;
 import org.ece.blackrose.finance.web.FinanceDtos.CompanyOutstandingResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.SettlementRequest;
@@ -172,7 +174,8 @@ class AllocationWarningTest {
   void servisCariYoksaSorgulamazVeKapsamliSorguyuYalnizLimitedKullanicidaYapar() {
     AccountTransactionRepository transactions = mock(AccountTransactionRepository.class);
     BranchScopeService scope = mock(BranchScopeService.class);
-    SettlementWarningService service = new SettlementWarningService(transactions, scope);
+    SettlementWarningService service =
+        new SettlementWarningService(transactions, scope, mock(SettlementRepository.class));
     assertThat(service.check(SettlementType.PAYMENT, request(null, "10"), B)).isEmpty();
     verifyNoInteractions(transactions);
 
@@ -207,6 +210,124 @@ class AllocationWarningTest {
     assertThat(scoped.excess()).isEqualByComparingTo("0");
     assertThat(scoped.partialScope()).isTrue();
     assertThat(scoped.otherHiddenExists()).isTrue();
+  }
+
+  /**
+   * Düzeltme önizlemesi (12.2a §3.4): aynı cari ve para birimindeki POSTED eski ödeme şirket
+   * borcundan düşülmüş gibi; farklı cari/para birimi/tür/durum ya da taşınmış kayıt etkisiz; kapsam
+   * dışı iş yerindeki kayıt yalnız karar bakiyesinde.
+   */
+  @Test
+  void duzeltmeOnizlemesiEskiOdemeyiBorctanDuser() {
+    AccountTransactionRepository transactions = mock(AccountTransactionRepository.class);
+    BranchScopeService scope = mock(BranchScopeService.class);
+    SettlementRepository settlements = mock(SettlementRepository.class);
+    SettlementWarningService service =
+        new SettlementWarningService(transactions, scope, settlements);
+    UUID account = UUID.randomUUID();
+    UUID branch = UUID.randomUUID();
+    // B'de 150 alacak (borcumuz), 100 ödenmiş: kalan borç 50.
+    KindBalanceRow b = row(account, B, "TRY", "100", "150");
+    when(transactions.kindBalances(
+            anyCollection(), anyString(), isNull(), isNull(), any(BranchFilter.class)))
+        .thenReturn(List.of(b));
+    when(scope.limited()).thenReturn(false);
+    SettlementRequest request = request(account, "150");
+
+    assertThat(service.check(SettlementType.PAYMENT, request, B)).hasSize(1);
+    assertThat(service.check(SettlementType.PAYMENT, request, B, null)).hasSize(1);
+    Settlement old = payment(account, branch, B, "100", "TRY");
+    assertThat(service.check(SettlementType.PAYMENT, request, B, old)).isEmpty();
+    // Daha fazlası yine onay ister: 150 borç, 160 ödeme.
+    SettlementWarningResponse more =
+        service.check(SettlementType.PAYMENT, request(account, "160"), B, old).get(0);
+    assertThat(more.companyOutstanding()).isEqualByComparingTo("150");
+    assertThat(more.excess()).isEqualByComparingTo("10");
+
+    // Etkisiz: başka cari, başka para birimi, tahsilat, iptal edilmiş, taşınmış.
+    assertThat(
+            service.check(
+                SettlementType.PAYMENT,
+                request,
+                B,
+                payment(UUID.randomUUID(), branch, B, "100", "TRY")))
+        .hasSize(1);
+    assertThat(
+            service.check(
+                SettlementType.PAYMENT, request, B, payment(account, branch, B, "100", "USD")))
+        .hasSize(1);
+    Settlement collection =
+        new Settlement(
+            SettlementType.COLLECTION,
+            SettlementMethod.CASH,
+            account,
+            branch,
+            B,
+            UUID.randomUUID(),
+            null,
+            null,
+            null,
+            tl("100"),
+            LocalDate.of(2026, 11, 14),
+            null,
+            null);
+    assertThat(service.check(SettlementType.PAYMENT, request, B, collection)).hasSize(1);
+    Settlement reversed = payment(account, branch, B, "100", "TRY");
+    reversed.markReversed(LocalDate.of(2026, 11, 14), null);
+    assertThat(service.check(SettlementType.PAYMENT, request, B, reversed)).hasSize(1);
+    Settlement moved = payment(account, branch, B, "100", "TRY");
+    when(settlements.isTransferred(moved.getId())).thenReturn(true);
+    assertThat(service.check(SettlementType.PAYMENT, request, B, moved)).hasSize(1);
+    Settlement noAccount = payment(null, branch, B, "100", "TRY");
+    assertThat(service.check(SettlementType.PAYMENT, request, B, noAccount)).hasSize(1);
+
+    // Kapsamlı kullanıcı: görünen bakiye B1 (kapsamda) için de düşülür, kapsam dışında düşülmez.
+    BranchFilter limited = BranchFilter.limited(null, List.of(branch));
+    KindBalanceRow visible = row(account, B, "TRY", "100", "120");
+    when(scope.limited()).thenReturn(true);
+    when(scope.filter(null, null)).thenReturn(limited);
+    when(transactions.kindBalances(anyCollection(), anyString(), isNull(), isNull(), eq(limited)))
+        .thenReturn(List.of(visible));
+    when(scope.allowedOrNull()).thenReturn(java.util.Set.of(branch));
+    SettlementWarningResponse inScope =
+        service.check(SettlementType.PAYMENT, request(account, "200"), B, old).get(0);
+    assertThat(inScope.companyOutstanding()).isEqualByComparingTo("120");
+    Settlement hidden = payment(account, UUID.randomUUID(), B, "100", "TRY");
+    SettlementWarningResponse outOfScope =
+        service.check(SettlementType.PAYMENT, request(account, "200"), B, hidden).get(0);
+    assertThat(outOfScope.companyOutstanding()).isEqualByComparingTo("20");
+    assertThat(outOfScope.partialScope()).isTrue();
+  }
+
+  @Test
+  void borcDusmeKopyaUzerinde() {
+    Map<UUID, CompanyBalance> balances = Map.of(A, bal("100", "150"));
+    Map<UUID, CompanyBalance> adjusted =
+        SettlementWarningService.withoutPayment(balances, A, new BigDecimal("40"));
+    assertThat(adjusted.get(A).debit()).isEqualByComparingTo("60");
+    assertThat(balances.get(A).debit()).isEqualByComparingTo("100");
+    Map<UUID, CompanyBalance> missing =
+        SettlementWarningService.withoutPayment(balances, B, new BigDecimal("10"));
+    assertThat(missing.get(B).debit()).isEqualByComparingTo("-10");
+    assertThat(missing.get(B).credit()).isEqualByComparingTo("0");
+  }
+
+  private static Settlement payment(
+      UUID account, UUID branch, UUID company, String amount, String currency) {
+    return new Settlement(
+        SettlementType.PAYMENT,
+        SettlementMethod.CASH,
+        account,
+        branch,
+        company,
+        UUID.randomUUID(),
+        null,
+        null,
+        null,
+        new Money(new BigDecimal(amount), currency),
+        LocalDate.of(2026, 11, 14),
+        null,
+        null);
   }
 
   private static SettlementRequest request(UUID account, String amount) {

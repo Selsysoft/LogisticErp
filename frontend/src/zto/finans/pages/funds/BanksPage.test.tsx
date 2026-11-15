@@ -109,7 +109,7 @@ describe("BanksPage (ZTO BankIntroduction/Index)", { timeout: 30_000 }, () => {
       "noopener",
     );
     expect(within(card).getByText("Ödeme").closest("a")?.getAttribute("href")).toBe(
-      "/finance/settlements?new=PAYMENT&method=BANK&fundAccountId=f1",
+      "/zto-finans/banka-hareketleri?fundId=f1&openModal=true",
     );
     expect(
       document.querySelector('.account-card[data-definition-id="f3"] .balance-label')?.textContent,

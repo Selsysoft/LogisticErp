@@ -93,7 +93,7 @@ describe("CashesPage (ZTO CashIntroduction/Index)", { timeout: 30_000 }, () => {
     const card = document.querySelector('.cash-card[data-definition-id="k1"]') as HTMLElement;
     expect(card.getAttribute("data-cash-name")).toBe("Merkez Kasa|K1");
     expect(within(card).getByText("Tahsilat").closest("a")?.getAttribute("href")).toBe(
-      "/finance/settlements?new=COLLECTION&method=CASH&fundAccountId=k1",
+      "/zto-finans/kasa-hareketleri?fundId=k1&openCollection=true&collectionMethod=Nakit",
     );
     fireEvent.click(within(card).getByRole("button", { name: /işlemleri$/ }));
     expect(

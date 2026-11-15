@@ -10,6 +10,7 @@ import type { BranchTree } from "../../../branch/branchTree";
 import { OTHER_GROUP_NAME } from "../../../branch/branchTree";
 import { currencySymbol } from "../../../format";
 import { searchKey } from "../../../searchKey";
+import { fundTransactionsPath } from "../../navItems";
 
 /*
  * Bankalar / Kasalar liste mantığı (12.2 §5.5, §5.8; ZTO BankIntroduction/Index + _AccountCardsListPartial,
@@ -593,17 +594,51 @@ export function signedAmountText(direction: "IN" | "OUT", formatted: string): st
 }
 
 /**
- * Ödeme / tahsilat bağlantısı: MUI ödeme penceresi yeni sekmede, fon ön seçili (OK-12.2-22; ZTO
- * BankTransactions?openModal / openCollection yerine).
+ * Ödeme / tahsilat bağlantısı (12.2a §5.13; ZTO `_AccountCardsListPartial:143,153`,
+ * `_CashCardsListPartial:134,136`): Banka/Kasa Hareketleri sayfası açılır ve aynı sayfada ZTO ödeme /
+ * tahsilat modalı fon ön seçili gelir (`openModal` / `openCollection` + `collectionMethod`).
  */
 export function settlementPath(
   type: "PAYMENT" | "COLLECTION",
   kind: FundKind,
   fundId?: string,
 ): string {
-  const params = new URLSearchParams({ new: type, method: kind });
-  if (fundId) params.set("fundAccountId", fundId);
-  return `/finance/settlements?${params.toString()}`;
+  const collection = type === "COLLECTION";
+  return fundTransactionsPath(kind, {
+    fundId: fundId || undefined,
+    openModal: !collection || undefined,
+    openCollection: collection || undefined,
+    collectionMethod: collection ? (kind === "BANK" ? "Banka" : "Nakit") : undefined,
+  });
+}
+
+/** Banka/Kasa Hareketleri'nin okuyup URL'den sildiği modal açılış parametreleri (ZTO BTC:443-450). */
+export const SETTLEMENT_MODAL_PARAMS = ["openModal", "openCollection", "collectionMethod"] as const;
+
+/** Banka/Kasa Hareketleri sayfa içi ödeme / tahsilat modalı isteği (`settlementPath`'in tersi). */
+export type SettlementModalRequest = {
+  type: "PAYMENT" | "COLLECTION";
+  /** Modalın ön seçili yöntemi: Kasa sayfasında Nakit, Banka sayfasında Banka. */
+  method: FundKind;
+};
+
+const isTrue = (value: string | null) => (value ?? "").trim().toLowerCase() === "true";
+
+/**
+ * `?openModal=true` → Yeni Ödeme, `?openCollection=true[&collectionMethod=Banka|Nakit]` → Yeni Tahsilat
+ * (ZTO `toLowerCase() === 'true'`). Yöntem: tahsilatta `collectionMethod` (Banka → BANK, Nakit → CASH;
+ * kod değerleri de kabul edilir), aksi halde sayfanın türü. Parametre yoksa null.
+ */
+export function parseSettlementModal(
+  params: URLSearchParams,
+  kind: FundKind,
+): SettlementModalRequest | null {
+  if (isTrue(params.get("openModal"))) return { type: "PAYMENT", method: kind };
+  if (!isTrue(params.get("openCollection"))) return null;
+  const raw = (params.get("collectionMethod") ?? "").trim().toLocaleLowerCase("tr");
+  const method: FundKind =
+    raw === "banka" || raw === "bank" ? "BANK" : raw === "nakit" || raw === "cash" ? "CASH" : kind;
+  return { type: "COLLECTION", method };
 }
 
 /** "Ödeme Onay Yönetimi" rozetleri (ZTO sırası; Talimat Verildi 12.4'e kadar 0 — OK-12.2-25). */

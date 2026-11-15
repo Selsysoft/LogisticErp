@@ -1,6 +1,7 @@
 import {
   Box,
   Checkbox,
+  Chip,
   FormControlLabel,
   FormGroup,
   Stack,
@@ -19,6 +20,7 @@ import { withCompany } from "./companyQuery";
 import {
   DataTable,
   formatAmount,
+  formatDate,
   formatMoney,
   QueryState,
   SectionHeader,
@@ -125,22 +127,50 @@ function DailySection() {
               },
             ]}
           />
+          {report.data.rows.some((r) => r.reversedOn) && (
+            <Typography variant="caption" color="text.secondary">
+              {t("finance.reports.includesReversedNote")}
+            </Typography>
+          )}
           {report.data.rows.length > 0 && (
             <DataTable
               rows={report.data.rows}
               rowKey={(row) => row.id}
               columns={[
                 { header: t("finance.field.branch"), render: (r) => branchName(r.branchId) },
-                { header: t("finance.field.account"), render: (r) => accountName(r.accountId) },
+                {
+                  header: t("finance.field.account"),
+                  // 12.2a: satır cari adını taşır (personel maskesinde null → "—"; §3.7).
+                  render: (r) =>
+                    r.employeeMasked ? "—" : (r.accountName ?? accountName(r.accountId)),
+                },
                 {
                   header: t("finance.field.method"),
-                  render: (r) => t(`finance.method.${r.method}`),
+                  // Kredi Kartı / Senet ayrımı `displayMethod` ile (12.2a §4.3).
+                  render: (r) => t(`finance.method.${r.displayMethod ?? r.method}`),
                 },
                 { header: t("finance.field.description"), render: (r) => r.description },
                 {
                   header: t("finance.field.amount"),
                   align: "right",
-                  render: (r) => formatMoney(r.money),
+                  // B4 "o tarihteki durum": sonradan iptal edilen satır etiketlenir; toplamlar
+                  // sunucudaki gibi onu içerir (OK-12.2a-30, goc-defter:F3).
+                  render: (r) => (
+                    <>
+                      {formatMoney(r.money)}
+                      {r.reversedOn && (
+                        <Chip
+                          size="small"
+                          variant="outlined"
+                          color="warning"
+                          sx={{ ml: 1 }}
+                          label={t("finance.reports.reversedLater", {
+                            date: formatDate(r.reversedOn),
+                          })}
+                        />
+                      )}
+                    </>
+                  ),
                 },
               ]}
             />

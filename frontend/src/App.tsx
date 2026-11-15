@@ -275,6 +275,19 @@ const ZtoExchangeBreakReportPage = lazyPage(
   () => import("./zto/finans/pages/transferCenter/ExchangeBreakReportPage"),
   "ExchangeBreakReportPage",
 );
+// 12.2a ödeme / tahsilat (12.2a_TASARIM §5.3): listeler ve günlük rapor kabuk içinde.
+const ZtoPaymentsPage = lazyPage(
+  () => import("./zto/finans/pages/settlements/PaymentsPage"),
+  "PaymentsPage",
+);
+const ZtoCollectionsPage = lazyPage(
+  () => import("./zto/finans/pages/settlements/CollectionsPage"),
+  "CollectionsPage",
+);
+const ZtoDailySettlementReportPage = lazyPage(
+  () => import("./zto/finans/pages/settlements/DailySettlementReportPage"),
+  "DailySettlementReportPage",
+);
 // Bileşen vitrini yalnız geliştirme ortamında; üretim paketine girmez.
 const ZtoShowcasePage = import.meta.env.DEV
   ? lazyPage(() => import("./zto/finans/pages/ShowcasePage"), "ShowcasePage")
@@ -483,6 +496,16 @@ export function App() {
               <Route
                 path="transfer-merkezi/doviz-bozum-raporu"
                 element={<ZtoExchangeBreakReportPage />}
+              />
+              <Route path="odemeler" element={<ZtoPaymentsPage />} />
+              <Route
+                path="odemeler/gunluk-rapor"
+                element={<ZtoDailySettlementReportPage key="PAYMENT" type="PAYMENT" />}
+              />
+              <Route path="tahsilatlar" element={<ZtoCollectionsPage />} />
+              <Route
+                path="tahsilatlar/gunluk-rapor"
+                element={<ZtoDailySettlementReportPage key="COLLECTION" type="COLLECTION" />}
               />
               <Route
                 path="tanimlar/is-yerleri"

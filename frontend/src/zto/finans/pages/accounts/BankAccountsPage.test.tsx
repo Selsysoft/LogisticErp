@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../../../i18n";
 import { apiError, fakeApi, renderAt, signIn } from "../definitions/definitionTestUtils";
 import { BankAccountFormPage } from "./BankAccountFormPage";
+import type { Page, SettlementListItem } from "../../../../pages/finance/types";
 import { BankAccountsPage } from "./BankAccountsPage";
 import { MANAGER, makeAccount, makeBank, mockCommon } from "./accountsTestUtils";
 
@@ -43,6 +44,74 @@ beforeEach(() => {
 });
 
 afterEach(cleanup);
+
+/** Liste satırı (12.2a §4.3 `SettlementListItem`); yalnız panelin kullandığı alanlar anlamlı. */
+function listItem(overrides: Partial<SettlementListItem> = {}): SettlementListItem {
+  return {
+    id: "s1",
+    type: "PAYMENT",
+    method: "BANK",
+    channel: "TRANSFER",
+    displayMethod: "BANK",
+    accountId: "a1",
+    accountCode: "C-1",
+    accountName: "Ankara Lastik",
+    accountType: "SUPPLIER",
+    accountSubGroup: null,
+    accountGroupName: null,
+    employeeMasked: false,
+    branchId: "b1",
+    branchName: "Merkez",
+    branchGroupName: null,
+    companyId: "c1",
+    fundAccountId: "f1",
+    fundName: "Ziraat TL",
+    fundKind: "BANK",
+    fundBankName: null,
+    fundBankBranchName: null,
+    instrumentId: null,
+    instrumentKind: null,
+    instrumentNumber: null,
+    instrumentStatus: null,
+    expenseItemId: null,
+    expenseItemName: null,
+    planId: null,
+    money: { amount: "1500.00", currency: "TRY" },
+    exchangeRate: 1,
+    tlAmount: 1500,
+    settlementDate: "2026-11-10",
+    documentNo: "DK-7",
+    description: null,
+    status: "POSTED",
+    counterpartyBankAccountId: "bk1",
+    counterpartyIbanMasked: "TR33 **** 1326",
+    counterpartyBankName: "Ziraat Bankası",
+    correctsSettlementId: null,
+    correctedById: null,
+    reverseReason: null,
+    reversedOn: null,
+    createdAt: "2026-11-10T08:00:00Z",
+    createdBy: "u1",
+    intercompany: false,
+    credit: false,
+    transferred: false,
+    fxUsed: "0.00",
+    fxRemaining: "0.00",
+    lockReason: null,
+    reversible: true,
+    correctable: true,
+    ...overrides,
+  };
+}
+
+const page = (content: SettlementListItem[], totalElements = content.length) =>
+  ({
+    content,
+    page: 0,
+    size: 50,
+    totalElements,
+    totalPages: 1,
+  }) satisfies Page<SettlementListItem>;
 
 const where = () => screen.getByTestId("where");
 const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -101,15 +170,14 @@ describe("BankAccountsPage (ZTO BankAccounts/Index)", { timeout: 30_000 }, () =>
     expect(document.activeElement).toBe(trigger);
   });
 
-  it("Hesap İşlemleri paneli 12.2a notu; Sil → onay → PATCH → snackbar; Pasifleri göster", async () => {
+  it("Hesap İşlemleri paneli boş: ödeme/tahsilat yok iletisi; Sil → onay → PATCH → snackbar; Pasifleri göster", async () => {
+    fakeApi.on("GET", /^\/finance\/(payments|collections)\?/, page([]));
     fakeApi.on("PATCH", "/finance/bank-accounts/bk1/active", { ...ACTIVE, active: false });
     renderAt("/zto-finans/cari-kartlar/a1/banka-hesaplari", ROUTES);
     await screen.findByText("Ziraat Bankası");
     fireEvent.click(screen.getByRole("button", { name: "Ziraat Bankası hesabı işlemleri" }));
     fireEvent.click(screen.getByRole("menuitem", { name: /Hesap İşlemleri/ }));
-    expect(
-      await screen.findByText("Bu hesaba yapılan ödemeler Faz 12.2a ile listelenecek."),
-    ).toBeTruthy();
+    expect(await screen.findByText("Bu hesaba ait ödeme/tahsilat bulunamadı.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Ziraat Bankası hesabı işlemleri" }));
     fireEvent.click(screen.getByRole("menuitem", { name: /^Sil$/ }));
     const dialog = await screen.findByRole("dialog");
@@ -122,6 +190,75 @@ describe("BankAccountsPage (ZTO BankAccounts/Index)", { timeout: 30_000 }, () =>
     expect(await screen.findByText("Banka hesabı başarıyla silindi.")).toBeTruthy();
     fireEvent.click(screen.getByLabelText("Pasifleri göster"));
     expect(await screen.findByText("Vakıfbank")).toBeTruthy();
+  });
+  it("12.2a: Banka Hesabı İşlemleri — iki uç, POSTED + hesap süzgeci, tarih azalan, ZTO küçük tablo", async () => {
+    fakeApi.on("GET", /^\/finance\/payments\?/, page([listItem()], 51));
+    fakeApi.on(
+      "GET",
+      /^\/finance\/collections\?/,
+      page([
+        listItem({
+          id: "s2",
+          type: "COLLECTION",
+          settlementDate: "2026-11-12",
+          documentNo: null,
+          money: { amount: "250.5", currency: "USD" },
+          branchName: "Şube 2",
+        }),
+      ]),
+    );
+    renderAt("/zto-finans/cari-kartlar/a1/banka-hesaplari", ROUTES);
+    await screen.findByText("Ziraat Bankası");
+    fireEvent.click(screen.getByRole("button", { name: "Ziraat Bankası hesabı işlemleri" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Hesap İşlemleri/ }));
+    const panel = byId("bankAccountTransactionsPanel");
+    const region = await within(panel).findByRole("region", { name: /Banka Hesabı İşlemleri/ });
+    expect(region.tabIndex).toBe(0);
+    const table = region.querySelector("table") as HTMLTableElement;
+    expect(table.className).toBe("table table-sm table-bordered");
+    expect(Array.from(table.querySelectorAll("thead th"), (th) => th.textContent)).toEqual([
+      "Tarih",
+      "Tür",
+      "İş Yeri",
+      "Tutar",
+      "Belge No",
+    ]);
+    const rows = Array.from(table.querySelectorAll("tbody tr"), (tr) =>
+      Array.from(tr.querySelectorAll("td"), (td) => td.textContent),
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows[0].slice(0, 3)).toEqual(["12.11.2026", "Tahsilat", "Şube 2"]);
+    expect(rows[0][3]).toContain("250,50");
+    expect(rows[0][4]).toBe("-");
+    expect(rows[1].slice(0, 3)).toEqual(["10.11.2026", "Ödeme", "Merkez"]);
+    expect(rows[1][3]).toContain("1.500,00");
+    expect(rows[1][4]).toBe("DK-7");
+    expect(within(panel).getByText("Son 50 kayıt gösteriliyor.")).toBeTruthy();
+    const listCalls = fakeApi.calls
+      .filter((c) => /^\/finance\/(payments|collections)\?/.test(c.path))
+      .map((c) => new URL(c.path, "http://x"));
+    expect(listCalls.map((u) => u.pathname).sort()).toEqual([
+      "/finance/collections",
+      "/finance/payments",
+    ]);
+    for (const url of listCalls) {
+      expect(url.searchParams.get("counterpartyBankAccountId")).toBe("bk1");
+      expect(url.searchParams.get("status")).toBe("POSTED");
+      expect(url.searchParams.get("size")).toBe("50");
+    }
+  });
+
+  it("12.2a: Banka Hesabı İşlemleri yüklenemezse hata iletisi", async () => {
+    fakeApi.on("GET", /^\/finance\/payments\?/, page([]));
+    fakeApi.on("GET", /^\/finance\/collections\?/, () => {
+      throw apiError(403, "BRANCH_OUT_OF_SCOPE", "Kapsam dışı.");
+    });
+    renderAt("/zto-finans/cari-kartlar/a1/banka-hesaplari", ROUTES);
+    await screen.findByText("Ziraat Bankası");
+    fireEvent.click(screen.getByRole("button", { name: "Ziraat Bankası hesabı işlemleri" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Hesap İşlemleri/ }));
+    const panel = byId("bankAccountTransactionsPanel");
+    expect((await within(panel).findByRole("alert")).textContent).toBe("Kapsam dışı.");
   });
 });
 

@@ -1600,6 +1600,25 @@
         },
         "type" : "object"
       },
+      "AllocationRequest" : {
+        "properties" : {
+          "amount" : {
+            "example" : "250.00",
+            "format" : "decimal",
+            "type" : "string"
+          },
+          "targetId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "targetType" : {
+            "enum" : [ "PURCHASE_INVOICE", "FREIGHT_INVOICE", "WAREHOUSE_INVOICE", "OPENING_INVOICE", "ACCOUNT_DOCUMENT" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "amount", "targetId", "targetType" ],
+        "type" : "object"
+      },
       "AssignLegRequest" : {
         "properties" : {
           "carrierAccountId" : {
@@ -3244,15 +3263,104 @@
         },
         "type" : "object"
       },
+      "DailyFundBalanceResponse" : {
+        "properties" : {
+          "balanceAtDate" : {
+            "example" : "1500.00",
+            "format" : "decimal",
+            "type" : "string"
+          },
+          "balanceNow" : {
+            "example" : "1500.00",
+            "format" : "decimal",
+            "type" : "string"
+          },
+          "bankBranchName" : {
+            "type" : [ "string", "null" ]
+          },
+          "bankName" : {
+            "type" : [ "string", "null" ]
+          },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "branchName" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "fundAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "BANK", "CASH" ],
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "DailyInstrumentMovementResponse" : {
+        "properties" : {
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "branchName" : {
+            "type" : "string"
+          },
+          "count" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "fundAccountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "fundKind" : {
+            "enum" : [ "BANK", "CASH" ],
+            "type" : "string"
+          },
+          "fundName" : {
+            "type" : "string"
+          },
+          "total" : {
+            "example" : "1500.00",
+            "format" : "decimal",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "DailyReportResponse" : {
         "properties" : {
           "date" : {
             "format" : "date",
             "type" : "string"
           },
+          "fundBalances" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DailyFundBalanceResponse"
+            },
+            "type" : "array"
+          },
+          "instrumentFundMovements" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DailyInstrumentMovementResponse"
+            },
+            "type" : "array"
+          },
           "rows" : {
             "items" : {
-              "$ref" : "#/components/schemas/SettlementResponse"
+              "$ref" : "#/components/schemas/SettlementListItemResponse"
             },
             "type" : "array"
           },
@@ -6641,6 +6749,14 @@
             "format" : "date",
             "type" : "string"
           },
+          "fundAccountId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "initialStatus" : {
+            "enum" : [ "PORTFOLIO", "AT_BANK", "COLLECTED", "ENDORSED", "COLLECTED_TO_CASH", "BOUNCED", "ISSUED", "PAID" ],
+            "type" : [ "string", "null" ]
+          },
           "kind" : {
             "enum" : [ "CHECK", "NOTE" ],
             "type" : "string"
@@ -6652,6 +6768,59 @@
           }
         },
         "required" : [ "dueDate", "kind", "number" ],
+        "type" : "object"
+      },
+      "OpenInvoiceResponse" : {
+        "properties" : {
+          "allocated" : {
+            "example" : "500.00",
+            "format" : "decimal",
+            "type" : "string"
+          },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "dueDate" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "invoiceDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "number" : {
+            "type" : "string"
+          },
+          "remaining" : {
+            "example" : "1000.00",
+            "format" : "decimal",
+            "type" : "string"
+          },
+          "targetType" : {
+            "enum" : [ "PURCHASE_INVOICE", "FREIGHT_INVOICE", "WAREHOUSE_INVOICE", "OPENING_INVOICE", "ACCOUNT_DOCUMENT" ],
+            "type" : "string"
+          },
+          "total" : {
+            "example" : "1500.00",
+            "format" : "decimal",
+            "type" : "string"
+          },
+          "typeName" : {
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "OpenTransactionResponse" : {
@@ -7559,11 +7728,11 @@
         },
         "type" : "object"
       },
-      "PageResponseSettlementResponse" : {
+      "PageResponseSettlementListItemResponse" : {
         "properties" : {
           "content" : {
             "items" : {
-              "$ref" : "#/components/schemas/SettlementResponse"
+              "$ref" : "#/components/schemas/SettlementListItemResponse"
             },
             "type" : "array"
           },
@@ -10703,6 +10872,49 @@
         "required" : [ "newPassword", "token" ],
         "type" : "object"
       },
+      "SettlementAllocationResponse" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "dueDate" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "invoiceDate" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "money" : {
+            "$ref" : "#/components/schemas/Money"
+          },
+          "outOfScope" : {
+            "type" : "boolean"
+          },
+          "targetCancelled" : {
+            "type" : "boolean"
+          },
+          "targetId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "targetNumber" : {
+            "type" : [ "string", "null" ]
+          },
+          "targetType" : {
+            "enum" : [ "PURCHASE_INVOICE", "FREIGHT_INVOICE", "WAREHOUSE_INVOICE", "OPENING_INVOICE", "ACCOUNT_DOCUMENT" ],
+            "type" : "string"
+          },
+          "targetTypeName" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "type" : "object"
+      },
       "SettlementCheckResponse" : {
         "properties" : {
           "invoiceGaps" : {
@@ -10716,6 +10928,280 @@
               "$ref" : "#/components/schemas/SettlementWarningResponse"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "SettlementCorrectionRequest" : {
+        "properties" : {
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "replacement" : {
+            "$ref" : "#/components/schemas/SettlementRequest"
+          }
+        },
+        "required" : [ "replacement" ],
+        "type" : "object"
+      },
+      "SettlementDetailResponse" : {
+        "properties" : {
+          "allocations" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SettlementAllocationResponse"
+            },
+            "type" : "array"
+          },
+          "bankStatementMatched" : {
+            "type" : "boolean"
+          },
+          "fundIbanMasked" : {
+            "type" : [ "string", "null" ]
+          },
+          "instrument" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/InstrumentResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "item" : {
+            "$ref" : "#/components/schemas/SettlementListItemResponse"
+          },
+          "lines" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SettlementLineResponse"
+            },
+            "type" : "array"
+          },
+          "plan" : {
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/PlanResponse"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "type" : "object"
+      },
+      "SettlementLineResponse" : {
+        "properties" : {
+          "direction" : {
+            "type" : "string"
+          },
+          "exchangeRate" : {
+            "type" : "number"
+          },
+          "ledger" : {
+            "type" : "string"
+          },
+          "money" : {
+            "$ref" : "#/components/schemas/Money"
+          },
+          "reversal" : {
+            "type" : "boolean"
+          },
+          "tlAmount" : {
+            "type" : "number"
+          },
+          "transactionDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "transactionId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SettlementListItemResponse" : {
+        "properties" : {
+          "accountCode" : {
+            "type" : [ "string", "null" ]
+          },
+          "accountGroupName" : {
+            "type" : [ "string", "null" ]
+          },
+          "accountId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "accountName" : {
+            "type" : [ "string", "null" ]
+          },
+          "accountSubGroup" : {
+            "type" : [ "string", "null" ]
+          },
+          "accountType" : {
+            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
+            "type" : [ "string", "null" ]
+          },
+          "branchGroupName" : {
+            "type" : [ "string", "null" ]
+          },
+          "branchId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "branchName" : {
+            "type" : "string"
+          },
+          "channel" : {
+            "enum" : [ "TRANSFER", "CREDIT_CARD" ],
+            "type" : [ "string", "null" ]
+          },
+          "companyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "correctable" : {
+            "type" : "boolean"
+          },
+          "correctedById" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "correctsSettlementId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "counterpartyBankAccountId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "counterpartyBankName" : {
+            "type" : [ "string", "null" ]
+          },
+          "counterpartyIbanMasked" : {
+            "type" : [ "string", "null" ]
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "credit" : {
+            "type" : "boolean"
+          },
+          "description" : {
+            "type" : [ "string", "null" ]
+          },
+          "displayMethod" : {
+            "enum" : [ "CASH", "BANK", "CHECK", "NOTE", "CREDIT_CARD", "OTHER" ],
+            "type" : "string"
+          },
+          "documentNo" : {
+            "type" : [ "string", "null" ]
+          },
+          "employeeMasked" : {
+            "type" : "boolean"
+          },
+          "exchangeRate" : {
+            "type" : [ "number", "null" ]
+          },
+          "expenseItemId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "expenseItemName" : {
+            "type" : [ "string", "null" ]
+          },
+          "fundAccountId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "fundBankBranchName" : {
+            "type" : [ "string", "null" ]
+          },
+          "fundBankName" : {
+            "type" : [ "string", "null" ]
+          },
+          "fundKind" : {
+            "enum" : [ "BANK", "CASH" ],
+            "type" : [ "string", "null" ]
+          },
+          "fundName" : {
+            "type" : [ "string", "null" ]
+          },
+          "fxRemaining" : {
+            "example" : "0.00",
+            "format" : "decimal",
+            "type" : "string"
+          },
+          "fxUsed" : {
+            "example" : "0.00",
+            "format" : "decimal",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "instrumentId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "instrumentKind" : {
+            "enum" : [ "CHECK", "NOTE" ],
+            "type" : [ "string", "null" ]
+          },
+          "instrumentNumber" : {
+            "type" : [ "string", "null" ]
+          },
+          "instrumentStatus" : {
+            "enum" : [ "PORTFOLIO", "AT_BANK", "COLLECTED", "ENDORSED", "COLLECTED_TO_CASH", "BOUNCED", "ISSUED", "PAID" ],
+            "type" : [ "string", "null" ]
+          },
+          "intercompany" : {
+            "type" : "boolean"
+          },
+          "lockReason" : {
+            "enum" : [ "REVERSED", "CHECK", "PLAN", "INTERCOMPANY", "FX_SOURCE", "VEHICLE_EXPENSE", "TRANSFERRED", "NO_ACCOUNT" ],
+            "type" : [ "string", "null" ]
+          },
+          "method" : {
+            "enum" : [ "CASH", "BANK", "CHECK" ],
+            "type" : "string"
+          },
+          "money" : {
+            "$ref" : "#/components/schemas/Money"
+          },
+          "planId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "reverseReason" : {
+            "type" : [ "string", "null" ]
+          },
+          "reversedOn" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "reversible" : {
+            "type" : "boolean"
+          },
+          "settlementDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "POSTED", "REVERSED" ],
+            "type" : "string"
+          },
+          "tlAmount" : {
+            "type" : [ "number", "null" ]
+          },
+          "transferred" : {
+            "type" : "boolean"
+          },
+          "type" : {
+            "enum" : [ "PAYMENT", "COLLECTION" ],
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -10748,12 +11234,28 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "allocations" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AllocationRequest"
+            },
+            "maxItems" : 50,
+            "minItems" : 0,
+            "type" : [ "array", "null" ]
+          },
           "branchId" : {
             "format" : "uuid",
             "type" : "string"
           },
+          "channel" : {
+            "enum" : [ "TRANSFER", "CREDIT_CARD" ],
+            "type" : [ "string", "null" ]
+          },
           "confirmWarnings" : {
             "type" : "boolean"
+          },
+          "counterpartyBankAccountId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
           },
           "date" : {
             "format" : "date",
@@ -10763,6 +11265,11 @@
             "maxLength" : 500,
             "minLength" : 0,
             "type" : "string"
+          },
+          "documentNo" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : [ "string", "null" ]
           },
           "exchangeRate" : {
             "type" : "number"
@@ -10803,12 +11310,27 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "channel" : {
+            "enum" : [ "TRANSFER", "CREDIT_CARD" ],
+            "type" : [ "string", "null" ]
+          },
           "companyId" : {
             "format" : "uuid",
             "type" : "string"
           },
+          "correctsSettlementId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "counterpartyBankAccountId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
           "description" : {
             "type" : "string"
+          },
+          "documentNo" : {
+            "type" : [ "string", "null" ]
           },
           "expenseItemId" : {
             "format" : "uuid",
@@ -10836,6 +11358,13 @@
           "planId" : {
             "format" : "uuid",
             "type" : "string"
+          },
+          "reverseReason" : {
+            "type" : [ "string", "null" ]
+          },
+          "reversedOn" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
           },
           "settlementDate" : {
             "format" : "date",
@@ -17402,10 +17931,133 @@
           }
         }, {
           "in" : "query",
-          "name" : "pageable",
-          "required" : true,
+          "name" : "accountId",
+          "required" : false,
           "schema" : {
-            "$ref" : "#/components/schemas/Pageable"
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "accountType",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "subGroup",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "branchIds",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "fundAccountIds",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "method",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "enum" : [ "CASH", "BANK", "CHECK", "NOTE", "CREDIT_CARD", "OTHER" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "POSTED", "REVERSED" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "counterpartyBankAccountId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "hasAccount",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "sort",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         } ],
         "responses" : {
@@ -17413,7 +18065,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/PageResponseSettlementResponse"
+                  "$ref" : "#/components/schemas/PageResponseSettlementListItemResponse"
                 }
               }
             },
@@ -18992,6 +19644,22 @@
           }
         }, {
           "in" : "query",
+          "name" : "direction",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "RECEIVED", "ISSUED" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "kind",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "CHECK", "NOTE" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
           "name" : "companyId",
           "required" : false,
           "schema" : {
@@ -19450,6 +20118,25 @@
           }
         }, {
           "in" : "query",
+          "name" : "statuses",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "enum" : [ "DRAFT", "PENDING", "APPROVED", "REJECTED", "PAID", "CANCELLED" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "accountId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
           "name" : "companyId",
           "required" : false,
           "schema" : {
@@ -19815,10 +20502,133 @@
           }
         }, {
           "in" : "query",
-          "name" : "pageable",
-          "required" : true,
+          "name" : "accountId",
+          "required" : false,
           "schema" : {
-            "$ref" : "#/components/schemas/Pageable"
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "accountType",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "CUSTOMER", "CARRIER", "SUPPLIER", "EMPLOYEE", "BANK", "LEAD", "INTERCOMPANY" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "subGroup",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "branchIds",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "fundAccountIds",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "method",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "enum" : [ "CASH", "BANK", "CHECK", "NOTE", "CREDIT_CARD", "OTHER" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "POSTED", "REVERSED" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "counterpartyBankAccountId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "hasAccount",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "sort",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         } ],
         "responses" : {
@@ -19826,7 +20636,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/PageResponseSettlementResponse"
+                  "$ref" : "#/components/schemas/PageResponseSettlementListItemResponse"
                 }
               }
             },
@@ -20059,6 +20869,43 @@
             "format" : "uuid",
             "type" : "string"
           }
+        }, {
+          "in" : "query",
+          "name" : "fundAccountIds",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "currency",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "method",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "enum" : [ "CASH", "BANK", "CHECK", "NOTE", "CREDIT_CARD", "OTHER" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "sort",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "TIME_ASC", "TIME_DESC" ],
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -20247,6 +21094,14 @@
             "enum" : [ "PAYMENT", "COLLECTION" ],
             "type" : "string"
           }
+        }, {
+          "in" : "query",
+          "name" : "correctsSettlementId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
         } ],
         "requestBody" : {
           "content" : {
@@ -20268,6 +21123,138 @@
               }
             },
             "description" : "OK"
+          }
+        },
+        "tags" : [ "finance-controller" ]
+      }
+    },
+    "/api/v1/finance/settlements/open-invoices" : {
+      "get" : {
+        "operationId" : "openInvoices",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "type",
+          "required" : true,
+          "schema" : {
+            "enum" : [ "PAYMENT", "COLLECTION" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "accountId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "branchId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "currency",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "excludeSettlementId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/OpenInvoiceResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "finance-controller" ]
+      }
+    },
+    "/api/v1/finance/settlements/{id}" : {
+      "get" : {
+        "operationId" : "settlementDetail",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SettlementDetailResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "finance-controller" ]
+      }
+    },
+    "/api/v1/finance/settlements/{id}/correct" : {
+      "post" : {
+        "operationId" : "correctSettlement",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SettlementCorrectionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SettlementResponse"
+                }
+              }
+            },
+            "description" : "Created"
           }
         },
         "tags" : [ "finance-controller" ]

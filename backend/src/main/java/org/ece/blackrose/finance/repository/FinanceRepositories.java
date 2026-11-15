@@ -18,10 +18,11 @@ import org.ece.blackrose.finance.domain.FinanceSettings;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundAccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundKind;
+import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentDirection;
+import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.InvoiceSide;
 import org.ece.blackrose.finance.domain.FinanceTypes.PlanStatus;
-import org.ece.blackrose.finance.domain.FinanceTypes.SettlementType;
 import org.ece.blackrose.finance.domain.FundAccount;
 import org.ece.blackrose.finance.domain.FundTransaction;
 import org.ece.blackrose.finance.domain.Instrument;
@@ -31,6 +32,7 @@ import org.ece.blackrose.finance.domain.PaymentPlan;
 import org.ece.blackrose.finance.domain.PaymentPlanEvent;
 import org.ece.blackrose.finance.domain.PurchaseInvoice;
 import org.ece.blackrose.finance.domain.Settlement;
+import org.ece.blackrose.finance.domain.SettlementAllocation;
 import org.ece.blackrose.organization.BranchFilter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -109,7 +111,8 @@ public final class FinanceRepositories {
           + BASE_TYPE
           + "= 'SETTLEMENT' and s.id ="
           + BASE_ID
-          + "and s.deleted = false ";
+          + "and s.deleted = false"
+          + " left join instrument sin on sin.id = s.instrument_id and sin.deleted = false ";
 
   private static final String DOCUMENT_DATE =
       " coalesce(d.document_date, pi.invoice_date, fi.invoice_date, wi.invoice_date,"
@@ -130,9 +133,13 @@ public final class FinanceRepositories {
             when 'ACCOUNT_TRANSFER_IN' then 'IN' end as "transferRole",
        exists (select 1 from account_transfer_line l where l.account_transaction_id = t.id
                  and l.active and l.deleted = false) as "transferredOut",
-       coalesce(d.document_no, pi.number, fi.number, wi.number, oi.number) as "documentNo",
+       coalesce(d.document_no, pi.number, fi.number, wi.number, oi.number, s.document_no)
+         as "documentNo",
        coalesce(d.due_date, pi.due_date, fi.due_date, wi.due_date, oi.due_date) as "dueDate",
-       coalesce(d.payment_method, s.method) as "paymentMethod",
+       coalesce(d.payment_method,
+                case when s.method = 'CHECK' then coalesce(sin.kind, 'CHECK')
+                     when s.channel = 'CREDIT_CARD' then 'CREDIT_CARD'
+                     else s.method end) as "paymentMethod",
       """
           + KIND
           + " as \"kind\", "
@@ -1738,23 +1745,39 @@ public final class FinanceRepositories {
     @Query("select i from Instrument i where i.id = :id")
     Optional<Instrument> findForUpdate(@Param("id") UUID id);
 
+    /** Çek/senet listesi; {@code null} süzgeçler süzmez (12.2a §3.9: yön ve tür eklendi). */
     @Query(
         """
         select i from Instrument i
         where (:status is null or i.status = :status)
+          and (:direction is null or i.direction = :direction)
+          and (:kind is null or i.kind = :kind)
           and (:companyId is null or i.companyId = :companyId)
           and (:allBranches = true or i.branchId in :branchIds)
         """)
     Page<Instrument> search(
         @Param("status") InstrumentStatus status,
+        @Param("direction") InstrumentDirection direction,
+        @Param("kind") InstrumentKind kind,
         @Param("companyId") UUID companyId,
         @Param("allBranches") boolean allBranches,
         @Param("branchIds") Collection<UUID> branchIds,
         Pageable pageable);
 
     default Page<Instrument> search(
-        InstrumentStatus status, BranchFilter filter, Pageable pageable) {
-      return search(status, filter.companyId(), filter.allBranches(), filter.branchIds(), pageable);
+        InstrumentStatus status,
+        InstrumentDirection direction,
+        InstrumentKind kind,
+        BranchFilter filter,
+        Pageable pageable) {
+      return search(
+          status,
+          direction,
+          kind,
+          filter.companyId(),
+          filter.allBranches(),
+          filter.branchIds(),
+          pageable);
     }
   }
 
@@ -1772,43 +1795,174 @@ public final class FinanceRepositories {
     @Query("select s from Settlement s where s.id = :id")
     Optional<Settlement> findForUpdate(@Param("id") UUID id);
 
+    /** Bu kaydı düzelten yeni kayıt (bir kayıt en çok bir kez düzeltilir; V35). */
+    Optional<Settlement> findByCorrectsSettlementId(UUID correctsSettlementId);
+
+    /** Settlement silinmemiş bir araç giderine bağlı mı (kullanıcı iptalini engeller; §3.5). */
     @Query(
-        """
-        select s from Settlement s
-        where s.type = :type
-          and (:companyId is null or s.companyId = :companyId)
-          and (:allBranches = true or s.branchId in :branchIds)
-        """)
-    Page<Settlement> search(
-        @Param("type") SettlementType type,
-        @Param("companyId") UUID companyId,
-        @Param("allBranches") boolean allBranches,
-        @Param("branchIds") Collection<UUID> branchIds,
-        Pageable pageable);
+        value =
+            """
+            select exists(select 1 from vehicle_expense v
+                          where v.settlement_id = :id and v.deleted = false)
+            """,
+        nativeQuery = true)
+    boolean existsVehicleExpenseLink(@Param("id") UUID id);
 
-    default Page<Settlement> search(SettlementType type, BranchFilter filter, Pageable pageable) {
-      return search(type, filter.companyId(), filter.allBranches(), filter.branchIds(), pageable);
-    }
-
+    /**
+     * Settlement'ın cari satırı cari taşımayla başka cariye taşınmış mı (aktif taşıma satırı; iptal
+     * ve düzeltme erken 409 {@code TRANSACTION_TRANSFERRED}, 12.2a Rev 1 F-2).
+     */
     @Query(
-        """
-        select s from Settlement s
-        where s.type = :type and s.settlementDate = :date
-          and s.status = org.ece.blackrose.finance.domain.FinanceTypes.SettlementStatus.POSTED
-          and (:companyId is null or s.companyId = :companyId)
-          and (:allBranches = true or s.branchId in :branchIds)
-        order by s.createdAt
-        """)
-    List<Settlement> daily(
-        @Param("type") SettlementType type,
-        @Param("date") LocalDate date,
-        @Param("companyId") UUID companyId,
-        @Param("allBranches") boolean allBranches,
-        @Param("branchIds") Collection<UUID> branchIds);
+        value =
+            """
+            select exists(select 1 from account_transaction t
+                          join account_transfer_line l on l.account_transaction_id = t.id
+                                                      and l.active and l.deleted = false
+                          where t.source_type = 'SETTLEMENT' and t.source_id = :id)
+            """,
+        nativeQuery = true)
+    boolean isTransferred(@Param("id") UUID id);
+  }
 
-    default List<Settlement> daily(SettlementType type, LocalDate date, BranchFilter filter) {
-      return daily(type, date, filter.companyId(), filter.allBranches(), filter.branchIds());
-    }
+  /**
+   * Bilgi amaçlı fatura eşleştirmeleri (V36). Satırlar değişmez; sorgular {@code deleted = false}
+   * süzgecini açıkça yazar (entity'de {@code @SQLRestriction} yok).
+   */
+  public interface SettlementAllocationRepository
+      extends JpaRepository<SettlementAllocation, UUID> {
+
+    List<SettlementAllocation> findBySettlementIdAndDeletedFalse(UUID settlementId);
+
+    /**
+     * Eşleştirme hedefinin işlem sonuna kadar süren danışma kilidi (12.2a §3.3 adım 4; anahtar şema
+     * adını içerir). Çağıran hedefleri kimlik sırasıyla kilitler.
+     */
+    @Query(
+        value =
+            "select count(*) from (select pg_advisory_xact_lock("
+                + "hashtext(current_schema() || ':alloc:' || :key))) x",
+        nativeQuery = true)
+    long lockTarget(@Param("key") String key);
+
+    /**
+     * Eşleştirme hedefleri (beş belge türü, silinmemiş): taraf, açıklık ve toplam formülünün ham
+     * alanları. Alış/navlun/depo/açılış faturasında {@code reflected = true}, {@code ledgerAmount}
+     * = fatura toplamı; cari belgesinde {@code counts_as_invoice} türü değilse {@code invoiceType =
+     * false}.
+     */
+    @Query(
+        value =
+            """
+            select 'PURCHASE_INVOICE' as "targetType", p.id as "id", p.account_id as "accountId",
+                   p.company_id as "companyId", p.branch_id as "branchId", p.currency as "currency",
+                   'PAYABLE' as "side", (p.status = 'OPEN') as "open", true as "invoiceType",
+                   true as "reflected", p.total_amount as "ledgerAmount",
+                   cast(null as numeric) as "netPayable", p.total_amount as "amount"
+            from purchase_invoice p
+            where p.id in (:ids) and p.deleted = false
+            union all
+            select 'FREIGHT_INVOICE', f.id, f.account_id, f.company_id, f.branch_id, f.currency,
+                   'RECEIVABLE', (f.status = 'ISSUED'), true, true, f.total_amount,
+                   cast(null as numeric), f.total_amount
+            from freight_invoice f
+            where f.id in (:ids) and f.deleted = false
+            union all
+            select 'WAREHOUSE_INVOICE', w.id, w.account_id, w.company_id, w.branch_id, w.currency,
+                   'RECEIVABLE', (w.status = 'ISSUED'), true, true, w.total_amount,
+                   cast(null as numeric), w.total_amount
+            from warehouse_invoice w
+            where w.id in (:ids) and w.deleted = false
+            union all
+            select 'OPENING_INVOICE', o.id, o.account_id, o.company_id, o.branch_id, o.currency,
+                   o.kind, (o.status = 'OPEN'), true, true, o.total_amount,
+                   cast(null as numeric), o.total_amount
+            from opening_invoice o
+            where o.id in (:ids) and o.deleted = false
+            union all
+            select 'ACCOUNT_DOCUMENT', d.id, d.account_id, d.company_id, d.branch_id, d.currency,
+                   d.side, (d.status = 'OPEN'), ty.counts_as_invoice, d.reflect_to_ledger,
+                   d.ledger_amount, x.net_payable, d.amount
+            from account_document d
+            join account_document_type ty on ty.side = d.side and ty.code = d.document_type
+            left join account_document_tax x on x.document_id = d.id and x.deleted = false
+            where d.id in (:ids) and d.deleted = false
+            """,
+        nativeQuery = true)
+    List<AllocationTargetRow> targets(@Param("ids") Collection<UUID> ids);
+
+    /**
+     * Hedef başına "eşleşen" toplam (12.2a §3.3, Rev 1 F-3): geçerli eşleşmeler (satır silinmemiş,
+     * settlement POSTED; {@code excludedSettlementId} hariç) + faturaya plan üzerinden bağlı POSTED
+     * plan ödemeleri (alış faturasında {@code payment_plan.purchase_invoice_id}, açılış faturasında
+     * {@code opening_invoice.payment_plan_id}). Toplamı olmayan hedef dönmez.
+     */
+    @Query(
+        value =
+            """
+            select u.target_id as "targetId", sum(u.amount) as "allocated"
+            from (
+              select coalesce(a.purchase_invoice_id, a.freight_invoice_id, a.warehouse_invoice_id,
+                              a.opening_invoice_id, a.account_document_id) as target_id,
+                     a.amount as amount
+              from settlement_allocation a
+              join settlement s on s.id = a.settlement_id
+              where a.deleted = false and s.deleted = false and s.status = 'POSTED'
+                and s.id <> :excludedSettlementId
+                and coalesce(a.purchase_invoice_id, a.freight_invoice_id, a.warehouse_invoice_id,
+                             a.opening_invoice_id, a.account_document_id) in (:ids)
+              union all
+              select pp.purchase_invoice_id, s.amount
+              from settlement s
+              join payment_plan pp on pp.id = s.plan_id
+              where s.deleted = false and s.status = 'POSTED' and pp.purchase_invoice_id in (:ids)
+              union all
+              select o.id, s.amount
+              from settlement s
+              join opening_invoice o on o.payment_plan_id = s.plan_id
+              where s.deleted = false and s.status = 'POSTED' and o.id in (:ids)
+            ) u
+            group by u.target_id
+            """,
+        nativeQuery = true)
+    List<AllocatedTotalRow> allocatedTotals(
+        @Param("ids") Collection<UUID> ids,
+        @Param("excludedSettlementId") UUID excludedSettlementId);
+  }
+
+  /** {@link SettlementAllocationRepository#targets} satırı. */
+  public interface AllocationTargetRow {
+    String getTargetType();
+
+    UUID getId();
+
+    UUID getAccountId();
+
+    UUID getCompanyId();
+
+    UUID getBranchId();
+
+    String getCurrency();
+
+    String getSide();
+
+    Boolean getOpen();
+
+    Boolean getInvoiceType();
+
+    Boolean getReflected();
+
+    BigDecimal getLedgerAmount();
+
+    BigDecimal getNetPayable();
+
+    BigDecimal getAmount();
+  }
+
+  /** {@link SettlementAllocationRepository#allocatedTotals} satırı. */
+  public interface AllocatedTotalRow {
+    UUID getTargetId();
+
+    BigDecimal getAllocated();
   }
 
   public interface PurchaseInvoiceRepository extends JpaRepository<PurchaseInvoice, UUID> {
@@ -1839,22 +1993,43 @@ public final class FinanceRepositories {
     @Query("select p from PaymentPlan p where p.id = :id")
     Optional<PaymentPlan> findForUpdate(@Param("id") UUID id);
 
+    /**
+     * Plan listesi (12.2a §3.9): {@code allStatuses = false} iken yalnız {@code statuses}; {@code
+     * accountId} {@code null} ise tüm cariler.
+     */
     @Query(
         """
         select p from PaymentPlan p
-        where (:status is null or p.status = :status)
+        where (:allStatuses = true or p.status in :statuses)
+          and (:accountId is null or p.accountId = :accountId)
           and (:companyId is null or p.companyId = :companyId)
           and (:allBranches = true or p.branchId in :branchIds)
         """)
     Page<PaymentPlan> search(
-        @Param("status") PlanStatus status,
+        @Param("allStatuses") boolean allStatuses,
+        @Param("statuses") Collection<PlanStatus> statuses,
+        @Param("accountId") UUID accountId,
         @Param("companyId") UUID companyId,
         @Param("allBranches") boolean allBranches,
         @Param("branchIds") Collection<UUID> branchIds,
         Pageable pageable);
 
+    /** Durum kümesi (boş = hepsi) ve cariyle. */
+    default Page<PaymentPlan> search(
+        Collection<PlanStatus> statuses, UUID accountId, BranchFilter filter, Pageable pageable) {
+      boolean all = statuses == null || statuses.isEmpty();
+      return search(
+          all,
+          all ? List.of(PlanStatus.DRAFT) : statuses,
+          accountId,
+          filter.companyId(),
+          filter.allBranches(),
+          filter.branchIds(),
+          pageable);
+    }
+
     default Page<PaymentPlan> search(PlanStatus status, BranchFilter filter, Pageable pageable) {
-      return search(status, filter.companyId(), filter.allBranches(), filter.branchIds(), pageable);
+      return search(status == null ? List.of() : List.of(status), null, filter, pageable);
     }
 
     /** Kiracı geneli (günlük özet). */

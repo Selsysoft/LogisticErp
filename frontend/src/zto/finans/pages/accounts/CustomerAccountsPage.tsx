@@ -49,6 +49,8 @@ import {
   accountBankAccountsPath,
   accountEditPath,
   accountTransactionsPath,
+  collectionsPath,
+  paymentsPath,
   statementPath,
   transferCenterPath,
 } from "../../navItems";
@@ -357,6 +359,7 @@ export function CustomerAccountsPage() {
   const canManage = useCan("FINANCE_MANAGE");
   const canEmployee = useCan("FINANCE_EMPLOYEE_VIEW");
   const canFleet = useCan("FLEET_VIEW");
+  const canPost = useCan("FINANCE_PAYMENT_CREATE");
   const multiCompany = useMultiCompany();
   const companies = useAuthStore((state) => state.me?.companies);
   const snackbar = useZtoSnackbar();
@@ -687,6 +690,7 @@ export function CustomerAccountsPage() {
             row={row}
             canManage={canManage}
             canFleet={canFleet}
+            canPost={canPost}
             pending={toggleActive.isPending}
             onDetail={openDetail}
             onActive={async (active) => {
@@ -708,7 +712,17 @@ export function CustomerAccountsPage() {
         ),
       }),
     ];
-  }, [t, tc, canManage, canFleet, toggleActive.isPending, openDetail, confirm, mutateActive]);
+  }, [
+    t,
+    tc,
+    canManage,
+    canFleet,
+    canPost,
+    toggleActive.isPending,
+    openDetail,
+    confirm,
+    mutateActive,
+  ]);
 
   const modes = totalsModes(multiCompany);
   const modeMeta: Record<TotalsMode, { icon: string; label: string; title: string }> = {
@@ -831,16 +845,14 @@ export function CustomerAccountsPage() {
                 style={{ fontSize: 11 }}
                 icon="fas fa-cash-register text-primary mr-2"
                 label={t("accounts.buttons.payments")}
-                href="/finance/settlements"
-                newTab
+                to={paymentsPath()}
               />
               <MenuItem
                 className="dropdown-item"
                 style={{ fontSize: 11 }}
                 icon="fas fa-hand-holding-usd text-success mr-2"
                 label={t("accounts.buttons.collections")}
-                href="/finance/settlements"
-                newTab
+                to={collectionsPath()}
               />
               <MenuItem
                 className="dropdown-item"
@@ -1482,6 +1494,7 @@ function RowActions({
   row,
   canManage,
   canFleet,
+  canPost,
   pending,
   onDetail,
   onActive,
@@ -1489,6 +1502,8 @@ function RowActions({
   row: AccountRow;
   canManage: boolean;
   canFleet: boolean;
+  /** FINANCE_PAYMENT_CREATE: "Ödeme Ekle" (12.2a §5.13; yetkisizde gizli). */
+  canPost: boolean;
   pending: boolean;
   onDetail: (account: Account, history: boolean) => void;
   onActive: (active: boolean) => void;
@@ -1576,11 +1591,13 @@ function RowActions({
           to={accountBankAccountsPath(row.id)}
         />
         <MenuDivider />
-        {showPlans && (
+        {/* ZTO _AccountsTableBody:570-577: müşteri dışı carilerde Ödemeler yeni sekmede, Yeni Ödeme
+            modalı cari ön seçili (12.2a §5.13). */}
+        {showPlans && canPost && (
           <MenuItem
             icon="faw fa-money-bill-wave text-success mr-2"
             label={a("addPayment")}
-            href="/finance/settlements"
+            href={paymentsPath({ id: row.id, openModal: true })}
             newTab
           />
         )}

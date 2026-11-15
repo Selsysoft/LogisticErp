@@ -13,6 +13,7 @@ import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.finance.domain.AccountTransfer;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.Direction;
+import org.ece.blackrose.finance.domain.FinanceTypes.SettlementType;
 import org.ece.blackrose.finance.domain.FinanceTypes.TransactionKind;
 import org.ece.blackrose.finance.repository.AccountRepositories.AccountTransferRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountTransactionRepository;
@@ -225,7 +226,12 @@ public class AccountTransactionQueryService {
     UUID ref = row.getRefId();
     String route =
         switch (type) {
-          case "SETTLEMENT" -> "/finance/settlements";
+          case "SETTLEMENT" ->
+              SettlementQueryService.route(
+                  "COLLECTION".equals(row.getKind())
+                      ? SettlementType.COLLECTION
+                      : SettlementType.PAYMENT,
+                  row.getBaseSourceId());
           case "PURCHASE_INVOICE" -> "/finance/invoices";
           case "FREIGHT_INVOICE", "TRIP_COST" ->
               ref == null ? null : "/operations/shipments/" + ref;

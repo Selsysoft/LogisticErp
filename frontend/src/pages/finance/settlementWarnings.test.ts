@@ -3,6 +3,7 @@ import tr from "../../locales/tr";
 import {
   allocationWarningText,
   checkKey,
+  defaultReverseDate,
   displayGaps,
   gapsForCompany,
   invoiceGapText,
@@ -15,6 +16,8 @@ import {
   parseConfirmationDetails,
   parseNewSettlement,
   settlementCheckBody,
+  settlementErrorKeys,
+  settlementLockErrorCode,
   type Translate,
 } from "./settlementWarnings";
 import type { AccountInvoiceGap, SettlementWarning } from "./types";
@@ -196,15 +199,20 @@ describe("checkKey ve settlementCheckBody", () => {
 
   it("kararlı: yalnız ilgili alanlar; açıklama/tarih değişince aynı, tutar biçimi normalize", () => {
     const key = checkKey(base);
-    expect(key).toBe("acc|b1|f1|CASH|150|TRY|");
+    expect(key).toBe("acc|b1|f1|CASH|150|TRY|||");
     expect(checkKey({ ...base, description: "başka", date: "2026-01-01" })).toBe(key);
     expect(checkKey({ ...base, amount: "150,00" })).toBe(key);
     expect(checkKey({ ...base, amount: " 150.0 " })).toBe(key);
     expect(checkKey({ ...base, amount: "151" })).not.toBe(key);
     expect(checkKey({ ...base, instrumentId: "i1" })).not.toBe(key);
     expect(checkKey({ ...base, number: "A-1", bankName: "Z", dueDate: "2026-12-01" })).toBe(key);
-    expect(checkKey({})).toBe("||||||");
-    expect(checkKey({ accountId: true as unknown as string })).toBe("||||||");
+    // 12.2a §5.14: kanal ve araç türü anahtara girer (sabit sırada sona).
+    expect(checkKey({ ...base, channel: "CREDIT_CARD" })).toBe(
+      "acc|b1|f1|CASH|150|TRY||CREDIT_CARD|",
+    );
+    expect(checkKey({ ...base, instrumentKind: "NOTE" })).toBe("acc|b1|f1|CASH|150|TRY|||NOTE");
+    expect(checkKey({})).toBe("||||||||");
+    expect(checkKey({ accountId: true as unknown as string })).toBe("||||||||");
   });
 
   it("normalizedAmount", () => {
@@ -231,16 +239,15 @@ describe("checkKey ve settlementCheckBody", () => {
       branchId: "b1",
       money: { amount: "150", currency: "TRY" },
       date: "2026-01-02",
-      // Sunucu önizlemede de çek/senet ister (F-12.2-R4): yer tutucu, vade = tarih.
-      instrument: { kind: "CHECK", number: "-", dueDate: "2026-01-02" },
+      // 12.2a §5.14: F-12.2-R4 sunucuda kapandı, yer tutucu çek/senet eklenmez.
     });
     expect(
       settlementCheckBody(
         { ...base, fundAccountId: "", instrumentKind: "NOTE", dueDate: "2026-12-31" },
         "CHECK",
         "2026-01-02",
-      )?.instrument,
-    ).toEqual({ kind: "NOTE", number: "-", dueDate: "2026-12-31" });
+      ),
+    ).not.toHaveProperty("instrument");
     const endorsed = settlementCheckBody(
       { ...base, fundAccountId: "", instrumentId: "i1" },
       "CHECK",
@@ -255,6 +262,100 @@ describe("checkKey ve settlementCheckBody", () => {
       expect(settlementCheckBody({ ...base, [missing]: "" }, "CASH", "2026-11-14")).toBeNull();
     }
     expect(settlementCheckBody({ ...base, amount: "0" }, "CASH", "2026-11-14")).toBeNull();
+  });
+
+  it("kanal yalnız BANK yönteminde ve geçerli değerde gövdeye yazılır (sunucu CHANNEL_INVALID)", () => {
+    expect(
+      settlementCheckBody({ ...base, channel: "CREDIT_CARD" }, "BANK", "2026-11-14"),
+    ).toMatchObject({ method: "BANK", channel: "CREDIT_CARD" });
+    expect(
+      settlementCheckBody({ ...base, channel: "TRANSFER" }, "BANK", "2026-11-14")?.channel,
+    ).toBe("TRANSFER");
+    expect(
+      settlementCheckBody({ ...base, channel: "CREDIT_CARD" }, "CASH", "2026-11-14"),
+    ).not.toHaveProperty("channel");
+    expect(
+      settlementCheckBody({ ...base, channel: "WIRE" }, "BANK", "2026-11-14"),
+    ).not.toHaveProperty("channel");
+  });
+});
+
+describe("iptal tarihi ve kilit nedenleri (12.2a §3.5, §3.12)", () => {
+  it("varsayılan iptal tarihi max(bugün, kayıt tarihi)", () => {
+    expect(defaultReverseDate("2026-11-10", "2026-11-15")).toBe("2026-11-15");
+    expect(defaultReverseDate("2026-11-20", "2026-11-15")).toBe("2026-11-20");
+    expect(defaultReverseDate("2026-11-15", "2026-11-15")).toBe("2026-11-15");
+    expect(defaultReverseDate("2026-12-31", "2027-01-01")).toBe("2027-01-01");
+  });
+
+  it("kilit nedeni → hata kodu; her kodun Türkçe iletisi var", () => {
+    const cases: [Parameters<typeof settlementLockErrorCode>[0], string][] = [
+      ["REVERSED", "SETTLEMENT_REVERSED"],
+      ["CHECK", "SETTLEMENT_CHECK_NOT_REVERSIBLE"],
+      ["PLAN", "SETTLEMENT_LINKED_TO_PLAN"],
+      ["INTERCOMPANY", "SETTLEMENT_LINKED_TO_INTERCOMPANY"],
+      ["FX_SOURCE", "SETTLEMENT_USED_IN_FX_EXCHANGE"],
+      ["VEHICLE_EXPENSE", "SETTLEMENT_SOURCE_MANAGED"],
+      ["TRANSFERRED", "TRANSACTION_TRANSFERRED"],
+      ["NO_ACCOUNT", "SETTLEMENT_NOT_CORRECTABLE"],
+      [null, "SETTLEMENT_NOT_CORRECTABLE"],
+      [undefined, "SETTLEMENT_NOT_CORRECTABLE"],
+    ];
+    for (const [reason, code] of cases) {
+      expect(settlementLockErrorCode(reason)).toBe(code);
+      expect(t(`finance.error.${code}`).length).toBeGreaterThan(0);
+    }
+    expect(settlementLockErrorCode("REVERSED", "s2")).toBe("SETTLEMENT_ALREADY_CORRECTED");
+    expect(settlementLockErrorCode("CHECK", "s2")).toBe("SETTLEMENT_CHECK_NOT_REVERSIBLE");
+    expect(t("finance.error.TRANSACTION_TRANSFERRED")).toBe(
+      "Cari taşıma geri alınmadan düzenlenemez/silinemez.",
+    );
+  });
+
+  it("hata anahtar adayları en özelden genele; tür/neden ekli ZTO iletileri", () => {
+    expect(settlementErrorKeys("ALLOCATION_TARGET_INVALID", "PAYMENT", "CURRENCY")).toEqual([
+      "finance.error.ALLOCATION_TARGET_INVALID_CURRENCY_PAYMENT",
+      "finance.error.ALLOCATION_TARGET_INVALID_CURRENCY",
+      "finance.error.ALLOCATION_TARGET_INVALID_PAYMENT",
+      "finance.error.ALLOCATION_TARGET_INVALID",
+    ]);
+    expect(settlementErrorKeys("X")).toEqual(["finance.error.X"]);
+    expect(settlementErrorKeys("X", null, "R")).toEqual(["finance.error.X_R", "finance.error.X"]);
+    const first = (keys: string[]) => {
+      for (const key of keys) {
+        try {
+          return t(key);
+        } catch {
+          // sonraki aday
+        }
+      }
+      return null;
+    };
+    expect(first(settlementErrorKeys("ALLOCATION_EXCEEDS_SETTLEMENT", "PAYMENT"))).toBe(
+      "Toplam tahsis tutarı ödeme tutarını aşıyor!",
+    );
+    expect(first(settlementErrorKeys("ALLOCATION_EXCEEDS_SETTLEMENT", "COLLECTION"))).toBe(
+      "Toplam tahsis tutarı tahsilat tutarını aşıyor!",
+    );
+    expect(first(settlementErrorKeys("SETTLEMENT_NOT_FOUND", "PAYMENT"))).toBe(
+      "Ödeme bilgileri alınamadı.",
+    );
+    expect(first(settlementErrorKeys("SETTLEMENT_NOT_FOUND", "COLLECTION"))).toBe(
+      "Tahsilat bilgileri alınamadı.",
+    );
+    expect(first(settlementErrorKeys("ALLOCATION_TARGET_INVALID", "COLLECTION", "CLOSED"))).toBe(
+      "Bu fatura için tahsis edilebilecek tutar kalmadı.",
+    );
+    expect(first(settlementErrorKeys("ALLOCATION_TARGET_INVALID", "COLLECTION", "CURRENCY"))).toBe(
+      "Bu faturanın para birimi seçilen tahsilat para birimi ile aynı değil.",
+    );
+    expect(first(settlementErrorKeys("ALLOCATION_TARGET_INVALID", "PAYMENT", "CURRENCY"))).toBe(
+      "Bu faturanın para birimi seçilen ödeme para birimi ile aynı değil.",
+    );
+    // Sunucu iletisi kalanlar (§3.12 "sunucu iletisi"): anahtar yok.
+    expect(first(settlementErrorKeys("ALLOCATION_TARGET_INVALID", "PAYMENT", "SIDE"))).toBeNull();
+    expect(first(settlementErrorKeys("CORRECTION_TARGET_INVALID", "PAYMENT"))).toBeNull();
+    expect(first(settlementErrorKeys("REVERSE_BEFORE_SETTLEMENT", "PAYMENT"))).toBeNull();
   });
 });
 

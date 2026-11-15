@@ -38,3 +38,12 @@
 @import "./scoped/fund-activity-report.css";
 @import "./scoped/transfer-center.css";
 @import "./scoped/exchange-break-report.css";
+/*
+ * 12.2a sayfa CSS'leri (12.2a_TASARIM §5.4): Ödemeler ve Tahsilatlar listeleri (FE-1), ödeme/tahsilat
+ * modalları (FE-2; settlement-modals.css SHARED_SCOPES ile dört köke yazılır: payments, collections,
+ * bank-transactions, cash-transactions), günlük ödeme/tahsilat raporu (FE-1).
+ */
+@import "./scoped/payments.css";
+@import "./scoped/collections.css";
+@import "./scoped/settlement-modals.css";
+@import "./scoped/daily-settlement-report.css";

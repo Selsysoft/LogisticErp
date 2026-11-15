@@ -368,9 +368,15 @@ export function invoiceGapsQuery(params: InvoiceGapParams, activeCompanyId: stri
   );
 }
 
-/** `POST /finance/settlements/check?type=…` (yazmaz). */
-export function settlementCheckPath(type: SettlementType) {
-  return "/finance/settlements/check" + buildQuery({ type });
+/**
+ * `POST /finance/settlements/check?type=…` (yazmaz). Düzeltme önizlemesinde (12.2a §3.4)
+ * `correctsSettlementId`: eski kaydın bakiye etkisi düşülerek hesaplanır.
+ */
+export function settlementCheckPath(type: SettlementType, correctsSettlementId?: string | null) {
+  return (
+    "/finance/settlements/check" +
+    buildQuery({ type, correctsSettlementId: correctsSettlementId ?? undefined })
+  );
 }
 
 /** Uyarı önizlemesi için zorunlu alanlar: cari + iş yeri + pozitif tutar + para birimi (§5.13). */
@@ -424,8 +430,11 @@ export const fundKeys = {
   intercompany: (id: string) => [...ROOT, "intercompany", id] as const,
   invoiceGaps: (q: InvoiceGapParams & { companyId: string | null }) =>
     [...ROOT, "invoice-gaps", q] as const,
-  settlementCheck: (q: { type: SettlementType; body: SettlementBody | null }) =>
-    [...ROOT, "settlement-check", q] as const,
+  settlementCheck: (q: {
+    type: SettlementType;
+    body: SettlementBody | null;
+    correctsSettlementId?: string | null;
+  }) => [...ROOT, "settlement-check", q] as const,
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -710,19 +719,25 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
 
 /**
  * Ödeme/tahsilat uyarı önizlemesi (`POST /settlements/check`): gövde 400 ms sabit kaldıktan sonra ve
- * zorunlu alanlar (cari, iş yeri, tutar, para birimi) doluyken istenir; yazmaz.
+ * zorunlu alanlar (cari, iş yeri, tutar, para birimi) doluyken istenir; yazmaz. Üçüncü argümanın
+ * `correctsSettlementId`'si (12.2a düzenleme modalı) sorguya `correctsSettlementId=` olarak eklenir.
  */
 export function useSettlementCheck(
   type: SettlementType,
   body: SettlementBody | null,
-  options: Enabled & { delayMs?: number } = {},
+  options: Enabled & { delayMs?: number; correctsSettlementId?: string | null } = {},
 ) {
   const debounced = useDebouncedValue(body, options.delayMs ?? SETTLEMENT_CHECK_DELAY_MS);
   const ready = (options.enabled ?? true) && settlementCheckReady(debounced);
+  const correctsSettlementId = options.correctsSettlementId || null;
   return useQuery({
-    queryKey: fundKeys.settlementCheck({ type, body: ready ? debounced : null }),
+    queryKey: fundKeys.settlementCheck({
+      type,
+      body: ready ? debounced : null,
+      correctsSettlementId,
+    }),
     queryFn: () =>
-      apiRequest<SettlementCheck>("POST", settlementCheckPath(type), {
+      apiRequest<SettlementCheck>("POST", settlementCheckPath(type, correctsSettlementId), {
         ...(debounced as SettlementBody),
         confirmWarnings: undefined,
       }),

@@ -184,6 +184,14 @@ describe("sorgu yolları", () => {
     );
     expect(api.invoiceGapsQuery({ companyId: null })).toBe("/finance/accounts/invoice-gaps");
     expect(api.settlementCheckPath("PAYMENT")).toBe("/finance/settlements/check?type=PAYMENT");
+    // 12.2a düzeltme önizlemesi (§3.4): eski kaydın kimliği sorguda.
+    expect(api.settlementCheckPath("COLLECTION", "s 1")).toBe(
+      "/finance/settlements/check?type=COLLECTION&correctsSettlementId=s%201",
+    );
+    expect(api.settlementCheckPath("PAYMENT", null)).toBe(
+      "/finance/settlements/check?type=PAYMENT",
+    );
+    expect(api.settlementCheckPath("PAYMENT", "")).toBe("/finance/settlements/check?type=PAYMENT");
   });
 
   it("uyarı önizlemesi için zorunlu alanlar", () => {
@@ -471,6 +479,33 @@ describe("useDebouncedValue ve useSettlementCheck", () => {
     const on = renderHook(() => api.useSettlementCheck("COLLECTION", body), { wrapper: Wrapper });
     await waitFor(() => expect(on.result.current.isSuccess).toBe(true));
     expect(paths()).toEqual(["POST /finance/settlements/check?type=COLLECTION"]);
+  });
+
+  it("üçüncü argüman correctsSettlementId sorguya ve anahtara girer (12.2a düzenleme)", async () => {
+    apiRequest.mockResolvedValue({ warnings: [], invoiceGaps: [] });
+    const { Wrapper, client } = wrapper();
+    const { result } = renderHook(
+      () => api.useSettlementCheck("PAYMENT", body, { correctsSettlementId: "old-1" }),
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(paths()).toEqual([
+      "POST /finance/settlements/check?type=PAYMENT&correctsSettlementId=old-1",
+    ]);
+    const keys = client
+      .getQueryCache()
+      .getAll()
+      .map((q) => q.queryKey);
+    expect(keys).toEqual([
+      api.fundKeys.settlementCheck({ type: "PAYMENT", body, correctsSettlementId: "old-1" }),
+    ]);
+    // Aynı gövde, düzeltmesiz: ayrı anahtar ve kimliksiz yol.
+    const plain = renderHook(
+      () => api.useSettlementCheck("PAYMENT", body, { correctsSettlementId: "" }),
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => expect(plain.result.current.isSuccess).toBe(true));
+    expect(paths()[1]).toBe("POST /finance/settlements/check?type=PAYMENT");
   });
 });
 

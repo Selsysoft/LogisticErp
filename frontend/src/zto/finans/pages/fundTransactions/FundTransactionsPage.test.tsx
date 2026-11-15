@@ -32,6 +32,43 @@ vi.mock("../../../export", async (importOriginal) => ({
   downloadBlob: download,
 }));
 
+type ModalProps = {
+  show: boolean;
+  onHide: () => void;
+  mode: string;
+  presetFundAccountId?: string;
+  presetBranchId?: string;
+  presetCurrency?: string;
+  presetMethod?: string;
+};
+// FE-2 modalları ayrı test edilir; burada yalnız sayfanın verdiği proplar (12.2a §5.13).
+const modals = vi.hoisted(() => ({ payment: [] as unknown[], collection: [] as unknown[] }));
+vi.mock("../settlementModals", () => {
+  const stub = (name: string, log: unknown[]) =>
+    function Stub(props: ModalProps) {
+      log.push(props);
+      return props.show ? (
+        <div role="dialog" aria-label={name} data-mode={props.mode}>
+          <span data-testid="preset">
+            {[
+              props.presetMethod,
+              props.presetFundAccountId ?? "-",
+              props.presetBranchId ?? "-",
+              props.presetCurrency ?? "-",
+            ].join("|")}
+          </span>
+          <button type="button" onClick={props.onHide}>
+            Kapat-{name}
+          </button>
+        </div>
+      ) : null;
+    };
+  return {
+    PaymentModal: stub("ödeme-modalı", modals.payment),
+    CollectionModal: stub("tahsilat-modalı", modals.collection),
+  };
+});
+
 const ROUTES = {
   "banka-hareketleri": <FundTransactionsPage key="BANK" kind="BANK" />,
   "kasa-hareketleri": <FundTransactionsPage key="CASH" kind="CASH" />,
@@ -46,6 +83,8 @@ const FUNDS = [
 beforeEach(() => {
   fakeApi.reset();
   download.mockReset();
+  modals.payment.length = 0;
+  modals.collection.length = 0;
   signIn(MANAGER);
   mockFundCommon();
   fakeApi.on("GET", /^\/finance\/funds\?/, FUNDS);
@@ -125,13 +164,21 @@ describe(
           .getByRole("link", { name: /Ankara Lastik/ })
           .getAttribute("href"),
       ).toBe("/zto-finans/cari-kartlar/a1/hareketler");
-      expect(within(first).getByRole("link", { name: "Ödemeyi Düzenle" })).toBeTruthy();
+      expect(
+        within(first)
+          .getByRole("link", { name: /Ödemeyi Düzenle/ })
+          .getAttribute("href"),
+      ).toBe("/zto-finans/odemeler?openEditPayment=true&paymentId=s1");
       expect(screen.getByText("İptal/Ters kayıt")).toBeTruthy();
       expect(screen.getAllByText("—").length).toBeGreaterThan(0);
       expect(document.querySelector(".table-responsive")?.getAttribute("role")).toBe("region");
-      expect(screen.getByRole("link", { name: /Yeni Ödeme/ }).getAttribute("href")).toBe(
-        "/finance/settlements?new=PAYMENT&method=BANK",
-      );
+      expect(screen.queryByRole("dialog")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: /Yeni Ödeme/ }));
+      const dialog = screen.getByRole("dialog", { name: "ödeme-modalı" });
+      expect(dialog.getAttribute("data-mode")).toBe("add");
+      expect(within(dialog).getByTestId("preset").textContent).toBe("BANK|-|-|-");
+      fireEvent.click(within(dialog).getByRole("button", { name: "Kapat-ödeme-modalı" }));
+      expect(screen.queryByRole("dialog")).toBeNull();
     });
 
     it("Banka süzgeci ZtoSearchableSelect: arama, seçim → sorgu + seçili hesap özeti", async () => {
@@ -174,9 +221,49 @@ describe(
       expect(
         screen.getByText(/2 ileri tarihli \(vadesi gelmemiş\) hareket var — net 30,00₺/),
       ).toBeTruthy();
-      expect(screen.getByRole("link", { name: /Yeni Tahsilat/ }).getAttribute("href")).toBe(
-        "/finance/settlements?new=COLLECTION&method=BANK&fundAccountId=f2",
+      fireEvent.click(screen.getByRole("button", { name: /Yeni Tahsilat/ }));
+      const dialog = screen.getByRole("dialog", { name: "tahsilat-modalı" });
+      expect(within(dialog).getByTestId("preset").textContent).toBe("BANK|f2|b2|TRY");
+      expect(screen.queryByRole("dialog", { name: "ödeme-modalı" })).toBeNull();
+    });
+
+    it("12.2a derin bağlantı: ?openModal=true fon listesi gelince Yeni Ödeme modalını açar, parametre silinir", async () => {
+      fakeApi.on("GET", "/finance/funds/f2", makeDetail({ id: "f2", name: "Garanti" }));
+      renderAt("/zto-finans/banka-hareketleri?fundId=f2&openModal=true", ROUTES);
+      const dialog = await screen.findByRole("dialog", { name: "ödeme-modalı" });
+      expect(within(dialog).getByTestId("preset").textContent).toBe("BANK|f2|b2|TRY");
+      await waitFor(() =>
+        expect(screen.getByTestId("where").textContent).toBe(
+          "/zto-finans/banka-hareketleri?fundId=f2",
+        ),
       );
+      expect(lastQuery()).toContain("fundId=f2");
+    });
+
+    it("12.2a derin bağlantı: kasa kartı Tahsilat → Yeni Tahsilat (Nakit), yetkisizde yok sayılır", async () => {
+      fakeApi.on("GET", /^\/finance\/funds\?/, [
+        makeFund({ id: "k1", kind: "CASH", name: "Merkez Kasa", branchId: "b2", currency: "EUR" }),
+      ]);
+      fakeApi.on("GET", "/finance/funds/k1", makeDetail({ id: "k1", kind: "CASH" }));
+      const path =
+        "/zto-finans/kasa-hareketleri?fundId=k1&openCollection=true&collectionMethod=Nakit";
+      renderAt(path, ROUTES);
+      const dialog = await screen.findByRole("dialog", { name: "tahsilat-modalı" });
+      expect(within(dialog).getByTestId("preset").textContent).toBe("CASH|k1|b2|EUR");
+      await waitFor(() =>
+        expect(screen.getByTestId("where").textContent).toBe(
+          "/zto-finans/kasa-hareketleri?fundId=k1",
+        ),
+      );
+      cleanup();
+      const rendered = modals.collection.length;
+      signIn(["FINANCE_VIEW"]);
+      renderAt(path, ROUTES);
+      await screen.findAllByText("Lastik ödemesi");
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(screen.queryByRole("button", { name: /Yeni Ödeme/ })).toBeNull();
+      expect(screen.queryByRole("link", { name: /Ödemeyi Düzenle/ })).toBeNull();
+      expect(modals.collection).toHaveLength(rendered);
     });
 
     it("süzgeçler Filtrele ile uygulanır; Temizle ilk varsayılana döner; iş yeri anında", async () => {
@@ -257,7 +344,12 @@ describe(
           bankBranchName: "Konak",
           currency: "TRY",
         },
-        source: { kind: "SETTLEMENT", id: "s1", code: "OD-1", route: "/finance/settlements" },
+        source: {
+          kind: "SETTLEMENT",
+          id: "s1",
+          code: "OD-1",
+          route: "/zto-finans/odemeler?settlementId=s1",
+        },
       });
       renderAt("/zto-finans/banka-hareketleri", ROUTES);
       await screen.findAllByText("Lastik ödemesi");
@@ -267,7 +359,7 @@ describe(
       expect(screen.getByText("ÇIKIŞ")).toBeTruthy();
       expect(screen.getByText("#VRM-2026-000001")).toBeTruthy();
       expect(screen.getByRole("link", { name: /Görüntüle \(OD-1\)/ }).getAttribute("href")).toBe(
-        "/finance/settlements",
+        "/zto-finans/odemeler?settlementId=s1",
       );
       const dialog = screen.getByRole("dialog");
       expect(

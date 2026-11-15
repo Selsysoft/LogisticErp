@@ -4,6 +4,7 @@ import {
   accountBankAccountsPath,
   accountEditPath,
   accountTransactionsPath,
+  paymentsPath,
   statementPath,
 } from "./navItems";
 
@@ -46,9 +47,8 @@ export type QuickCariPermissions = {
   shipments: boolean;
 };
 
-/** MUI ekranları (ödeme/tahsilat 12.2a'ya kadar MUI'de). */
+/** MUI ekranları (ödeme/tahsilat 12.2a'dan beri ZTO Ödemeler ekranında; `paymentsPath`). */
 export const QUICK_CARI_MUI_PATHS = {
-  settlements: "/finance/settlements",
   shipments: "/operations",
   drivers: "/fleet/drivers",
 } as const;
@@ -122,9 +122,10 @@ export function quickCariCards(
     },
   ];
   if (account.type !== "CUSTOMER" && can.payment) {
+    // ZTO qcaBuildCards:3969 `/CustomerAccountPayment/Payments/{id}?openModal=true` (12.2a §5.13).
     cards.push({
       key: "addPayment",
-      href: QUICK_CARI_MUI_PATHS.settlements,
+      href: paymentsPath({ id: account.id, openModal: true }),
       icon: "fa-money-bill-wave",
       color: "#198754",
       newTab: true,

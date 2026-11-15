@@ -216,11 +216,14 @@ class CompanyMigrationIT extends AbstractIntegrationTest {
                 s))
         .isEqualTo(8);
     // Sütun içi "number UNIQUE" kısıtları kaldırıldı; numara artık şirket başına tekil.
+    // (V36'nın bileşik FK hedefi UNIQUE (id, company_id) numarayı kapsamaz, sayılmaz.)
     assertThat(
             jdbc.queryForObject(
                 """
                 select count(*) from pg_constraint c
                 where c.contype = 'u' and c.conrelid in (to_regclass(?), to_regclass(?))
+                  and c.conname not in ('freight_invoice_id_company_uq',
+                                        'warehouse_invoice_id_company_uq')
                 """,
                 Long.class,
                 "\"" + s + "\".freight_invoice",

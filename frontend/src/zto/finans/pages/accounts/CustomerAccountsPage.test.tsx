@@ -271,4 +271,33 @@ describe("CustomerAccountsPage (ZTO CustomerAccounts/Index)", { timeout: 30_000 
     const link = screen.getByRole("menuitem", { name: /Banka Transferi & Virman & Döviz Bozum/ });
     expect(link.getAttribute("href")).toBe("/zto-finans/transfer-merkezi");
   });
+
+  it("12.2a: Ödeme & Tahsilat aynı sekmede ZTO ekranları; satır Ödeme Ekle yalnız müşteri dışı + yetkili", async () => {
+    renderAt("/zto-finans/cari-kartlar", ROUTES);
+    await screen.findByText("Ankara Lastik");
+    fireEvent.click(screen.getByRole("button", { name: /Ödeme & Tahsilat/ }));
+    const payments = screen.getByRole("menuitem", { name: /^Ödemeler/ });
+    expect(payments.getAttribute("href")).toBe("/zto-finans/odemeler");
+    expect(payments.getAttribute("target")).toBeNull();
+    const collections = screen.getByRole("menuitem", { name: /^Tahsilatlar/ });
+    expect(collections.getAttribute("href")).toBe("/zto-finans/tahsilatlar");
+    expect(collections.getAttribute("target")).toBeNull();
+    fireEvent.keyDown(collections, { key: "Escape" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Ankara Lastik işlemleri" }));
+    const add = screen.getByRole("menuitem", { name: /Ödeme Ekle/ });
+    expect(add.getAttribute("href")).toBe("/zto-finans/odemeler?id=a1&openModal=true");
+    expect(add.getAttribute("target")).toBe("_blank");
+    fireEvent.keyDown(add, { key: "Escape" });
+    fireEvent.click(screen.getByRole("button", { name: "Beta Gıda işlemleri" }));
+    expect(screen.queryByRole("menuitem", { name: /Ödeme Ekle/ })).toBeNull();
+
+    cleanup();
+    signIn(["FINANCE_VIEW"]);
+    renderAt("/zto-finans/cari-kartlar", ROUTES);
+    await screen.findByText("Ankara Lastik");
+    fireEvent.click(screen.getByRole("button", { name: "Ankara Lastik işlemleri" }));
+    expect(screen.getByRole("menuitem", { name: /Ekstre Al/ })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: /Ödeme Ekle/ })).toBeNull();
+  });
 });

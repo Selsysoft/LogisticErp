@@ -98,6 +98,25 @@ class AccountTransactionVoidServiceTest {
     verify(settlements).reverse(sourceId, DATE, "Yanlış giriş");
   }
 
+  /** Tarihsiz silme: ödeme/tahsilatta max(bugün, kayıt tarihi) (12.2a §3.5). */
+  @Test
+  void odemeTahsilatTarihsizIleriTarihliKaydinTarihiyle() {
+    LedgerDetailRow future = row("SETTLEMENT", "PAYMENT");
+    when(future.getTransactionDate()).thenReturn(TODAY.plusDays(3));
+    service.voidTransaction(id, null, null);
+    verify(settlements).reverse(sourceId, TODAY.plusDays(3), "ZTO ekranından silindi: Ödeme");
+
+    LedgerDetailRow past = row("SETTLEMENT", "COLLECTION");
+    when(past.getTransactionDate()).thenReturn(DATE);
+    service.voidTransaction(id, null, null);
+    verify(settlements).reverse(sourceId, TODAY, "ZTO ekranından silindi: Tahsilat");
+
+    LedgerDetailRow unknown = row("SETTLEMENT", "DEBT");
+    when(unknown.getTransactionDate()).thenReturn(null);
+    service.voidTransaction(id, null, null);
+    verify(settlements).reverse(sourceId, TODAY, "ZTO ekranından silindi: Borç");
+  }
+
   @ParameterizedTest
   @CsvSource({
     "MANUAL,RECEIVABLE,Alacak",

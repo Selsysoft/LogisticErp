@@ -64,16 +64,6 @@ public class InvoiceCoverageService {
             List.of(accountId), filter, true, null, false, asOf, true, ACCOUNT_LIMIT));
   }
 
-  /** Tek carinin eksik/fazla fatura satırları (yalnız {@code |missing| > 1}). */
-  @Transactional(readOnly = true)
-  public List<AccountInvoiceGapResponse> gaps(
-      UUID accountId, UUID companyId, List<UUID> branchIds) {
-    access.readable(accountId);
-    return coverage(accountId, scope.filter(companyId, branchIds), null).stream()
-        .filter(InvoiceCoverageService::isGap)
-        .toList();
-  }
-
   /**
    * Ödeme/tahsilat önizlemesi: ödemenin şirketi ve para birimi, verilen taraf; yalnız eksik ({@code
    * missing > 1}) satır. Kullanıcının kapsamıyla hesaplanır.
@@ -159,11 +149,6 @@ public class InvoiceCoverageService {
     return result.stream()
         .filter(row -> row.ledgerTotal().signum() != 0 || row.invoiceTotal().signum() != 0)
         .toList();
-  }
-
-  /** Uyarı ya da bilgi gerektiren fark ({@code |missing| > 1}). */
-  static boolean isGap(AccountInvoiceGapResponse gap) {
-    return gap.missing().abs().compareTo(TOLERANCE) > 0;
   }
 
   /** Eksik fatura ({@code missing > 1}); {@code missing < −1} fatura fazlasıdır (uyarı değil). */

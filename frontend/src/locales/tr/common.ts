@@ -30,5 +30,11 @@ export default {
     limitChart: "Son {{days}} gün bakiye grafiği; kredi limiti {{credit}}, risk limiti {{risk}}",
     removeBankRow: "{{n}}. banka hesabını kaldır",
     statementCaption: "{{branch}} — {{currency}} ekstresi",
+    // 12.2a (§5.15, Rev 1 F8): Döviz Bozum çubuğunun adı, devre dışı alan nedenleri (görünmez
+    // small.sr-only / title), maskeli personel satırı.
+    fxProgress: "Döviz bozum oranı",
+    phase123: "Faz 12.3'te",
+    phase124: "Faz 12.4'te",
+    maskedEmployee: "Personel (gizli)",
   },
 };

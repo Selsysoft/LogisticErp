@@ -39,9 +39,14 @@ test("/zto-finans Günlük Tüm Cari İşlemleri'ne yönlenir; ZTO kökü ve yan
   await expect(sidebar).not.toHaveClass(/open/);
   await root.locator(".zt-sidebar-arrow").hover();
   await expect(sidebar).toHaveClass(/open/);
-  const payments = sidebar.locator("a", { hasText: "Ödemeler" });
-  await expect(payments).toHaveClass("disabled");
-  await expect(payments).toHaveAttribute("title", "Bu ekran Faz 12.2a ile gelecek.");
+  const checks = sidebar.locator("a", { hasText: "Çekler" });
+  await expect(checks).toHaveClass("disabled");
+  await expect(checks).toHaveAttribute("title", "Bu ekran Faz 12.3 ile gelecek.");
+  // 12.2a: Ödemeler bağlantı.
+  await expect(sidebar.locator("a", { hasText: "Ödemeler" })).toHaveAttribute(
+    "href",
+    "/zto-finans/odemeler",
+  );
   await expect(sidebar.locator("a.zt-active")).toHaveAttribute(
     "href",
     "/zto-finans/cari-hareketler",
@@ -425,9 +430,13 @@ test("Günlük Tüm Cari İşlemleri: 7 Gün, kart süzgeci çipi, boş durum �
   await expect(page).toHaveURL(new RegExp(`/zto-finans/cari-kartlar/${accountId}/hareketler$`));
   await expect(modal).toHaveCount(0);
 
-  // Menüdeki "Hızlı Cari İşlemi" aynı modalı açar.
-  const sidebar = await openZtoSidebar(page);
-  await sidebar.getByRole("button", { name: "Hızlı Cari İşlemi" }).click();
+  // Menüdeki "Hızlı Cari İşlemi" aynı modalı açar. Cari Hareketler'e geçişte kabuk tembel parça
+  // yüklenince yeniden çizilip açılan menüyü kapatabilir; açma + tıklama birlikte yeniden denenir
+  // (`openZtoSidebarLink` deseni).
+  await expect(async () => {
+    const sidebar = await openZtoSidebar(page);
+    await sidebar.getByRole("button", { name: "Hızlı Cari İşlemi" }).click({ timeout: 5_000 });
+  }).toPass({ timeout: 60_000 });
   await expect(root.locator("#quickCariActionModal.modal")).toBeVisible();
   await expect(
     root.locator("#quickCariActionModal").getByText("Bir cari arayın ve seçin"),

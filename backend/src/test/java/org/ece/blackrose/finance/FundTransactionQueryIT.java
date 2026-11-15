@@ -241,7 +241,7 @@ class FundTransactionQueryIT extends AccountTestSupport {
     assertThat(settlementDetail.get("source").get("kind").asText()).isEqualTo("SETTLEMENT");
     assertThat(settlementDetail.get("source").get("id").asText()).isEqualTo(payment);
     assertThat(settlementDetail.get("source").get("route").asText())
-        .isEqualTo("/finance/settlements");
+        .isEqualTo("/zto-finans/odemeler?settlementId=" + payment);
     JsonNode transferDetail = detail(w, costTx.toString());
     assertThat(transferDetail.get("source").get("kind").asText()).isEqualTo("FUND_TRANSFER_COST");
     assertThat(transferDetail.get("source").get("id").asText()).isEqualTo(transfer.toString());

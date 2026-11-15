@@ -77,6 +77,7 @@ export default {
     newPayment: "Ödeme",
     newCollection: "Tahsilat",
     reverse: "Ters çevir",
+    reverseReason: "Gerekçe (isteğe bağlı)",
     move: "Durum değiştir",
     history: "Geçmiş",
     newInvoice: "Fatura ekle",
@@ -130,6 +131,36 @@ export default {
       "Bu ödeme, carinin seçilen şirketteki borcunu aşıyor; onaylayarak devam edebilirsiniz.",
     FUND_IS_COMPANY_DEFAULT:
       "Bu hesap şirketin varsayılan banka hesabı; önce şirket kartında başka bir hesap seçin.",
+    // 12.2a ödeme / tahsilat kataloğu (12.2a §3.12). Ek: `_PAYMENT` / `_COLLECTION` türe, `_CLOSED` /
+    // `_CURRENCY` nedene göre (settlementWarnings.settlementErrorKeys); anahtarı olmayan kod sunucu
+    // iletisiyle gösterilir.
+    CHANNEL_INVALID: "Kanal yalnız banka ödemesinde seçilebilir.",
+    COUNTERPARTY_BANK_ACCOUNT_INVALID: "Seçilen cari banka hesabı geçersiz.",
+    INSTRUMENT_STATUS_INVALID: "Çek durumu bu işlem için geçersiz.",
+    ALLOCATION_DUPLICATE_TARGET: "Aynı fatura birden fazla eşleştirilemez.",
+    ALLOCATION_TARGET_INVALID_CLOSED: "Bu fatura için tahsis edilebilecek tutar kalmadı.",
+    ALLOCATION_TARGET_INVALID_CURRENCY:
+      "Bu faturanın para birimi seçilen tahsilat para birimi ile aynı değil.",
+    ALLOCATION_TARGET_INVALID_CURRENCY_PAYMENT:
+      "Bu faturanın para birimi seçilen ödeme para birimi ile aynı değil.",
+    ALLOCATION_EXCEEDS_SETTLEMENT: "Toplam tahsis tutarı tahsilat tutarını aşıyor!",
+    ALLOCATION_EXCEEDS_SETTLEMENT_PAYMENT: "Toplam tahsis tutarı ödeme tutarını aşıyor!",
+    ALLOCATION_EXCEEDS_REMAINING: "Toplam tahsis tutarı aşıldı!",
+    CORRECTION_METHOD_INVALID: "Çekli/senetli kayıt düzenlenemez.",
+    SETTLEMENT_ALREADY_CORRECTED: "Bu kayıt zaten düzenlenmiş; güncel kaydı açın.",
+    SETTLEMENT_REVERSED: "İptal edilmiş kayıt düzenlenemez.",
+    SETTLEMENT_NOT_CORRECTABLE: "Bu kayıt düzenlenemez.",
+    SETTLEMENT_SOURCE_MANAGED: "Araç giderine bağlı ödeme araç gideri ekranından iptal edilir.",
+    TRANSACTION_TRANSFERRED: "Cari taşıma geri alınmadan düzenlenemez/silinemez.",
+    SETTLEMENT_NOT_FOUND: "Ödeme bilgileri alınamadı.",
+    SETTLEMENT_NOT_FOUND_COLLECTION: "Tahsilat bilgileri alınamadı.",
+    // 12.2 kodları (kilit nedeni metinleri; iletiler sunucudakiyle aynı).
+    SETTLEMENT_CHECK_NOT_REVERSIBLE: "Çekli kayıt ters çevrilemez; çekin durumunu güncelleyin.",
+    SETTLEMENT_LINKED_TO_PLAN: "Ödeme planına bağlı kayıt ters çevrilemez.",
+    SETTLEMENT_LINKED_TO_INTERCOMPANY:
+      "Şirketler arası virmana bağlı kayıt transfer merkezinden iptal edilir.",
+    SETTLEMENT_USED_IN_FX_EXCHANGE:
+      "Döviz bozumunda kaynak olarak kullanılan tahsilat iptal edilemez; önce bozumu iptal edin.",
   },
   noBranch: "İşlem yapmak için önce Tanımlar sekmesinden şube ekleyin.",
   openingBalance: "Dönem başı bakiye",
@@ -182,6 +213,10 @@ export default {
     days31To60: "31-60 gün",
     days61To90: "61-90 gün",
     daysOver90: "90+ gün",
+    // 12.2a (goc-defter:F3, zto-onyuz:F4): rapor "o tarihteki durum"u gösterir (OK-12.2a-30).
+    reversedLater: "Sonradan iptal: {{date}}",
+    includesReversedNote:
+      "Toplamlara rapor gününden sonra iptal edilen kayıtlar dahildir (o tarihteki durum).",
   },
   plans: {
     heatmap: "Nakit akış ısı haritası",
@@ -240,7 +275,17 @@ export default {
   },
   // 12.2 manuel fon hareketi kategorisi.
   category: { EXPENSE: "Masraf", INCOME: "Gelir", OTHER: "Diğer" },
-  method: { CASH: "Nakit", BANK: "Banka", CHECK: "Çek/Senet" },
+  // 12.2a: Kredi Kartı (BANK + kanal) ve Senet yalnız ZTO ekranlarında/listelerde gösterim içindir; MUI
+  // yöntem seçimi CASH/BANK/CHECK kalır (12.2a §5.14).
+  method: {
+    CASH: "Nakit",
+    BANK: "Banka",
+    CHECK: "Çek/Senet",
+    CREDIT_CARD: "Kredi Kartı",
+    NOTE: "Senet",
+  },
+  // 12.2a banka ödemesinin kanalı (`SettlementChannel`).
+  channel: { TRANSFER: "Banka Havalesi/Eft", CREDIT_CARD: "Kredi Kartı" },
   instrumentKind: { CHECK: "Çek", NOTE: "Senet" },
   instrumentDirection: { RECEIVED: "Alınan", ISSUED: "Verilen" },
   instrumentStatus: {

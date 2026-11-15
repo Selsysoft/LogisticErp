@@ -209,7 +209,9 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("CustomerAccountPayment", "Payments", 100),
         step: "12.2a",
-        implemented: false,
+        implemented: true,
+        // Alt yol (gunluk-rapor) öğeyi etkin yapar.
+        matchPrefix: true,
       },
       {
         id: "collections",
@@ -219,7 +221,8 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("CustomerAccountCollection", "Collections", 106),
         step: "12.2a",
-        implemented: false,
+        implemented: true,
+        matchPrefix: true,
       },
       {
         id: "checks",
@@ -599,6 +602,8 @@ export const ZTO_SLUGS = {
   bankTransactions: "banka-hareketleri",
   cashTransactions: "kasa-hareketleri",
   transferCenter: "transfer-merkezi",
+  payments: "odemeler",
+  collections: "tahsilatlar",
 } as const;
 
 /** Uygulama kabuğu dışındaki yazdırma sayfaları (ZTO `Layout = null`, yeni sekme). */
@@ -679,12 +684,29 @@ export function cashEditPath(id: string): string {
   return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.cashes}/${segment(id)}/duzenle`;
 }
 
-export type FundTransactionsQuery = { fundId?: string; branchId?: string; currency?: string };
+export type FundTransactionsQuery = {
+  fundId?: string;
+  branchId?: string;
+  currency?: string;
+  /** 12.2a: sayfa içinde Yeni Ödeme modalı (ZTO `_AccountCardsListPartial:143`, `openModal=true`). */
+  openModal?: boolean;
+  /** 12.2a: sayfa içinde Yeni Tahsilat modalı (ZTO `_CashCardsListPartial:134`). */
+  openCollection?: boolean;
+  /** 12.2a: tahsilat yöntemi ön seçimi (ZTO metni). */
+  collectionMethod?: "Banka" | "Nakit";
+};
 
 /** Banka / Kasa Hareketleri (ZTO BankTransactions/Index, CashTransactions/Index). */
 export function fundTransactionsPath(kind: ZtoFundKind, query: FundTransactionsQuery = {}): string {
   const slug = kind === "BANK" ? ZTO_SLUGS.bankTransactions : ZTO_SLUGS.cashTransactions;
-  return `${ZTO_FINANS_BASE}/${slug}${queryOf(query)}`;
+  return `${ZTO_FINANS_BASE}/${slug}${queryOf({
+    fundId: query.fundId,
+    branchId: query.branchId,
+    currency: query.currency,
+    openModal: query.openModal,
+    openCollection: query.openCollection,
+    collectionMethod: query.collectionMethod,
+  })}`;
 }
 
 /** Transfer Merkezi sekmeleri: Yeni Transfer, Transferler, Tüm Banka / Kasa Ekstreleri. */
@@ -771,9 +793,101 @@ export function fundActivityPath(id: string, range: { from: string; to: string }
   return `${ZTO_PRINT_BASE}/faaliyet-raporu/${segment(id)}${queryOf(range)}`;
 }
 
-function queryOf(query: Record<string, string | undefined>): string {
+// ---------------------------------------------------------------------------------------------
+// 12.2a ödeme / tahsilat yolları (12.2a_TASARIM §5.3). Parametre adları ZTO ile birebir; kimlikler
+// UUID. Yöntem değerleri ZTO metniyle üretilir (`settlementDeepLink.ts` metni ve kodu kabul eder).
+// ---------------------------------------------------------------------------------------------
+
+/** ZTO `paymentMethod` / `collectionMethod` URL değerleri. */
+export type ZtoSettlementMethodParam = "Nakit" | "Banka" | "Çek" | "Senet" | "Kredi Kartı";
+
+export type PaymentsQuery = {
+  /** Cari (süzgeç; `openModal` ile modal ön seçimi). */
+  id?: string;
+  openModal?: boolean;
+  openEditPayment?: boolean;
+  paymentId?: string;
+  bankId?: string;
+  cashId?: string;
+  workPlaceId?: string;
+  currencyId?: string;
+  paymentMethod?: ZtoSettlementMethodParam;
+  /** Detay modalı (backend kaynak rotası). */
+  settlementId?: string;
+};
+
+export type CollectionsQuery = {
+  id?: string;
+  openModal?: boolean;
+  openEditCollection?: boolean;
+  collectionId?: string;
+  bankId?: string;
+  cashId?: string;
+  workPlaceId?: string;
+  currencyId?: string;
+  collectionMethod?: ZtoSettlementMethodParam;
+  settlementId?: string;
+};
+
+/** Ödemeler (ZTO CustomerAccountPayment/Payments). */
+export function paymentsPath(query: PaymentsQuery = {}): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.payments}${queryOf({
+    id: query.id,
+    openModal: query.openModal,
+    openEditPayment: query.openEditPayment,
+    paymentId: query.paymentId,
+    bankId: query.bankId,
+    cashId: query.cashId,
+    workPlaceId: query.workPlaceId,
+    currencyId: query.currencyId,
+    paymentMethod: query.paymentMethod,
+    settlementId: query.settlementId,
+  })}`;
+}
+
+/** Tahsilatlar (ZTO CustomerAccountCollection/Collections). */
+export function collectionsPath(query: CollectionsQuery = {}): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.collections}${queryOf({
+    id: query.id,
+    openModal: query.openModal,
+    openEditCollection: query.openEditCollection,
+    collectionId: query.collectionId,
+    bankId: query.bankId,
+    cashId: query.cashId,
+    workPlaceId: query.workPlaceId,
+    currencyId: query.currencyId,
+    collectionMethod: query.collectionMethod,
+    settlementId: query.settlementId,
+  })}`;
+}
+
+export type DailySettlementReportQuery = {
+  /** ISO `YYYY-MM-DD` (yerel takvim). */
+  reportDate: string;
+  /** Virgülle birleştirilir (`workPlaceIds=a,b`, ZTO DPR/DCR). */
+  workPlaceIds?: readonly string[];
+};
+
+/**
+ * Günlük Ödeme / Tahsilat Raporu (ZTO DailyPaymentReport / DailyCollectionReport; kabuk içi, yeni
+ * sekme — OK-12.2a-25): `/zto-finans/odemeler/gunluk-rapor?reportDate=…&workPlaceIds=a,b`.
+ */
+export function dailySettlementReportPath(
+  type: "PAYMENT" | "COLLECTION",
+  query: DailySettlementReportQuery,
+): string {
+  const slug = type === "PAYMENT" ? ZTO_SLUGS.payments : ZTO_SLUGS.collections;
+  const ids = (query.workPlaceIds ?? []).filter((id) => id !== "");
+  const base = `${ZTO_FINANS_BASE}/${slug}/gunluk-rapor${queryOf({ reportDate: query.reportDate })}`;
+  if (ids.length === 0) return base;
+  // Kimlikler tek tek kodlanır; ayırıcı virgül ZTO'daki gibi düz kalır.
+  const list = ids.map((id) => encodeURIComponent(id)).join(",");
+  return `${base}${base.includes("?") ? "&" : "?"}workPlaceIds=${list}`;
+}
+
+function queryOf(query: Record<string, string | boolean | undefined>): string {
   const parts = Object.entries(query)
-    .filter(([, value]) => value !== undefined && value !== "")
-    .map(([key, value]) => `${key}=${encodeURIComponent(value as string)}`);
+    .filter(([, value]) => value !== undefined && value !== "" && value !== false)
+    .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`);
   return parts.length > 0 ? `?${parts.join("&")}` : "";
 }

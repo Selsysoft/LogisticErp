@@ -1,5 +1,7 @@
 package org.ece.blackrose.finance.web;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Email;
@@ -15,10 +17,13 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.ece.blackrose.common.money.Money;
+import org.ece.blackrose.common.web.NullableInSchema;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
+import org.ece.blackrose.finance.domain.FinanceTypes.AllocationTargetType;
 import org.ece.blackrose.finance.domain.FinanceTypes.CompanyType;
 import org.ece.blackrose.finance.domain.FinanceTypes.DensityLevel;
 import org.ece.blackrose.finance.domain.FinanceTypes.Direction;
+import org.ece.blackrose.finance.domain.FinanceTypes.DocumentPaymentMethod;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundAccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundCategory;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundDirection;
@@ -29,6 +34,8 @@ import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentMovementType;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.InvoiceStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.PlanStatus;
+import org.ece.blackrose.finance.domain.FinanceTypes.SettlementChannel;
+import org.ece.blackrose.finance.domain.FinanceTypes.SettlementLockReason;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementMethod;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementType;
@@ -378,11 +385,24 @@ public final class FinanceDtos {
 
   public record TransferResponse(UUID transferId) {}
 
+  /**
+   * Yeni çek/senet. {@code fundAccountId}: ödemede çekin çekildiği banka hesabı, tahsilatta {@code
+   * initialStatus = AT_BANK} iken yatırılan banka hesabı. {@code initialStatus} yalnız tahsilatta
+   * ({@code PORTFOLIO} varsayılan; {@code AT_BANK} yalnız çekte, fon hareketi yazmaz — 12.2a §3.2).
+   */
   public record NewInstrument(
       @NotNull InstrumentKind kind,
       @NotBlank @Size(max = 50) String number,
       @Size(max = 100) String bankName,
-      @NotNull LocalDate dueDate) {}
+      @NotNull LocalDate dueDate,
+      @NullableInSchema UUID fundAccountId,
+      @NullableInSchema InstrumentStatus initialStatus) {
+
+    /** 12.2 biçimi (yalnız dört alan). */
+    public NewInstrument(InstrumentKind kind, String number, String bankName, LocalDate dueDate) {
+      this(kind, number, bankName, dueDate, null, null);
+    }
+  }
 
   public record InstrumentResponse(
       UUID id,
@@ -438,7 +458,11 @@ public final class FinanceDtos {
       @NotNull LocalDate date,
       @Size(max = 500) String description,
       @Positive BigDecimal exchangeRate,
-      Boolean confirmWarnings) {
+      Boolean confirmWarnings,
+      @NullableInSchema @Size(max = 50) String documentNo,
+      @NullableInSchema SettlementChannel channel,
+      @NullableInSchema UUID counterpartyBankAccountId,
+      @NullableInSchema @Size(max = 50) List<@NotNull @Valid AllocationRequest> allocations) {
 
     /** Türetilmiş akışlar (plan ödemesi, araç gideri, sürücü avansı, virman): onay alanı yok. */
     @SuppressWarnings("java:S107")
@@ -466,9 +490,34 @@ public final class FinanceDtos {
           date,
           description,
           exchangeRate,
+          null,
+          null,
+          null,
+          null,
           null);
     }
   }
+
+  /**
+   * Bilgi amaçlı fatura eşleştirme satırı (12.2a §3.3). {@code amount} JSON'da ondalık metindir
+   * ({@code "250.00"}); para birimi kaydın para birimidir.
+   */
+  public record AllocationRequest(
+      @NotNull AllocationTargetType targetType,
+      @NotNull UUID targetId,
+      @NotNull
+          @Positive
+          @Digits(integer = 15, fraction = 4)
+          @JsonFormat(shape = JsonFormat.Shape.STRING)
+          @Schema(type = "string", format = "decimal", example = "250.00")
+          BigDecimal amount) {}
+
+  /**
+   * Düzeltme ({@code POST /settlements/{id}/correct}): eski kayıt kendi tarihiyle ters kayıtla
+   * iptal edilir, {@code replacement} yeni kayıt olarak yazılır (12.2a §3.6).
+   */
+  public record SettlementCorrectionRequest(
+      @Size(max = 500) String reason, @NotNull @Valid SettlementRequest replacement) {}
 
   // --- 12.2 §4.5 ödeme/tahsilat uyarıları
 
@@ -508,15 +557,195 @@ public final class FinanceDtos {
       Money money,
       LocalDate settlementDate,
       String description,
-      SettlementStatus status) {}
+      SettlementStatus status,
+      @NullableInSchema String documentNo,
+      @NullableInSchema SettlementChannel channel,
+      @NullableInSchema UUID counterpartyBankAccountId,
+      @NullableInSchema UUID correctsSettlementId,
+      @NullableInSchema String reverseReason,
+      @NullableInSchema LocalDate reversedOn) {}
+
+  // --- 12.2a §4.3 okuma yolu (B3)
+
+  /**
+   * Ödeme/tahsilat liste satırı ({@link SettlementResponse}'un üst kümesi). İzinsiz kullanıcıda
+   * personel carili satırın cari, açıklama ve karşı taraf banka alanları {@code null} ({@code
+   * employeeMasked = true}; Rev 1 SEC-01). {@code fxUsed}/{@code fxRemaining} ondalık metin.
+   */
+  public record SettlementListItemResponse(
+      UUID id,
+      SettlementType type,
+      SettlementMethod method,
+      @NullableInSchema SettlementChannel channel,
+      DocumentPaymentMethod displayMethod,
+      @NullableInSchema UUID accountId,
+      @NullableInSchema String accountCode,
+      @NullableInSchema String accountName,
+      @NullableInSchema AccountType accountType,
+      @NullableInSchema String accountSubGroup,
+      @NullableInSchema String accountGroupName,
+      boolean employeeMasked,
+      UUID branchId,
+      String branchName,
+      @NullableInSchema String branchGroupName,
+      UUID companyId,
+      @NullableInSchema UUID fundAccountId,
+      @NullableInSchema String fundName,
+      @NullableInSchema FundKind fundKind,
+      @NullableInSchema String fundBankName,
+      @NullableInSchema String fundBankBranchName,
+      @NullableInSchema UUID instrumentId,
+      @NullableInSchema InstrumentKind instrumentKind,
+      @NullableInSchema String instrumentNumber,
+      @NullableInSchema InstrumentStatus instrumentStatus,
+      @NullableInSchema UUID expenseItemId,
+      @NullableInSchema String expenseItemName,
+      @NullableInSchema UUID planId,
+      Money money,
+      @NullableInSchema BigDecimal exchangeRate,
+      @NullableInSchema BigDecimal tlAmount,
+      LocalDate settlementDate,
+      @NullableInSchema String documentNo,
+      @NullableInSchema String description,
+      SettlementStatus status,
+      @NullableInSchema UUID counterpartyBankAccountId,
+      @NullableInSchema String counterpartyIbanMasked,
+      @NullableInSchema String counterpartyBankName,
+      @NullableInSchema UUID correctsSettlementId,
+      @NullableInSchema UUID correctedById,
+      @NullableInSchema String reverseReason,
+      @NullableInSchema LocalDate reversedOn,
+      Instant createdAt,
+      String createdBy,
+      boolean intercompany,
+      boolean credit,
+      boolean transferred,
+      @JsonFormat(shape = JsonFormat.Shape.STRING)
+          @Schema(type = "string", format = "decimal", example = "0.00")
+          BigDecimal fxUsed,
+      @JsonFormat(shape = JsonFormat.Shape.STRING)
+          @Schema(type = "string", format = "decimal", example = "0.00")
+          BigDecimal fxRemaining,
+      @NullableInSchema SettlementLockReason lockReason,
+      boolean reversible,
+      boolean correctable) {}
+
+  /** {@code GET /settlements/{id}} (personel carisi izinsiz kullanıcıya 404). */
+  public record SettlementDetailResponse(
+      SettlementListItemResponse item,
+      List<SettlementLineResponse> lines,
+      @NullableInSchema InstrumentResponse instrument,
+      @NullableInSchema PlanResponse plan,
+      List<SettlementAllocationResponse> allocations,
+      @NullableInSchema String fundIbanMasked,
+      boolean bankStatementMatched) {}
+
+  /** Kaydın cari ({@code ACCOUNT}) ya da banka/kasa ({@code FUND}) defter satırı. */
+  public record SettlementLineResponse(
+      String ledger,
+      UUID transactionId,
+      String direction,
+      Money money,
+      BigDecimal exchangeRate,
+      BigDecimal tlAmount,
+      LocalDate transactionDate,
+      boolean reversal) {}
+
+  /**
+   * Fatura eşleştirmesi. {@code outOfScope = true} iken hedef bilgileri ({@code targetId}, {@code
+   * targetNumber}, {@code targetTypeName}, {@code invoiceDate}, {@code dueDate}) {@code null} (Rev
+   * 1 SEC-07). {@code active}: kayıt POSTED ve hedef açık.
+   */
+  public record SettlementAllocationResponse(
+      UUID id,
+      AllocationTargetType targetType,
+      @NullableInSchema UUID targetId,
+      @NullableInSchema String targetNumber,
+      @NullableInSchema String targetTypeName,
+      @NullableInSchema LocalDate invoiceDate,
+      @NullableInSchema LocalDate dueDate,
+      Money money,
+      boolean targetCancelled,
+      boolean active,
+      boolean outOfScope) {}
+
+  /**
+   * Eşleştirilebilir açık fatura kalemi ({@code GET /settlements/open-invoices}). {@code allocated}
+   * = geçerli eşleşmeler + faturaya bağlı POSTED plan ödemeleri (Rev 1 F-3); tutarlar ondalık
+   * metin.
+   */
+  public record OpenInvoiceResponse(
+      AllocationTargetType targetType,
+      UUID id,
+      String number,
+      String typeName,
+      LocalDate invoiceDate,
+      @NullableInSchema LocalDate dueDate,
+      String currency,
+      @JsonFormat(shape = JsonFormat.Shape.STRING)
+          @Schema(type = "string", format = "decimal", example = "1500.00")
+          BigDecimal total,
+      @JsonFormat(shape = JsonFormat.Shape.STRING)
+          @Schema(type = "string", format = "decimal", example = "500.00")
+          BigDecimal allocated,
+      @JsonFormat(shape = JsonFormat.Shape.STRING)
+          @Schema(type = "string", format = "decimal", example = "1000.00")
+          BigDecimal remaining,
+      UUID branchId,
+      UUID companyId) {}
 
   public record DailyTotal(UUID branchId, String currency, BigDecimal total, int count) {}
 
+  /**
+   * Günlük ödeme/tahsilat raporu (12.2a §3.8). {@code rows} o tarihteki durumdur: rapor gününde
+   * geçerli olup sonradan iptal edilen kayıt satırda kalır ve {@code reversedOn} doludur (Rev 1
+   * F-4); {@code totals} satırlardan iş yeri × para birimi. {@code fundBalances} satırlardaki ve
+   * süzgeçte istenen fonların gün sonu ve güncel bakiyesi; {@code instrumentFundMovements} o gün
+   * banka/kasaya yansıyan çek/senet hareketleri (tahsilatta giriş, ödemede çıkış).
+   */
   public record DailyReportResponse(
       SettlementType type,
       LocalDate date,
-      List<SettlementResponse> rows,
-      List<DailyTotal> totals) {}
+      List<SettlementListItemResponse> rows,
+      List<DailyTotal> totals,
+      List<DailyFundBalanceResponse> fundBalances,
+      List<DailyInstrumentMovementResponse> instrumentFundMovements) {}
+
+  /**
+   * Günlük rapor "Özet Bakiye Bilgisi" satırı: {@code balanceAtDate} rapor günü sonu, {@code
+   * balanceNow} güncel bakiye (ileri tarihli hareketler dahil); ondalık metin.
+   */
+  public record DailyFundBalanceResponse(
+      UUID fundAccountId,
+      String name,
+      FundKind kind,
+      String currency,
+      UUID branchId,
+      String branchName,
+      @NullableInSchema String bankName,
+      @NullableInSchema String bankBranchName,
+      @JsonFormat(shape = JsonFormat.Shape.STRING)
+          @Schema(type = "string", format = "decimal", example = "1500.00")
+          BigDecimal balanceAtDate,
+      @JsonFormat(shape = JsonFormat.Shape.STRING)
+          @Schema(type = "string", format = "decimal", example = "1500.00")
+          BigDecimal balanceNow) {}
+
+  /**
+   * Günlük rapor "Banka Hareketine Yansıyan Çek Özeti" satırı: çekin iş yeri × fon × para birimi
+   * başına adet ve toplam (ondalık metin).
+   */
+  public record DailyInstrumentMovementResponse(
+      UUID branchId,
+      String branchName,
+      UUID fundAccountId,
+      String fundName,
+      FundKind fundKind,
+      String currency,
+      int count,
+      @JsonFormat(shape = JsonFormat.Shape.STRING)
+          @Schema(type = "string", format = "decimal", example = "1500.00")
+          BigDecimal total) {}
 
   public record CreatePurchaseInvoiceRequest(
       @NotNull UUID accountId,

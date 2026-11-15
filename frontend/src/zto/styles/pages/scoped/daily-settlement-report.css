@@ -1,0 +1,643 @@
+/*
+ * Kaynak: ZtoFabrika/Views/CustomerAccountPayment/DailyPaymentReport.cshtml <style> :51-667 ∪
+ * Views/CustomerAccountCollection/DailyCollectionReport.cshtml <style> :42-624 (12.2a_TASARIM §5.4).
+ * Birebir kopya; değişiklik: Razor kaçışı @@ → @ (@page kuralı derlemede çıkarılır — prefixTransform).
+ * Ortak kurallar bir kez (DPR metni); DCR'de farklı olan üç kural en altta `.dcr-report` kapsamında
+ * (sayfa DCR'de kök kapsayıcıya `dcr-report` sınıfı yazar). DCR'de olmayan .legacy-checks-card,
+ * .legacy-check-badge ve .payment-date-checks-card kuralları yalnız DPR işaretlemesinde kullanılır.
+ * Sayfa kapsamı .zto-finans.zto-page-daily-settlement-report.
+ */
+/* --- DailyPaymentReport.cshtml <style> :52-666 --- */
+.report-toolbar {
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.report-page-header {
+  background: linear-gradient(135deg, #fbfdff 0%, #f3f7ff 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 2px 8px rgba(148, 163, 184, 0.08);
+}
+
+.report-page-title {
+  margin-bottom: 2px;
+  color: #334155;
+  font-weight: 700;
+}
+
+.report-page-subtitle {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.filters-toolbar {
+  display: grid;
+  grid-template-columns: minmax(290px, 390px) 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.search-compact-card .card-body {
+  padding: 10px;
+}
+
+.search-compact-help {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+.search-container .input-group {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.search-container .input-group:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+}
+
+.search-container .input-group-text,
+.search-container .form-control {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.dynamic-filter-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stat-main-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.stat-main-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.stat-items-wrapper {
+  max-height: 130px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  border-radius: 7px;
+  padding: 6px 7px;
+  margin-bottom: 4px;
+  background: #f8fafc;
+  border: 1px solid transparent;
+}
+
+.stat-item.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.stat-item.clickable:hover {
+  background: #e8f1ff;
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+
+.stat-item.clickable.active {
+  background: #dbeafe;
+  border-color: #60a5fa;
+  color: #1e3a8a;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px #93c5fd;
+}
+
+.stat-item-value {
+  min-width: 22px;
+  text-align: right;
+  font-weight: 700;
+}
+
+.stat-item-sub {
+  color: #64748b;
+  font-size: 10px;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.report-stat-card {
+  border: 1px solid #dbe4f0;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 10px 12px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.report-stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e0e7ff;
+  color: #1d4ed8;
+}
+
+.report-stat-title {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.report-stat-value {
+  font-size: 17px;
+  color: #1f2937;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.report-stat-sub {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.view-toggle-btn.active {
+  background: #1d4ed8;
+  color: #fff;
+  border-color: #1d4ed8;
+}
+
+.workplace-header-btn {
+  width: 100%;
+  border: 1px solid #dbe4f0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f8fbff 0%, #eef6ff 100%);
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f3b5b;
+}
+
+.bank-header-btn {
+  width: 100%;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+.cash-header-btn {
+  width: 100%;
+  border: 1px solid #fdba74;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9a3412;
+}
+
+.cash-header-btn .bank-meta small {
+  background: #ffffff;
+  border: 1px solid #fdba74;
+  color: #7c2d12;
+}
+
+.bank-meta {
+  margin-top: 2px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 11px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.bank-meta small {
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: #334155;
+}
+
+.summary-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.summary-badge {
+  background: #e7f0ff;
+  color: #1d4ed8;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.summary-badge.currency {
+  background: #ecfeff;
+  color: #155e75;
+}
+
+.report-table th {
+  font-size: 11px;
+  background: #f8fafc;
+  white-space: nowrap;
+}
+
+.report-table td {
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.workplace-transfer-row {
+  background-color: #fff7e6 !important;
+}
+
+.workplace-transfer-row td {
+  background-color: #fff7e6 !important;
+}
+
+.transfer-badge {
+  display: inline-block;
+  background: #ff9800;
+  color: white;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.empty-card {
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 22px;
+  text-align: center;
+  color: #64748b;
+}
+
+.totals-footer-card {
+  border: 1px solid #c7d2fe;
+  background: linear-gradient(135deg, #f8faff 0%, #eef2ff 100%);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 14px;
+}
+
+.currency-total-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
+  background: #ffffff;
+  color: #1e3a8a;
+  padding: 6px 12px;
+  margin: 4px 6px 4px 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ✅ Banka/Kasa ayrımlı toplam blokları */
+.totals-split-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.totals-split-block {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-width: 200px;
+  flex: 0 1 auto;
+}
+
+.totals-split-block.bank-block {
+  border-color: #93c5fd;
+  background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+}
+
+.totals-split-block.cash-block {
+  border-color: #fcd34d;
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+}
+
+.totals-block-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.totals-split-block.bank-block .totals-block-title {
+  color: #1e40af;
+}
+
+.totals-split-block.cash-block .totals-block-title {
+  color: #92400e;
+}
+
+.totals-split-divider {
+  width: 2px;
+  background: linear-gradient(180deg, transparent 0%, #cbd5e1 20%, #cbd5e1 80%, transparent 100%);
+  align-self: stretch;
+  margin: 0 2px;
+}
+
+.legacy-checks-card {
+  border: 1px solid #f59e0b;
+  background: linear-gradient(135deg, #fff9db 0%, #fff3bf 100%);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 14px;
+}
+
+.legacy-check-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.payment-date-checks-card {
+  border: 1px solid #f97316;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+@media print {
+  @page {
+    margin: 8mm 6mm;
+    size: A4;
+  }
+
+  /* Layout: navbar ve sidebar'ı gizle, boşlukları sıfırla */
+  nav.sb-topnav,
+  #layoutSidenav_nav {
+    display: none !important;
+  }
+
+  body.sb-nav-fixed {
+    padding-top: 0 !important;
+  }
+
+  #layoutSidenav {
+    display: block !important;
+  }
+
+  #layoutSidenav_content {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  * {
+    box-shadow: none !important;
+  }
+
+  body {
+    font-size: 10px !important;
+  }
+
+  br,
+  .report-toolbar,
+  .filters-toolbar,
+  .no-print,
+  #reportSearchInput,
+  #searchResultCount,
+  .row.mb-3,
+  .py-4.bg-light.mt-auto {
+    display: none !important;
+  }
+
+  #groupedView {
+    display: block !important;
+  }
+
+  #flatView {
+    display: none !important;
+  }
+
+  .container-fluid {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .report-page-header {
+    border: none !important;
+    padding: 4px 0 !important;
+    margin-bottom: 6px !important;
+    background: none !important;
+  }
+
+  .report-page-title {
+    font-size: 13px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .report-page-subtitle {
+    font-size: 10px !important;
+  }
+
+  .workplace-header-btn {
+    background: #eef6ff !important;
+    border: 1px solid #bfdbfe !important;
+    border-radius: 4px !important;
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .bank-header-btn {
+    background: #f0f4ff !important;
+    border: 1px solid #c7d2fe !important;
+    border-radius: 3px !important;
+    padding: 3px 8px !important;
+    font-size: 10px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .cash-header-btn {
+    background: #fff7ed !important;
+    border: 1px solid #fdba74 !important;
+    border-radius: 3px !important;
+    padding: 3px 8px !important;
+    font-size: 10px !important;
+    margin-bottom: 1px !important;
+  }
+
+  /* break-inside kaldırıldı — büyük gruplar sayfaya sığmayınca boşluk bırakmıyor */
+  .workplace-block {
+    margin-bottom: 4px !important;
+  }
+
+  .bank-block {
+    margin-bottom: 2px !important;
+  }
+
+  .report-table th {
+    font-size: 9px !important;
+    padding: 2px 4px !important;
+    white-space: nowrap;
+  }
+
+  .report-table td {
+    font-size: 9px !important;
+    padding: 2px 4px !important;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .report-table {
+    margin-bottom: 2px !important;
+  }
+
+  .table-responsive {
+    overflow: visible !important;
+  }
+
+  .totals-footer-card,
+  .legacy-checks-card,
+  .payment-date-checks-card {
+    border-radius: 4px !important;
+    padding: 6px 8px !important;
+    margin-top: 6px !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .totals-footer-card strong,
+  .legacy-checks-card strong,
+  .payment-date-checks-card strong {
+    font-size: 10px !important;
+  }
+
+  .currency-total-pill {
+    padding: 2px 6px !important;
+    font-size: 10px !important;
+    margin: 1px 3px 1px 0 !important;
+  }
+
+  .summary-badge {
+    font-size: 9px !important;
+    padding: 2px 5px !important;
+  }
+
+  .collapse {
+    display: block !important;
+    height: auto !important;
+  }
+
+  .pl-2 {
+    padding-left: 6px !important;
+  }
+
+  .mt-2 {
+    margin-top: 3px !important;
+  }
+  .mt-3 {
+    margin-top: 4px !important;
+  }
+  .mb-2 {
+    margin-bottom: 3px !important;
+  }
+  .mb-3 {
+    margin-bottom: 4px !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  .dynamic-filter-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  .filters-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .dynamic-filter-cards {
+    grid-template-columns: 1fr;
+  }
+}
+/* --- DailyCollectionReport.cshtml <style> farkları (:193-194, :218-220; DPR :206-207, :231-233) --- */
+.dcr-report .report-stat-icon {
+  background: #ecfeff;
+  color: #155e75;
+}
+
+.dcr-report .view-toggle-btn.active {
+  background: #0f766e;
+  border-color: #0f766e;
+}

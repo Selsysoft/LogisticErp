@@ -116,13 +116,11 @@ export default {
     addCredit: "Alacak Ekle",
     addCreditTitle: "Bu cariye, işletmenizin kestiği faturaları kayıt edebilirsiniz",
     addCollection: "Tahsilat Ekle",
-    addCollectionTitle:
-      "Bu cariden, işletmenizin tahsil ettiği tahsilatları kayıt edebilirsiniz (Faz 12.2a'da ZTO ekranı)",
+    addCollectionTitle: "Bu cariden, işletmenizin tahsil ettiği tahsilatları kayıt edebilirsiniz",
     addDebt: "Borç Ekle",
     addDebtTitle: "Bu cariye, işletmenizin faturalı/faturasız borçlarını kayıt edebilirsiniz",
     addPayment: "Ödeme Ekle",
-    addPaymentTitle:
-      "Bu cariye, işletmenizin yaptığı ödemeleri kayıt edebilirsiniz (Faz 12.2a'da ZTO ekranı)",
+    addPaymentTitle: "Bu cariye, işletmenizin yaptığı ödemeleri kayıt edebilirsiniz",
     statement: "Ekstre Al",
     statementTitle: "Bu carinin, tarihsel ekstre raporunu inceleyebilirsiniz",
     purchaseInvoices: "Alış Faturaları",
@@ -326,7 +324,9 @@ export default {
     transferIn: "Bu hareket başka bir cariden taşındı.",
     goSource: "Kaynağa Git",
     editSettlement: "Düzenle",
-    editSettlementHint: "Faz 12.2a ile gelecek",
+    /** 12.2a: düzenlenemeyen kaydın nedeni `finance.error.<KOD>` (settlementLockErrorCode); bu yedek metin. */
+    editSettlementHint: "Bu kayıt düzenlenemez.",
+    editSettlementLoading: "Kayıt bilgileri yükleniyor...",
     close: "Kapat",
     error: "Detay yüklenemedi.",
   },

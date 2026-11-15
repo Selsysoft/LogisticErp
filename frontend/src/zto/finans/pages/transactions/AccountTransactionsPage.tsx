@@ -14,7 +14,13 @@ import { useBranches, useCan, useMultiCompany } from "../../../../pages/finance/
 import type { AccountTransactionRow, DocumentSide } from "../../../../pages/finance/types";
 import { TX_SEARCH_IDS, ZtoAccountSearch, currencySymbol, formatN2 } from "../../../components";
 import { useZtoRootClass } from "../../ZtoRootClassContext";
-import { accountTransactionsPath, statementPath, ZTO_FINANS_BASE } from "../../navItems";
+import {
+  accountTransactionsPath,
+  collectionsPath,
+  paymentsPath,
+  statementPath,
+  ZTO_FINANS_BASE,
+} from "../../navItems";
 import { CariSidebar } from "./CariSidebar";
 import { CariTransferModal } from "./CariTransferModal";
 import { DeleteTransactionModal } from "./DeleteTransactionModal";
@@ -274,7 +280,12 @@ export function AccountTransactionsPage() {
       "_blank",
       "noopener",
     );
-  const settlementsLink = () => globalThis.open("/finance/settlements", "_blank", "noopener");
+  // ZTO transactions.js:2425-2440 openAddPaymentModal / openAddCollectionModal: Ödemeler / Tahsilatlar
+  // yeni sekmede, cari süzgeçli ve Yeni Ödeme / Yeni Tahsilat modalı açık (12.2a §5.13).
+  const openPayment = () =>
+    globalThis.open(paymentsPath({ id: a.id, openModal: true }), "_blank", "noopener");
+  const openCollection = () =>
+    globalThis.open(collectionsPath({ id: a.id, openModal: true }), "_blank", "noopener");
 
   return (
     <>
@@ -499,19 +510,21 @@ export function AccountTransactionsPage() {
                             <span>{t("transactions.toolbar.addCredit")}</span>
                           </button>
                         )}
-                        <button
-                          type="button"
-                          className="erp-action-btn btn-primary"
-                          title={t("transactions.toolbar.addCollectionTitle")}
-                          onClick={settlementsLink}
-                        >
-                          <i className="fas fa-hand-holding-usd" aria-hidden="true" />
-                          <span>{t("transactions.toolbar.addCollection")}</span>
-                          <span className="sr-only">
-                            {" "}
-                            {t("translation:common.a11y.opensInNewTab")}
-                          </span>
-                        </button>
+                        {canPost && (
+                          <button
+                            type="button"
+                            className="erp-action-btn btn-primary"
+                            title={t("transactions.toolbar.addCollectionTitle")}
+                            onClick={openCollection}
+                          >
+                            <i className="fas fa-hand-holding-usd" aria-hidden="true" />
+                            <span>{t("transactions.toolbar.addCollection")}</span>
+                            <span className="sr-only">
+                              {" "}
+                              {t("translation:common.a11y.opensInNewTab")}
+                            </span>
+                          </button>
+                        )}
                         {canPost && (
                           <button
                             type="button"
@@ -523,19 +536,21 @@ export function AccountTransactionsPage() {
                             <span>{t("transactions.toolbar.addDebt")}</span>
                           </button>
                         )}
-                        <button
-                          type="button"
-                          className="erp-action-btn btn-warning"
-                          title={t("transactions.toolbar.addPaymentTitle")}
-                          onClick={settlementsLink}
-                        >
-                          <i className="fas fa-money-check-alt" aria-hidden="true" />
-                          <span>{t("transactions.toolbar.addPayment")}</span>
-                          <span className="sr-only">
-                            {" "}
-                            {t("translation:common.a11y.opensInNewTab")}
-                          </span>
-                        </button>
+                        {canPost && (
+                          <button
+                            type="button"
+                            className="erp-action-btn btn-warning"
+                            title={t("transactions.toolbar.addPaymentTitle")}
+                            onClick={openPayment}
+                          >
+                            <i className="fas fa-money-check-alt" aria-hidden="true" />
+                            <span>{t("transactions.toolbar.addPayment")}</span>
+                            <span className="sr-only">
+                              {" "}
+                              {t("translation:common.a11y.opensInNewTab")}
+                            </span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="erp-action-btn btn-secondary"

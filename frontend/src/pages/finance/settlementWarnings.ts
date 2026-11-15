@@ -3,7 +3,10 @@ import type {
   CurrencyAmount,
   DocumentSide,
   SettlementBody,
+  SettlementChannel,
   SettlementCheck,
+  SettlementLockReason,
+  SettlementType,
   SettlementWarning,
 } from "./types";
 
@@ -136,7 +139,10 @@ export function parseConfirmationDetails(error: unknown): SettlementWarning | nu
 // Uyarı önizlemesinin girdisi (ödeme penceresi)
 // ---------------------------------------------------------------------------------------------
 
-/** Uyarı sorgusunu etkileyen form alanları (§5.13); `instrumentId` çekle ödemede gövdeyi belirler. */
+/**
+ * Uyarı sorgusunu etkileyen form alanları (§5.13; 12.2a §5.14 `channel`, `instrumentKind` ekleri).
+ * Sıra sabittir: anahtar bu sırayla kurulur. `instrumentId` çekle ödemede gövdeyi belirler.
+ */
 export const CHECK_FIELDS = [
   "accountId",
   "branchId",
@@ -145,19 +151,17 @@ export const CHECK_FIELDS = [
   "amount",
   "currency",
   "instrumentId",
+  "channel",
+  "instrumentKind",
 ] as const;
 
-/** Önizleme için yer tutucu çek/senet numarası (yalnız `/settlements/check`; kayda gitmez). */
-export const PREVIEW_INSTRUMENT_NUMBER = "-";
-
 /**
- * `POST /settlements/check` gövdesi. Çekle ödeme/tahsilatta sunucu `validate` aynı çek/senet
- * zorunluluğunu (`INSTRUMENT_REQUIRED`) önizlemede de uygular (F-12.2-R4); bu yüzden cirolanacak çek
- * seçili değilse yer tutucu `instrument` eklenir. Uyarı hesabı çek/senet bilgisinden bağımsızdır.
+ * `POST /settlements/check` gövdesi. 12.2a'da sunucu önizlemede çek/senet bilgisini zorunlu tutmaz
+ * (F-12.2-R4 kapandı), bu yüzden yer tutucu `instrument` eklenmez (12.2a §5.14).
  */
-export type SettlementCheckBody = SettlementBody & {
-  instrument?: { kind: string; number: string; dueDate: string };
-};
+export type SettlementCheckBody = SettlementBody;
+
+const CHANNELS: readonly SettlementChannel[] = ["TRANSFER", "CREDIT_CARD"];
 
 type CheckValues = Partial<Record<string, string | boolean | null | undefined>>;
 
@@ -186,7 +190,9 @@ export function checkKey(values: CheckValues): string {
 /**
  * `POST /settlements/check` gövdesi: cari + iş yeri + pozitif tutar + para birimi yoksa null (istek
  * atılmaz). Tarih yoksa bugün (uyarı tarihten bağımsızdır; sunucu doğrulaması için dolu gönderilir).
- * CHECK yönteminde cirolanacak çek seçiliyse `instrumentId`, değilse yer tutucu `instrument`.
+ * CHECK yönteminde yalnız cirolanacak çek seçiliyse `instrumentId` (yer tutucu araç yok); BANK
+ * yönteminde geçerli `channel` (TRANSFER | CREDIT_CARD) gövdeye yazılır, başka yöntemde yazılmaz
+ * (sunucu 400 `CHANNEL_INVALID`).
  */
 export function settlementCheckBody(
   values: CheckValues,
@@ -210,17 +216,69 @@ export function settlementCheckBody(
   };
   if (method === "CHECK") {
     const instrumentId = text(values.instrumentId);
-    if (instrumentId) {
-      body.instrumentId = instrumentId;
-    } else {
-      body.instrument = {
-        kind: text(values.instrumentKind) || "CHECK",
-        number: PREVIEW_INSTRUMENT_NUMBER,
-        dueDate: text(values.dueDate) || date,
-      };
-    }
+    if (instrumentId) body.instrumentId = instrumentId;
   }
+  const channel = text(values.channel) as SettlementChannel;
+  if (method === "BANK" && CHANNELS.includes(channel)) body.channel = channel;
   return body;
+}
+
+// ---------------------------------------------------------------------------------------------
+// İptal tarihi ve kilit nedenleri (12.2a §3.5, §3.12)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * İptal penceresinin varsayılan tarihi: `max(bugün, kayıt tarihi)` (12.2a §3.5). Sunucu kuralı
+ * `settlement_date ≤ tarih ≤ max(bugün, settlement_date)`; ileri tarihli kayıtta bugün gönderilirse 400
+ * `REVERSE_BEFORE_SETTLEMENT` döner. ISO `YYYY-MM-DD` metinleri sözlük sırasıyla karşılaştırılır.
+ */
+export function defaultReverseDate(settlementDate: string, todayIso: string): string {
+  return settlementDate > todayIso ? settlementDate : todayIso;
+}
+
+/** Kilit nedeni → `finance.error.<KOD>` (12.2a §5.7 eşlemesi; `REVERSED` düzeltilmişse ALREADY). */
+const LOCK_REASON_CODES: Record<SettlementLockReason, string> = {
+  REVERSED: "SETTLEMENT_REVERSED",
+  CHECK: "SETTLEMENT_CHECK_NOT_REVERSIBLE",
+  PLAN: "SETTLEMENT_LINKED_TO_PLAN",
+  INTERCOMPANY: "SETTLEMENT_LINKED_TO_INTERCOMPANY",
+  FX_SOURCE: "SETTLEMENT_USED_IN_FX_EXCHANGE",
+  VEHICLE_EXPENSE: "SETTLEMENT_SOURCE_MANAGED",
+  TRANSFERRED: "TRANSACTION_TRANSFERRED",
+  NO_ACCOUNT: "SETTLEMENT_NOT_CORRECTABLE",
+};
+
+/**
+ * Düzenlenemeyen kaydın nedeni olan hata kodu. Kilit nedeni yoksa (ör. personel maskesi, çek/senet
+ * yöntemi) `SETTLEMENT_NOT_CORRECTABLE`; iptal edilmiş ve düzeltilmiş kayıtta
+ * `SETTLEMENT_ALREADY_CORRECTED`.
+ */
+export function settlementLockErrorCode(
+  lockReason: SettlementLockReason | null | undefined,
+  correctedById?: string | null,
+): string {
+  if (lockReason === "REVERSED" && correctedById) return "SETTLEMENT_ALREADY_CORRECTED";
+  return (lockReason && LOCK_REASON_CODES[lockReason]) || "SETTLEMENT_NOT_CORRECTABLE";
+}
+
+/**
+ * Bir sunucu hata kodunun `finance.error.*` anahtar adayları, en özelden genele (i18next anahtar
+ * dizisi: ilk bulunan kullanılır, hiçbiri yoksa `defaultValue` = sunucu iletisi). Tür ve neden ekleri:
+ * `ALLOCATION_EXCEEDS_SETTLEMENT_PAYMENT` ("ödeme tutarını"), `SETTLEMENT_NOT_FOUND_COLLECTION`
+ * ("Tahsilat bilgileri…"), `ALLOCATION_TARGET_INVALID_CLOSED` / `_CURRENCY[_PAYMENT]` (§3.12).
+ */
+export function settlementErrorKeys(
+  code: string,
+  type?: SettlementType | null,
+  reason?: string | null,
+): string[] {
+  const base = `finance.error.${code}`;
+  const keys: string[] = [];
+  if (reason && type) keys.push(`${base}_${reason}_${type}`);
+  if (reason) keys.push(`${base}_${reason}`);
+  if (type) keys.push(`${base}_${type}`);
+  keys.push(base);
+  return keys;
 }
 
 // ---------------------------------------------------------------------------------------------

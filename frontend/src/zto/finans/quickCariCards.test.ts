@@ -34,7 +34,9 @@ describe("Hızlı Cari kartları (ZTO qcaBuildCards)", () => {
       newTab: false,
     });
     expect(cards[3]).toMatchObject({
-      href: "/finance/settlements",
+      key: "addPayment",
+      href: "/zto-finans/odemeler?id=a1&openModal=true",
+      icon: "fa-money-bill-wave",
       color: "#198754",
       newTab: true,
     });
@@ -87,6 +89,7 @@ describe("Hızlı Cari kartları (ZTO qcaBuildCards)", () => {
 
   it("uygulama içi yol", () => {
     expect(isZtoPath("/zto-finans/cari-kartlar/a/hareketler")).toBe(true);
+    expect(isZtoPath("/zto-finans/odemeler?id=a1&openModal=true")).toBe(true);
     expect(isZtoPath("/finance/settlements")).toBe(false);
   });
 });

@@ -10,6 +10,8 @@ import {
   bankEditPath,
   canonicalTransferType,
   cashEditPath,
+  collectionsPath,
+  dailySettlementReportPath,
   exchangeBreakReportPath,
   EXCLUDED_ZTO_ITEMS,
   fundActivityPath,
@@ -23,6 +25,7 @@ import {
   newBankAccountPath,
   newBankPath,
   newCashPath,
+  paymentsPath,
   statementPath,
   stepOf,
   TRANSFER_TYPE_ALIASES,
@@ -109,7 +112,7 @@ describe("ZTO finans menü kaydı", () => {
     for (const item of ztoItems) expect(STEPS, item.id).toContain(item.step);
   });
 
-  it("uygulanmış ekranlar: 12.1 cari, 12.2 banka/kasa, 12.1a tanım ekranları ve vitrin", () => {
+  it("uygulanmış ekranlar: 12.1 cari, 12.2 banka/kasa, 12.2a ödeme/tahsilat, tanımlar, vitrin", () => {
     expect(items.filter((i) => i.implemented).map((i) => i.id)).toEqual([
       "allTransactions",
       "quickTransaction",
@@ -120,6 +123,8 @@ describe("ZTO finans menü kaydı", () => {
       "cashes",
       "allCashTransactions",
       "transferCenter",
+      "payments",
+      "collections",
       "workPlaces",
       "branchGroups",
       "companies",
@@ -138,6 +143,8 @@ describe("ZTO finans menü kaydı", () => {
       bankTransactions: "banka-hareketleri",
       cashTransactions: "kasa-hareketleri",
       transferCenter: "transfer-merkezi",
+      payments: "odemeler",
+      collections: "tahsilatlar",
     });
     const accounts = items.find((i) => i.id === "accounts")!;
     expect(accounts.matchPrefix).toBe(true);
@@ -152,6 +159,17 @@ describe("ZTO finans menü kaydı", () => {
       ["kasalar", "12.2", true, true],
       ["kasa-hareketleri", "12.2", true, false],
       ["transfer-merkezi", "12.2", true, false],
+    ]);
+    // 12.2a: Ödemeler ve Tahsilatlar sayfa bağlantısı, günlük rapor alt yolunda da etkin; Çekler ve
+    // Senetler 12.3'te.
+    const paymentCollection = ZTO_NAV_SECTIONS.find((s) => s.id === "paymentCollection")!.items;
+    expect(
+      paymentCollection.map((i) => [i.slug, i.step, isNavigable(i), i.matchPrefix ?? false]),
+    ).toEqual([
+      ["odemeler", "12.2a", true, true],
+      ["tahsilatlar", "12.2a", true, true],
+      ["cekler", "12.3", false, false],
+      ["senetler", "12.3", false, false],
     ]);
     // Tüm Planlamalar 12.4'te (plan modalları).
     expect(items.find((i) => i.id === "allPlans")!.implemented).toBe(false);
@@ -262,6 +280,11 @@ describe("activeItemIds (en uzun eşleşme, 12.1 §5.4 F12)", () => {
     expect(ids("/zto-finans/banka-hareketleri")).toEqual(["allBankTransactions"]);
     expect(ids("/zto-finans/kasa-hareketleri")).toEqual(["allCashTransactions"]);
     expect(ids("/zto-finans/transfer-merkezi")).toEqual(["transferCenter"]);
+    // 12.2a: günlük rapor alt yolu kendi listesini etkin yapar; benzer önek etkin yapmaz.
+    expect(ids("/zto-finans/odemeler")).toEqual(["payments"]);
+    expect(ids("/zto-finans/odemeler/gunluk-rapor")).toEqual(["payments"]);
+    expect(ids("/zto-finans/tahsilatlar/gunluk-rapor")).toEqual(["collections"]);
+    expect(ids("/zto-finans/odemeler-x")).toEqual([]);
     // Banka hesapları (cari) yolu Bankalar'ı etkin yapmaz.
     expect(ids("/zto-finans/banka-hesaplari/b1/duzenle")).toEqual([]);
   });
@@ -320,6 +343,25 @@ describe("12.2 yol yardımcıları", () => {
     expect(fundTransactionsPath("BANK", { fundId: "f1", branchId: "b1" })).toBe(
       "/zto-finans/banka-hareketleri?fundId=f1&branchId=b1",
     );
+  });
+
+  it("12.2a: banka / kasa hareketlerinden Yeni Ödeme / Yeni Tahsilat (ZTO openModal, openCollection)", () => {
+    expect(fundTransactionsPath("BANK", { fundId: "f1", openModal: true })).toBe(
+      "/zto-finans/banka-hareketleri?fundId=f1&openModal=true",
+    );
+    expect(
+      fundTransactionsPath("CASH", {
+        collectionMethod: "Nakit",
+        openCollection: true,
+        currency: "TRY",
+        fundId: "k1",
+      }),
+    ).toBe(
+      "/zto-finans/kasa-hareketleri?fundId=k1&currency=TRY&openCollection=true&collectionMethod=Nakit",
+    );
+    expect(
+      fundTransactionsPath("BANK", { fundId: "f1", openModal: false, openCollection: undefined }),
+    ).toBe("/zto-finans/banka-hareketleri?fundId=f1");
   });
 
   it("transfer merkezi derin bağlantısı (ZTO 'Gönder' kaynak, 'Al' hedef + hedef iş yeri)", () => {
@@ -389,5 +431,64 @@ describe("12.2 yol yardımcıları", () => {
     expect(exchangeBreakReportPath({ from: "2026-11-07", to: "2026-11-15" })).toBe(
       "/zto-finans/transfer-merkezi/doviz-bozum-raporu?from=2026-11-07&to=2026-11-15",
     );
+  });
+});
+
+describe("12.2a yol yardımcıları (§5.3)", () => {
+  it("ödemeler: ZTO parametre adları, boolean'lar true iken yazılır, değerler kodlanır", () => {
+    expect(paymentsPath()).toBe("/zto-finans/odemeler");
+    expect(paymentsPath({ id: "a1", openModal: true })).toBe(
+      "/zto-finans/odemeler?id=a1&openModal=true",
+    );
+    expect(paymentsPath({ openEditPayment: true, paymentId: "s1" })).toBe(
+      "/zto-finans/odemeler?openEditPayment=true&paymentId=s1",
+    );
+    expect(
+      paymentsPath({
+        settlementId: "s9",
+        paymentMethod: "Kredi Kartı",
+        currencyId: "USD",
+        workPlaceId: "w1",
+        cashId: "k1",
+        bankId: "f1",
+        paymentId: "",
+        openModal: false,
+        id: "a1",
+      }),
+    ).toBe(
+      "/zto-finans/odemeler?id=a1&bankId=f1&cashId=k1&workPlaceId=w1&currencyId=USD&paymentMethod=Kredi%20Kart%C4%B1&settlementId=s9",
+    );
+  });
+
+  it("tahsilatlar: openEditCollection, collectionId, collectionMethod", () => {
+    expect(collectionsPath()).toBe("/zto-finans/tahsilatlar");
+    expect(collectionsPath({ id: "a 1", openModal: true, collectionMethod: "Çek" })).toBe(
+      "/zto-finans/tahsilatlar?id=a%201&openModal=true&collectionMethod=%C3%87ek",
+    );
+    expect(collectionsPath({ openEditCollection: true, collectionId: "s1" })).toBe(
+      "/zto-finans/tahsilatlar?openEditCollection=true&collectionId=s1",
+    );
+    expect(collectionsPath({ settlementId: "s2", bankId: "f1", workPlaceId: "w1" })).toBe(
+      "/zto-finans/tahsilatlar?bankId=f1&workPlaceId=w1&settlementId=s2",
+    );
+  });
+
+  it("günlük rapor: kabuk içi alt yol; iş yerleri virgülle", () => {
+    expect(dailySettlementReportPath("PAYMENT", { reportDate: "2026-11-15" })).toBe(
+      "/zto-finans/odemeler/gunluk-rapor?reportDate=2026-11-15",
+    );
+    expect(
+      dailySettlementReportPath("COLLECTION", {
+        reportDate: "2026-11-15",
+        workPlaceIds: ["w1", "w2"],
+      }),
+    ).toBe("/zto-finans/tahsilatlar/gunluk-rapor?reportDate=2026-11-15&workPlaceIds=w1,w2");
+    expect(
+      dailySettlementReportPath("PAYMENT", { reportDate: "2026-11-15", workPlaceIds: [] }),
+    ).toBe("/zto-finans/odemeler/gunluk-rapor?reportDate=2026-11-15");
+    expect(
+      dailySettlementReportPath("PAYMENT", { reportDate: "", workPlaceIds: ["a,b", "", "c"] }),
+    ).toBe("/zto-finans/odemeler/gunluk-rapor?workPlaceIds=a%2Cb,c");
+    expect(stepOf("tahsilatlar")).toBe("12.2a");
   });
 });

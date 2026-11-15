@@ -326,7 +326,20 @@ export default {
     menu: "{{name}} hesabı işlemleri",
     detailsPanel: "Banka Hesabı Detayları",
     transactionsPanel: "Banka Hesabı İşlemleri",
-    transactionsLater: "Bu hesaba yapılan ödemeler Faz 12.2a ile listelenecek.",
+    // 12.2a §5.13 (OK-12.2a-20; Blackrose eki — ZTO paneli boştur): bu cari banka hesabına bağlı
+    // ödeme ve tahsilatlar.
+    transactionsEmpty: "Bu hesaba ait ödeme/tahsilat bulunamadı.",
+    transactionsTruncated: "Son {{count}} kayıt gösteriliyor.",
+    transactionsLoadFailed: "Ödeme/tahsilat kayıtları yüklenemedi.",
+    transactionsLoading: "Yükleniyor...",
+    txColumns: {
+      date: "Tarih",
+      type: "Tür",
+      branch: "İş Yeri",
+      amount: "Tutar",
+      documentNo: "Belge No",
+    },
+    txType: { PAYMENT: "Ödeme", COLLECTION: "Tahsilat" },
     close: "Kapat",
     copy: "Kopyala",
     confirmTitle: "Onay",

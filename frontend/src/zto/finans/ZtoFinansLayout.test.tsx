@@ -115,12 +115,19 @@ describe("ZtoFinansLayout", () => {
     expect(active.querySelector(".zt-icon > i.fas.fa-calendar-day")).not.toBeNull();
     expect(active.querySelector(".zt-label")?.textContent).toBe("Günlük Cari İşlemleri");
 
+    // Yazılmamış ekran pasif (Çekler 12.3); 12.2a Ödemeler / Tahsilatlar bağlantı.
+    const checks = screen.getByText("Çekler").closest("a") as HTMLAnchorElement;
+    expect(checks.className).toBe("disabled");
+    expect(checks.hasAttribute("href")).toBe(false);
+    expect(checks.getAttribute("aria-disabled")).toBe("true");
+    expect(checks.title).toBe("Bu ekran Faz 12.3 ile gelecek.");
+    expect(checks.querySelector(".zt-phase")?.textContent).toBe("Faz 12.3");
     const payments = screen.getByText("Ödemeler").closest("a") as HTMLAnchorElement;
-    expect(payments.className).toBe("disabled");
-    expect(payments.hasAttribute("href")).toBe(false);
-    expect(payments.getAttribute("aria-disabled")).toBe("true");
-    expect(payments.title).toBe("Bu ekran Faz 12.2a ile gelecek.");
-    expect(payments.querySelector(".zt-phase")?.textContent).toBe("Faz 12.2a");
+    expect(payments.getAttribute("href")).toBe("/zto-finans/odemeler");
+    expect(payments.hasAttribute("aria-disabled")).toBe(false);
+    expect(payments.querySelector(".zt-phase")).toBeNull();
+    const collections = screen.getByText("Tahsilatlar").closest("a") as HTMLAnchorElement;
+    expect(collections.getAttribute("href")).toBe("/zto-finans/tahsilatlar");
     // Yeni Cari Kart yalnız FINANCE_MANAGE ile görünür.
     expect(screen.queryByText("Yeni Cari Kart")).toBeNull();
     const accounts = screen.getByText("Cari Kartlar").closest("a") as HTMLAnchorElement;

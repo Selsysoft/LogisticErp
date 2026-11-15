@@ -17,10 +17,12 @@ import org.ece.blackrose.finance.domain.FinanceTypes.FundAccountingType;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundCategory;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundDirection;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundKind;
+import org.ece.blackrose.finance.domain.FinanceTypes.SettlementType;
 import org.ece.blackrose.finance.domain.FundAccount;
 import org.ece.blackrose.finance.domain.FundTransaction;
 import org.ece.blackrose.finance.repository.FinanceRepositories.FundAccountRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.FundTransactionRepository;
+import org.ece.blackrose.finance.repository.FinanceRepositories.SettlementRepository;
 import org.ece.blackrose.finance.repository.FundRepositories.FundBalanceAsOfRow;
 import org.ece.blackrose.finance.repository.FundRepositories.FundDeleteCountsRow;
 import org.ece.blackrose.finance.repository.FundRepositories.FundOpeningRow;
@@ -168,6 +170,7 @@ public class FundQueryService {
   private final FundAccountRepository funds;
   private final FundTransactionRepository transactions;
   private final FundQueryRepository queries;
+  private final SettlementRepository settlements;
   private final BranchScopeService scope;
   private final AccountAccess access;
   private final PersonalDataProtector protector;
@@ -177,6 +180,7 @@ public class FundQueryService {
       FundAccountRepository funds,
       FundTransactionRepository transactions,
       FundQueryRepository queries,
+      SettlementRepository settlements,
       BranchScopeService scope,
       AccountAccess access,
       PersonalDataProtector protector,
@@ -184,6 +188,7 @@ public class FundQueryService {
     this.funds = funds;
     this.transactions = transactions;
     this.queries = queries;
+    this.settlements = settlements;
     this.scope = scope;
     this.access = access;
     this.protector = protector;
@@ -437,7 +442,11 @@ public class FundQueryService {
             fund.getAccountNoMasked(),
             fund.getBankBranchName(),
             fund.getCurrency()),
-        sourceOf(row, fund));
+        sourceOf(
+            row,
+            fund,
+            "EXPENSE".equals(row.getAccountingType())
+                && settlements.existsVehicleExpenseLink(row.getSourceRefId())));
   }
 
   // --- Faaliyet raporu (§3.2.8)
@@ -804,17 +813,29 @@ public class FundQueryService {
   }
 
   /**
-   * Taban kaynak belge ve açılabilen sayfası: ödeme/tahsilat listesi, transfer merkezi (kodla),
-   * çek/senet listesi, açılış için hesap düzenleme formu; manuel ve eski virmanda rota yok.
+   * Taban kaynak belge ve açılabilen sayfası: ZTO ödeme/tahsilat sayfası (kayıt detayıyla; araç
+   * gideri ödemesi araç ekranı — 12.2a §3.10), transfer merkezi (kodla), çek/senet listesi, açılış
+   * için hesap düzenleme formu; manuel ve eski virmanda rota yok.
    */
-  static FundSourceRefResponse sourceOf(FundTxRow row, FundAccount fund) {
+  static FundSourceRefResponse sourceOf(FundTxRow row, FundAccount fund, boolean vehicleExpense) {
     String base = row.getBaseType();
     String code = row.getSourceRefCode();
     boolean intercompany = FundAccountingType.INTERCOMPANY.name().equals(row.getAccountingType());
     String route =
         switch (base) {
-          case "SETTLEMENT" ->
-              intercompany ? transferCenter(code, row.getSourceRefDate()) : "/finance/settlements";
+          case "SETTLEMENT" -> {
+            if (intercompany) {
+              yield transferCenter(code, row.getSourceRefDate());
+            }
+            if (vehicleExpense) {
+              yield SettlementService.VEHICLE_ROUTE;
+            }
+            yield SettlementQueryService.route(
+                FundAccountingType.ACCOUNT_COLLECTION.name().equals(row.getAccountingType())
+                    ? SettlementType.COLLECTION
+                    : SettlementType.PAYMENT,
+                row.getSourceRefId());
+          }
           case "FUND_TRANSFER", "FUND_TRANSFER_COST" ->
               transferCenter(code, row.getSourceRefDate());
           case "INSTRUMENT" -> "/finance/instruments";

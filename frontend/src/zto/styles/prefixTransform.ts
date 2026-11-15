@@ -68,9 +68,13 @@ export const PAGE_SCOPE_ALIASES: Readonly<Record<string, string>> = {
  * Birden çok sayfanın paylaştığı sayfa CSS'leri (12.2 §5.4): ZTO Kasalar sayfası bankalarınkiyle aynı
  * `css/zt/timedeposits/index.css`'i yükler; dosya bir kez kopyalanır (`banks.css`) ve her kuralı iki
  * kök sınıfa yazılır (`.zto-page-banks` ve `.zto-page-cashes`). Anahtar dosya adı, değer kök adları.
+ * 12.2a §5.4: ödeme/tahsilat modallarının kuralları (`settlement-modals.css`) modalı barındıran dört
+ * sayfanın köküne yazılır (Ödemeler, Tahsilatlar, Banka ve Kasa Hareketleri; modallar `.zto-finans`
+ * köküne portal'lanır).
  */
 export const SHARED_SCOPES: Readonly<Record<string, readonly string[]>> = {
   banks: ["banks", "cashes"],
+  "settlement-modals": ["payments", "collections", "bank-transactions", "cash-transactions"],
 };
 
 /**

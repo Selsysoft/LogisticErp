@@ -254,24 +254,13 @@ describe("SettlementsPage şirket dağılımı uyarısı (K-12.2-3)", { timeout:
     await waitFor(() => expect(screen.queryByRole("dialog", { name: /Ödeme · Nakit/ })).toBeNull());
   });
 
-  it("çek/senetle ödemede de kırmızı uyarı form altında çıkar (F-12.2-R4)", async () => {
+  it("çek/senetle ödemede de kırmızı uyarı form altında çıkar; yer tutucu çek yok (12.2a §5.14)", async () => {
     api({ confirmFirst: false });
-    // Sunucu önizlemede de çek/senet zorunluluğunu uygular: instrument/instrumentId yoksa 400.
-    respond = ((base) => (call: Call) => {
-      if (call.method === "GET" && call.path.startsWith("/finance/instruments")) return page([]);
-      if (call.method === "POST" && call.path === "/finance/settlements/check?type=PAYMENT") {
-        const body = call.body as { instrument?: unknown; instrumentId?: unknown };
-        if (!body.instrument && !body.instrumentId) {
-          throw new ApiError(400, {
-            code: "INSTRUMENT_REQUIRED",
-            message: "Ödeme için yeni çek/senet veya cirolanacak çek seçilmelidir.",
-            details: [],
-            traceId: null,
-          });
-        }
-      }
-      return base(call);
-    })(respond);
+    // F-12.2-R4 sunucuda kapandı (12.2a §3.4): önizleme çek/senet bilgisi olmadan 200 döner.
+    respond = ((base) => (call: Call) =>
+      call.method === "GET" && call.path.startsWith("/finance/instruments")
+        ? page([])
+        : base(call))(respond);
     renderPage("/finance/settlements?new=PAYMENT&method=CHECK");
     const dialog = await screen.findByRole("dialog", { name: /Ödeme · Çek\/Senet/ });
     choose(dialog, /^Cari/, "TED-1 · Demir Tedarik");
@@ -291,8 +280,8 @@ describe("SettlementsPage şirket dağılımı uyarısı (K-12.2-3)", { timeout:
       accountId: "acc",
       branchId: "bB",
       money: { amount: "150", currency: "TRY" },
-      instrument: { kind: "CHECK", number: "-" },
     });
+    expect(check?.body).not.toHaveProperty("instrument");
     expect(payments()).toHaveLength(0);
   });
 
@@ -322,5 +311,92 @@ describe("SettlementsPage şirket dağılımı uyarısı (K-12.2-3)", { timeout:
     renderPage("/finance/settlements");
     expect(await screen.findByRole("columnheader", { name: "Şirket" })).toBeTruthy();
     expect(await screen.findByRole("cell", { name: "Beta" })).toBeTruthy();
+  });
+});
+
+describe("SettlementsPage ters çevirme penceresi (12.2a §3.5, §5.14)", { timeout: 30_000 }, () => {
+  const row = (settlementDate: string) => ({
+    id: "s9",
+    type: "PAYMENT",
+    method: "CASH",
+    accountId: "acc",
+    branchId: "bB",
+    fundAccountId: "kasaB",
+    instrumentId: null,
+    expenseItemId: null,
+    planId: null,
+    money: { amount: "10", currency: "TRY" },
+    settlementDate,
+    description: null,
+    status: "POSTED",
+    companyId: "B",
+  });
+
+  it("ileri tarihli kayıtta tarih varsayılanı kayıt tarihi; gerekçe gövdeye yazılır; hata pencerede", async () => {
+    api({ confirmFirst: false });
+    let fail = true;
+    respond = ((base) => (call: Call) => {
+      if (call.method === "GET" && call.path.startsWith("/finance/payments")) {
+        return page([row("2099-01-05")]);
+      }
+      if (call.method === "POST" && call.path === "/finance/settlements/s9/reverse") {
+        if (fail) {
+          fail = false;
+          throw new ApiError(400, {
+            code: "REVERSE_BEFORE_SETTLEMENT",
+            message: "İptal tarihi ödeme/tahsilat tarihinden önce olamaz.",
+            details: [],
+            traceId: null,
+          });
+        }
+        return { ...row("2099-01-05"), status: "REVERSED" };
+      }
+      return base(call);
+    })(respond);
+    renderPage("/finance/settlements");
+    fireEvent.click(await screen.findByRole("button", { name: "Ters çevir" }));
+    const dialog = await screen.findByRole("dialog", { name: /Ters çevir/ });
+    const date = within(dialog).getByLabelText(/Tarih/) as HTMLInputElement;
+    expect(date.value).toBe("2099-01-05");
+    fireEvent.change(within(dialog).getByRole("textbox", { name: /Gerekçe/ }), {
+      target: { value: "  Mükerrer kayıt  " },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Ters çevir" }));
+    expect(
+      await within(dialog).findByText(/İptal tarihi ödeme\/tahsilat tarihinden önce olamaz/),
+    ).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Ters çevir" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /Ters çevir/ })).toBeNull());
+    const reverses = calls.filter((c) => c.path === "/finance/settlements/s9/reverse");
+    expect(reverses).toHaveLength(2);
+    expect(reverses[1].body).toEqual({ date: "2099-01-05", description: "Mükerrer kayıt" });
+  });
+
+  it("geçmiş tarihli kayıtta tarih varsayılanı bugün; gerekçe boşsa null", async () => {
+    api({ confirmFirst: false });
+    respond = ((base) => (call: Call) => {
+      if (call.method === "GET" && call.path.startsWith("/finance/payments")) {
+        return page([row("2020-01-01")]);
+      }
+      if (call.method === "POST" && call.path === "/finance/settlements/s9/reverse") {
+        return { ...row("2020-01-01"), status: "REVERSED" };
+      }
+      return base(call);
+    })(respond);
+    renderPage("/finance/settlements");
+    fireEvent.click(await screen.findByRole("button", { name: "Ters çevir" }));
+    const dialog = await screen.findByRole("dialog", { name: /Ters çevir/ });
+    const now = new Date();
+    const todayIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 10);
+    expect((within(dialog).getByLabelText(/Tarih/) as HTMLInputElement).value).toBe(todayIso);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Ters çevir" }));
+    await waitFor(() =>
+      expect(calls.find((c) => c.path === "/finance/settlements/s9/reverse")?.body).toEqual({
+        date: todayIso,
+        description: null,
+      }),
+    );
   });
 });

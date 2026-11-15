@@ -2,6 +2,10 @@ import type { ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useTransactionDetail, useTransactionSource } from "../../../../pages/finance/accountApi";
+import { useCan } from "../../../../pages/finance/common";
+import { useSettlement } from "../../../../pages/finance/settlementApi";
+import { settlementLockErrorCode } from "../../../../pages/finance/settlementWarnings";
+import { collectionsPath, paymentsPath } from "../../navItems";
 import {
   ZtoModal,
   ZtoTooltip,
@@ -47,7 +51,10 @@ function InfoItem({
 /**
  * İşlem Detayları (ZTO Transactions.cshtml:2322-2354 normalDetailModal; içerik tjs populateManualDebtDetails
  * :4470-4555). Tarih, iş yeri, belge no/tür, vade, tutar, yöntem, açıklama, vergi kırılımı (belgeli satır),
- * oluşturan; "Kaynağa Git" kaynak rotası varsa. Ödeme/tahsilat "Düzenle" 12.2a'ya kadar pasif.
+ * oluşturan; "Kaynağa Git" kaynak rotası varsa. Ödeme/tahsilat "Düzenle" (12.2a §5.13; ZTO tjs
+ * openPaymentEditInNewTab / openCollectionEditInNewTab): kayıt düzeltilebilirse Ödemeler / Tahsilatlar
+ * yeni sekmede düzenleme modalıyla açılır; değilse pasif ve nedeni (`finance.error.<KOD>`, ör. cari
+ * taşıma → TRANSACTION_TRANSFERRED) gösterilir. Yetkisiz kullanıcıda düğme yok.
  */
 export function TransactionDetailModal({ transactionId, onHide }: TransactionDetailModalProps) {
   const { t } = useTranslation("ztoFinans");
@@ -64,6 +71,31 @@ export function TransactionDetailModal({ transactionId, onHide }: TransactionDet
       ? t(`translation:finance.source.${row.sourceType}`, { defaultValue: row.sourceType })
       : "");
   const route = source.data?.route ?? null;
+  const canPost = useCan("FINANCE_PAYMENT_CREATE");
+  const settlementRow = row?.kind === "PAYMENT" || row?.kind === "COLLECTION";
+  const settlementId =
+    canPost && settlementRow && row?.sourceType === "SETTLEMENT" ? row.sourceId : null;
+  const settlement = useSettlement(settlementId);
+  const item = settlement.data?.item;
+  const editHref =
+    settlementId && item?.correctable
+      ? item.type === "COLLECTION"
+        ? collectionsPath({ openEditCollection: true, collectionId: settlementId })
+        : paymentsPath({ openEditPayment: true, paymentId: settlementId })
+      : null;
+  const lockText = !settlementId
+    ? t("transactions.detail.editSettlementHint")
+    : settlement.isPending
+      ? t("transactions.detail.editSettlementLoading")
+      : item
+        ? t(
+            `translation:finance.error.${settlementLockErrorCode(item.lockReason, item.correctedById)}`,
+          )
+        : t(
+            row?.kind === "COLLECTION"
+              ? "translation:finance.error.SETTLEMENT_NOT_FOUND_COLLECTION"
+              : "translation:finance.error.SETTLEMENT_NOT_FOUND",
+          );
 
   return (
     <ZtoModal
@@ -84,19 +116,32 @@ export function TransactionDetailModal({ transactionId, onHide }: TransactionDet
       }
       footer={
         <>
-          {row?.kind === "PAYMENT" || row?.kind === "COLLECTION" ? (
-            <ZtoTooltip content={t("transactions.detail.editSettlementHint")}>
+          {canPost && settlementRow ? (
+            editHref ? (
               <button
                 type="button"
                 className="btn btn-warning"
-                aria-disabled="true"
-                onClick={(event) => event.preventDefault()}
+                onClick={() => globalThis.open(editHref, "_blank", "noopener")}
               >
                 <i className="fas fa-edit mr-1" aria-hidden="true" />
                 {t("transactions.detail.editSettlement")}
-                <span className="sr-only"> ({t("transactions.detail.editSettlementHint")})</span>
+                <span className="sr-only"> {t("translation:common.a11y.opensInNewTab")}</span>
               </button>
-            </ZtoTooltip>
+            ) : (
+              <ZtoTooltip content={lockText}>
+                <button
+                  type="button"
+                  className="btn btn-warning"
+                  aria-disabled="true"
+                  aria-busy={settlementId !== null && settlement.isPending}
+                  onClick={(event) => event.preventDefault()}
+                >
+                  <i className="fas fa-edit mr-1" aria-hidden="true" />
+                  {t("transactions.detail.editSettlement")}
+                  <span className="sr-only"> ({lockText})</span>
+                </button>
+              </ZtoTooltip>
+            )
           ) : null}
           {route && (
             <button

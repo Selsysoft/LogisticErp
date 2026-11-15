@@ -11,6 +11,7 @@ import org.ece.blackrose.finance.domain.FinanceTypes.Direction;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundDirection;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentDirection;
+import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentStatus;
 import org.ece.blackrose.finance.domain.FundAccount;
 import org.ece.blackrose.finance.domain.Instrument;
@@ -78,7 +79,21 @@ public class InstrumentService {
 
   @Transactional(readOnly = true)
   public Page<Instrument> list(InstrumentStatus status, UUID companyId, Pageable pageable) {
-    return instruments.search(status, scope.filter(companyId, null), pageable);
+    return list(status, null, null, companyId, pageable);
+  }
+
+  /**
+   * Çek/senet listesi; {@code direction}/{@code kind} {@code null} ise süzmez (12.2a §3.9: ciro
+   * edilebilir çekler {@code PORTFOLIO + RECEIVED + CHECK + şirket}).
+   */
+  @Transactional(readOnly = true)
+  public Page<Instrument> list(
+      InstrumentStatus status,
+      InstrumentDirection direction,
+      InstrumentKind kind,
+      UUID companyId,
+      Pageable pageable) {
+    return instruments.search(status, direction, kind, scope.filter(companyId, null), pageable);
   }
 
   @Transactional(readOnly = true)
@@ -89,6 +104,10 @@ public class InstrumentService {
 
   /**
    * Tahsilatta alınan veya ödemede verilen yeni çek/senedi kaydeder. Cari hareketi çağıran yazar.
+   * Verilen çek/senette {@code fundAccountId} çekin çekildiği banka hesabıdır (fon hareketi yok).
+   * Alınan çekte {@code initialStatus = AT_BANK}: portföy kaydından sonra aynı işlemde bankaya
+   * yatırılır ({@code PORTFOLIO → AT_BANK}); fon hareketi yazılmaz, para tahsilde girer (12.2a
+   * §3.2).
    */
   @Transactional
   public Instrument register(
@@ -116,6 +135,14 @@ public class InstrumentService {
                 data.dueDate(),
                 initial));
     movements.save(new InstrumentMovement(instrument.getId(), null, initial, date, null));
+    if (direction == InstrumentDirection.ISSUED && data.fundAccountId() != null) {
+      instrument.assignFund(requireFund(instrument, data.fundAccountId(), FundKind.BANK));
+    }
+    if (direction == InstrumentDirection.RECEIVED
+        && data.initialStatus() == InstrumentStatus.AT_BANK) {
+      instrument.assignFund(requireFund(instrument, data.fundAccountId(), FundKind.BANK));
+      record(instrument, InstrumentStatus.AT_BANK, date, null);
+    }
     return instrument;
   }
 

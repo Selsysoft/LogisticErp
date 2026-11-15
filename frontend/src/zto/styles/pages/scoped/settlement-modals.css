@@ -1,0 +1,1228 @@
+/*
+ * Kaynak: ZtoFabrika/wwwroot/css/zt/customeraccountpayment/payments.css ve
+ * wwwroot/css/zt/customeraccountcollection/collections.css'in modal kuralları (#addPaymentModal,
+ * #editPaymentModal, #addCollectionModal, #editCollectionModal, #postPaymentPlanningModal,
+ * #remainingDebtInfo, #remainingCreditInfo, .erp-modal, .field-group*, .required-field, modal içi
+ * .ss-*) + wwwroot/js/zt/payments/payments.js :4724-4773 .workplace-currency-btn (dinamik <style>)
+ * + Views/Shared/_PostPaymentPlanningModal.cshtml :6 .modal-content satır içi stili (12.2a_TASARIM §5.4).
+ * Birebir kopya; alınan aralıklar: payments.css :968-1359 (MODAL STİLLERİ, .field-group*,
+ * .required-field, #customerBankSection, #postPaymentPlanningModal), :1402-1643 (.workplace-balance-card,
+ * #workPlaceBalancesContainer, #remainingDebtInfo görünürlük düzeltmesi, ödeme yöntemi bilgi kutuları),
+ * :1775-1779 (.modal/.erp-modal .ss-dropdown z-index); collections.css :672-762 (#addCollectionModal /
+ * #editCollectionModal), :880-921 (cari alacak akordeonu), :1056-1058 (#remainingCreditInfo .alert),
+ * :1595-1671 (para birimi düğmeleri, çek durum seçimi), :431-663 (.erp-stat-* kartları).
+ * Alınmayanlar: payments.css :1361-1401 .garden-* (bahçe bölümü taşınmaz, S-9), :2018-2035 seçim kilidi
+ * örtüsü ve :2036-2164 .payment-3col-row (ZTO görünümlerinde kullanılmıyor); collections.css :764-878 ve
+ * :923-937 (.erp-modal/.required-field/.field-group ve duyarlı kurallar payments.css kopyasıyla birebir
+ * aynı — bir kez), :939-1019 'MODAL SCROLL / OVERFLOW FIX' genel kuralları (html body.modal-open, .modal,
+ * .modal-open .modal, .erp-modal .modal-content/.modal-dialog overflow visible, #addDebtModal,
+ * .select2-container — sayfanın diğer modallarına sızar; bu dört modalda kimlik kuralları zaten
+ * overflow: hidden !important verir), :1780-1782 ve :1969-1982 (payments.css kopyasıyla aynı / kullanılmıyor);
+ * APM/CMP :26-29 satır içi stil (#supplierGardensSection / #orderAllocationSection gizleme; bölümler yok).
+ * Değişiklikler: @keyframes modalSlideIn/pulseGlow/shimmer → zto-stm-* (check:zto-css); tahsilat
+ * sayfasına özgü genel seçiciler yalnız ilgili modala yazıldı (ZTO'da collections.css yalnız Tahsilatlar
+ * sayfasında yüklenir; burada dört sayfada ortak): .btn-group-toggle → #addCollectionModal /
+ * #editCollectionModal öneki, .erp-stat-* → #remainingCreditInfo / #editRemainingCreditInfo öneki.
+ * Paylaşılan kapsam (prefixTransform.ts SHARED_SCOPES): .zto-page-payments, .zto-page-collections,
+ * .zto-page-bank-transactions, .zto-page-cash-transactions — modallar .zto-finans köküne portal'lanır,
+ * kökte açan sayfanın sınıfı vardır.
+ */
+
+/* --- customeraccountpayment/payments.css:968-1359 --- */
+/* ============================================ */
+/* MODAL STİLLERİ */
+/* ============================================ */
+
+.erp-modal {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+#addPaymentModal .modal-dialog {
+  width: 80vw;
+  max-width: 80vw;
+  height: 90vh;
+  margin-top: 5vh;
+  margin-bottom: 5vh;
+}
+
+#addPaymentModal .modal-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+
+#addPaymentModal .modal-content > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#addPaymentModal .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: calc(90vh - 130px);
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #e2e8f0;
+}
+
+#addPaymentModal .modal-body::-webkit-scrollbar {
+  width: 12px;
+}
+
+#addPaymentModal .modal-body::-webkit-scrollbar-track {
+  background: #e2e8f0;
+  border-radius: 8px;
+}
+
+#addPaymentModal .modal-body::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+}
+
+#addPaymentModal .modal-body::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+#addPaymentModal .modal-footer {
+  flex: 0 0 auto;
+}
+
+#editPaymentModal .modal-dialog {
+  width: 80vw;
+  max-width: 80vw;
+  height: 90vh;
+  margin-top: 5vh;
+  margin-bottom: 5vh;
+}
+
+#editPaymentModal .modal-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+
+#editPaymentModal .modal-content > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#editPaymentModal .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: calc(90vh - 130px);
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #e2e8f0;
+}
+
+#editPaymentModal .modal-body::-webkit-scrollbar {
+  width: 12px;
+}
+
+#editPaymentModal .modal-body::-webkit-scrollbar-track {
+  background: #e2e8f0;
+  border-radius: 8px;
+}
+
+#editPaymentModal .modal-body::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+}
+
+#editPaymentModal .modal-body::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+#editPaymentModal .modal-footer {
+  flex: 0 0 auto;
+}
+
+#editPaymentModal .modal-dialog,
+#editPaymentModal .modal-dialog {
+  overflow: hidden !important;
+}
+
+.erp-modal .modal-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-bottom: 1px solid #cbd5e0;
+  padding: 12px 20px;
+}
+
+.erp-modal .modal-header .modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.erp-modal .modal-header .modal-title i {
+  color: #3b82f6;
+}
+
+.erp-modal .modal-body {
+  padding: 20px;
+  background: #f8fafc;
+  /* ✅ DÜZELTME: max-height ve overflow kaldırıldı - layout bozuluyor */
+}
+
+.erp-modal .form-group {
+  margin-bottom: 15px;
+}
+
+.erp-modal .form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.erp-modal .form-group label i {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.erp-modal .form-group .form-control {
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-size: 13px;
+  transition: all 0.2s;
+  background: white;
+}
+
+.erp-modal .form-group .form-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+/* ✅ DÜZELTME: form-row için padding override - sadece modal içinde */
+.erp-modal .form-row {
+  margin-left: -5px;
+  margin-right: -5px;
+}
+
+.erp-modal .form-row > .col,
+.erp-modal .form-row > [class*="col-"] {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.erp-modal .modal-footer {
+  border-top: 1px solid #cbd5e0;
+  padding: 12px 20px;
+  background: #f8fafc;
+}
+
+.erp-modal .modal-footer .btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 5px;
+  border: 1px solid;
+  min-width: 80px;
+}
+
+.required-field::after {
+  content: "*";
+  color: #ef4444;
+  margin-left: 3px;
+}
+
+/* Field groups */
+.field-group {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.field-group-title {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #007bff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-group-title i {
+  color: #3b82f6;
+}
+
+/* Responsive modal */
+@media (max-width: 768px) {
+  .erp-modal .modal-dialog {
+    margin: 10px;
+  }
+
+  .erp-modal .modal-body {
+    padding: 15px;
+  }
+
+  .erp-modal .form-row {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+/* payments.css dosyasına ekleyin */
+#customerBankSection {
+  transition: all 0.3s ease;
+}
+
+#CustomerBankAccountID option {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+#CustomerBankAccountID option:hover {
+  background-color: #f8f9fa;
+}
+
+.field-group {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.field-group-title {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #007bff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ============================================ */
+/* ÖDEME SONRASI PLANLAMA MODAL STİLLERİ */
+/* ============================================ */
+
+#postPaymentPlanningModal .modal-content {
+  animation: zto-stm-modalSlideIn 0.3s ease-out;
+}
+
+@keyframes zto-stm-modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+#postPaymentPlanningModal .field-group {
+  transition: all 0.3s ease;
+}
+
+#postPaymentPlanningModal .field-group:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+#postPaymentPlanningModal .form-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+#postPaymentPlanningModal .btn {
+  transition: all 0.2s ease;
+}
+
+#postPaymentPlanningModal .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+#postPaymentPlanningModal .required-field::after {
+  content: " *";
+  color: #ef4444;
+}
+
+/* Kalan Borç Kartı Animasyonu */
+#postPaymentPlanningModal .card {
+  animation: zto-stm-pulseGlow 2s infinite;
+}
+
+@keyframes zto-stm-pulseGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(245, 158, 11, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
+  }
+}
+
+/* Alert Gradient Animation */
+#paymentSummaryAlert {
+  position: relative;
+  overflow: hidden;
+}
+
+#paymentSummaryAlert::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: zto-stm-shimmer 2s infinite;
+}
+
+@keyframes zto-stm-shimmer {
+  0% {
+    left: -100%;
+  }
+
+  100% {
+    left: 100%;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #postPaymentPlanningModal .modal-dialog {
+    margin: 10px;
+  }
+
+  #postPaymentPlanningModal .modal-body {
+    padding: 15px;
+  }
+
+  #postPaymentPlanningModal .btn-lg {
+    padding: 10px 15px;
+    font-size: 14px;
+  }
+}
+
+/* --- customeraccountpayment/payments.css:1402-1643 --- */
+/* İş Yeri Bakiye Kartları */
+.workplace-balance-card {
+  transition: all 0.2s ease;
+}
+
+.workplace-balance-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Scroll bar styling */
+#workPlaceBalancesContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+#workPlaceBalancesContainer::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+#workPlaceBalancesContainer::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+#workPlaceBalancesContainer::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ============================================ */
+/* REMAINING DEBT INFO - İÇERİK GÖRÜNÜRLÜĞÜ FIX */
+/* ============================================ */
+
+/* Ana container zorla görünür */
+#remainingDebtInfo {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  background: transparent !important;
+}
+
+/* Card beyaz arka plan ve border */
+#remainingDebtInfo .card {
+  display: block !important;
+  visibility: visible !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  margin-bottom: 15px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Card header görünür */
+#remainingDebtInfo .card-header {
+  display: block !important;
+  visibility: visible !important;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+  padding: 8px 12px !important;
+}
+
+/* Card body görünür */
+#remainingDebtInfo .card-body {
+  display: block !important;
+  visibility: visible !important;
+  background: #ffffff !important;
+  padding: 12px !important;
+}
+
+/* Yazılar görünür olsun */
+#remainingDebtInfo h6,
+#remainingDebtInfo h5,
+#remainingDebtInfo h4,
+#remainingDebtInfo h3,
+#remainingDebtInfo p,
+#remainingDebtInfo span,
+#remainingDebtInfo div,
+#remainingDebtInfo small,
+#remainingDebtInfo strong,
+#remainingDebtInfo label {
+  color: inherit !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Accordion görünür */
+#remainingDebtInfo .accordion {
+  display: block !important;
+  visibility: visible !important;
+}
+
+#remainingDebtInfo .accordion-item {
+  display: block !important;
+  visibility: visible !important;
+  margin-bottom: 8px !important;
+}
+
+/* Accordion butonları görünür */
+#remainingDebtInfo .accordion-btn {
+  display: flex !important;
+  visibility: visible !important;
+  width: 100%;
+  padding: 10px 12px !important;
+}
+
+/* Collapse alanları */
+#remainingDebtInfo .collapse {
+  display: none !important;
+}
+
+#remainingDebtInfo .collapse.show {
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* Accordion body görünür */
+#remainingDebtInfo .accordion-body {
+  display: block !important;
+  visibility: visible !important;
+  background: #f8fafc !important;
+  padding: 12px !important;
+}
+
+/* WorkPlace Balances Container */
+#remainingDebtInfo [id^="workPlaceBalancesContainer_"] {
+  display: block !important;
+  visibility: visible !important;
+  max-height: 400px;
+  overflow-y: auto;
+  background: transparent !important;
+}
+
+/* İş Yeri Bakiye Kartları */
+#remainingDebtInfo .workplace-balance-card {
+  display: block !important;
+  visibility: visible !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  padding: 10px !important;
+  margin-bottom: 8px !important;
+}
+
+/* Tüm text elementleri koyu renk */
+#remainingDebtInfo * {
+  color: #1e293b;
+}
+
+/* Özel renkler */
+#remainingDebtInfo .text-muted {
+  color: #64748b !important;
+}
+
+#remainingDebtInfo .text-danger {
+  color: #dc2626 !important;
+}
+
+#remainingDebtInfo .text-success {
+  color: #10b981 !important;
+}
+
+#remainingDebtInfo .text-primary {
+  color: #3b82f6 !important;
+}
+
+#remainingDebtInfo .text-warning {
+  color: #f59e0b !important;
+}
+
+#remainingDebtInfo .text-white {
+  color: #ffffff !important;
+}
+
+/* Badge'ler görünür */
+#remainingDebtInfo .badge {
+  display: inline-block !important;
+  visibility: visible !important;
+  padding: 4px 8px !important;
+  font-size: 10px !important;
+}
+
+/* Ödeme Metod Açıklama Divleri */
+#selectPaymentInfo .field-group,
+#otherPaymentInfo .field-group {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px dashed #cbd5e1;
+  transition: all 0.3s ease;
+}
+
+#selectPaymentInfo .field-group:hover,
+#otherPaymentInfo .field-group:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+/* Çek/Senet Açıklama Başlık Divleri */
+#checkFields .field-group:first-child,
+#billFields .field-group:first-child {
+  border: none;
+  padding: 0;
+  margin-bottom: 15px;
+}
+
+/* Ödeme Metod Açıklama Divleri */
+#selectPaymentInfo .field-group,
+#otherPaymentInfo .field-group,
+#checkPaymentInfo .field-group,
+#billPaymentInfo .field-group {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px dashed #cbd5e1;
+  transition: all 0.3s ease;
+  margin-bottom: 0;
+}
+
+#selectPaymentInfo .field-group:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+#otherPaymentInfo .field-group:hover {
+  border-color: #10b981;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+}
+
+#checkPaymentInfo .field-group {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-color: #93c5fd;
+}
+
+#checkPaymentInfo .field-group:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+#billPaymentInfo .field-group {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #fcd34d;
+}
+
+#billPaymentInfo .field-group:hover {
+  border-color: #f59e0b;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+}
+
+/* --- customeraccountpayment/payments.css:1775-1779 --- */
+/* Modal içinde z-index garantisi */
+.modal .ss-dropdown,
+.erp-modal .ss-dropdown {
+  z-index: 99999;
+}
+
+/* --- js/zt/payments/payments.js:4724-4773 (workplaceCurrencyStyles) --- */
+.workplace-currency-btn {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e0;
+  background: white;
+  color: #475569;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 6px;
+  margin-bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.workplace-currency-btn:hover {
+  background: #f1f5f9;
+  border-color: #3b82f6;
+  color: #1e40af;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.workplace-currency-btn.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-color: #3b82f6;
+  color: white !important; /* ✅ BEYAZ YAPTIK */
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.workplace-currency-btn.active:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  transform: translateY(-1px);
+  color: white !important; /* ✅ HOVER'DA DA BEYAZ */
+}
+
+/* ✅ İkon rengi de beyaz olsun */
+.workplace-currency-btn.active i {
+  color: white !important;
+}
+
+.workplace-balance-card {
+  transition: all 0.2s;
+}
+
+.workplace-balance-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+/* --- Views/Shared/_PostPaymentPlanningModal.cshtml:6 (.modal-content satır içi stil) --- */
+#postPaymentPlanningModal .modal-content {
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* --- customeraccountcollection/collections.css:672-762 --- */
+#addCollectionModal .modal-dialog {
+  width: 80vw;
+  max-width: 80vw;
+  height: 90vh;
+  margin-top: 5vh;
+  margin-bottom: 5vh;
+}
+
+#addCollectionModal .modal-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+
+#addCollectionModal .modal-content > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#addCollectionModal .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: calc(90vh - 130px);
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #e2e8f0;
+}
+
+#addCollectionModal .modal-body::-webkit-scrollbar {
+  width: 12px;
+}
+
+#addCollectionModal .modal-body::-webkit-scrollbar-track {
+  background: #e2e8f0;
+  border-radius: 8px;
+}
+
+#addCollectionModal .modal-body::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+}
+
+#addCollectionModal .modal-body::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+#addCollectionModal .modal-footer {
+  flex: 0 0 auto;
+}
+
+#editCollectionModal .modal-dialog {
+  width: 80vw;
+  max-width: 80vw;
+  height: 90vh;
+  margin-top: 5vh;
+  margin-bottom: 5vh;
+}
+
+#editCollectionModal .modal-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+
+#editCollectionModal .modal-content > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#editCollectionModal .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+#editCollectionModal .modal-footer {
+  flex: 0 0 auto;
+}
+
+#addCollectionModal .modal-dialog,
+#editCollectionModal .modal-dialog {
+  overflow: hidden !important;
+}
+
+/* --- customeraccountcollection/collections.css:880-921 --- */
+/* ============================================ */
+/* CARİ ALACAK BİLGİLERİ ACCORDION STİLLERİ */
+/* ============================================ */
+.cari-alacak-accordion {
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.cari-alacak-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e40af;
+  transition: background 0.2s;
+}
+
+.cari-alacak-header:hover {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+}
+
+.cari-alacak-header .accordion-chevron {
+  color: #3b82f6;
+  font-size: 12px;
+  transition: transform 0.25s;
+}
+
+.cari-alacak-header.open .accordion-chevron {
+  transform: rotate(90deg);
+}
+
+.cari-alacak-body {
+  padding: 12px 15px;
+  background: #f8fafc;
+}
+
+/* --- customeraccountcollection/collections.css:1056-1058 --- */
+#remainingCreditInfo .alert {
+  border-left: 4px solid #10b981;
+}
+
+/* --- customeraccountcollection/collections.css:1595-1647 --- */
+/* ============================================ */
+/* PARA BİRİMİ BUTONLARI */
+/* ============================================ */
+
+.collection-currency-btn {
+  background: white;
+  border: 1px solid #dee2e6;
+  color: #495057;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.collection-currency-btn:hover {
+  background: #f8f9fa;
+  border-color: #0056b3;
+  color: #0056b3;
+  transform: translateY(-1px);
+}
+
+.collection-currency-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white !important;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+}
+
+.collection-currency-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
+}
+
+.collection-currency-btn:active {
+  transform: translateY(0);
+}
+
+.currency-filter-container {
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.btn-group .collection-currency-btn {
+  margin-right: 4px;
+}
+
+.btn-group .collection-currency-btn:last-child {
+  margin-right: 0;
+}
+
+/* --- customeraccountcollection/collections.css:1648-1671 (yalnız tahsilat modalları) --- */
+/* ============================================ */
+/* ÇEK DURUM SEÇİMİ */
+/* ============================================ */
+
+#addCollectionModal .btn-group-toggle .btn,
+#editCollectionModal .btn-group-toggle .btn {
+  padding: 10px 15px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+#addCollectionModal .btn-group-toggle .btn:hover,
+#editCollectionModal .btn-group-toggle .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+#addCollectionModal .btn-group-toggle .btn.active,
+#editCollectionModal .btn-group-toggle .btn.active {
+  font-weight: 600;
+}
+
+#addCollectionModal .btn-group-toggle .btn i,
+#editCollectionModal .btn-group-toggle .btn i {
+  margin-right: 5px;
+}
+
+/* --- customeraccountcollection/collections.css:431-663 (yalnız kalan alacak paneli) --- */
+#remainingCreditInfo .erp-stat-card,
+#editRemainingCreditInfo .erp-stat-card {
+  border-radius: 6px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+#remainingCreditInfo .erp-stat-card:hover,
+#editRemainingCreditInfo .erp-stat-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+#remainingCreditInfo .erp-stat-card::before,
+#editRemainingCreditInfo .erp-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--card-color-start), var(--card-color-end));
+  z-index: 1;
+}
+
+#remainingCreditInfo .erp-stat-card.card-total,
+#editRemainingCreditInfo .erp-stat-card.card-total {
+  --card-color-start: #3b82f6;
+  --card-color-end: #06b6d4;
+}
+
+#remainingCreditInfo .erp-stat-card.card-count,
+#editRemainingCreditInfo .erp-stat-card.card-count {
+  --card-color-start: #10b981;
+  --card-color-end: #84cc16;
+}
+
+#remainingCreditInfo .erp-stat-card.card-average,
+#editRemainingCreditInfo .erp-stat-card.card-average {
+  --card-color-start: #f59e0b;
+  --card-color-end: #f97316;
+}
+
+#remainingCreditInfo .erp-stat-card.card-methods,
+#editRemainingCreditInfo .erp-stat-card.card-methods {
+  --card-color-start: #8b5cf6;
+  --card-color-end: #d946ef;
+}
+
+/* transactions.css'den gelen card tipleri */
+#remainingCreditInfo .erp-stat-card.card-alacak,
+#editRemainingCreditInfo .erp-stat-card.card-alacak {
+  --card-color-start: #28a745;
+  --card-color-end: #20c997;
+}
+
+#remainingCreditInfo .erp-stat-card.card-tahsilat,
+#editRemainingCreditInfo .erp-stat-card.card-tahsilat {
+  --card-color-start: #007bff;
+  --card-color-end: #17a2b8;
+}
+
+#remainingCreditInfo .erp-stat-card.card-borc,
+#editRemainingCreditInfo .erp-stat-card.card-borc {
+  --card-color-start: #dc3545;
+  --card-color-end: #fd7e14;
+}
+
+#remainingCreditInfo .erp-stat-card.card-odeme,
+#editRemainingCreditInfo .erp-stat-card.card-odeme {
+  --card-color-start: #ffc107;
+  --card-color-end: #fd7e14;
+}
+
+#remainingCreditInfo .erp-stat-card.card-bakiye-positive,
+#editRemainingCreditInfo .erp-stat-card.card-bakiye-positive {
+  --card-color-start: #ffc107;
+  --card-color-end: #ff6b6b;
+}
+
+#remainingCreditInfo .erp-stat-card.card-bakiye-negative,
+#editRemainingCreditInfo .erp-stat-card.card-bakiye-negative {
+  --card-color-start: #28a745;
+  --card-color-end: #20c997;
+}
+
+#remainingCreditInfo .erp-stat-card.card-bakiye-zero,
+#editRemainingCreditInfo .erp-stat-card.card-bakiye-zero {
+  --card-color-start: #6c757d;
+  --card-color-end: #495057;
+}
+
+#remainingCreditInfo .erp-stat-card.card-info,
+#editRemainingCreditInfo .erp-stat-card.card-info {
+  --card-color-start: #6c757d;
+  --card-color-end: #495057;
+}
+
+#remainingCreditInfo .erp-stat-content,
+#editRemainingCreditInfo .erp-stat-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px 12px 15px;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+}
+
+#remainingCreditInfo .erp-stat-icon,
+#editRemainingCreditInfo .erp-stat-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--card-color-start), var(--card-color-end));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#remainingCreditInfo .erp-stat-details,
+#editRemainingCreditInfo .erp-stat-details {
+  flex: 1;
+  min-width: 0;
+}
+
+#remainingCreditInfo .erp-stat-label,
+#editRemainingCreditInfo .erp-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 3px;
+  display: block;
+}
+
+#remainingCreditInfo .erp-stat-value,
+#editRemainingCreditInfo .erp-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+#remainingCreditInfo .erp-stat-currency,
+#editRemainingCreditInfo .erp-stat-currency {
+  font-size: 12px;
+  font-weight: 600;
+  color: #718096;
+}
+
+#remainingCreditInfo .erp-stat-subtext,
+#editRemainingCreditInfo .erp-stat-subtext {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+#remainingCreditInfo .erp-stat-progress,
+#editRemainingCreditInfo .erp-stat-progress {
+  height: 2px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+#remainingCreditInfo .erp-stat-progress-bar,
+#editRemainingCreditInfo .erp-stat-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--card-color-start), var(--card-color-end));
+  transition: width 0.6s ease;
+}
+
+#remainingCreditInfo .erp-stat-badge,
+#editRemainingCreditInfo .erp-stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+#remainingCreditInfo .erp-stat-badge.badge-customer-debt,
+#editRemainingCreditInfo .erp-stat-badge.badge-customer-debt {
+  background: #fff5f5;
+  color: #c53030;
+  border: 1px solid #feb2b2;
+}
+
+#remainingCreditInfo .erp-stat-badge.badge-customer-credit,
+#editRemainingCreditInfo .erp-stat-badge.badge-customer-credit {
+  background: #e6fffa;
+  color: #276749;
+  border: 1px solid #9ae6b4;
+}
+
+#remainingCreditInfo .erp-stat-badge.badge-supplier-debt,
+#editRemainingCreditInfo .erp-stat-badge.badge-supplier-debt {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+#remainingCreditInfo .erp-stat-badge.badge-supplier-overpay,
+#editRemainingCreditInfo .erp-stat-badge.badge-supplier-overpay {
+  background: #e6fffa;
+  color: #276749;
+  border: 1px solid #9ae6b4;
+}
+
+#remainingCreditInfo .erp-stat-badge.badge-balanced,
+#editRemainingCreditInfo .erp-stat-badge.badge-balanced {
+  background: #f7fafc;
+  color: #4a5568;
+  border: 1px solid #cbd5e0;
+}
+
+@media (max-width: 1200px) {
+  #remainingCreditInfo .erp-stat-value,
+  #editRemainingCreditInfo .erp-stat-value {
+    font-size: 16px;
+  }
+
+  #remainingCreditInfo .erp-stat-icon,
+  #editRemainingCreditInfo .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  #remainingCreditInfo .erp-stat-value,
+  #editRemainingCreditInfo .erp-stat-value {
+    font-size: 16px;
+  }
+
+  #remainingCreditInfo .erp-stat-icon,
+  #editRemainingCreditInfo .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  #remainingCreditInfo .erp-stat-content,
+  #editRemainingCreditInfo .erp-stat-content {
+    padding: 10px 10px 10px 13px;
+  }
+}

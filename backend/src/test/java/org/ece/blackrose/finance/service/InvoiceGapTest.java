@@ -26,20 +26,17 @@ class InvoiceGapTest {
         InvoiceCoverageService.gap(
             ACCOUNT, InvoiceSide.PAYABLE, A, "TRY", new BigDecimal("150"), new BigDecimal("100"));
     assertThat(gap.missing()).isEqualByComparingTo("50");
-    assertThat(InvoiceCoverageService.isGap(gap)).isTrue();
     assertThat(InvoiceCoverageService.isMissing(gap)).isTrue();
   }
 
   @Test
   void toleransBirBirim() {
-    assertThat(InvoiceCoverageService.isGap(gap("101", "100"))).isFalse();
     assertThat(InvoiceCoverageService.isMissing(gap("101", "100"))).isFalse();
-    assertThat(InvoiceCoverageService.isGap(gap("101.01", "100"))).isTrue();
+    assertThat(InvoiceCoverageService.isMissing(gap("101.01", "100"))).isTrue();
     // Fatura fazlası: uyarı değil, yalnız fark satırı.
     AccountInvoiceGapResponse excess = gap("100", "130");
-    assertThat(InvoiceCoverageService.isGap(excess)).isTrue();
     assertThat(InvoiceCoverageService.isMissing(excess)).isFalse();
-    assertThat(InvoiceCoverageService.isGap(gap("100", "101"))).isFalse();
+    assertThat(InvoiceCoverageService.isMissing(gap("100", "101"))).isFalse();
   }
 
   @Test

@@ -2,6 +2,7 @@ package org.ece.blackrose.finance.web;
 
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
@@ -11,12 +12,17 @@ import org.ece.blackrose.finance.domain.ExpenseType;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.AgingType;
 import org.ece.blackrose.finance.domain.FinanceTypes.BalanceGroupBy;
+import org.ece.blackrose.finance.domain.FinanceTypes.DailyReportSort;
 import org.ece.blackrose.finance.domain.FinanceTypes.DateBasis;
+import org.ece.blackrose.finance.domain.FinanceTypes.DocumentPaymentMethod;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundAccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.HeatmapPeriod;
+import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentDirection;
+import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.PlanStatus;
+import org.ece.blackrose.finance.domain.FinanceTypes.SettlementStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementType;
 import org.ece.blackrose.finance.repository.FinanceRepositories.CurrencyRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.ExchangeRateRepository;
@@ -30,8 +36,12 @@ import org.ece.blackrose.finance.service.FundQueryService.FundSearch;
 import org.ece.blackrose.finance.service.FundService;
 import org.ece.blackrose.finance.service.InstrumentService;
 import org.ece.blackrose.finance.service.PaymentPlanService;
+import org.ece.blackrose.finance.service.PaymentPlanService.PlanSearch;
 import org.ece.blackrose.finance.service.PurchaseInvoiceService;
 import org.ece.blackrose.finance.service.RateRefresher;
+import org.ece.blackrose.finance.service.SettlementQueryService;
+import org.ece.blackrose.finance.service.SettlementQueryService.DailyReportFilter;
+import org.ece.blackrose.finance.service.SettlementQueryService.SettlementSearch;
 import org.ece.blackrose.finance.service.SettlementService;
 import org.ece.blackrose.finance.web.FinanceDtos.AccountResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.AccountTransactionResponse;
@@ -54,6 +64,7 @@ import org.ece.blackrose.finance.web.FinanceDtos.InstrumentResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.InstrumentTransitionRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.ManualAccountTransactionRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.ManualFundTransactionRequest;
+import org.ece.blackrose.finance.web.FinanceDtos.OpenInvoiceResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.PayPlanRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.PlanEventResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.PlanNoteRequest;
@@ -67,6 +78,9 @@ import org.ece.blackrose.finance.web.FinanceDtos.SaveExpenseTypeRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SaveFinanceSettingsRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SaveThresholdRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SettlementCheckResponse;
+import org.ece.blackrose.finance.web.FinanceDtos.SettlementCorrectionRequest;
+import org.ece.blackrose.finance.web.FinanceDtos.SettlementDetailResponse;
+import org.ece.blackrose.finance.web.FinanceDtos.SettlementListItemResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.SettlementRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SettlementResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.StatementResponse;
@@ -106,6 +120,7 @@ public class FinanceController {
   private final FundQueryService fundQueries;
   private final InstrumentService instruments;
   private final SettlementService settlements;
+  private final SettlementQueryService settlementQueries;
   private final PurchaseInvoiceService invoices;
   private final PaymentPlanService plans;
   private final ExpenseTypeRepository expenseTypes;
@@ -123,6 +138,7 @@ public class FinanceController {
       FundQueryService fundQueries,
       InstrumentService instruments,
       SettlementService settlements,
+      SettlementQueryService settlementQueries,
       PurchaseInvoiceService invoices,
       PaymentPlanService plans,
       ExpenseTypeRepository expenseTypes,
@@ -138,6 +154,7 @@ public class FinanceController {
     this.fundQueries = fundQueries;
     this.instruments = instruments;
     this.settlements = settlements;
+    this.settlementQueries = settlementQueries;
     this.invoices = invoices;
     this.plans = plans;
     this.expenseTypes = expenseTypes;
@@ -340,9 +357,12 @@ public class FinanceController {
   @PreAuthorize(VIEW)
   PageResponse<InstrumentResponse> listInstruments(
       @RequestParam(required = false) InstrumentStatus status,
+      @RequestParam(required = false) InstrumentDirection direction,
+      @RequestParam(required = false) InstrumentKind kind,
       @RequestParam(required = false) UUID companyId,
       Pageable pageable) {
-    return PageResponse.from(instruments.list(status, companyId, pageable), mapper::toResponse);
+    return PageResponse.from(
+        instruments.list(status, direction, kind, companyId, pageable), mapper::toResponse);
   }
 
   @GetMapping("/instruments/{id}/movements")
@@ -360,12 +380,51 @@ public class FinanceController {
 
   // Ödeme ve tahsilat
 
+  /**
+   * Ödeme listesi (12.2a §4.2). Sayfalama açık {@code page}/{@code size} parametreleriyle ({@code
+   * size} 1–500; global 200 sınırı uygulanmaz — Rev 1 F1); {@code sort} tekrarlı {@code alan,yön}.
+   * Parametresiz çağrı tüm durumları tarih sınırı olmadan döner (MUI geriye uyumu).
+   */
   @GetMapping("/payments")
   @PreAuthorize(VIEW)
-  PageResponse<SettlementResponse> listPayments(
-      @RequestParam(required = false) UUID companyId, Pageable pageable) {
+  PageResponse<SettlementListItemResponse> listPayments(
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(required = false) UUID accountId,
+      @RequestParam(required = false) AccountType accountType,
+      @RequestParam(required = false) String subGroup,
+      @RequestParam(required = false) List<UUID> branchIds,
+      @RequestParam(required = false) List<UUID> fundAccountIds,
+      @RequestParam(name = "method", required = false) List<DocumentPaymentMethod> methods,
+      @RequestParam(required = false) SettlementStatus status,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+      @RequestParam(required = false) String q,
+      @RequestParam(required = false) UUID counterpartyBankAccountId,
+      @RequestParam(required = false) Boolean hasAccount,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(required = false) List<String> sort) {
     return PageResponse.from(
-        settlements.list(SettlementType.PAYMENT, companyId, pageable), mapper::toResponse);
+        settlementQueries.list(
+            SettlementType.PAYMENT,
+            new SettlementSearch(
+                companyId,
+                accountId,
+                accountType,
+                subGroup,
+                branchIds,
+                fundAccountIds,
+                methods,
+                status,
+                from,
+                to,
+                q,
+                counterpartyBankAccountId,
+                hasAccount),
+            page,
+            size,
+            sort),
+        item -> item);
   }
 
   @PostMapping("/payments")
@@ -379,12 +438,47 @@ public class FinanceController {
         settlements.createByUser(SettlementType.PAYMENT, request, idempotencyKey));
   }
 
+  /** Tahsilat listesi; süzgeçler ve sayfalama ödeme listesiyle aynı. */
   @GetMapping("/collections")
   @PreAuthorize(VIEW)
-  PageResponse<SettlementResponse> listCollections(
-      @RequestParam(required = false) UUID companyId, Pageable pageable) {
+  PageResponse<SettlementListItemResponse> listCollections(
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(required = false) UUID accountId,
+      @RequestParam(required = false) AccountType accountType,
+      @RequestParam(required = false) String subGroup,
+      @RequestParam(required = false) List<UUID> branchIds,
+      @RequestParam(required = false) List<UUID> fundAccountIds,
+      @RequestParam(name = "method", required = false) List<DocumentPaymentMethod> methods,
+      @RequestParam(required = false) SettlementStatus status,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+      @RequestParam(required = false) String q,
+      @RequestParam(required = false) UUID counterpartyBankAccountId,
+      @RequestParam(required = false) Boolean hasAccount,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(required = false) List<String> sort) {
     return PageResponse.from(
-        settlements.list(SettlementType.COLLECTION, companyId, pageable), mapper::toResponse);
+        settlementQueries.list(
+            SettlementType.COLLECTION,
+            new SettlementSearch(
+                companyId,
+                accountId,
+                accountType,
+                subGroup,
+                branchIds,
+                fundAccountIds,
+                methods,
+                status,
+                from,
+                to,
+                q,
+                counterpartyBankAccountId,
+                hasAccount),
+            page,
+            size,
+            sort),
+        item -> item);
   }
 
   @PostMapping("/collections")
@@ -400,14 +494,57 @@ public class FinanceController {
 
   /**
    * Ödeme/tahsilat önizlemesi (12.2 §4.5): şirket dağılımı uyarısı ve eksik fatura; yazmaz. Kayıt
-   * uçlarıyla aynı kapı ve doğrulamalar.
+   * uçlarıyla aynı kapı ve doğrulamalar. {@code correctsSettlementId}: düzeltme önizlemesi (eski
+   * ödeme borçtan düşülmüş gibi; 12.2a §3.4).
    */
   @PostMapping("/settlements/check")
   @PreAuthorize(POST)
   SettlementCheckResponse checkSettlement(
-      @RequestParam SettlementType type, @Valid @RequestBody SettlementRequest request) {
+      @RequestParam SettlementType type,
+      @RequestParam(required = false) UUID correctsSettlementId,
+      @Valid @RequestBody SettlementRequest request) {
     scope.requireNew(request.branchId());
-    return settlements.check(type, request);
+    return settlements.check(type, request, correctsSettlementId);
+  }
+
+  /**
+   * Düzeltme (ZTO "Düzenle"; 12.2a §3.6): eski kayıt ters kayıtla iptal, yeni kayıt yazılır. Yeni
+   * iş yeri her durumda yeni kayıt kurallarından geçer (pasif iş yeri/şirket 422; SEC-03).
+   */
+  @PostMapping("/settlements/{id}/correct")
+  @ResponseStatus(HttpStatus.CREATED)
+  @PreAuthorize(POST)
+  SettlementResponse correctSettlement(
+      @PathVariable UUID id,
+      @Valid @RequestBody SettlementCorrectionRequest request,
+      @RequestHeader(name = IDEMPOTENCY_HEADER, required = false) String idempotencyKey) {
+    scope.requireNew(request.replacement().branchId());
+    return mapper.toResponse(settlements.correct(id, request, idempotencyKey));
+  }
+
+  /**
+   * Ödeme/tahsilat detayı: defter satırları (ters kayıtlar dahil), çek, plan, eşleşmeler. Personel
+   * carili kayıt izinsiz kullanıcıya 404 {@code SETTLEMENT_NOT_FOUND}.
+   */
+  @GetMapping("/settlements/{id}")
+  @PreAuthorize(VIEW)
+  SettlementDetailResponse settlementDetail(@PathVariable UUID id) {
+    return settlementQueries.detail(id);
+  }
+
+  /**
+   * Eşleştirilebilir açık fatura kalemleri (en çok 200, en eski vade önce). {@code
+   * excludeSettlementId}: düzeltilen kaydın eşleşmeleri serbest sayılır.
+   */
+  @GetMapping("/settlements/open-invoices")
+  @PreAuthorize(VIEW)
+  List<OpenInvoiceResponse> openInvoices(
+      @RequestParam SettlementType type,
+      @RequestParam UUID accountId,
+      @RequestParam UUID branchId,
+      @RequestParam String currency,
+      @RequestParam(required = false) UUID excludeSettlementId) {
+    return settlementQueries.openInvoices(type, accountId, branchId, currency, excludeSettlementId);
   }
 
   @PostMapping("/settlements/{id}/reverse")
@@ -417,14 +554,27 @@ public class FinanceController {
     return mapper.toResponse(settlements.reverse(id, request.date(), request.description()));
   }
 
+  /**
+   * Günlük ödeme/tahsilat raporu (12.2a §3.8): o tarihteki durum, fon bakiyeleri ve banka/kasaya
+   * yansıyan çek hareketleri. Kapsam dışı ya da süzgeçle uyuşmayan fon sessizce atlanır; satır
+   * sınırı 5000 (422 {@code RESULT_TOO_LARGE}).
+   */
   @GetMapping("/reports/daily")
   @PreAuthorize(VIEW)
   DailyReportResponse dailyReport(
       @RequestParam SettlementType type,
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
       @RequestParam(required = false) List<UUID> branchIds,
-      @RequestParam(required = false) UUID companyId) {
-    return settlements.daily(type, date, branchIds, companyId);
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(required = false) List<UUID> fundAccountIds,
+      @RequestParam(required = false) String currency,
+      @RequestParam(name = "method", required = false) List<DocumentPaymentMethod> methods,
+      @RequestParam(required = false) DailyReportSort sort) {
+    return settlementQueries.daily(
+        type,
+        date,
+        new DailyReportFilter(branchIds, companyId, fundAccountIds, currency, methods),
+        sort);
   }
 
   // Tedarikçi faturası
@@ -457,9 +607,20 @@ public class FinanceController {
   @PreAuthorize(VIEW)
   PageResponse<PlanResponse> listPlans(
       @RequestParam(required = false) PlanStatus status,
+      @RequestParam(required = false) List<PlanStatus> statuses,
+      @RequestParam(required = false) UUID accountId,
       @RequestParam(required = false) UUID companyId,
       Pageable pageable) {
-    return PageResponse.from(plans.list(status, companyId, pageable), mapper::toResponse);
+    // status ve çoklu statuses birlikte gelirse birleşimleri süzülür (12.2a §4.2).
+    List<PlanStatus> wanted = new ArrayList<>();
+    if (status != null) {
+      wanted.add(status);
+    }
+    if (statuses != null) {
+      wanted.addAll(statuses);
+    }
+    return PageResponse.from(
+        plans.list(new PlanSearch(wanted, accountId, companyId), pageable), mapper::toResponse);
   }
 
   @PostMapping("/payment-plans")

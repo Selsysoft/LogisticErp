@@ -64,6 +64,9 @@ public final class AccountRepositories {
 
     List<AccountBankAccount> findAllByAccountIdOrderByCreatedAt(UUID accountId);
 
+    /** Cariye ait, silinmemiş banka hesabı (karşı taraf hesabı doğrulaması; V35 bileşik FK). */
+    Optional<AccountBankAccount> findByIdAndAccountIdAndDeletedFalse(UUID id, UUID accountId);
+
     boolean existsByIbanHashAndActiveTrue(String ibanHash);
 
     boolean existsByIbanHashAndActiveTrueAndIdNot(String ibanHash, UUID id);

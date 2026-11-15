@@ -197,7 +197,10 @@ describe("12.2 sayfa CSS iskeletleri ve paylaşılan kapsam (§5.4)", () => {
       read("pages/_index.css").matchAll(/^@import "([^"]+)";/gm),
       (m) => m[1],
     );
-    expect(imports.slice(-PAGES.length)).toEqual(PAGES.map((p) => `./scoped/${p}.css`));
+    const start = imports.indexOf("./scoped/banks.css");
+    expect(imports.slice(start, start + PAGES.length)).toEqual(
+      PAGES.map((p) => `./scoped/${p}.css`),
+    );
     expect(imports.indexOf("./quick-cari.css")).toBeLessThan(imports.indexOf("./scoped/banks.css"));
     for (const page of PAGES) {
       expect(read(`pages/scoped/${page}.css`)).toMatch(/Kaynak: ZtoFabrika\//);
@@ -205,7 +208,10 @@ describe("12.2 sayfa CSS iskeletleri ve paylaşılan kapsam (§5.4)", () => {
   });
 
   it("banks.css iki köke yazılır; diğer dosyalar tek kök", () => {
-    expect(SHARED_SCOPES).toEqual({ banks: ["banks", "cashes"] });
+    expect(SHARED_SCOPES).toEqual({
+      banks: ["banks", "cashes"],
+      "settlement-modals": ["payments", "collections", "bank-transactions", "cash-transactions"],
+    });
     const banks = "F:/p/frontend/src/zto/styles/pages/scoped/banks.css";
     expect(scopesForFile(banks)).toEqual([
       ".zto-finans.zto-page-banks",
@@ -243,6 +249,69 @@ describe("12.2 sayfa CSS iskeletleri ve paylaşılan kapsam (§5.4)", () => {
     );
     expect(css).toContain(".zto-finans.zto-page-banks .x, .zto-finans.zto-page-cashes .x {");
     expect(css.match(/zto-page-banks \.account-card/g)).toHaveLength(1);
+  });
+});
+
+describe("12.2a sayfa CSS iskeletleri ve modal kapsamı (12.2a §5.4)", () => {
+  const PAGES_12_2A = ["payments", "collections", "settlement-modals", "daily-settlement-report"];
+  const PAGES_12_2 = [
+    "banks",
+    "bank-form",
+    "bank-detail",
+    "cashes",
+    "cash-form",
+    "bank-transactions",
+    "cash-transactions",
+    "fund-extract",
+    "fund-activity-report",
+    "transfer-center",
+    "exchange-break-report",
+  ];
+
+  it("_index.css: 12.2 bloğu ardından 12.2a bloğu sıralı; her dosyada kaynak", () => {
+    const imports = Array.from(
+      read("pages/_index.css").matchAll(/^@import "([^"]+)";/gm),
+      (m) => m[1],
+    );
+    const start = imports.indexOf("./scoped/banks.css");
+    expect(start).toBeGreaterThan(imports.indexOf("./quick-cari.css"));
+    expect(imports.slice(start)).toEqual(
+      [...PAGES_12_2, ...PAGES_12_2A].map((p) => `./scoped/${p}.css`),
+    );
+    for (const page of PAGES_12_2A) {
+      expect(read(`pages/scoped/${page}.css`)).toMatch(/Kaynak: ZtoFabrika\//);
+    }
+  });
+
+  it("settlement-modals.css dört köke yazılır; liste ve rapor dosyaları tek kök", () => {
+    const modals = "F:/p/frontend/src/zto/styles/pages/scoped/settlement-modals.css";
+    expect(scopesForFile(modals)).toEqual([
+      ".zto-finans.zto-page-payments",
+      ".zto-finans.zto-page-collections",
+      ".zto-finans.zto-page-bank-transactions",
+      ".zto-finans.zto-page-cash-transactions",
+    ]);
+    expect(scopeForFile(modals)).toBe(".zto-finans.zto-page-payments");
+    for (const page of ["payments", "collections", "daily-settlement-report"]) {
+      expect(scopesForFile(`F:/p/frontend/src/zto/styles/pages/scoped/${page}.css`)).toEqual([
+        `.zto-finans.zto-page-${page}`,
+      ]);
+    }
+  });
+
+  it("modal kuralı dört kökte bir kez; #id seçicisi ve @media korunur", async () => {
+    const css = await scope(
+      "#addPaymentModal .modal-dialog { width: 80vw } @media (max-width: 768px) { .erp-modal .x { margin: 0 } }",
+      "C:\\p\\frontend\\src\\zto\\styles\\pages\\scoped\\settlement-modals.css",
+    );
+    expect(css).toContain(
+      ".zto-finans.zto-page-payments #addPaymentModal .modal-dialog, " +
+        ".zto-finans.zto-page-collections #addPaymentModal .modal-dialog, " +
+        ".zto-finans.zto-page-bank-transactions #addPaymentModal .modal-dialog, " +
+        ".zto-finans.zto-page-cash-transactions #addPaymentModal .modal-dialog {",
+    );
+    expect(css.match(/zto-page-cash-transactions \.erp-modal \.x/g)).toHaveLength(1);
+    expect(css).toContain("@media (max-width: 768px)");
   });
 });
 

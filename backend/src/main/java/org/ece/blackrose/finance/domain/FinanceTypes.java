@@ -335,4 +335,45 @@ public final class FinanceTypes {
     PAYABLE,
     RECEIVABLE
   }
+
+  // --- Faz 12.2a (ödemeler/tahsilatlar; 12.2a_TASARIM §2.1)
+
+  /**
+   * Banka yöntemli ödeme/tahsilatın kanalı: {@link #TRANSFER} Banka Havalesi/Eft, {@link
+   * #CREDIT_CARD} Kredi Kartı (herhangi bir aktif BANK fonu). Eski kayıtlarda NULL = havale.
+   */
+  public enum SettlementChannel {
+    TRANSFER,
+    CREDIT_CARD
+  }
+
+  /** Bilgi amaçlı fatura eşleştirmesinin hedef belgesi (V36 tür başına kolon). */
+  public enum AllocationTargetType {
+    PURCHASE_INVOICE,
+    FREIGHT_INVOICE,
+    WAREHOUSE_INVOICE,
+    OPENING_INVOICE,
+    ACCOUNT_DOCUMENT
+  }
+
+  /** Günlük ödeme/tahsilat raporunun saat sıralaması. */
+  public enum DailyReportSort {
+    TIME_ASC,
+    TIME_DESC
+  }
+
+  /**
+   * Kaydın neden iptal edilemediği/düzeltilemediği. {@link #TRANSFERRED}: cari satırı cari
+   * taşımayla başka cariye taşınmış (Rev 1 F-2).
+   */
+  public enum SettlementLockReason {
+    REVERSED,
+    CHECK,
+    PLAN,
+    INTERCOMPANY,
+    FX_SOURCE,
+    VEHICLE_EXPENSE,
+    TRANSFERRED,
+    NO_ACCOUNT
+  }
 }

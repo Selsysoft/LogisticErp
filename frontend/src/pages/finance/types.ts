@@ -695,13 +695,29 @@ export interface Settlement {
   description: string | null;
   status: "POSTED" | "REVERSED";
   companyId: string;
+  // 12.2a (12.2a_TASARIM §4.3): mevcut 14 alanın sonuna.
+  documentNo: string | null;
+  /** Yalnız `method = BANK` iken dolu (NULL eski kayıt = TRANSFER). */
+  channel: SettlementChannel | null;
+  counterpartyBankAccountId: string | null;
+  /** Düzeltme (`POST /settlements/{id}/correct`) ile oluşan kayıtta eski kaydın kimliği. */
+  correctsSettlementId: string | null;
+  reverseReason: string | null;
+  reversedOn: string | null;
 }
 
+/**
+ * Şema `DailyReportResponse` (12.2a §4.3): `rows` liste satırının üst kümesi (`SettlementListItem`;
+ * `reversedOn` dolu satır = o tarihte geçerli, sonradan iptal — OK-12.2a-30).
+ */
 export interface DailyReport {
   type: string;
   date: string;
-  rows: Settlement[];
-  totals: { branchId: string; currency: string; total: string; count: number }[];
+  rows: SettlementListItem[];
+  /** `DailyTotal.total` sunucuda JSON sayısı (BigDecimal, @JsonFormat yok; 12.2a B4 notu). */
+  totals: { branchId: string; currency: string; total: number; count: number }[];
+  fundBalances: DailyFundBalance[];
+  instrumentFundMovements: DailyInstrumentMovement[];
 }
 
 export interface Invoice {
@@ -1386,15 +1402,241 @@ export type IntercompanyTransferBody = {
  * `confirmWarnings` yalnız kayıt uçlarında (409 CONFIRMATION_REQUIRED sonrası).
  */
 export type SettlementBody = {
-  method: "CASH" | "BANK" | "CHECK";
+  method: SettlementMethod;
   accountId?: string;
   branchId: string;
   fundAccountId?: string;
+  /** Ciro edilecek (portföydeki) çek. */
   instrumentId?: string;
+  /** Yeni çek/senet (12.2a §4.1 `NewInstrument`). */
+  instrument?: NewInstrumentBody;
   expenseItemId?: string;
   money: Money;
   date: string;
   description?: string;
   exchangeRate?: number;
   confirmWarnings?: boolean;
+  // 12.2a (§4.1): sona dört alan.
+  /** ≤ 50. */
+  documentNo?: string;
+  /** Yalnız BANK; yoksa TRANSFER (Kredi Kartı = BANK + CREDIT_CARD, OK-12.2a-9). */
+  channel?: SettlementChannel;
+  /** Yalnız BANK; carinin banka hesabı (maskeli gösterilir, OK-12.2a-14). */
+  counterpartyBankAccountId?: string;
+  /** ≤ 50 satır; `amount` ondalık metin. */
+  allocations?: AllocationBody[];
 };
+
+/** `NewInstrument` (12.2a §4.1): mevcut 4 alan + `fundAccountId`, `initialStatus`. */
+export type NewInstrumentBody = {
+  kind: InstrumentKind;
+  /** 1–50 (çekte istemci 7 hane, OK-12.2a-10). */
+  number: string;
+  bankName?: string;
+  dueDate: string;
+  /** Ödeme: çekin çekildiği BANK fonu; tahsilat AT_BANK: yatırılan banka. */
+  fundAccountId?: string;
+  /** Yalnız tahsilat. */
+  initialStatus?: "PORTFOLIO" | "AT_BANK";
+};
+
+/** `AllocationRequest` (12.2a §4.1); `amount` ondalık metin ("250.00"; > 0, en çok 4 ondalık). */
+export type AllocationBody = {
+  targetType: AllocationTargetType;
+  targetId: string;
+  amount: string;
+};
+
+/** `POST /finance/settlements/{id}/correct` (`SettlementCorrectionRequest`). */
+export type CorrectSettlementBody = {
+  /** ≤ 500. */
+  reason?: string;
+  replacement: SettlementBody;
+};
+
+/** `POST /finance/settlements/{id}/reverse` (`ReverseRequest`); `description` → reverse_reason. */
+export type ReverseSettlementBody = { date: string; description?: string };
+
+// ---------------------------------------------------------------------------------------------
+// 12.2a ödeme / tahsilat (12.2a_TASARIM §4.3, §5.2). Para alanları (`Money.amount` ve "decimal"
+// alanlar) JSON'da ondalık metindir; toplama/karşılaştırma `zto/decimal.ts` ile (float yok).
+// Kur (`exchangeRate`) ve TL karşılığı (`tlAmount`) yalnız gösterim, JSON number.
+// ---------------------------------------------------------------------------------------------
+
+/** `settlement.method` (DB; CHECK = çek ve senet). */
+export type SettlementMethod = "CASH" | "BANK" | "CHECK";
+/** `SettlementChannel`: yalnız BANK kayıtlarında. */
+export type SettlementChannel = "TRANSFER" | "CREDIT_CARD";
+export type SettlementStatus = "POSTED" | "REVERSED";
+/** ZTO'da görünen yöntem (`displayMethod`, `DocumentPaymentMethod` alt kümesi; OTHER yok). */
+export type PayMethod = "CASH" | "BANK" | "CREDIT_CARD" | "CHECK" | "NOTE";
+export type InstrumentKind = "CHECK" | "NOTE";
+export type AllocationTargetType =
+  | "PURCHASE_INVOICE"
+  | "FREIGHT_INVOICE"
+  | "WAREHOUSE_INVOICE"
+  | "OPENING_INVOICE"
+  | "ACCOUNT_DOCUMENT";
+/** Düzenle/Sil kilidinin nedeni (§3.7; `TRANSFERRED` = cari taşımayla taşınmış, OK-12.2a-34). */
+export type SettlementLockReason =
+  | "REVERSED"
+  | "CHECK"
+  | "PLAN"
+  | "INTERCOMPANY"
+  | "FX_SOURCE"
+  | "VEHICLE_EXPENSE"
+  | "TRANSFERRED"
+  | "NO_ACCOUNT";
+/** `GET /reports/daily?sort=` (`DailyReportSort`). */
+export type DailyReportSort = "TIME_ASC" | "TIME_DESC";
+
+/**
+ * Şema `SettlementListItemResponse` (`GET /payments|collections`, günlük rapor satırı). Maskeli
+ * personel satırında (`employeeMasked`) cari alanları, `description` ve karşı taraf banka alanları
+ * null; `reversible`/`correctable` false (OK-12.2a-8).
+ */
+export interface SettlementListItem {
+  id: string;
+  type: SettlementType;
+  method: SettlementMethod;
+  channel: SettlementChannel | null;
+  displayMethod: DocumentPaymentMethod;
+  accountId: string | null;
+  accountCode: string | null;
+  accountName: string | null;
+  accountType: AccountType | null;
+  accountSubGroup: string | null;
+  accountGroupName: string | null;
+  employeeMasked: boolean;
+  branchId: string;
+  branchName: string;
+  branchGroupName: string | null;
+  companyId: string;
+  fundAccountId: string | null;
+  fundName: string | null;
+  fundKind: FundKind | null;
+  fundBankName: string | null;
+  fundBankBranchName: string | null;
+  instrumentId: string | null;
+  instrumentKind: InstrumentKind | null;
+  instrumentNumber: string | null;
+  instrumentStatus: string | null;
+  expenseItemId: string | null;
+  expenseItemName: string | null;
+  planId: string | null;
+  money: Money;
+  exchangeRate: number | null;
+  tlAmount: number | null;
+  settlementDate: string;
+  documentNo: string | null;
+  description: string | null;
+  status: SettlementStatus;
+  counterpartyBankAccountId: string | null;
+  counterpartyIbanMasked: string | null;
+  counterpartyBankName: string | null;
+  correctsSettlementId: string | null;
+  correctedById: string | null;
+  reverseReason: string | null;
+  reversedOn: string | null;
+  createdAt: string;
+  createdBy: string;
+  intercompany: boolean;
+  credit: boolean;
+  /** Cari satırı cari taşımayla başka cariye taşınmış (lockReason TRANSFERRED). */
+  transferred: boolean;
+  /** Döviz bozumunda kullanılan tutar (ondalık metin). */
+  fxUsed: string;
+  /** Bozulmamış kalan (ondalık metin). */
+  fxRemaining: string;
+  lockReason: SettlementLockReason | null;
+  reversible: boolean;
+  correctable: boolean;
+}
+
+/** Şema `SettlementLineResponse`: kaydın cari ve banka/kasa defter satırları (ters kayıtlar dahil). */
+export interface SettlementLine {
+  ledger: "ACCOUNT" | "FUND";
+  transactionId: string;
+  direction: "DEBIT" | "CREDIT" | "IN" | "OUT";
+  money: Money;
+  exchangeRate: number;
+  tlAmount: number;
+  transactionDate: string;
+  reversal: boolean;
+}
+
+/**
+ * Şema `SettlementAllocationResponse`: fatura eşleştirmesi. `outOfScope` iken hedef bilgileri
+ * (`targetId`, `targetNumber`, `targetTypeName`, `invoiceDate`, `dueDate`) null, tutar görünür
+ * (OK-12.2a-33). `active` = kayıt POSTED ve hedef açık (OK-12.2a-3).
+ */
+export interface SettlementAllocation {
+  id: string;
+  targetType: AllocationTargetType;
+  targetId: string | null;
+  targetNumber: string | null;
+  targetTypeName: string | null;
+  invoiceDate: string | null;
+  dueDate: string | null;
+  money: Money;
+  targetCancelled: boolean;
+  active: boolean;
+  outOfScope: boolean;
+}
+
+/** Şema `SettlementDetailResponse` (`GET /settlements/{id}`; personel carisinde 404). */
+export interface SettlementDetail {
+  item: SettlementListItem;
+  lines: SettlementLine[];
+  instrument: Instrument | null;
+  plan: Plan | null;
+  allocations: SettlementAllocation[];
+  /** Kapsam dışı fonda null. */
+  fundIbanMasked: string | null;
+  bankStatementMatched: boolean;
+}
+
+/**
+ * Şema `OpenInvoiceResponse` (`GET /settlements/open-invoices`; ≤ 200). `allocated` = eşleşmeler +
+ * faturaya bağlı POSTED plan ödemeleri (OK-12.2a-29); tutarlar ondalık metin.
+ */
+export interface OpenInvoice {
+  targetType: AllocationTargetType;
+  id: string;
+  number: string;
+  typeName: string;
+  invoiceDate: string;
+  dueDate: string | null;
+  currency: string;
+  total: string;
+  allocated: string;
+  remaining: string;
+  branchId: string;
+  companyId: string;
+}
+
+/** Şema `DailyFundBalanceResponse` (günlük rapor "Özet Bakiye Bilgisi"); bakiyeler ondalık metin. */
+export interface DailyFundBalance {
+  fundAccountId: string;
+  name: string;
+  kind: FundKind;
+  currency: string;
+  branchId: string;
+  branchName: string;
+  bankName: string | null;
+  bankBranchName: string | null;
+  balanceAtDate: string;
+  balanceNow: string;
+}
+
+/** Şema `DailyInstrumentMovementResponse` ("Banka Hareketine Yansıyan Çek Özeti"). */
+export interface DailyInstrumentMovement {
+  branchId: string;
+  branchName: string;
+  fundAccountId: string;
+  fundName: string;
+  fundKind: FundKind;
+  currency: string;
+  count: number;
+  total: string;
+}

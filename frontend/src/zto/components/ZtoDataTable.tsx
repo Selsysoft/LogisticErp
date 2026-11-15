@@ -103,6 +103,11 @@ export type ZtoDataTableProps<T> = {
   lengthChange?: boolean;
   /** DataTables "ordering". */
   ordering?: boolean;
+  /**
+   * Shift+tık çok sütunlu sıralamada en çok sütun sayısı (TanStack `maxMultiSortColCount`; aşılınca en
+   * eski sıralama düşer). Sunucu sıralama sınırı olan listeler için; verilmezse sınırsız.
+   */
+  maxMultiSortColCount?: number;
   buttons?: ZtoButton[];
   /**
    * "dataTables": Buttons 2.2.2 + buttons.dataTables.css (ZTO _Layout): div.dt-buttons > button.dt-button.
@@ -229,6 +234,7 @@ export function ZtoDataTable<T>({
   info = true,
   lengthChange = true,
   ordering = true,
+  maxMultiSortColCount,
   buttons,
   buttonsStyle = "dataTables",
   exportTitle,
@@ -286,6 +292,7 @@ export function ZtoDataTable<T>({
     getSortedRowModel: getSortedRowModel(),
     manualSorting: manual,
     enableSorting: ordering,
+    maxMultiSortColCount,
     // DataTables artan → azalan → artan döner; sırasız duruma dönmez, ilk tık her zaman artan.
     enableSortingRemoval: false,
     sortDescFirst: false,

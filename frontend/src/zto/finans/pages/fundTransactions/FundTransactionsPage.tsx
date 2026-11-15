@@ -11,7 +11,7 @@ import {
   useFundList,
   useFundTransactions,
 } from "../../../../pages/finance/fundApi";
-import type { FundKind, FundTransactionRow } from "../../../../pages/finance/types";
+import type { Fund, FundKind, FundTransactionRow } from "../../../../pages/finance/types";
 import { mapInChunks } from "../../../a11y";
 import { useBranchTree } from "../../../branch/branchTree";
 import {
@@ -27,9 +27,16 @@ import {
 } from "../../../components";
 import { errorCode, errorMessage } from "../../../components/definitionLogic";
 import { downloadBlob } from "../../../export";
-import { ZTO_FINANS_BASE, ZTO_SLUGS, accountTransactionsPath } from "../../navItems";
+import { ZTO_FINANS_BASE, ZTO_SLUGS, accountTransactionsPath, paymentsPath } from "../../navItems";
 import { useZtoRootClass } from "../../ZtoRootClassContext";
-import { branchIndex, companyNames, settlementPath } from "../funds/fundsLogic";
+import {
+  SETTLEMENT_MODAL_PARAMS,
+  branchIndex,
+  companyNames,
+  parseSettlementModal,
+  type SettlementModalRequest,
+} from "../funds/fundsLogic";
+import { CollectionModal, PaymentModal } from "../settlementModals";
 import { ActivityReportModal } from "./ActivityReportModal";
 import { FundTransactionDetailModal } from "./FundTransactionDetailModal";
 import { SelectedFundSummary } from "./SelectedFundSummary";
@@ -85,6 +92,18 @@ const SPIN_MS = 700;
 type Notice = { variant: "danger" | "warning"; text: string } | null;
 
 /**
+ * Sayfa içi ödeme / tahsilat modalı (ZTO BT:726-732 `_AddPaymentModal` + `_CollectionModalsPartial`).
+ * `open=false` iken ön değerler kapanış animasyonu boyunca korunur; `seq` her açılışta yeni örnek verir.
+ */
+type SettlementModalState = SettlementModalRequest & {
+  open: boolean;
+  seq: number;
+  fundId?: string;
+  branchId?: string;
+  currency?: string;
+};
+
+/**
  * Banka / Kasa Hareketleri (ZTO BankTransactions/Index.cshtml, CashTransactions/Index.cshtml; 12.2
  * §5.9). Tek bileşen, `kind` = BANK (mavi) | CASH (turuncu). Sunucu sayfalı (`/funds/transactions`,
  * açık page/size, "Tümü" = 500); yürüyen bakiye sunucuda (ZTO B10). Süzgeç: (≥ 2 şirket) ŞİRKET,
@@ -95,7 +114,7 @@ export function FundTransactionsPage({ kind = "BANK" }: { kind?: FundKind }) {
   useZtoRootClass(bank ? "zto-page-bank-transactions" : "zto-page-cash-transactions");
   const { t } = useTranslation("ztoFinans");
   const { t: tc } = useTranslation();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const multiCompany = useMultiCompany();
   const activeCompany = useActiveCompanyId();
   const canPost = useCan("FINANCE_PAYMENT_CREATE");
@@ -123,6 +142,10 @@ export function FundTransactionsPage({ kind = "BANK" }: { kind?: FundKind }) {
   const [exporting, setExporting] = useState(false);
   const spinTimer = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => () => clearTimeout(spinTimer.current), []);
+  const [modal, setModal] = useState<SettlementModalState | null>(null);
+  // ZTO `?openModal=true` / `?openCollection=true&collectionMethod=…` (kart bağlantıları): ilk çizimde
+  // okunur; yetkisiz kullanıcıda yok sayılır.
+  const [deepLink] = useState(() => (canPost ? parseSettlementModal(params, kind) : null));
 
   const tree = useBranchTree();
   const branches = useMemo(() => branchIndex(tree.data), [tree.data]);
@@ -378,24 +401,26 @@ export function FundTransactionsPage({ kind = "BANK" }: { kind?: FundKind }) {
             >
               <i className="fas fa-eye" aria-hidden="true" />
             </button>
-            {canEditPayment(row.original) && (
-              <a
-                className="btn btn-sm btn-outline-primary ml-1"
-                href="/finance/settlements"
-                target="_blank"
-                rel="noopener noreferrer"
-                title={c("editPayment")}
-                aria-label={c("editPayment")}
-              >
-                <i className="fas fa-edit" aria-hidden="true" />
-              </a>
-            )}
+            {canPost &&
+              canEditPayment(row.original) &&
+              row.original.sourceType === "SETTLEMENT" && (
+                <a
+                  className="btn btn-sm btn-outline-primary ml-1"
+                  href={paymentsPath({ openEditPayment: true, paymentId: row.original.sourceId })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={c("editPayment")}
+                  aria-label={`${c("editPayment")} ${tc("common.a11y.opensInNewTab")}`}
+                >
+                  <i className="fas fa-edit" aria-hidden="true" />
+                </a>
+              )}
           </>
         ),
       }),
     ];
     return list;
-  }, [t, bank, page, size, branches, multiCompany, companyName, accountingLabel]);
+  }, [t, tc, bank, page, size, branches, multiCompany, companyName, accountingLabel, canPost]);
 
   const update = (patch: Partial<TxFilters>, apply: boolean) => {
     const next = { ...draft, ...patch };
@@ -406,6 +431,51 @@ export function FundTransactionsPage({ kind = "BANK" }: { kind?: FundKind }) {
     t(`funds.common.accountTypes.${fund.accountType ?? "DEMAND"}`);
   const fundItems = fundOptions(funds.data ?? [], kind, draft.branchId, draft.fundId, typeLabel);
   const selectedFundData = applied.fundId ? selectedFund.data : undefined;
+
+  /**
+   * Modal ön değerleri (ZTO openPaymentModalFromBank / openCollectionModalFromBank): süzgeçteki banka /
+   * kasa, onun iş yeri ve para birimi; fon yoksa süzgeçteki iş yeri ve URL para birimi.
+   */
+  const openSettlement = (request: SettlementModalRequest, fundId: string, branchId: string) => {
+    const fund: Fund | undefined =
+      (funds.data ?? []).find((x) => x.id === fundId) ??
+      (selectedFund.data?.id === fundId ? selectedFund.data : undefined);
+    setModal((previous) => ({
+      ...request,
+      open: true,
+      seq: (previous?.seq ?? 0) + 1,
+      fundId: fund?.id,
+      branchId: fund?.branchId ?? (branchId || undefined),
+      currency: fund?.currency ?? currency,
+    }));
+  };
+  const openSettlementRef = useRef(openSettlement);
+  openSettlementRef.current = openSettlement;
+  const closeSettlement = () => setModal((previous) => previous && { ...previous, open: false });
+
+  // Parametreler okunduktan sonra URL'den silinir (ZTO `history.replaceState`); fundId/branchId/currency
+  // süzgeç değeri olarak kalır.
+  useEffect(() => {
+    if (!SETTLEMENT_MODAL_PARAMS.some((key) => params.has(key))) return;
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        SETTLEMENT_MODAL_PARAMS.forEach((key) => next.delete(key));
+        return next;
+      },
+      { replace: true },
+    );
+    // Yalnız ilk çizim.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Ön seçili fon varsa fon listesi gelince açılır (iş yeri / para birimi fondan).
+  const deepLinkDone = useRef(false);
+  const fundsSettled = !initial.fundId || !funds.isPending;
+  useEffect(() => {
+    if (!deepLink || deepLinkDone.current || !fundsSettled) return;
+    deepLinkDone.current = true;
+    openSettlementRef.current(deepLink, initial.fundId, initial.branchId);
+  }, [deepLink, fundsSettled, initial.fundId, initial.branchId]);
 
   const refresh = () => {
     setSpinning(true);
@@ -514,30 +584,42 @@ export function FundTransactionsPage({ kind = "BANK" }: { kind?: FundKind }) {
                 >
                   {canPost && (
                     <>
-                      <a
+                      <button
+                        type="button"
                         className="erp-btn erp-btn-success"
                         id="btnNewPayment"
                         title={h("newPaymentTitle")}
-                        href={settlementPath("PAYMENT", kind, applied.fundId || undefined)}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        aria-haspopup="dialog"
+                        onClick={() =>
+                          openSettlement(
+                            { type: "PAYMENT", method: kind },
+                            draft.fundId,
+                            draft.branchId,
+                          )
+                        }
                       >
                         <i className="fas fa-plus-circle" aria-hidden="true" />
                         <span className="d-none d-md-inline">{h("newPayment")}</span>
                         <span className="sr-only d-md-none">{h("newPayment")}</span>
-                      </a>
-                      <a
+                      </button>
+                      <button
+                        type="button"
                         className="erp-btn erp-btn-info"
                         id="btnNewCollection"
                         title={h("newCollectionTitle")}
-                        href={settlementPath("COLLECTION", kind, applied.fundId || undefined)}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        aria-haspopup="dialog"
+                        onClick={() =>
+                          openSettlement(
+                            { type: "COLLECTION", method: kind },
+                            draft.fundId,
+                            draft.branchId,
+                          )
+                        }
                       >
                         <i className="fas fa-hand-holding-usd" aria-hidden="true" />
                         <span className="d-none d-md-inline">{h("newCollection")}</span>
                         <span className="sr-only d-md-none">{h("newCollection")}</span>
-                      </a>
+                      </button>
                       <div className="btn-divider" />
                     </>
                   )}
@@ -856,6 +938,30 @@ export function FundTransactionsPage({ kind = "BANK" }: { kind?: FundKind }) {
         multiCompany={multiCompany}
         companyName={companyName}
       />
+      {canPost && modal && (
+        <>
+          <PaymentModal
+            key={`payment-${modal.seq}`}
+            show={modal.open && modal.type === "PAYMENT"}
+            onHide={closeSettlement}
+            mode="add"
+            presetFundAccountId={modal.type === "PAYMENT" ? modal.fundId : undefined}
+            presetBranchId={modal.branchId}
+            presetCurrency={modal.currency}
+            presetMethod={modal.method}
+          />
+          <CollectionModal
+            key={`collection-${modal.seq}`}
+            show={modal.open && modal.type === "COLLECTION"}
+            onHide={closeSettlement}
+            mode="add"
+            presetFundAccountId={modal.type === "COLLECTION" ? modal.fundId : undefined}
+            presetBranchId={modal.branchId}
+            presetCurrency={modal.currency}
+            presetMethod={modal.method}
+          />
+        </>
+      )}
       {activity > 0 && (
         <ActivityReportModal
           key={activity}

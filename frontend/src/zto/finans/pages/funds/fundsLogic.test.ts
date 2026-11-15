@@ -24,7 +24,9 @@ import {
   parseCashGroup,
   progressPct,
   searchWords,
+  parseSettlementModal,
   settlementPath,
+  SETTLEMENT_MODAL_PARAMS,
   signedAmountText,
   statItems,
   summaryByType,
@@ -442,12 +444,49 @@ describe("fundsLogic — özet, silme, bağlantılar", () => {
 
   it("ödeme/tahsilat bağlantısı ve işaretli tutar", () => {
     expect(settlementPath("PAYMENT", "BANK", "f1")).toBe(
-      "/finance/settlements?new=PAYMENT&method=BANK&fundAccountId=f1",
+      "/zto-finans/banka-hareketleri?fundId=f1&openModal=true",
     );
-    expect(settlementPath("COLLECTION", "CASH")).toBe(
-      "/finance/settlements?new=COLLECTION&method=CASH",
+    expect(settlementPath("COLLECTION", "BANK", "f1")).toBe(
+      "/zto-finans/banka-hareketleri?fundId=f1&openCollection=true&collectionMethod=Banka",
+    );
+    expect(settlementPath("PAYMENT", "CASH")).toBe("/zto-finans/kasa-hareketleri?openModal=true");
+    expect(settlementPath("COLLECTION", "CASH", "k1")).toBe(
+      "/zto-finans/kasa-hareketleri?fundId=k1&openCollection=true&collectionMethod=Nakit",
     );
     expect(signedAmountText("IN", "1,00")).toBe("+1,00");
     expect(signedAmountText("OUT", "1,00")).toBe("-1,00");
+  });
+
+  it("modal açılış parametreleri (settlementPath'in tersi; ZTO 'true' büyük/küçük harf duyarsız)", () => {
+    const parse = (query: string, kind: "BANK" | "CASH" = "BANK") =>
+      parseSettlementModal(new URLSearchParams(query), kind);
+    expect(parse("")).toBeNull();
+    expect(parse("openModal=false&openCollection=0")).toBeNull();
+    expect(parse("fundId=f1&openModal=TRUE")).toEqual({ type: "PAYMENT", method: "BANK" });
+    expect(parse("openModal=true&collectionMethod=Nakit", "CASH")).toEqual({
+      type: "PAYMENT",
+      method: "CASH",
+    });
+    expect(parse("openCollection=true&collectionMethod=Banka", "CASH")).toEqual({
+      type: "COLLECTION",
+      method: "BANK",
+    });
+    expect(parse("openCollection=true&collectionMethod=NAKİT")).toEqual({
+      type: "COLLECTION",
+      method: "CASH",
+    });
+    expect(parse("openCollection=true&collectionMethod=cash")).toEqual({
+      type: "COLLECTION",
+      method: "CASH",
+    });
+    expect(parse("openCollection=true&collectionMethod=Çek", "CASH")).toEqual({
+      type: "COLLECTION",
+      method: "CASH",
+    });
+    expect(parse(new URL(settlementPath("COLLECTION", "BANK", "f1"), "http://x").search)).toEqual({
+      type: "COLLECTION",
+      method: "BANK",
+    });
+    expect(SETTLEMENT_MODAL_PARAMS).toEqual(["openModal", "openCollection", "collectionMethod"]);
   });
 });

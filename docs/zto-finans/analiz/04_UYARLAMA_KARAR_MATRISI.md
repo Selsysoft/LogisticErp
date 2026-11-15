@@ -149,8 +149,8 @@ Faz 0 envanter promptları (A, B, C) ve ana promptun §4.1 sayfa listesi matrisl
 | Z12 | `account_transfer` | Cari transfer + `account_transfer_instrument` | MX1 + §6.1-K3 | 12.1 — **uygulandı: `V30__account_transfer`** (+ `account_transfer_line`, `instrument_movement.movement_type`) |
 | Z13 | `fund_transfer` | Transfer merkezi, döviz bozumu, maliyet, kaynak; **yalnız aynı şirket içinde** (MX5) | MX2 | 12.2 — **uygulandı: `V32__fund_transfer`** (+ `fund_transfer_cost`, `fund_transfer_source`, şirketler arası virman `intercompany_transfer` (MX5 D8), şirket başına `FUND_TRANSFER` (VRM) / `INTERCOMPANY_TRANSFER` (SVR) serileri; §1.2) |
 | Z14 | `fin_income_expense` | Faiz geliri, kur farkı, banka masrafı defteri | MX2 | 12.2 — **uygulandı: `V33__fin_income_expense`** (tek yazıcı `IncomeExpenseService`; döviz bozumu kur farkı FX_DIFF, transfer masrafı BANK_CHARGE; §1.3) |
-| Z15 | `settlement_details` | Belge no, kanal (`CREDIT_CARD` dahil), karşı tarafın IBAN'ı (`account_bank_account` FK), düzeltme zinciri, iptal gerekçesi | MX7 V2xQ1 | 12.2a |
-| Z16 | `settlement_allocation` | Tahsilat/ödemenin navlun, depo, açılış ve alış faturalarıyla bilgi amaçlı eşleşmesi (yaşlandırma FIFO kalır). **§6.2-Y5'e bağlı** | MX7 V2xQ2 | 12.2a |
+| Z15 | `settlement_details` | Belge no, kanal (`CREDIT_CARD` dahil), karşı tarafın IBAN'ı (`account_bank_account` FK), düzeltme zinciri, iptal gerekçesi | MX7 V2xQ1 | 12.2a — **uygulandı: `V35__settlement_details`** (belge no, kanal TRANSFER/CREDIT_CARD, `counterparty_bank_account_id` bileşik FK, `corrects_settlement_id` tekil zincir, `reverse_reason`, `reversed_on` + geri doldurma; `uygulama/12.2a_TASARIM.md` §1.1) |
+| Z16 | `settlement_allocation` | Tahsilat/ödemenin navlun, depo, açılış ve alış faturalarıyla bilgi amaçlı eşleşmesi (yaşlandırma FIFO kalır). **§6.2-Y5'e bağlı** | MX7 V2xQ2 | 12.2a — **uygulandı: `V36__settlement_allocation`** (tür başına hedef kolonu + bileşik FK `(x_id, company_id)`, beş hedef tabloya `UNIQUE (id, company_id)`; defter/FIFO/eksik fatura değişmez; §1.2) |
 | Z17 | `time_deposit` | Vadeli mevduat + olaylar | MX2 | 12.6 |
 | Z18 | `credit` | Kredi sözleşmesi, taksit, hareket, `settlement.origin_*`, FINANCE gider kalemleri; KrediBankaCari betiği burada karşılanır (MX7 §5) | MX3 | 12.5 |
 | Z19 | `payment_plan_extensions` | Plan genişletmesi, `payment_instruction`, 5 seviyeli yoğunluk | MX1+MX2+MX3 + §6.1-K4 | 12.4 |
@@ -249,6 +249,7 @@ Kullanıcı gereksinimi (2026-11-13): bir kiracı (lojistik firması) kendisine 
 12. Uyumsoft (MX9): SOAP katmanı doğrulanmamış iskelet (16 `TODO(WSDL)`); **şifreleme anahtarı için koda gömülü varsayılan** (`UyumsoftController.cs:36`) — ZTO Fabrika'da da düzeltilmeli. Blackrose'da anahtar yoksa uygulama açılmaz.
 13. WorkPlace (MX5): Google Maps API anahtarı view'larda açık (`Views/WorkPlace/Add.cshtml:106`, `Edit.cshtml:87`) — ZTO Fabrika'da da kısıtlanmalı/taşınmalı.
 14. Banka / kasa / transfer merkezi (12.2 keşfi; ayrıntı `uygulama/12.2_TASARIM.md` §3.2, §5.5–§5.11): bakiye ve hesap sayısı kartları tür süzgecine bağlı (B1); para birimi simgesi sabit (B3); ileri tarihli hareket uyarısı hiç görünmüyor (B5); "FİLTRELENEN" dönem başını içermiyor (B6); CSV iş yeri/şirket süzgecini yok sayıyor (B7); "Temizle" ilk varsayılanlara dönmüyor (B8); hareket tablosu sırası yanlış (B9); yürüyen bakiye istemcide ve süzgeçten sonra hesaplanıyor (B10); şirketler arası neden satırı ölü kod (B11); transfer özeti Virman/EFT/Havale'yi ayrı sayıyor (B12); KMV TL yerine kaynak para biriminde (B13); çapraz kur arayüzü ulaşılamaz ve ekstre sekmeleri sayfasız (B14); arama temizliği tek sekmeyi yeniliyor (B15); "Önceki Döviz Bozum Kaynakları" colspan hatası (B16); son hareketlerde ileri tarihliler (B18); "Dönem Başı Bakiyesi" etiketi başlangıç bakiyesini gösteriyor (B20, etiket birebir, not). Blackrose'da hepsi düzeltilmiş olarak yazıldı; ZTO'da tür başına 7 transfer öneki yerine şirket başına tek seri (OK-12.2-6).
+15. Ödemeler / tahsilatlar / günlük raporlar (12.2a keşfi; ayrıntı `uygulama/12.2a_TASARIM.md` §0.4, §5): ödeme düzenleme yerinde ve transaction'sız güncelleme, silme fiziksel → düzeltme = ters kayıt + yeni kayıt tek işlemde (`POST /settlements/{id}/correct`), silme = ters kayıt (iptal tarihi + gerekçe saklanır); döviz kuru alanı devre dışı (kur 1) → TCMB kuru, düzenlemede kaydın kuru korunur; silme onayında "TL" sabiti → kaydın para birimi; sabit konumlu bildirimler kapanmıyor → başarı 3 sn / hata 5 sn, modal açıkken kuyrukta; tablo hücrelerinde `data-label` yok → eklendi; Günlük rapor İş Yeri çoklu seçimi ilk "Filtrele"de kayboluyor → çoklu seçim korunur; "Temizle" açılış varsayılanına (bugün−7…bugün) dönmüyor → döner; çek no iki modalda farklı → tek kural `^\d{7}$` (madde 3); cari banka hesabı seçilince açıklamaya tam IBAN + hesap sahibi yazılıyor → maskeli IBAN, personel carisinde cümle yok (KVKK); DCR grup başlığı farklı para birimlerini topluyor → rozet çizilmez; rapor süzgeç seçenekleri yalnız ekrandaki satırlardan → görünür fon/para birimi listesinden; "KESİDECİ" yazımı → "KEŞİDECİ".
 
 ## 8. Blackrose'da ayrıca düzeltilecek hata
 
@@ -270,7 +271,7 @@ Adım numaraları `docs/fazlar/FAZ_12_ZTO_Finans_Eklemeleri.md` ile aynıdır (2
 | 12.1a | İş yeri / şube / çoklu şirket; "Şirketler" ekranı; kullanıcı iş yeri kısıtı | Z01–Z05, ZA1 | 12.0 |
 | 12.1 | Cari (+ cari IBAN ekranları) | Z06, Z10–Z12 | 12.1a |
 | 12.2 | Banka/kasa, transfer merkezi (✅ 2026-11-14; V31–V34, `uygulama/12.2_TASARIM.md`) | Z07, Z13, Z14 (+ Z41) | 12.1 |
-| 12.2a | Ödemeler, Tahsilatlar, günlük raporlar, ortak ödeme/tahsilat modalları | Z15, Z16 | 12.2 |
+| 12.2a | Ödemeler, Tahsilatlar, günlük raporlar, ortak ödeme/tahsilat modalları (✅ 2026-11-15; V35–V36, `uygulama/12.2a_TASARIM.md`) | Z15, Z16 | 12.2 |
 | 12.3 | Çek/senet/koçan | Z08, Z09 | 12.2a |
 | 12.4 | Ödeme planı + PaymentApproval/Index + PaymentManagement ekranları | Z19 | 12.3 |
 | 12.5 | Kredi | Z18 | 12.4 |
@@ -286,7 +287,7 @@ Adım numaraları `docs/fazlar/FAZ_12_ZTO_Finans_Eklemeleri.md` ile aynıdır (2
 ## 10. Açık / doğrulanamayan noktalar
 
 - ZTO'da öneksiz `BankTransactions`/`CashTransactions` tablolarına yazan kod (`PurchaseCurrentAccountController.cs:1251, :1297`): canlı DB'de var mı? (Faz 2 şema dökümüyle bakılacak.)
-- `exportToExcel`/`exportToPDF` fonksiyonları ZTO'da tanımlı değil (düğmeler çalışmıyor olabilir).
+- ~~`exportToExcel`/`exportToPDF` fonksiyonları ZTO'da tanımlı değil~~ → çözüldü (12.2a): `exportToExcel` ödemelerde `payments.js:3951`, tahsilatlarda `collections.js:6601`'de tanımlı; Blackrose'da Excel dışa aktarımı sunucu sayfalarıyla (4 × 500 satır).
 - ~~ZTO Şube İli (`BranchProvince`) karşılığı~~ → çözüldü: `branch_group` (Z02), MX5.
 - ~~Blackrose'da kullanıcı başına şube kısıtı~~ → yok; `user_branch` (Z05) eklenecek. Denetim kaydının varlık bazında filtrelenmesi hâlâ doğrulanmadı.
 - ZTO "2026" vergi dilimleri ve asgari ücret değerinin resmî tarifeyle karşılaştırılması (MX6); avansın cari bakiyede iki kez düşüp düşmediği ve zimmet borcunun yönü canlı veriyle doğrulanmalı.

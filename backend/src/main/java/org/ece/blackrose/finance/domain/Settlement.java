@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 import org.ece.blackrose.common.audit.AuditableEntity;
 import org.ece.blackrose.common.money.Money;
+import org.ece.blackrose.finance.domain.FinanceTypes.SettlementChannel;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementMethod;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementType;
@@ -44,6 +45,22 @@ public class Settlement extends AuditableEntity {
 
   private String idempotencyKey;
 
+  /** Serbest belge/fiş/dekont numarası (tekil değil; V35). */
+  private String documentNo;
+
+  /** Yalnız {@code method = BANK}: havale/EFT ya da kredi kartı (V35 CHECK). */
+  @Enumerated(EnumType.STRING)
+  private SettlementChannel channel;
+
+  /** Settlement carisine ait banka hesabı; IBAN kopyalanmaz (KVKK; V35 bileşik FK). */
+  private UUID counterpartyBankAccountId;
+
+  /** Bu kaydın düzelttiği (ters kayıtla iptal edilen) eski kayıt; aynı şirkette (V35). */
+  private UUID correctsSettlementId;
+
+  private String reverseReason;
+  private LocalDate reversedOn;
+
   protected Settlement() {}
 
   public Settlement(
@@ -76,10 +93,35 @@ public class Settlement extends AuditableEntity {
     this.description = description;
     this.status = SettlementStatus.POSTED;
     this.idempotencyKey = idempotencyKey;
+    this.channel = method == SettlementMethod.BANK ? SettlementChannel.TRANSFER : null;
   }
 
-  public void markReversed() {
+  /**
+   * Kullanıcı girişinin ayrıntıları (yalnız kayıttan önce çağrılır). Kanal yalnız {@code BANK}
+   * yönteminde atanır ({@code null} → {@code TRANSFER}); diğer yöntemlerde savunmacı olarak boş
+   * kalır (doğrulama 400'ü serviste verir).
+   */
+  public Settlement withDetails(
+      String documentNo,
+      SettlementChannel channel,
+      UUID counterpartyBankAccountId,
+      UUID correctsSettlementId) {
+    this.documentNo = documentNo;
+    this.channel =
+        method == SettlementMethod.BANK
+            ? (channel == null ? SettlementChannel.TRANSFER : channel)
+            : null;
+    this.counterpartyBankAccountId = counterpartyBankAccountId;
+    this.correctsSettlementId = correctsSettlementId;
+    return this;
+  }
+
+  /** Ters kayıtla iptal: iptal tarihi ve (boş değilse kırpılmış) gerekçe saklanır. */
+  public void markReversed(LocalDate date, String reason) {
     status = SettlementStatus.REVERSED;
+    reversedOn = date;
+    String trimmed = reason == null ? null : reason.trim();
+    reverseReason = trimmed == null || trimmed.isEmpty() ? null : trimmed;
   }
 
   public Money getMoney() {
@@ -136,5 +178,33 @@ public class Settlement extends AuditableEntity {
 
   public UUID getCompanyId() {
     return companyId;
+  }
+
+  public String getIdempotencyKey() {
+    return idempotencyKey;
+  }
+
+  public String getDocumentNo() {
+    return documentNo;
+  }
+
+  public SettlementChannel getChannel() {
+    return channel;
+  }
+
+  public UUID getCounterpartyBankAccountId() {
+    return counterpartyBankAccountId;
+  }
+
+  public UUID getCorrectsSettlementId() {
+    return correctsSettlementId;
+  }
+
+  public String getReverseReason() {
+    return reverseReason;
+  }
+
+  public LocalDate getReversedOn() {
+    return reversedOn;
   }
 }

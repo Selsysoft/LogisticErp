@@ -209,4 +209,28 @@ describe("AccountTransactionsPage", { timeout: 60_000 }, () => {
     expect(await screen.findByText("150,00 ₺")).toBeTruthy();
     expect(screen.getByText("50,00 ₺")).toBeTruthy();
   });
+
+  it("12.2a: Tahsilat Ekle / Ödeme Ekle ZTO ekranlarını yeni sekmede açar; yetkisizde gizli", async () => {
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    api();
+    open();
+    await screen.findByText("FTR-1", {}, { timeout: 20_000 });
+    const collection = screen.getByRole("button", { name: /Tahsilat Ekle/ });
+    expect(collection.getAttribute("title")).toBe(
+      "Bu cariden, işletmenizin tahsil ettiği tahsilatları kayıt edebilirsiniz",
+    );
+    fireEvent.click(collection);
+    fireEvent.click(screen.getByRole("button", { name: /Ödeme Ekle/ }));
+    expect(openSpy.mock.calls.map((call) => call.slice(0, 2))).toEqual([
+      ["/zto-finans/tahsilatlar?id=a1&openModal=true", "_blank"],
+      ["/zto-finans/odemeler?id=a1&openModal=true", "_blank"],
+    ]);
+    openSpy.mockRestore();
+    cleanup();
+    signIn(["FINANCE_VIEW"]);
+    open();
+    await screen.findByText("FTR-1", {}, { timeout: 20_000 });
+    expect(screen.queryByRole("button", { name: /Tahsilat Ekle/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Ödeme Ekle/ })).toBeNull();
+  });
 });

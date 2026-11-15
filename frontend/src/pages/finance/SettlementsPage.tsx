@@ -1,11 +1,10 @@
 import { Alert, Button, Stack, ToggleButton, ToggleButtonGroup } from "@mui/material";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { apiGet, apiRequest } from "../../api/client";
 import { useActiveCompanyId } from "../../auth/companyStore";
-import { ErrorState } from "../../components/ErrorState";
 import {
   DataTable,
   FieldDef,
@@ -34,6 +33,7 @@ import { useSettlementCheck } from "./fundApi";
 import {
   allocationWarningText,
   checkKey,
+  defaultReverseDate,
   invoiceGapText,
   isConfirmationRequired,
   isMissing,
@@ -91,11 +91,9 @@ export function SettlementsPage() {
       ),
     placeholderData: keepPreviousData,
   });
-  const reverse = useMutation({
-    mutationFn: (id: string) =>
-      apiRequest("POST", `/finance/settlements/${id}/reverse`, { date: today() }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["finance"] }),
-  });
+  // Ters çevirme penceresi (12.2a §3.5, §5.14): tarih varsayılanı max(bugün, kayıt tarihi), gerekçe
+  // isteğe bağlı (`reverse_reason`).
+  const [reversing, setReversing] = useState<Settlement | null>(null);
   const accountName = (id: string | null) =>
     accounts.data?.find((account) => account.id === id)?.name ?? "—";
 
@@ -138,12 +136,7 @@ export function SettlementsPage() {
         r.status === "POSTED" &&
         r.method !== "CHECK" &&
         !r.planId && (
-          <Button
-            size="small"
-            color="error"
-            disabled={reverse.isPending}
-            onClick={() => reverse.mutate(r.id)}
-          >
+          <Button size="small" color="error" onClick={() => setReversing(r)}>
             {t("finance.action.reverse")}
           </Button>
         ),
@@ -182,7 +175,6 @@ export function SettlementsPage() {
             </Button>
           ))}
       </SectionHeader>
-      {reverse.isError && <ErrorState error={reverse.error} />}
       <QueryState isPending={list.isPending} error={list.error} />
       {list.data && (
         <DataTable
@@ -195,6 +187,33 @@ export function SettlementsPage() {
             size: paging.size,
             onPage: paging.setPage,
             onSize: paging.setSize,
+          }}
+        />
+      )}
+      {reversing && (
+        <FormDialog
+          title={`${t("finance.action.reverse")} · ${formatMoney(reversing.money)}`}
+          submitLabel={t("finance.action.reverse")}
+          fields={[
+            {
+              name: "date",
+              label: t("finance.field.date"),
+              type: "date",
+              required: true,
+              defaultValue: defaultReverseDate(reversing.settlementDate, today()),
+            },
+            { name: "description", label: t("finance.action.reverseReason") },
+          ]}
+          onClose={() => setReversing(null)}
+          onSubmit={(values) =>
+            apiRequest("POST", `/finance/settlements/${reversing.id}/reverse`, {
+              date: values.date,
+              description: values.description?.trim() || null,
+            })
+          }
+          onSaved={() => {
+            setReversing(null);
+            void client.invalidateQueries({ queryKey: ["finance"] });
           }}
         />
       )}

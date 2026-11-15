@@ -101,9 +101,28 @@ public class PaymentPlanService {
     this.mapper = mapper;
   }
 
+  /**
+   * Plan listesi süzgeçleri (12.2a §3.9): {@code statuses} boşsa tüm durumlar, {@code accountId}
+   * {@code null} ise tüm cariler, {@code companyId} {@code null} ise konsolide.
+   */
+  public record PlanSearch(List<PlanStatus> statuses, UUID accountId, UUID companyId) {}
+
   @Transactional(readOnly = true)
   public Page<PaymentPlan> list(PlanStatus status, UUID companyId, Pageable pageable) {
-    return plans.search(status, scope.filter(companyId, null), pageable);
+    return list(
+        new PlanSearch(status == null ? List.of() : List.of(status), null, companyId), pageable);
+  }
+
+  /** Cari verilmişse okunabilir olmalı (izinsiz kullanıcıya personel carisi 404). */
+  @Transactional(readOnly = true)
+  public Page<PaymentPlan> list(PlanSearch search, Pageable pageable) {
+    if (search.accountId() != null) {
+      access.readable(search.accountId());
+    }
+    List<PlanStatus> statuses =
+        search.statuses() == null ? List.of() : search.statuses().stream().distinct().toList();
+    return plans.search(
+        statuses, search.accountId(), scope.filter(search.companyId(), null), pageable);
   }
 
   @Transactional(readOnly = true)
