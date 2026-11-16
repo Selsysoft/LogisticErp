@@ -244,6 +244,12 @@ export interface AccountDocument {
   createdAt: string;
   updatedBy: string;
   updatedAt: string;
+  /** 12.8 (§4.3): KUR_FARKI belgesinin kaynak hareketi; diğer belgelerde null. */
+  fxSourceTransactionId: string | null;
+  /** 12.8: kesim kuru (değerleme tarihindeki TCMB döviz alış); diğer belgelerde null. */
+  fxRate: number | null;
+  /** 12.8: kesim kurunun tarihi (`"YYYY-MM-DD"`). */
+  fxRateDate: string | null;
 }
 
 /** Şema `AccountTransactionRowResponse` (çapraz cari hareket satırı). */
@@ -408,8 +414,15 @@ export interface TransferableTransaction {
   }[];
   /** Aynı çeke bağlı satırlar birlikte seçilir. */
   instrumentGroup: string | null;
-  blockedReason: "OPEN_PLAN" | null;
+  /**
+   * Taşıma engeli: açık ödeme planı; 12.8: açık kur farkı belgesinin kaynağı (`FX_DOCUMENT_OPEN`) ya da
+   * KUR_FARKI belgesinin kendisi (`FX_DOCUMENT`, Rev 1 F5).
+   */
+  blockedReason: TransferBlockedReason | null;
 }
+
+/** Cari Taşıma satır engeli (12.8 §5.2). */
+export type TransferBlockedReason = "OPEN_PLAN" | "FX_DOCUMENT_OPEN" | "FX_DOCUMENT";
 
 /** Şema `AccountTransferResponse`. */
 export interface AccountTransfer {
@@ -656,7 +669,8 @@ export interface Instrument {
   direction: "RECEIVED" | "ISSUED";
   number: string;
   bankName: string | null;
-  accountId: string;
+  /** 12.3: `InstrumentListItemResponse` — personel carisi maskeli satırda null (OK-12.3-18). */
+  accountId: string | null;
   endorsedAccountId: string | null;
   branchId: string;
   companyId: string;
@@ -678,6 +692,9 @@ export interface InstrumentMovement {
   fromAccountId: string | null;
   toAccountId: string | null;
   accountTransferId: string | null;
+  /** 12.3 (§4.3): hareketin banka/kasa fonu (tahsil, ödeme, emanet kasası); yoksa null. */
+  fundAccountId?: string | null;
+  fundName?: string | null;
 }
 
 export interface Settlement {
@@ -785,11 +802,19 @@ export interface Threshold {
   high: number;
 }
 
+/** Şema `ExpenseItemResponse` (12.7 §4.3; pasifler dahil listelenir). */
 export interface ExpenseItem {
   id: string;
   expenseTypeId: string;
+  expenseTypeName: string | null;
   code: string;
   name: string;
+  description: string | null;
+  defaultUnit: string | null;
+  active: boolean;
+  /** Sistem kalemi: kodu değişmez, pasifleştirilemez. */
+  system: boolean;
+  createdAt: string;
 }
 
 export interface ExpenseType {
@@ -813,7 +838,17 @@ export interface Aging {
   days31To60: number;
   days61To90: number;
   daysOver90: number;
+  /** 12.8: `notDue` dahil (TRANSACTION tabanında `notDue = 0`, değer değişmez). */
   total: number;
+  /** 12.8 (§4.3, yaşlandırma v2). */
+  accountCode: string;
+  subGroup: string;
+  subGroupName: string;
+  phone: string | null;
+  /** Vadesi gelmemiş ("Güncel") kova; yalnız DUE tabanında dolu. */
+  notDue: number;
+  /** Toplamın değerleme kuruyla TL karşılığı. */
+  tlTotal: number;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1438,6 +1473,21 @@ export type NewInstrumentBody = {
   fundAccountId?: string;
   /** Yalnız tahsilat. */
   initialStatus?: "PORTFOLIO" | "AT_BANK";
+  // 12.3 (12.3_TASARIM §4.1): hepsi isteğe bağlı; boş metin gönderilmez.
+  /** Keşide / düzenlenme tarihi (ISO; ≤ vade). */
+  issueDate?: string;
+  /** ≤ 100. */
+  bankBranch?: string;
+  /** Keşideci adı (tahsilat; ≤ 200). */
+  drawerName?: string;
+  /** ≤ 500. */
+  description?: string;
+  /** Tahsilat `PORTFOLIO`: çekin tutulduğu kasa ("Kasaya Al (Ciro)"). */
+  custodyFundId?: string;
+  /** Ödeme + kendi çekimiz: koçan yaprağı (`fundAccountId` ile aynı banka). */
+  checkLeafId?: string;
+  /** Yalnız NOTE. */
+  noteType?: NoteType;
 };
 
 /** `AllocationRequest` (12.2a §4.1); `amount` ondalık metin ("250.00"; > 0, en çok 4 ondalık). */
@@ -1485,6 +1535,7 @@ export type SettlementLockReason =
   | "INTERCOMPANY"
   | "FX_SOURCE"
   | "VEHICLE_EXPENSE"
+  | "EXPENSE"
   | "TRANSFERRED"
   | "NO_ACCOUNT";
 /** `GET /reports/daily?sort=` (`DailyReportSort`). */
@@ -1640,3 +1691,843 @@ export interface DailyInstrumentMovement {
   count: number;
   total: string;
 }
+
+// ---------------------------------------------------------------------------------------------
+// 12.3 çek / senet / çek koçanı (12.3_TASARIM §4). Tutar `Money.amount` ondalık metin; tarihler ISO.
+// Yeni yanıt tipleri `InstrumentListItemResponse` vb. şemalara ad kuralıyla (TS adı = record − Response)
+// bağlanır; eski `Instrument` (MUI, ciro listesi) bu listenin alt kümesidir.
+// ---------------------------------------------------------------------------------------------
+
+/** `InstrumentStatus` (12 değer; §3.1 geçiş tablosu sunucuda, `allowedTransitions`). */
+export type InstrumentStatus =
+  | "PORTFOLIO"
+  | "AT_BANK"
+  | "COLLECTED"
+  | "COLLECTED_TO_CASH"
+  | "ENDORSED"
+  | "ISSUED"
+  | "PAID"
+  | "BOUNCED"
+  | "PROTESTED"
+  | "RETURNED"
+  | "CANCELLED"
+  | "COLLATERAL";
+export type InstrumentDirection = "RECEIVED" | "ISSUED";
+/** Senet türü: Adi Senet / Emre Muharrer / Bono. */
+export type NoteType = "PLAIN" | "ORDER" | "BOND";
+export type CheckLeafStatus = "UNUSED" | "USED" | "VOID";
+
+/** Şema `InstrumentListItemResponse` (`GET /instruments`; personel carisinde ad alanları null, §3.9). */
+export interface InstrumentListItem {
+  id: string;
+  kind: InstrumentKind;
+  direction: InstrumentDirection;
+  number: string;
+  bankName: string | null;
+  bankBranch: string | null;
+  issueDate: string | null;
+  dueDate: string;
+  money: Money;
+  status: InstrumentStatus;
+  accountId: string | null;
+  accountCode: string | null;
+  accountName: string | null;
+  accountType: AccountType | null;
+  employeeMasked: boolean;
+  endorsedAccountId: string | null;
+  endorsedAccountName: string | null;
+  drawerName: string | null;
+  branchId: string;
+  branchName: string;
+  companyId: string;
+  companyName: string;
+  fundAccountId: string | null;
+  fundName: string | null;
+  fundKind: FundKind | null;
+  fundBankName: string | null;
+  custodyFundId: string | null;
+  custodyFundName: string | null;
+  checkLeafId: string | null;
+  checkBookId: string | null;
+  checkBookSerial: string | null;
+  leafNo: number | null;
+  description: string | null;
+  noteType: NoteType | null;
+  collateral: boolean;
+  settledDate: string | null;
+  originSettlementId: string | null;
+  originSettlementStatus: SettlementStatus | null;
+  movementCount: number;
+  lastMovementDate: string | null;
+  allowedTransitions: InstrumentStatus[];
+}
+
+/** Şema `InstrumentDetailResponse` (`GET /instruments/{id}`; maskeli/yok → 404). */
+export interface InstrumentDetail {
+  item: InstrumentListItem;
+  movements: InstrumentMovement[];
+}
+
+/** Şema `InstrumentNumberCheckResponse` (`GET /instruments/check-number`). */
+export interface InstrumentNumberCheck {
+  /** CHECK'te `^\d{7}$`. */
+  valid: boolean;
+  available: boolean;
+  conflictId: string | null;
+  conflictStatus: InstrumentStatus | null;
+  /** Kapsam dışı ya da maskeli çakışmada null. */
+  conflictAccountName: string | null;
+}
+
+/** Şema `CheckBookResponse` (`GET /check-books`; yaprak sayımlarıyla). */
+export interface CheckBook {
+  id: string;
+  companyId: string;
+  branchId: string;
+  branchName: string;
+  fundAccountId: string;
+  fundName: string;
+  fundBankName: string | null;
+  serialNo: string;
+  bankCode: string | null;
+  branchCode: string | null;
+  startNumber: string;
+  endNumber: string;
+  leafCount: number;
+  unusedCount: number;
+  usedCount: number;
+  voidCount: number;
+  createdAt: string;
+}
+
+/** Şema `CheckBookCreatedResponse` (`POST /check-books`, 201). */
+export interface CheckBookCreated {
+  book: CheckBook;
+  createdCount: number;
+  /** Başka koçanda ya da kullanılmış olduğu için atlanan numaralar. */
+  skippedNumbers: string[];
+}
+
+/** Şema `CheckLeafResponse` (`GET /check-leaves`, `/check-leaves/lookup`). */
+export interface CheckLeaf {
+  id: string;
+  checkBookId: string;
+  checkBookSerial: string;
+  leafNo: number;
+  /** 7 hane, baştaki sıfırlar korunur. */
+  number: string;
+  micrCode: string | null;
+  status: CheckLeafStatus;
+  usedDate: string | null;
+  voidReason: string | null;
+  fundAccountId: string;
+  fundName: string;
+  fundBankName: string | null;
+  fundBankBranchName: string | null;
+  /** Fon IBAN'ı düz (OK-12.2-18). */
+  fundIban: string | null;
+  branchId: string;
+  branchName: string;
+  companyId: string;
+  /** Yaprağı gösteren etkin ya da en son çek. */
+  instrumentId: string | null;
+  instrumentStatus: InstrumentStatus | null;
+}
+
+/** `POST /instruments/{id}/transition` (`InstrumentTransitionRequest`). */
+export type InstrumentTransitionBody = {
+  toStatus: InstrumentStatus;
+  /** COLLECTED / PAID: banka; COLLECTED_TO_CASH: kasa; PORTFOLIO → AT_BANK: banka. */
+  fundAccountId?: string;
+  date: string;
+  /** ≤ 500. */
+  note?: string;
+  exchangeRate?: number;
+  /** AT_BANK → PORTFOLIO: emanet kasası (sunucuda isteğe bağlı, OK-12.3-19). */
+  custodyFundId?: string;
+};
+
+/** `PATCH /instruments/{id}` (`InstrumentUpdateRequest`): yalnız değişen finansal olmayan alanlar. */
+export type InstrumentUpdateBody = {
+  number?: string;
+  bankName?: string;
+  bankBranch?: string;
+  issueDate?: string;
+  dueDate?: string;
+  drawerName?: string;
+  description?: string;
+  noteType?: NoteType;
+};
+
+/** `PUT /instruments/{id}/custody` (`InstrumentCustodyRequest`); `custodyFundId: null` emaneti kaldırır. */
+export type InstrumentCustodyBody = {
+  custodyFundId: string | null;
+  date: string;
+  note?: string;
+};
+
+/** `POST /check-books` (`CheckBookRequest`). */
+export type CheckBookBody = {
+  fundAccountId: string;
+  serialNo: string;
+  startNumber: string;
+  endNumber: string;
+  bankCode?: string;
+  branchCode?: string;
+};
+
+/** `POST /check-leaves/{id}/void` (`CheckLeafVoidRequest`). */
+export type CheckLeafVoidBody = { reason?: string };
+
+// ---------------------------------------------------------------------------------------------
+// 12.7 — Tek masraf modeli (12.7_TASARIM §4.3, §5.2). Ad kuralı: TS adı = record adı − `Response`.
+// Para ve oran alanları ondalık metin (`string`, `zto/decimal.ts`); tarih alanları takvim tarihi
+// `"YYYY-MM-DD"` (asla `new Date(...)` ile ayrıştırılmaz). `CurrencyTotal`/`CurrencyAmount` bu
+// adımda kullanılmaz (Rev 1 F3): `ExpenseCurrencyTotal`.
+// ---------------------------------------------------------------------------------------------
+
+/** Masraf bağlamı (tipli FK + CHECK, OK-12.7-8). */
+export type ExpenseContextType = "GENERAL" | "VEHICLE" | "SHIPMENT" | "WAREHOUSE" | "DRIVER";
+/** Ödeme şekli: Cari, Nakit ya da Banka (OK-12.7-9). */
+export type ExpensePaymentMethod = "ACCOUNT" | "CASH" | "BANK";
+/** Ters çevrilen kayıt `REVERSED` ve silinmiş görünür (OK-12.7-4). */
+export type ExpenseStatus = "POSTED" | "REVERSED";
+/** 10 lojistik departman (OK-12.7-19; DB CHECK). */
+export type ExpenseDepartment =
+  | "OPERATION"
+  | "FLEET"
+  | "WAREHOUSE"
+  | "CUSTOMS"
+  | "ADMIN"
+  | "ACCOUNTING"
+  | "SALES"
+  | "IT"
+  | "HR"
+  | "OTHER";
+
+/** Şema `ExpenseLineResponse`. */
+export interface ExpenseLine {
+  id: string;
+  lineNo: number;
+  description: string | null;
+  quantity: string;
+  unit: string | null;
+  unitPrice: string;
+  subTotal: string;
+  discountRate: string;
+  discountAmount: string;
+  netAmount: string;
+  vatRate: string;
+  vatAmount: string;
+  withholdingAmount: string;
+  otherTaxAmount: string;
+  totalAmount: string;
+}
+
+/** Şema `ExpenseDetailResponse` (`GET /finance/expenses/{id}`, create/reverse/revise yanıtı). */
+export interface ExpenseDetail {
+  id: string;
+  companyId: string;
+  branchId: string;
+  branchName: string;
+  expenseItemId: string;
+  expenseItemName: string | null;
+  expenseTypeName: string | null;
+  contextType: ExpenseContextType;
+  vehicleId: string | null;
+  shipmentId: string | null;
+  warehouseId: string | null;
+  driverId: string | null;
+  contextLabel: string | null;
+  paymentMethod: ExpensePaymentMethod;
+  supplierAccountId: string | null;
+  supplierName: string | null;
+  fundAccountId: string | null;
+  fundName: string | null;
+  /** Nakit/Banka masrafın settlement'ı (`EXPENSE:{id}`). */
+  settlementId: string | null;
+  invoiceNumber: string | null;
+  invoiceDate: string;
+  dueDate: string | null;
+  documentType: string;
+  department: ExpenseDepartment;
+  description: string | null;
+  currency: string;
+  exchangeRate: string | null;
+  subTotal: string;
+  discountAmount: string;
+  netAmount: string;
+  vatAmount: string;
+  withholdingAmount: string;
+  otherTaxAmount: string;
+  totalAmount: string;
+  tlAmount: string;
+  status: ExpenseStatus;
+  replacesExpenseId: string | null;
+  reversedOn: string | null;
+  reverseReason: string | null;
+  lines: ExpenseLine[];
+  createdAt: string;
+  createdBy: string;
+}
+
+/** Şema `ExpenseListItemResponse` (`GET /finance/expenses`, sayfalı). */
+export interface ExpenseListItem {
+  id: string;
+  invoiceNumber: string | null;
+  description: string | null;
+  expenseItemId: string;
+  expenseItemName: string | null;
+  expenseTypeName: string | null;
+  department: ExpenseDepartment;
+  companyId: string;
+  branchId: string;
+  branchName: string;
+  contextType: ExpenseContextType;
+  contextLabel: string | null;
+  paymentMethod: ExpensePaymentMethod;
+  supplierName: string | null;
+  currency: string;
+  totalAmount: string;
+  tlAmount: string;
+  invoiceDate: string;
+  dueDate: string | null;
+  documentType: string;
+  hasDocument: boolean;
+  createdAt: string;
+}
+
+/** Şema `ExpenseCurrencyTotalResponse` (para birimi kırılımı; ₺ ile toplanmaz). */
+export interface ExpenseCurrencyTotal {
+  currency: string;
+  count: number;
+  totalAmount: string;
+}
+
+/** Şema `ExpenseItemSummaryResponse` (`GET /finance/expenses/summary`; PEL satırı, OK-12.7-12). */
+export interface ExpenseItemSummary {
+  expenseItemId: string;
+  expenseItemName: string;
+  expenseItemCode: string;
+  expenseTypeName: string | null;
+  lastSupplierAccountId: string | null;
+  lastSupplierName: string | null;
+  /** Yalnız maskeli VKN/TCKN (KVKK). */
+  lastSupplierTaxNumberMasked: string | null;
+  lastSupplierPhone: string | null;
+  lastSupplierCity: string | null;
+  branchNames: string[];
+  invoiceCount: number;
+  totals: ExpenseCurrencyTotal[];
+  lastInvoiceDate: string | null;
+}
+
+/** Şema `ExpenseCalendarEntryResponse`. */
+export interface ExpenseCalendarEntry {
+  id: string;
+  expenseItemId: string;
+  expenseItemName: string | null;
+  expenseTypeName: string | null;
+  invoiceNumber: string | null;
+  contextType: ExpenseContextType;
+  contextLabel: string | null;
+  supplierName: string | null;
+  department: ExpenseDepartment;
+  invoiceDate: string;
+  currency: string;
+  totalAmount: string;
+}
+
+/** Şema `ExpenseCalendarDayResponse`. */
+export interface ExpenseCalendarDay {
+  date: string;
+  expenses: ExpenseCalendarEntry[];
+}
+
+/** Şema `ExpenseAllTimeResponse` (takvim "Tüm Zamanlar" kartları). */
+export interface ExpenseAllTime {
+  currency: string;
+  count: number;
+  netAmount: string;
+  vatAmount: string;
+  discountAmount: string;
+  totalAmount: string;
+}
+
+/** Şema `ExpenseCalendarResponse` (`GET /finance/expenses/calendar?year&month`). */
+export interface ExpenseCalendar {
+  year: number;
+  month: number;
+  days: ExpenseCalendarDay[];
+  allTime: ExpenseAllTime[];
+}
+
+/** Şema `ExpenseMonthlyResponse` (`month` = `"YYYY-MM"`; değer ₺ karşılığı). */
+export interface ExpenseMonthly {
+  month: string;
+  expenseTypeId: string | null;
+  expenseTypeName: string | null;
+  tlAmount: string;
+}
+
+/** Şema `ExpenseContextOptionResponse` (araç/sefer/depo/sürücü arama; en çok 20). */
+export interface ExpenseContextOption {
+  id: string;
+  label: string;
+  branchId: string | null;
+}
+
+/** `POST|PUT /finance/expense-items` (`SaveExpenseItemRequest`; `code` boşsa `MK-00001` dizisi). */
+export type SaveExpenseItemRequest = {
+  expenseTypeId: string;
+  code?: string | null;
+  name: string;
+  description?: string | null;
+  defaultUnit?: string | null;
+};
+
+/** `PUT /finance/expense-items/{id}/active` (`ExpenseItemActiveRequest`). */
+export type ExpenseItemActiveRequest = { active: boolean };
+
+/** Masraf satırı (`SaveExpenseLineRequest`); null oran/tutar 0 sayılır. */
+export type SaveExpenseLineRequest = {
+  description?: string | null;
+  quantity: string;
+  unit?: string | null;
+  unitPrice: string;
+  discountRate?: string | null;
+  vatRate: string;
+  withholdingAmount?: string | null;
+  otherTaxAmount?: string | null;
+};
+
+/**
+ * `POST /finance/expenses` (`SaveExpenseRequest`). Bağlama göre yalnız ilgili kimlik dolu
+ * (GENERAL'de hiçbiri); ACCOUNT'ta `supplierAccountId`, CASH/BANK'ta `fundAccountId` zorunlu.
+ */
+export type SaveExpenseRequest = {
+  branchId: string;
+  expenseItemId: string;
+  contextType: ExpenseContextType;
+  vehicleId?: string | null;
+  shipmentId?: string | null;
+  warehouseId?: string | null;
+  driverId?: string | null;
+  paymentMethod: ExpensePaymentMethod;
+  supplierAccountId?: string | null;
+  fundAccountId?: string | null;
+  invoiceNumber?: string | null;
+  invoiceDate: string;
+  dueDate?: string | null;
+  documentType: string;
+  department: ExpenseDepartment;
+  description?: string | null;
+  currency: string;
+  /** TRY dışında isteğe bağlı; boşsa sunucu kuru (OK-12.7-21). */
+  exchangeRate?: string | null;
+  lines: SaveExpenseLineRequest[];
+};
+
+/** `POST /finance/expenses/{id}/reverse` (`ReverseExpenseRequest`). */
+export type ReverseExpenseRequest = { date: string; reason: string };
+
+/** `POST /finance/expenses/{id}/revise` (`ReviseExpenseRequest`; ters kayıt + yeni kayıt). */
+export type ReviseExpenseRequest = {
+  expense: SaveExpenseRequest;
+  reason: string;
+  /** true: eski kaydın belgesi yeni kayda taşınmaz. */
+  removeDocument: boolean;
+};
+
+// ---------------------------------------------------------------------------------------------
+// 12.8 — Finans raporları, kur farkı, nakit akışı, hazine (12.8_TASARIM §4.3, §5.2). Ad kuralı: TS
+// adı = record adı − `Response` (`FinanceReportDtos`; şema adları benzersiz). Para ve oran alanları
+// ondalık metin (`string`, `zto/decimal.ts`); istisna mevcut `Aging` ve `PositionRow` (sayı). Tarih
+// alanları takvim tarihi `"YYYY-MM-DD"` (asla `new Date(...)` ile ayrıştırılmaz); `generatedAt` Instant.
+// ---------------------------------------------------------------------------------------------
+
+/** FinanceReport rapor türü (ZTO `FrTypes`; `PERSONNEL` FINANCE_EMPLOYEE_VIEW ister). */
+export type ReportType = "SALES" | "SUPPLIERS" | "MATERIAL" | "LABOR" | "OTHER" | "PERSONNEL";
+/** Yaşlandırma tabanı: işlem tarihi ya da kaynak belgenin vadesi. */
+export type AgingBasis = "TRANSACTION" | "DUE";
+/** Kur farkı raporu kesim süzgeci. */
+export type FxCutState = "ALL" | "OPEN" | "CUT";
+/** Kur farkının etkisi (TL karşılığı arttı/azaldı/değişmedi). */
+export type FxEffect = "GAIN" | "LOSS" | "NONE";
+/** Kesimi engelleyen değerleme durumu (Rev 1 F4/F7); doluysa kur alanları null, "Kes" pasif. */
+export type FxValuationBlock = "AFTER_VALUATION" | "SETTLED";
+/** Cari yanı: alacaklarımız / borçlarımız. */
+export type LedgerSide = "RECEIVABLE" | "PAYABLE";
+
+/** Şema `LedgerSummaryResponse` (`GET /finance/reports/ledger-summary`; genel bakış `to` kapanışı). */
+export interface LedgerSummary {
+  from: string | null;
+  to: string;
+  rows: LedgerSummaryRow[];
+  /** PERSONNEL satırı izinsiz kullanıcıda yok (OK-12.8-18). */
+  personnelHidden: boolean;
+}
+
+/** Şema `LedgerSummaryRowResponse`; `reportType` null = Rapor dışı. */
+export interface LedgerSummaryRow {
+  reportType: ReportType | null;
+  currency: string;
+  weOwe: string;
+  theyOwe: string;
+  net: string;
+  openAccounts: number;
+}
+
+/** Şema `LedgerAccountsResponse` (`GET /finance/reports/ledger-accounts`). */
+export interface LedgerAccounts {
+  reportType: string;
+  side: LedgerSide;
+  from: string | null;
+  to: string;
+  postPeriodCount: number;
+  rows: LedgerAccountRow[];
+}
+
+/** Şema `LedgerAccountRowResponse`; satır anahtarı cari × şirket × para birimi (Rev 1 F3). */
+export interface LedgerAccountRow {
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  accountType: string;
+  subGroup: string;
+  subGroupName: string;
+  active: boolean;
+  companyId: string;
+  companyName: string;
+  currency: string;
+  opening: string;
+  debt: string;
+  payment: string;
+  receivable: string;
+  penalty: string;
+  collection: string;
+  closing: string;
+  lastSettlementDate: string | null;
+  lastSettlementAmount: string | null;
+  lastMovementDate: string | null;
+}
+
+/** Şema `AccountMethodTotalResponse` (cari ekstre ödeme/tahsilat yöntem kırılımı). */
+export interface AccountMethodTotal {
+  type: "PAYMENT" | "COLLECTION";
+  method: "CASH" | "BANK" | "CHECK" | "NOTE" | "CREDIT_CARD";
+  currency: string;
+  amount: string;
+}
+
+/** Şema `ReportRateResponse` (rapor değerleme kuru; TCMB döviz alış, OK-12.8-4). */
+export interface ReportRate {
+  currency: string;
+  rate: string;
+  rateDate: string;
+}
+
+/** Şema `ReportCurrencyAmountResponse` (işaretli; Blackrose: + cari bize borçlu). */
+export interface ReportCurrencyAmount {
+  currency: string;
+  amount: string;
+}
+
+/** Şema `BalanceSheetResponse` (`GET /finance/reports/balance-sheet`). */
+export interface BalanceSheet {
+  asOf: string;
+  rateDate: string | null;
+  rates: ReportRate[];
+  missingRates: string[];
+  /** Şirket düzeyi brüt toplamlar (Rev 1 F2). */
+  assetsTl: string;
+  liabilitiesTl: string;
+  netTl: string;
+  workplaceCount: number;
+  companies: BalanceSheetCompany[];
+  workplaces: BalanceSheetWorkplace[];
+  intercompany: BalanceSheetIntercompany[];
+  /** Kredi/mevduat (12.5/12.6) atlandı: ilgili kartlar çizilmez. */
+  creditDepositPending: boolean;
+}
+
+/** Şema `BalanceSheetCompanyResponse` (şirket özeti; Rev 1 F2). */
+export interface BalanceSheetCompany {
+  companyId: string;
+  companyName: string;
+  assetsTl: string;
+  liabilitiesTl: string;
+  netTl: string;
+}
+
+/** Şema `BalanceSheetWorkplaceResponse` (iş yeri kartı = iş yeri görünümü, OK-12.8-24). */
+export interface BalanceSheetWorkplace {
+  branchId: string;
+  branchName: string;
+  branchGroupName: string | null;
+  companyId: string;
+  companyName: string;
+  assetsTl: string;
+  liabilitiesTl: string;
+  netTl: string;
+  currencyCount: number;
+  accountCount: number;
+  currencies: BalanceSheetCurrency[];
+  accounts: BalanceSheetAccount[];
+}
+
+/** Şema `BalanceSheetCurrencyResponse` (iş yeri × para birimi). */
+export interface BalanceSheetCurrency {
+  currency: string;
+  debt: string;
+  payment: string;
+  receivable: string;
+  collection: string;
+  bank: string;
+  cash: string;
+  receivedChecks: string;
+  receivedNotes: string;
+  issuedChecks: string;
+  issuedNotes: string;
+  receivedCheckCount: number;
+  receivedNoteCount: number;
+  issuedCheckCount: number;
+  issuedNoteCount: number;
+  accountReceivable: string;
+  accountPayable: string;
+  /** Eksi bakiyeli fon hesapları (KMH) yükümlülüğü (Rev 1 F6). */
+  bankOverdraft: string;
+  /** Kaynağı açık KUR_FARKI düzeltmesi (Rev 1 F1; TRY dışında 0). */
+  fxAdjustment: string;
+  net: string;
+  assets: string;
+  liabilities: string;
+  /** Kur yoksa null (`missingRates`). */
+  tlAssets: string | null;
+  tlLiabilities: string | null;
+}
+
+/** Şema `BalanceSheetAccountResponse` (iş yeri cari listesi; personel satırı `masked`). */
+export interface BalanceSheetAccount {
+  accountId: string | null;
+  accountCode: string | null;
+  accountName: string | null;
+  subGroupName: string;
+  masked: boolean;
+  balances: ReportCurrencyAmount[];
+}
+
+/** Şema `BalanceSheetIntercompanyResponse` (grup şirketi carisi; OK-12.8-11). */
+export interface BalanceSheetIntercompany {
+  accountId: string;
+  accountName: string;
+  representsCompanyId: string;
+  companyId: string;
+  balances: ReportCurrencyAmount[];
+}
+
+/** Şema `TreasuryResponse` (`GET /finance/reports/treasury`; Hızlı Bakiye Özeti). */
+export interface Treasury {
+  generatedAt: string;
+  rateDate: string | null;
+  rates: ReportRate[];
+  missingRates: string[];
+  banks: TreasuryFund[];
+  cashes: TreasuryFund[];
+  pendingChecks: TreasuryInstrument[];
+  pendingBills: TreasuryInstrument[];
+  byCurrency: TreasuryCurrency[];
+  bankTl: string;
+  cashTl: string;
+  checkTl: string;
+  noteTl: string;
+  netTl: string;
+  bankDaily: TreasuryDaily[];
+  cashDaily: TreasuryDaily[];
+  dueBuckets: TreasuryDueBucket[];
+  creditDepositPending: boolean;
+}
+
+/** Şema `TreasuryFundResponse` (banka/kasa hesabı satırı). */
+export interface TreasuryFund {
+  fundAccountId: string;
+  kind: FundKind;
+  branchId: string;
+  branchName: string;
+  branchGroupName: string | null;
+  code: string;
+  name: string;
+  bankName: string | null;
+  bankBranchName: string | null;
+  accountNoMasked: string | null;
+  iban: string | null;
+  currency: string;
+  balance: string;
+  in30: string;
+  out30: string;
+  checkCount: number;
+  noteCount: number;
+  active: boolean;
+}
+
+/** Şema `TreasuryInstrumentResponse` (bekleyen çek/senet; `masked` iken `drawerName` null). */
+export interface TreasuryInstrument {
+  instrumentId: string;
+  kind: InstrumentKind;
+  direction: InstrumentDirection;
+  number: string;
+  bankName: string | null;
+  bankBranch: string | null;
+  accountName: string | null;
+  masked: boolean;
+  drawerName: string | null;
+  noteType: string | null;
+  amount: string;
+  currency: string;
+  dueDate: string;
+  daysLeft: number;
+  status: InstrumentStatus;
+}
+
+/** Şema `TreasuryCurrencyResponse` (para birimi kartı). */
+export interface TreasuryCurrency {
+  currency: string;
+  bank: string;
+  cash: string;
+  receivedChecks: string;
+  issuedChecks: string;
+  receivedNotes: string;
+  issuedNotes: string;
+  net: string;
+}
+
+/** Şema `TreasuryDailyResponse` (son 30 gün giriş/çıkış TL). */
+export interface TreasuryDaily {
+  date: string;
+  inTl: string;
+  outTl: string;
+}
+
+/** Şema `TreasuryDueBucketResponse` (`month` = `"YYYY-MM"`). */
+export interface TreasuryDueBucket {
+  month: string;
+  checksTl: string;
+  notesTl: string;
+}
+
+/** Şema `CashFlowResponse` (`GET /finance/reports/cash-flow`; `currency` null = TL karşılığı). */
+export interface CashFlow {
+  today: string;
+  weeks: number;
+  currency: string | null;
+  rateDate: string | null;
+  missingRates: string[];
+  rows: CashFlowWeek[];
+  /** Sabit true: ödeme planları (12.4) projeksiyona dahil değil. */
+  planExcluded: boolean;
+}
+
+/** Şema `CashFlowWeekResponse` (`payableDue` yalnız API'de, OK-12.8-9). */
+export interface CashFlowWeek {
+  index: number;
+  weekStart: string;
+  weekEnd: string;
+  receivableDue: string;
+  receivedChecks: string;
+  issuedChecks: string;
+  notesInfo: string;
+  payableDue: string;
+  net: string;
+  cumulative: string;
+}
+
+/** Şema `AccountPerformanceRowResponse` (cari bazlı ödeme performansı; OK-12.8-20). */
+export interface AccountPerformanceRow {
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  subGroupName: string;
+  currency: string;
+  paymentCount: number;
+  collectionCount: number;
+  paymentAmount: string;
+  collectionAmount: string;
+  avgDelayDays: string | null;
+  lateCount: number;
+  onTimeCount: number;
+  unmatchedCount: number;
+  score: number | null;
+}
+
+/** Şema `CurrencyPositionRowResponse` (`byCompany` iken `companyId` dolu). */
+export interface CurrencyPositionRow {
+  currency: string;
+  companyId: string | null;
+  cash: string;
+  receivable: string;
+  payable: string;
+  net: string;
+}
+
+/** Şema `FxDifferenceReportResponse` (`GET /finance/reports/fx-differences`; OK-12.8-22). */
+export interface FxDifferenceReport {
+  valuationDate: string;
+  withRates: boolean;
+  missingRates: string[];
+  rows: FxDifferenceRow[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+/** Şema `FxDifferenceRowResponse` (kur farkı adayı; `valuationBlock` doluysa kur alanları null). */
+export interface FxDifferenceRow {
+  transactionId: string;
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  accountActive: boolean;
+  companyId: string;
+  branchId: string;
+  direction: "DEBIT" | "CREDIT";
+  transactionDate: string;
+  sourceType: string;
+  documentNo: string | null;
+  /** ACCOUNT_DOCUMENT türünde belge türü adı; diğerinde null (ön yüz `sourceType` etiketini kullanır). */
+  documentTypeName: string | null;
+  amount: string;
+  currency: string;
+  transactionRate: string;
+  tlAmount: string;
+  currentRate: string | null;
+  currentRateDate: string | null;
+  currentTl: string | null;
+  difference: string | null;
+  effect: FxEffect | null;
+  /** Değerleme tarihinde FIFO açık kalan (kaynak para biriminde; Rev 1 F4). */
+  openRemaining: string;
+  closedOn: string | null;
+  valuationBlock: FxValuationBlock | null;
+  cut: FxDifferenceCut | null;
+}
+
+/** Şema `FxDifferenceCutResponse` (kaynağın açık kur farkı belgesi). */
+export interface FxDifferenceCut {
+  documentId: string;
+  documentNo: string;
+  side: LedgerSide;
+  amount: string;
+  documentDate: string;
+}
+
+/** `POST /finance/fx-differences` gövdesi (`FxDifferenceRequest`; yanıt 201 `AccountDocument`). */
+export type FxDifferenceRequest = {
+  sourceTransactionId: string;
+  /** `"YYYY-MM-DD"`; kur sunucuda bu tarihten okunur (OK-12.8-5). */
+  valuationDate: string;
+  /** İşaretli ondalık metin; sunucu hesabından farklıysa 409. */
+  expectedDifference: string;
+  /** En çok 500 karakter. */
+  description?: string | null;
+};

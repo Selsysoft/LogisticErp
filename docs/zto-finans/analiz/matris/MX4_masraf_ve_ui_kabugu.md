@@ -1,5 +1,7 @@
 # MX-4 — Masraf ekranları (ExpenseItems / ProductionExpenses / Investments) + ortak UI kabuğu ve CSS stratejisi
 
+> **12.7 uygulandı (2026-11-16); uygulama belgesi [`docs/zto-finans/uygulama/12.7_TASARIM.md`](../../uygulama/12.7_TASARIM.md)** (bu matrisin §A.4–§A.5 masraf modelini düzeltir: kalem = cari deseni çıktı, borç tedarikçi carisine; tipli bağlam FK'ları, ayna kayıt yok). Çelişkide uygulama belgesi geçerlidir.
+
 Kökler: ZTO = `f:\visual studio zto\ZtoFabrika2026\ZtoFabrika` · BR = `F:\visual studio zto\LogisticErp`
 Salt okunur analiz. Gizli değer yazılmadı. Bulunamayanlar `⚠ BULUNAMADI` ile işaretli.
 Mevcut envanterle (01_FINANS_ENVANTER, D, E) **çelişen** yeni bulgular `🆕` ile işaretli.

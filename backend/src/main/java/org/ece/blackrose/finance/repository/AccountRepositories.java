@@ -110,6 +110,14 @@ public final class AccountRepositories {
     /** Bu belgenin revizesi (bir belge en çok bir kez revize edilir). */
     Optional<AccountDocument> findFirstByRevisedFromId(UUID revisedFromId);
 
+    /** Kaynak harekete bağlı bu durumda kur farkı belgesi var mı (12.8; açık belge tekildir). */
+    boolean existsByFxSourceTransactionIdAndStatusAndDeletedFalse(
+        UUID txId, AccountDocumentStatus status);
+
+    /** Kaynak harekete bağlı bu durumdaki kur farkı belgesi (12.8; V28 fx_source_uq). */
+    Optional<AccountDocument> findFirstByFxSourceTransactionIdAndStatusAndDeletedFalse(
+        UUID txId, AccountDocumentStatus status);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select d from AccountDocument d where d.id = :id")
     Optional<AccountDocument> findForUpdate(@Param("id") UUID id);

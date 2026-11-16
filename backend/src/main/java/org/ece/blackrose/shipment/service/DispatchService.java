@@ -234,6 +234,9 @@ public class DispatchService implements ResourceBusyProvider {
     }
     removeCarrierCost(leg.getId());
     leg.assignCarrier(request.carrierAccountId());
+    if (request.transportMode() != null) {
+      leg.changeTransportMode(request.transportMode());
+    }
     var conversion =
         rates.convert(request.carrierCost(), clock.dateOf(leg.getPlannedStart()), null);
     costs.save(
@@ -296,12 +299,21 @@ public class DispatchService implements ResourceBusyProvider {
         .orElse(row);
   }
 
-  /** Taşeron değişirse veya etap öz filoya alınırsa eski maliyet kalmamalıdır. */
+  /**
+   * Taşeron değişirse veya etap öz filoya alınırsa eski maliyet kalmamalıdır. Cariye işlenmiş
+   * (POSTED) taşeron gideri varken etap yeniden atanamaz ve silinemez: önce ters kaydı yapılır
+   * (12.7 §3.3.3, OK-12.7-6). Yazılmamış (OPEN) satırlar silinir.
+   */
   private void removeCarrierCost(UUID legId) {
-    costs
-        .findByLegIdAndKind(legId, CostKind.SUBCONTRACTOR)
-        .filter(cost -> cost.getPostedAt() == null)
-        .ifPresent(TripCost::markDeleted);
+    List<TripCost> existing =
+        costs.findByLegIdAndKindOrderByCreatedAt(legId, CostKind.SUBCONTRACTOR);
+    if (existing.stream().anyMatch(cost -> cost.isPosted() || cost.getPostedAt() != null)) {
+      throw new BusinessException(
+          HttpStatus.CONFLICT,
+          "COST_POSTED",
+          "Cariye işlenmiş taşeron gideri var; önce ters kaydını yapın.");
+    }
+    existing.forEach(TripCost::markDeleted);
     costs.flush();
   }
 

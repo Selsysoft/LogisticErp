@@ -1,0 +1,508 @@
+/*
+ * Kaynak: ZtoFabrika/Views/FinancialBalanceSheet/Index.cshtml <style> :28-463 (12.8_TASARIM §5.3).
+ * Birebir kopya (FE-0); kurallar .zto-finans.zto-page-financial-balance-sheet altına alınır
+ * (prefixTransform.ts). Değişiklikler: Razor kaçışı @@ → @. Stok ve iş yerleri arası ticari borç
+ * kartı/modal kuralları kopyalanır ama kullanılmaz (MX1 §2.8 ÇIKAR). Dosya sonunda alt şerit eki.
+ */
+/* --- Views/FinancialBalanceSheet/Index.cshtml :28-463 --- */
+/* ============================================================ */
+/* ✅ MODERN ERP - FİNANSAL BİLANÇO SAYFASI                       */
+/* ============================================================ */
+.fbs-page-header {
+  margin-bottom: 8px;
+}
+.fbs-page-header h5 {
+  margin: 0 0 2px 0;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 700;
+}
+.fbs-page-header .page-subtitle {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 400;
+  margin: 0;
+}
+.fbs-page-header hr {
+  margin: 12px 0 16px 0;
+  border: 0;
+  border-top: 1px solid #e9edf3;
+}
+
+/* Grand Summary Banner */
+.fbs-grand-summary {
+  background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
+  color: #fff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 14px rgba(29, 78, 216, 0.18);
+}
+.fbs-grand-summary .gs-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.9;
+  margin-bottom: 4px;
+}
+.fbs-grand-summary .gs-value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.fbs-grand-summary .gs-subtitle {
+  font-size: 11px;
+  opacity: 0.85;
+  margin-top: 4px;
+}
+.fbs-grand-summary .gs-divider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  height: 56px;
+}
+
+/* Workplace Card — accordion stili */
+.fbs-wp-card {
+  background: #fff;
+  border: 1px solid #e9edf3;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+.fbs-wp-header {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-bottom: 1px solid #e9edf3;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  user-select: none;
+}
+.fbs-wp-header:hover {
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+}
+.fbs-wp-header .accordion-chevron {
+  color: #64748b;
+  font-size: 14px;
+  transition: transform 0.25s ease;
+  margin-right: 4px;
+}
+.fbs-wp-card.is-open .accordion-chevron {
+  transform: rotate(90deg);
+}
+.fbs-wp-collapse {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.fbs-wp-card.is-open .fbs-wp-collapse {
+  max-height: 5000px; /* large enough for content */
+}
+/* Card body scrollable */
+.fbs-wp-card.is-open .fbs-wp-body-scroll {
+  max-height: 72vh;
+  overflow-y: auto;
+}
+/* Mini-summary in header — workplace özet (kapalıyken görünür) */
+.fbs-wp-header .wp-mini-totals {
+  display: inline-flex;
+  gap: 10px;
+  font-size: 11px;
+  color: #475569;
+  margin-left: 12px;
+}
+.fbs-wp-header .wp-mini-totals .mini-stat {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-weight: 600;
+}
+.fbs-wp-header .wp-mini-totals .mini-assets {
+  color: #059669;
+}
+.fbs-wp-header .wp-mini-totals .mini-debt {
+  color: #dc2626;
+}
+.fbs-wp-header .wp-mini-totals .mini-stock {
+  color: #d97706;
+}
+.fbs-wp-header .wp-mini-totals .mini-networth {
+  color: #1d4ed8;
+}
+.fbs-wp-header .wp-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.fbs-wp-header .wp-branch {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+}
+.fbs-wp-header .wp-stats-mini {
+  display: inline-flex;
+  gap: 6px;
+  font-size: 10px;
+}
+.fbs-wp-header .wp-stats-mini .stat-chip {
+  background: #fff;
+  border: 1px solid #e9edf3;
+  color: #475569;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.fbs-wp-body {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 12px;
+  padding: 14px;
+  background: #fafbfc;
+}
+@media (max-width: 992px) {
+  .fbs-wp-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Currency Block — sol panel */
+.fbs-currency-block {
+  background: #fff;
+  border: 1px solid #e9edf3;
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.fbs-currency-block .cb-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed #e9edf3;
+}
+.fbs-currency-block .cb-header .cb-symbol {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-weight: 700;
+  font-size: 13px;
+  min-width: 30px;
+  text-align: center;
+}
+.fbs-currency-block .cb-header .cb-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.fbs-currency-block .cb-net-badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.fbs-currency-block .cb-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.fbs-currency-block .stat-cell {
+  background: #f8fafc;
+  border-left: 3px solid #cbd5e1;
+  padding: 5px 8px;
+  border-radius: 4px;
+}
+.fbs-currency-block .stat-cell.debt {
+  background: #fef2f2;
+  border-left-color: #dc2626;
+}
+.fbs-currency-block .stat-cell.payment {
+  background: #f0fdf4;
+  border-left-color: #059669;
+}
+.fbs-currency-block .stat-cell.credit {
+  background: #eff6ff;
+  border-left-color: #2563eb;
+}
+.fbs-currency-block .stat-cell.collect {
+  background: #fef3c7;
+  border-left-color: #d97706;
+}
+.stat-cell .stat-label {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 1px;
+}
+.stat-cell .stat-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Liquidity row: Banka, Kasa, Çekler */
+.fbs-currency-block .liquidity-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  margin-bottom: 6px;
+}
+.fbs-currency-block .liq-cell {
+  background: #fff;
+  border: 1px solid #e9edf3;
+  border-radius: 5px;
+  padding: 6px 8px;
+  text-align: center;
+}
+.liq-cell.bank {
+  border-top: 2px solid #06b6d4;
+}
+.liq-cell.cash {
+  border-top: 2px solid #84cc16;
+}
+.liq-cell.cek-in {
+  border-top: 2px solid #10b981;
+}
+.liq-cell.cek-out {
+  border-top: 2px solid #ef4444;
+}
+.liq-cell .liq-label {
+  font-size: 9px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.liq-cell .liq-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+.liq-cell .liq-count {
+  font-size: 9px;
+  color: #94a3b8;
+}
+
+/* Net Bakiye summary */
+.fbs-currency-block .cb-net-summary {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 6px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+.fbs-currency-block .cb-net-summary strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+/* Right Side Panels */
+.fbs-right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fbs-side-card {
+  background: #fff;
+  border: 1px solid #e9edf3;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.fbs-side-card .sc-header {
+  background: #f8fafc;
+  border-bottom: 1px solid #e9edf3;
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.fbs-side-card .sc-header h6 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.fbs-side-card .sc-body {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+/* Cari list inside right panel */
+.fbs-cari-search {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 5px 10px 5px 28px;
+  font-size: 11px;
+  margin: 6px;
+  width: calc(100% - 12px);
+  background: #fff
+    url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='%2394a3b8' d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0'/%3e%3c/svg%3e")
+    no-repeat 8px center;
+  background-size: 12px;
+}
+.fbs-cari-search:focus {
+  outline: none;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+.fbs-cari-item {
+  padding: 7px 9px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  transition: background 0.15s;
+  cursor: pointer;
+}
+.fbs-cari-item:hover {
+  background: #f8fafc;
+}
+.fbs-cari-item:last-child {
+  border-bottom: none;
+}
+.fbs-cari-name {
+  color: #1e293b;
+  font-weight: 600;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fbs-cari-group {
+  font-size: 9px;
+  color: #94a3b8;
+  font-weight: 400;
+}
+.fbs-cari-balance {
+  font-weight: 700;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.fbs-cari-balance.borcli {
+  color: #dc2626;
+}
+.fbs-cari-balance.alacakli {
+  color: #059669;
+}
+.fbs-cari-balance.denge {
+  color: #64748b;
+}
+
+/* Inter-workplace */
+.fbs-iwp-item {
+  padding: 6px 9px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+.fbs-iwp-item:last-child {
+  border-bottom: none;
+}
+.fbs-iwp-arrow {
+  margin: 0 4px;
+  opacity: 0.7;
+  font-size: 9px;
+}
+
+/* Footer: TRY conversion */
+.fbs-wp-footer {
+  background: linear-gradient(135deg, #f8fafc, #eef2ff);
+  border-top: 1px solid #e9edf3;
+  padding: 10px 14px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* 4 sütun: Varlık | Stok | Borç | Net */
+  gap: 10px;
+  font-size: 11px;
+}
+@media (max-width: 1024px) {
+  .fbs-wp-footer {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .fbs-wp-footer {
+    grid-template-columns: 1fr;
+  }
+}
+.fbs-wp-footer .footer-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 6px;
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid #e9edf3;
+}
+.fbs-wp-footer .footer-stat .stat-label {
+  font-size: 9px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.fbs-wp-footer .footer-stat .stat-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.fbs-wp-footer .footer-stat.assets .stat-value {
+  color: #059669;
+}
+.fbs-wp-footer .footer-stat.liabilities .stat-value {
+  color: #dc2626;
+}
+.fbs-wp-footer .footer-stat.networth .stat-value {
+  color: #1d4ed8;
+}
+
+.fbs-tcmb-info {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 6px;
+  text-align: center;
+}
+
+.fbs-empty {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+/* --- Blackrose eki (12.8 §5.3): stok kartı alınmadığı için iş yeri kartı alt şeridi 4 değil 3 sütun
+   (Varlık | Borç | Net); ZTO'nun 1024 px ve 600 px altı kuralları aynen geçerli. --- */
+@media (min-width: 1025px) {
+  .fbs-wp-footer {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

@@ -16,6 +16,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.ece.blackrose.common.error.BusinessException;
+import org.ece.blackrose.finance.repository.ExpenseRepositories.ExpenseRepository;
 import org.ece.blackrose.fleet.domain.ComplianceDocument;
 import org.ece.blackrose.fleet.domain.Driver;
 import org.ece.blackrose.fleet.domain.FleetTypes;
@@ -40,6 +41,7 @@ import org.ece.blackrose.fleet.web.FleetDtos.FuelConsumptionResponse;
 import org.ece.blackrose.fleet.web.FleetDtos.FuelConsumptionRow;
 import org.ece.blackrose.fleet.web.FleetDtos.ReminderResponse;
 import org.ece.blackrose.fleet.web.FleetDtos.VehicleCostRow;
+import org.ece.blackrose.organization.BranchFilter;
 import org.ece.blackrose.organization.BranchScopeService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
@@ -67,6 +69,7 @@ public class FleetInsightService {
   private final FleetSettingsRepository settings;
   private final List<ResourceBusyProvider> busyProviders;
   private final BranchScopeService scope;
+  private final ExpenseRepository generalExpenses;
 
   public FleetInsightService(
       VehicleRepository vehicles,
@@ -76,7 +79,9 @@ public class FleetInsightService {
       VehicleExpenseRepository expenses,
       FleetSettingsRepository settings,
       @Lazy List<ResourceBusyProvider> busyProviders,
-      BranchScopeService scope) {
+      BranchScopeService scope,
+      ExpenseRepository generalExpenses) {
+    this.generalExpenses = generalExpenses;
     this.busyProviders = busyProviders;
     this.scope = scope;
     this.vehicles = vehicles;
@@ -413,22 +418,42 @@ public class FleetInsightService {
         expenses.findByExpenseDateBetween(from, to).stream()
             .filter(expense -> allowed == null || allowed.contains(expense.getBranchId()))
             .collect(Collectors.groupingBy(VehicleExpense::getVehicleId));
+    // 12.8 OK-12.8-12: araç bağlamlı kayıtlı masraf (KDV hariç net TL) "Genel masraf" olarak.
+    Map<UUID, BigDecimal> general = new HashMap<>();
+    for (Object[] row :
+        generalExpenses.netTlByVehicle(
+            from,
+            to,
+            allowed == null,
+            allowed == null || allowed.isEmpty() ? List.of(BranchFilter.NONE) : allowed)) {
+      UUID vehicleId = row[0] instanceof UUID id ? id : UUID.fromString(row[0].toString());
+      general.merge(
+          vehicleId,
+          row[1] instanceof BigDecimal d ? d : new BigDecimal(row[1].toString()),
+          BigDecimal::add);
+    }
     Map<UUID, Vehicle> vehicleById = byId(vehicles.findAll(), Vehicle::getId);
+    Set<UUID> vehicleIds = new HashSet<>(byVehicle.keySet());
+    vehicleIds.addAll(general.keySet());
     List<VehicleCostRow> rows = new ArrayList<>();
-    byVehicle.forEach(
-        (vehicleId, list) -> {
-          Vehicle vehicle = vehicleById.get(vehicleId);
-          if (vehicle != null) {
-            rows.add(costRow(vehicle, list));
-          }
-        });
+    for (UUID vehicleId : vehicleIds) {
+      Vehicle vehicle = vehicleById.get(vehicleId);
+      if (vehicle != null) {
+        rows.add(
+            costRow(
+                vehicle,
+                byVehicle.getOrDefault(vehicleId, List.of()),
+                general.getOrDefault(vehicleId, BigDecimal.ZERO)));
+      }
+    }
     rows.sort(Comparator.comparing(VehicleCostRow::plate));
     return rows;
   }
 
-  private static VehicleCostRow costRow(Vehicle vehicle, List<VehicleExpense> list) {
+  private static VehicleCostRow costRow(
+      Vehicle vehicle, List<VehicleExpense> list, BigDecimal generalExpense) {
     Map<ExpenseKind, BigDecimal> totals = new EnumMap<>(ExpenseKind.class);
-    BigDecimal total = BigDecimal.ZERO;
+    BigDecimal total = generalExpense;
     for (VehicleExpense expense : list) {
       totals.merge(expense.getKind(), expense.getTlAmount(), BigDecimal::add);
       total = total.add(expense.getTlAmount());
@@ -455,6 +480,7 @@ public class FleetInsightService {
         totals.getOrDefault(ExpenseKind.REPAIR, BigDecimal.ZERO),
         totals.getOrDefault(ExpenseKind.TIRE, BigDecimal.ZERO),
         totals.getOrDefault(ExpenseKind.FUEL, BigDecimal.ZERO),
+        generalExpense,
         total,
         liters,
         distance,

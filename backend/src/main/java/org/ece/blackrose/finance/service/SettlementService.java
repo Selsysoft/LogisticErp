@@ -5,7 +5,6 @@ import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -16,7 +15,9 @@ import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.common.money.Money;
 import org.ece.blackrose.finance.domain.Account;
 import org.ece.blackrose.finance.domain.AccountBankAccount;
+import org.ece.blackrose.finance.domain.CheckLeaf;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
+import org.ece.blackrose.finance.domain.FinanceTypes.CheckLeafStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.Direction;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundDirection;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundKind;
@@ -32,8 +33,10 @@ import org.ece.blackrose.finance.domain.Instrument;
 import org.ece.blackrose.finance.domain.Settlement;
 import org.ece.blackrose.finance.repository.AccountRepositories.AccountBankAccountRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
+import org.ece.blackrose.finance.repository.FinanceRepositories.CheckLeafRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.ExpenseItemRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.FundAccountRepository;
+import org.ece.blackrose.finance.repository.FinanceRepositories.InstrumentRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.SettlementRepository;
 import org.ece.blackrose.finance.repository.FundRepositories.FundTransferSourceRepository;
 import org.ece.blackrose.finance.repository.FundRepositories.IntercompanyTransferRepository;
@@ -68,6 +71,9 @@ public class SettlementService {
   /** Araç giderine bağlı ödemenin iptal ekranı (409 {@code SETTLEMENT_SOURCE_MANAGED}). */
   static final String VEHICLE_ROUTE = "/fleet/vehicles";
 
+  /** Genel masrafa bağlı ödemenin iptal ekranı (409 {@code SETTLEMENT_SOURCE_MANAGED}; 12.7 F1). */
+  static final String EXPENSE_ROUTE = "/zto-finans/genel-masraflar";
+
   private final SettlementRepository settlements;
   private final AccountRepository accounts;
   private final ExpenseItemRepository expenseItems;
@@ -88,6 +94,8 @@ public class SettlementService {
   private final SettlementAllocationService allocations;
   private final AccountBankAccountRepository bankAccounts;
   private final TenantClock clock;
+  private final InstrumentRepository instrumentRecords;
+  private final CheckLeafRepository leaves;
 
   @PersistenceContext private EntityManager entityManager;
 
@@ -112,7 +120,11 @@ public class SettlementService {
       AuditService audit,
       SettlementAllocationService allocations,
       AccountBankAccountRepository bankAccounts,
-      TenantClock clock) {
+      TenantClock clock,
+      InstrumentRepository instrumentRecords,
+      CheckLeafRepository leaves) {
+    this.instrumentRecords = instrumentRecords;
+    this.leaves = leaves;
     this.allocations = allocations;
     this.bankAccounts = bankAccounts;
     this.clock = clock;
@@ -428,6 +440,7 @@ public class SettlementService {
       return settlement;
     }
     requireReversibleKind(settlement);
+    precheckInstrument(settlement);
     if (mode == ReverseMode.USER) {
       requireReverseDate(settlement.getSettlementDate(), date, clock.today());
     }
@@ -439,21 +452,23 @@ public class SettlementService {
       return settlement;
     }
     requireUnlinked(settlement, mode);
-    reverseLedgers(settlement, date, reason, defaultReverseText(settlement.getType()));
+    Instrument instrument = lockInstrument(settlement);
+    String defaultText = defaultReverseText(settlement.getType());
+    reverseLedgers(settlement, date, reason, defaultText);
+    if (instrument != null) {
+      releaseInstrument(settlement, instrument, date, reverseText(reason, defaultText), false);
+    }
     if (mode == ReverseMode.USER) {
       audit.record(AuditEvent.SETTLEMENT_REVERSED, "SETTLEMENT:" + id, "date=" + date);
     }
     return settlement;
   }
 
-  /** Çekli (12.3'e kadar) ve plana bağlı kayıt ters çevrilmez. */
+  /**
+   * Plana bağlı kayıt ters çevrilmez. Çekli kayıt 12.3'ten beri çek ilerlememişse ters çevrilir
+   * ({@link #requireInstrumentReversible}).
+   */
   private static void requireReversibleKind(Settlement settlement) {
-    if (settlement.getMethod() == SettlementMethod.CHECK) {
-      throw new BusinessException(
-          HttpStatus.CONFLICT,
-          "SETTLEMENT_CHECK_NOT_REVERSIBLE",
-          "Çekli kayıt ters çevrilemez; çekin durumunu güncelleyin.");
-    }
     if (settlement.getPlanId() != null) {
       throw new BusinessException(
           HttpStatus.CONFLICT,
@@ -484,6 +499,13 @@ public class SettlementService {
           "Araç giderine bağlı ödeme araç gideri ekranından iptal edilir.",
           List.of("route=" + VEHICLE_ROUTE));
     }
+    if (mode == ReverseMode.USER && settlements.existsExpenseLink(id)) {
+      throw new BusinessException(
+          HttpStatus.CONFLICT,
+          "SETTLEMENT_SOURCE_MANAGED",
+          "Genel masrafa bağlı ödeme Genel Masraf ekranından iptal edilir.",
+          List.of("route=" + EXPENSE_ROUTE));
+    }
     if (transferSources.existsActiveBySettlementId(id)) {
       throw new BusinessException(
           HttpStatus.CONFLICT,
@@ -502,10 +524,98 @@ public class SettlementService {
   /** Cari ve fon ters kayıtları verilen tarihle; gerekçe boşsa varsayılan açıklama. */
   private void reverseLedgers(
       Settlement settlement, LocalDate date, String reason, String defaultText) {
-    String text = reason == null || reason.isBlank() ? defaultText : reason.trim();
+    String text = reverseText(reason, defaultText);
     ledger.reverseSource(SOURCE_SETTLEMENT, settlement.getId(), date, text);
     fundLedger.reverseSource(SOURCE_SETTLEMENT, settlement.getId(), date, text);
     settlement.markReversed(date, reason);
+  }
+
+  private static String reverseText(String reason, String defaultText) {
+    return reason == null || reason.isBlank() ? defaultText : reason.trim();
+  }
+
+  /**
+   * Çekli kaydın kilitsiz ön denetimi (§3.4 adım 3): çek ilerlemişse hızlı 409 {@code
+   * SETTLEMENT_CHECK_NOT_REVERSIBLE}. Asıl denetim kilit altında ({@link #lockInstrument}).
+   */
+  private void precheckInstrument(Settlement settlement) {
+    if (settlement.getMethod() != SettlementMethod.CHECK || settlement.getInstrumentId() == null) {
+      return;
+    }
+    instrumentRecords
+        .findById(settlement.getInstrumentId())
+        .ifPresent(instrument -> requireInstrumentReversible(settlement, instrument));
+  }
+
+  /**
+   * Çekli kayıtta kilit sırası (§3.4 adım 8, §3.10; Rev 1 F2): kaydın cari hareketi → çek; çek
+   * kilit altında yeniden okunur ve denetlenir. Çeksiz kayıtta {@code null}.
+   */
+  private Instrument lockInstrument(Settlement settlement) {
+    if (settlement.getMethod() != SettlementMethod.CHECK || settlement.getInstrumentId() == null) {
+      return null;
+    }
+    ledger.lockSource(SOURCE_SETTLEMENT, settlement.getId());
+    Instrument instrument = instruments.lockForSettlement(settlement.getInstrumentId());
+    requireInstrumentReversible(settlement, instrument);
+    return instrument;
+  }
+
+  /**
+   * Ters kayıttan sonra çek: köken kayıtta {@code CANCELLED} (düz iptalde yaprak {@code VOID},
+   * düzeltmede {@code UNUSED}); ciro kaydında çek portföye döner (§3.4 adım 10, §3.5).
+   */
+  private void releaseInstrument(
+      Settlement settlement,
+      Instrument instrument,
+      LocalDate date,
+      String text,
+      boolean releaseLeaf) {
+    if (InstrumentRules.isOrigin(settlement.getType(), instrument.getDirection())) {
+      instruments.cancelForSettlement(instrument, date, text, releaseLeaf);
+    } else {
+      instruments.undoEndorsement(instrument, date, "Ciro iptali");
+    }
+  }
+
+  /**
+   * Çek ilerlemişse 409 {@code SETTLEMENT_CHECK_NOT_REVERSIBLE} ({@code instrumentStatus}, {@code
+   * instrumentId} ayrıntılarıyla; §3.4).
+   */
+  private static void requireInstrumentReversible(Settlement settlement, Instrument instrument) {
+    if (InstrumentRules.settlementReversible(
+        settlement.getType(),
+        instrument.getDirection(),
+        instrument.getStatus(),
+        instrument.getEndorsedAccountId(),
+        settlement.getAccountId())) {
+      return;
+    }
+    throw new BusinessException(
+        HttpStatus.CONFLICT,
+        "SETTLEMENT_CHECK_NOT_REVERSIBLE",
+        "Çek/senet işlem gördü (durum: "
+            + statusLabel(instrument.getStatus())
+            + "); önce çekin durumunu geri alacak işlemi yapın ya da çek ekranından ilerleyin.",
+        List.of(
+            "instrumentStatus=" + instrument.getStatus(), "instrumentId=" + instrument.getId()));
+  }
+
+  private static String statusLabel(InstrumentStatus status) {
+    return switch (status) {
+      case PORTFOLIO -> "Portföyde";
+      case AT_BANK -> "Bankada";
+      case ENDORSED -> "Ciro edildi";
+      case ISSUED -> "Verildi";
+      case COLLECTED -> "Tahsil edildi";
+      case COLLECTED_TO_CASH -> "Kasaya tahsil edildi";
+      case PAID -> "Ödendi";
+      case BOUNCED -> "Karşılıksız";
+      case CANCELLED -> "İptal";
+      case RETURNED -> "İade edildi";
+      case COLLATERAL -> "Teminatta";
+      case PROTESTED -> "Protestolu";
+    };
   }
 
   private static String defaultReverseText(SettlementType type) {
@@ -553,10 +663,6 @@ public class SettlementService {
     requireCorrectable(old);
     SettlementRequest replacement = body.replacement();
     SettlementType type = old.getType();
-    if (replacement.method() != SettlementMethod.CASH
-        && replacement.method() != SettlementMethod.BANK) {
-      throw bad("CORRECTION_METHOD_INVALID", "Çekli/senetli kayıt düzenlenemez.");
-    }
     if (!companies.companyOf(replacement.branchId()).equals(old.getCompanyId())) {
       throw new BusinessException(
           HttpStatus.UNPROCESSABLE_ENTITY,
@@ -568,7 +674,10 @@ public class SettlementService {
     if (replacement.accountId() != null) {
       identityRule.require(access.usableLocked(replacement.accountId()), old.getCompanyId());
     }
-    lockFunds(Arrays.asList(old.getFundAccountId(), replacement.fundAccountId()));
+    List<UUID> replacementFunds = userFundIds(replacement);
+    List<UUID> lockIds = new ArrayList<>(replacementFunds);
+    lockIds.add(old.getFundAccountId());
+    lockFunds(lockIds);
     entityManager.refresh(old, LockModeType.PESSIMISTIC_WRITE);
     if (idempotencyKey != null) {
       // Aynı anahtarla eşzamanlı tekrar: kilidi ilk istek bıraktığında onun kaydı döner (F-6).
@@ -581,19 +690,27 @@ public class SettlementService {
       }
     }
     requireCorrectable(old);
-    if (replacement.fundAccountId() != null) {
-      FundService.requireActive(funds.findVisible(replacement.fundAccountId()));
+    for (UUID fundId : replacementFunds) {
+      FundService.requireActive(funds.findVisible(fundId));
     }
-    UUID companyId = validate(type, replacement, false);
+    Instrument oldInstrument = lockInstrument(old);
+    UUID companyId = validate(type, replacement, false, correctionContext(old, oldInstrument));
     allocations.validate(type, replacement, companyId, id);
 
     String reason = body.reason();
     String text = type == SettlementType.PAYMENT ? "Ödeme düzeltmesi" : "Tahsilat düzeltmesi";
     Optional<SettlementWarningResponse> confirmation;
     Settlement created;
-    if (type == SettlementType.PAYMENT) {
-      // Önce eski ödeme ters: uyarı, eski ödeme geri alınmış bakiyeyle hesaplanır.
+    boolean checkInvolved =
+        old.getMethod() == SettlementMethod.CHECK || replacement.method() == SettlementMethod.CHECK;
+    if (type == SettlementType.PAYMENT || checkInvolved) {
+      // Önce eski kayıt ters: uyarı eski ödeme geri alınmış bakiyeyle hesaplanır; çekli kayıtta
+      // eski çek iptal edilir/portföye döner, numara ve yaprak yeni kayda serbest kalır (§3.5).
       reverseLedgers(old, old.getSettlementDate(), reason, text);
+      if (oldInstrument != null) {
+        releaseInstrument(
+            old, oldInstrument, old.getSettlementDate(), reverseText(reason, text), true);
+      }
       entityManager.flush();
       confirmation = confirm(type, replacement, companyId);
       created = insert(type, replacement, companyId, idempotencyKey, null, id);
@@ -636,6 +753,7 @@ public class SettlementService {
           HttpStatus.CONFLICT, "SETTLEMENT_REVERSED", "İptal edilmiş kayıt düzenlenemez.");
     }
     requireReversibleKind(old);
+    precheckInstrument(old);
     // Bağ denetimleri carisiz kayıt denetiminden önce: araç giderinin (carisiz) ödemesinde
     // kullanıcı
     // genel "düzenlenemez" yerine iptal ekranını söyleyen 409 SETTLEMENT_SOURCE_MANAGED alır.
@@ -710,6 +828,30 @@ public class SettlementService {
    * olmalıdır. {@code preview}: önizlemede çek/senet bilgisinin zorunluluğu atlanır (F-12.2-R4).
    */
   private UUID validate(SettlementType type, SettlementRequest request, boolean preview) {
+    return validate(type, request, preview, null);
+  }
+
+  /**
+   * Düzeltme bağlamı (§3.3, Rev 1 F1): eski kayıt çekli bir köken kayıtsa eski çekin kimliği,
+   * yaprağı, numarası ve fonu. Numara tekilliğinde eski çek dışlanır, eski yaprak {@code USED} olsa
+   * da kabul edilir; yapraksız eski çekle aynı numara/fon koçan denetiminden muaftır.
+   */
+  private record CorrectionContext(
+      UUID oldInstrumentId, UUID oldCheckLeafId, String oldNumber, UUID oldFundAccountId) {}
+
+  private static CorrectionContext correctionContext(Settlement old, Instrument instrument) {
+    if (instrument == null || !InstrumentRules.isOrigin(old.getType(), instrument.getDirection())) {
+      return null;
+    }
+    return new CorrectionContext(
+        instrument.getId(),
+        instrument.getCheckLeafId(),
+        instrument.getNumber(),
+        instrument.getFundAccountId());
+  }
+
+  private UUID validate(
+      SettlementType type, SettlementRequest request, boolean preview, CorrectionContext ctx) {
     UUID companyId = companies.companyOf(request.branchId());
     if (request.accountId() != null && !accounts.existsById(request.accountId())) {
       throw new BusinessException(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", "Cari bulunamadı.");
@@ -736,7 +878,7 @@ public class SettlementService {
       case BANK -> requireFund(request, FundKind.BANK, companyId);
       case CHECK -> {
         validateCheck(type, request, preview);
-        validateInstrument(type, request, companyId);
+        validateInstrument(type, request, companyId, preview, ctx);
       }
     }
     return companyId;
@@ -782,7 +924,12 @@ public class SettlementService {
    * hesabı isteğe bağlıdır; tahsilatta yalnız {@code PORTFOLIO}/{@code AT_BANK}, {@code AT_BANK}
    * yalnız çekte ve banka hesabıyla; portföydeki çeke banka hesabı verilmez (kasa/emanet 12.3).
    */
-  private void validateInstrument(SettlementType type, SettlementRequest request, UUID companyId) {
+  private void validateInstrument(
+      SettlementType type,
+      SettlementRequest request,
+      UUID companyId,
+      boolean preview,
+      CorrectionContext ctx) {
     NewInstrument data = request.instrument();
     if (data == null) {
       return;
@@ -810,6 +957,110 @@ public class SettlementService {
           FundKind.BANK,
           request.money().currency(),
           companyId);
+    }
+    if (data.issueDate() != null && data.issueDate().isAfter(data.dueDate())) {
+      throw InstrumentService.datesInvalid();
+    }
+    validateCustody(type, request, companyId);
+    if (preview) {
+      return;
+    }
+    validateInstrumentIdentity(type, data, companyId, ctx);
+  }
+
+  /** Emanet kasası (§3.3 #6): yalnız tahsilatta portföydeki çekte; CASH, aktif, aynı şirket. */
+  private void validateCustody(SettlementType type, SettlementRequest request, UUID companyId) {
+    NewInstrument data = request.instrument();
+    if (data.custodyFundId() == null) {
+      return;
+    }
+    InstrumentStatus status = data.initialStatus();
+    if (type != SettlementType.COLLECTION
+        || (status != null && status != InstrumentStatus.PORTFOLIO)) {
+      throw bad(
+          "INSTRUMENT_CUSTODY_INVALID", "Çekin tutulduğu kasa yalnız portföydeki çekte seçilir.");
+    }
+    FundAccount fund = funds.findVisible(data.custodyFundId());
+    checkFund(fund, FundKind.CASH, request.money().currency(), companyId);
+    FundService.requireActive(fund);
+  }
+
+  /**
+   * Numara biçimi, senet türü, koçan yaprağı, elle girilen numaranın koçanda olmaması ve numara
+   * tekilliği (§3.3 #1, #7, #3, #4, #2 sırasıyla: yaprak iletisi daha belirleyicidir; önizlemede
+   * çalışmaz). Kilitli yaprak denetimi {@code register}'da.
+   */
+  private void validateInstrumentIdentity(
+      SettlementType type, NewInstrument data, UUID companyId, CorrectionContext ctx) {
+    boolean check = data.kind() == InstrumentKind.CHECK;
+    if (check && !InstrumentService.validCheckNumber(data.number())) {
+      throw InstrumentService.checkNumberInvalid();
+    }
+    if (check && data.noteType() != null) {
+      throw InstrumentService.noteTypeInvalid();
+    }
+    if (data.checkLeafId() != null) {
+      validateLeaf(type, data, check, ctx);
+    } else if (type == SettlementType.PAYMENT && check && data.fundAccountId() != null) {
+      boolean sameAsOld =
+          ctx != null
+              && ctx.oldCheckLeafId() == null
+              && data.number().equals(ctx.oldNumber())
+              && data.fundAccountId().equals(ctx.oldFundAccountId());
+      if (!sameAsOld) {
+        leaves
+            .findByFundAccountIdAndNumberAndDeletedFalse(data.fundAccountId(), data.number())
+            .ifPresent(
+                leaf -> {
+                  throw new BusinessException(
+                      HttpStatus.CONFLICT,
+                      "CHECK_NUMBER_IN_CHECK_BOOK",
+                      "Bu çek numarası koçan yaprağı olarak kayıtlı — manuel olarak"
+                          + " kullanılamaz, lütfen koçandan seçiniz.",
+                      List.of("leafId=" + leaf.getId(), "leafStatus=" + leaf.getStatus()));
+                });
+      }
+    }
+    InstrumentDirection direction =
+        type == SettlementType.COLLECTION
+            ? InstrumentDirection.RECEIVED
+            : InstrumentDirection.ISSUED;
+    instrumentRecords
+        .findActiveByNumber(
+            companyId,
+            data.kind(),
+            direction,
+            data.number(),
+            data.bankName(),
+            ctx == null ? null : ctx.oldInstrumentId())
+        .ifPresent(
+            conflict -> {
+              throw new BusinessException(
+                  HttpStatus.CONFLICT,
+                  "INSTRUMENT_NUMBER_TAKEN",
+                  "Bu çek numarası zaten kullanılıyor!",
+                  List.of("status=" + conflict.getStatus()));
+            });
+  }
+
+  /** Koçan yaprağı (§3.3 #3): yalnız kendi çekimizle (banka hesaplı) ödemede. */
+  private void validateLeaf(
+      SettlementType type, NewInstrument data, boolean check, CorrectionContext ctx) {
+    if (type != SettlementType.PAYMENT || !check || data.fundAccountId() == null) {
+      throw bad("CHECK_LEAF_INVALID", "Koçan yaprağı yalnız kendi çekimizle ödemede seçilir.");
+    }
+    CheckLeaf leaf =
+        leaves.findById(data.checkLeafId()).orElseThrow(InstrumentService::leafNotFound);
+    if (!leaf.getFundAccountId().equals(data.fundAccountId())
+        || !leaf.getNumber().equals(data.number())) {
+      throw new BusinessException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          "CHECK_LEAF_MISMATCH",
+          "Seçilen koçan yaprağı bu banka hesabına ait değil.");
+    }
+    boolean oldLeaf = ctx != null && leaf.getId().equals(ctx.oldCheckLeafId());
+    if (leaf.getStatus() != CheckLeafStatus.UNUSED && !oldLeaf) {
+      throw InstrumentService.leafUsed();
     }
   }
 

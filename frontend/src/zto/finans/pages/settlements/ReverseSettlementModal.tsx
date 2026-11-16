@@ -10,6 +10,7 @@ import {
   isReverseDateValid,
   payMethodOf,
   reverseBounds,
+  reverseInstrumentNotice,
 } from "./settlementListLogic";
 
 type Props = {
@@ -61,6 +62,7 @@ export function ReverseSettlementModal({ settlementId, type, onHide, onDone }: P
   const dateValid = bounds ? isReverseDateValid(date, bounds) : false;
   const showDateError = touched && !dateValid;
   const parts = item ? deleteMessageParts(item) : null;
+  const instrumentNotice = reverseInstrumentNotice(type, detail.data?.instrument);
 
   async function confirm() {
     setTouched(true);
@@ -112,6 +114,11 @@ export function ReverseSettlementModal({ settlementId, type, onHide, onDone }: P
       <div className="alert alert-warning">
         <i className="fas fa-info-circle" aria-hidden="true" /> {r("irreversible")}
       </div>
+      {instrumentNotice && (
+        <div className="alert alert-warning" id="reverseInstrumentNotice">
+          <i className="fas fa-money-check" aria-hidden="true" /> {r(instrumentNotice)}
+        </div>
+      )}
       {detail.isError && (
         <div className="alert alert-danger" role="alert">
           {errorText(detail.error, t(`${ns}.detail.notFound`), type)}

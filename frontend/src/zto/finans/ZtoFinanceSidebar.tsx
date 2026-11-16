@@ -22,7 +22,8 @@ import {
   type ZtoNavItem,
   type ZtoNavSection,
 } from "./navItems";
-import { QuickCariContext } from "./quickCariContext";
+import { QuickCariContext, type QuickCariApi } from "./quickCariContext";
+import { TreasuryContext, type TreasuryApi } from "./treasuryContext";
 
 /** ZTO'nun fareyle çıkınca kapanma gecikmesi (_SideMenu_Assets.cshtml:247-251). */
 export const SIDEBAR_LEAVE_DELAY_MS = 120;
@@ -167,9 +168,26 @@ export function ZtoFinanceSidebar({
   );
 }
 
+/** Menüden açılan modallar (ZTO `onclick`): öğe kimliği → modal. */
+export type ZtoMenuModal = "quickCari" | "treasury";
+
+/**
+ * Modal öğesinin açtığı modal (12.8 §5.3): `quickTransaction` → Hızlı Cari İşlemi, `quickBalance` →
+ * Hızlı Bakiye Özeti; diğer kimlikler hiçbir modal açmaz (null).
+ */
+export function menuModalOf(itemId: string): ZtoMenuModal | null {
+  if (itemId === "quickTransaction") return "quickCari";
+  if (itemId === "quickBalance") return "treasury";
+  return null;
+}
+
 function SidebarLink({ item, active }: { item: ZtoNavItem; active: boolean }) {
   const { t } = useTranslation("ztoFinans");
   const quickCari = useContext(QuickCariContext);
+  const treasury = useContext(TreasuryContext);
+  const modals: Record<ZtoMenuModal, QuickCariApi | TreasuryApi | null> = { quickCari, treasury };
+  const target = menuModalOf(item.id);
+  const modal = target ? modals[target] : null;
   const content = (
     <>
       <span className="zt-icon">
@@ -182,11 +200,12 @@ function SidebarLink({ item, active }: { item: ZtoNavItem; active: boolean }) {
     .filter(Boolean)
     .join(" ");
 
-  if (isModalAction(item) && quickCari) {
+  if (isModalAction(item) && modal) {
     // ZTO: <a href="javascript:void(0)" onclick="openQuickCariModal()">; düğme rolüyle, Enter/Boşluk.
+    // 12.8: Hızlı Bakiye Özeti ZTO'da data-target="#treasuryModal" (aynı düğme davranışı).
     const openModal = (event: ReactMouseEvent | KeyboardEvent) => {
       event.preventDefault();
-      quickCari.open();
+      modal.open();
     };
     return (
       <a

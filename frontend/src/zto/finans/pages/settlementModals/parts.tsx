@@ -370,12 +370,12 @@ export function Help({ children, icon }: { children: ReactNode; icon?: string })
   );
 }
 
-/** 12.3/12.4 devre dışı alanının görünmez nedeni (görünüm değişmez; MWG §5.9). */
-export function PhaseNote({ id, step }: { id: string; step: "12.3" | "12.4" }) {
+/** 12.4 devre dışı alanının görünmez nedeni (görünüm değişmez; MWG §5.9). 12.3 alanları açıldı. */
+export function PhaseNote({ id }: { id: string; step: "12.4" }) {
   const { tm } = useModalText();
   return (
     <small id={id} className="sr-only">
-      {tm(step === "12.3" ? "shared.phase123" : "shared.phase124")}
+      {tm("shared.phase124")}
     </small>
   );
 }

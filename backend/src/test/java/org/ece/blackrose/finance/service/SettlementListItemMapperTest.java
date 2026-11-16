@@ -15,7 +15,6 @@ import java.util.Set;
 import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementLockReason;
-import org.ece.blackrose.finance.domain.FinanceTypes.SettlementMethod;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementType;
 import org.ece.blackrose.finance.repository.SettlementQueryRepository.AllocationRow;
@@ -37,27 +36,33 @@ class SettlementListItemMapperTest {
   void kilitNedeniSirasi() {
     BigDecimal zero = BigDecimal.ZERO;
     BigDecimal used = BigDecimal.ONE;
-    SettlementMethod cash = SettlementMethod.CASH;
+    boolean cash = false;
     SettlementStatus posted = SettlementStatus.POSTED;
     assertThat(
             SettlementQueryService.lockReason(
-                SettlementStatus.REVERSED, SettlementMethod.CHECK, true, true, true, used, true))
+                SettlementStatus.REVERSED, true, true, true, true, true, used, true))
         .isEqualTo(SettlementLockReason.REVERSED);
+    assertThat(SettlementQueryService.lockReason(posted, true, true, true, true, true, used, true))
+        .isEqualTo(SettlementLockReason.CHECK);
+    assertThat(SettlementQueryService.lockReason(posted, cash, true, true, true, true, used, true))
+        .isEqualTo(SettlementLockReason.PLAN);
+    assertThat(SettlementQueryService.lockReason(posted, cash, false, true, true, true, used, true))
+        .isEqualTo(SettlementLockReason.INTERCOMPANY);
+    assertThat(
+            SettlementQueryService.lockReason(posted, cash, false, false, true, true, used, true))
+        .isEqualTo(SettlementLockReason.VEHICLE_EXPENSE);
+    assertThat(
+            SettlementQueryService.lockReason(posted, cash, false, false, false, true, used, true))
+        .isEqualTo(SettlementLockReason.EXPENSE);
+    assertThat(
+            SettlementQueryService.lockReason(posted, cash, false, false, false, false, used, true))
+        .isEqualTo(SettlementLockReason.FX_SOURCE);
+    assertThat(
+            SettlementQueryService.lockReason(posted, cash, false, false, false, false, zero, true))
+        .isEqualTo(SettlementLockReason.TRANSFERRED);
     assertThat(
             SettlementQueryService.lockReason(
-                posted, SettlementMethod.CHECK, true, true, true, used, true))
-        .isEqualTo(SettlementLockReason.CHECK);
-    assertThat(SettlementQueryService.lockReason(posted, cash, true, true, true, used, true))
-        .isEqualTo(SettlementLockReason.PLAN);
-    assertThat(SettlementQueryService.lockReason(posted, cash, false, true, true, used, true))
-        .isEqualTo(SettlementLockReason.INTERCOMPANY);
-    assertThat(SettlementQueryService.lockReason(posted, cash, false, false, true, used, true))
-        .isEqualTo(SettlementLockReason.VEHICLE_EXPENSE);
-    assertThat(SettlementQueryService.lockReason(posted, cash, false, false, false, used, true))
-        .isEqualTo(SettlementLockReason.FX_SOURCE);
-    assertThat(SettlementQueryService.lockReason(posted, cash, false, false, false, zero, true))
-        .isEqualTo(SettlementLockReason.TRANSFERRED);
-    assertThat(SettlementQueryService.lockReason(posted, cash, false, false, false, zero, false))
+                posted, cash, false, false, false, false, zero, false))
         .isNull();
   }
 
@@ -108,6 +113,60 @@ class SettlementListItemMapperTest {
     assertThat(item.lockReason()).isEqualTo(SettlementLockReason.CHECK);
     assertThat(item.reversible()).isFalse();
     assertThat(item.correctable()).isFalse();
+  }
+
+  /** 12.3 §3.8: çekli kayıt yalnız çek ilerlemişse kilitli; açık çekte iptal ve düzeltme açık. */
+  @Test
+  void cekliSatirKilidiCekDurumunaGore() {
+    SettlementItemRow received = checkRow("COLLECTION", "RECEIVED", "PORTFOLIO", null);
+    SettlementListItemResponse portfolio = SettlementQueryService.toItem(received);
+    assertThat(portfolio.lockReason()).isNull();
+    assertThat(portfolio.reversible()).isTrue();
+    assertThat(portfolio.correctable()).isTrue();
+
+    SettlementListItemResponse atBank =
+        SettlementQueryService.toItem(checkRow("COLLECTION", "RECEIVED", "AT_BANK", null));
+    assertThat(atBank.lockReason()).isNull();
+
+    SettlementListItemResponse collected =
+        SettlementQueryService.toItem(checkRow("COLLECTION", "RECEIVED", "COLLECTED", null));
+    assertThat(collected.lockReason()).isEqualTo(SettlementLockReason.CHECK);
+    assertThat(collected.reversible()).isFalse();
+    assertThat(collected.correctable()).isFalse();
+
+    assertThat(
+            SettlementQueryService.toItem(checkRow("PAYMENT", "ISSUED", "ISSUED", null))
+                .lockReason())
+        .isNull();
+    assertThat(
+            SettlementQueryService.toItem(checkRow("PAYMENT", "ISSUED", "PAID", null)).lockReason())
+        .isEqualTo(SettlementLockReason.CHECK);
+
+    SettlementListItemResponse endorsed =
+        SettlementQueryService.toItem(checkRow("PAYMENT", "RECEIVED", "ENDORSED", ACCOUNT));
+    assertThat(endorsed.lockReason()).isNull();
+    assertThat(endorsed.correctable()).isTrue();
+    assertThat(
+            SettlementQueryService.toItem(
+                    checkRow("PAYMENT", "RECEIVED", "ENDORSED", UUID.randomUUID()))
+                .lockReason())
+        .isEqualTo(SettlementLockReason.CHECK);
+
+    SettlementItemRow orphan = row("CHECK", null, "CHECK");
+    assertThat(SettlementQueryService.toItem(orphan).lockReason())
+        .isEqualTo(SettlementLockReason.CHECK);
+  }
+
+  private static SettlementItemRow checkRow(
+      String type, String direction, String status, UUID endorsedAccountId) {
+    SettlementItemRow row = row("CHECK", null, "CHECK");
+    when(row.getType()).thenReturn(type);
+    when(row.getInstrumentId()).thenReturn(UUID.randomUUID());
+    when(row.getInstrumentKind()).thenReturn("CHECK");
+    when(row.getInstrumentDirection()).thenReturn(direction);
+    when(row.getInstrumentStatus()).thenReturn(status);
+    when(row.getInstrumentEndorsedAccountId()).thenReturn(endorsedAccountId);
+    return row;
   }
 
   @Test

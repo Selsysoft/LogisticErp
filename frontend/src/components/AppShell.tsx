@@ -120,9 +120,11 @@ export function AppShell() {
     </>
   );
 
+  // Yazdırmada uygulama kabuğu (üst çubuk, yan menü, üst boşluk) basılmaz; içerik tam genişlik
+  // (12.8 §5.3, OK-12.8-14: Finans Raporları "Yazdır / PDF", Hızlı Bakiye Özeti window.print()).
   return (
-    <Box sx={{ display: "flex" }}>
-      <AppBar position="fixed" sx={{ zIndex: (z) => z.zIndex.drawer + 1 }}>
+    <Box sx={{ display: "flex", "@media print": { display: "block" } }}>
+      <AppBar position="fixed" sx={{ zIndex: (z) => z.zIndex.drawer + 1, displayPrint: "none" }}>
         <Toolbar>
           {!isWide && (
             <IconButton
@@ -159,13 +161,17 @@ export function AppShell() {
         sx={{
           width: isWide ? DRAWER_WIDTH : undefined,
           flexShrink: 0,
+          displayPrint: "none",
           "& .MuiDrawer-paper": { width: DRAWER_WIDTH, boxSizing: "border-box" },
         }}
       >
         {drawer}
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 } }}>
-        <Toolbar />
+      <Box
+        component="main"
+        sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 }, "@media print": { p: 0 } }}
+      >
+        <Toolbar sx={{ displayPrint: "none" }} />
         <SuspenseOutlet />
       </Box>
     </Box>

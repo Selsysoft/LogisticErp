@@ -1,0 +1,47 @@
+/*
+ * Kaynak: ZtoFabrika/Views/CustomerAccountReport/Reports.cshtml <style> :1020-1060 (12.8_TASARIM §5.3).
+ * Birebir kopya (FE-0); kurallar .zto-finans.zto-page-customer-account-report altına alınır
+ * (prefixTransform.ts). Değişiklik yok (Razor kaçışı yok).
+ */
+/* --- Views/CustomerAccountReport/Reports.cshtml :1020-1060 --- */
+.info-box {
+  min-height: 80px;
+  padding: 15px;
+  border-radius: 5px;
+  color: white;
+  margin-bottom: 15px;
+}
+
+.info-box-icon {
+  font-size: 2rem;
+  float: left;
+  margin-right: 15px;
+}
+
+.info-box-content {
+  overflow: hidden;
+}
+
+.info-box-text {
+  display: block;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.info-box-number {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.table thead th {
+  vertical-align: middle;
+}
+
+.nav-tabs .nav-link {
+  color: #495057;
+}
+
+.nav-tabs .nav-link.active {
+  font-weight: bold;
+}

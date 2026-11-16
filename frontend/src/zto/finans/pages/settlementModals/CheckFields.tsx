@@ -1,23 +1,28 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useAccountList } from "../../../../pages/finance/accountApi";
+import { useCheckLeafLookup, useCheckLeaves } from "../../../../pages/finance/instrumentApi";
 import { useEndorsableChecks } from "../../../../pages/finance/settlementApi";
-import type { Fund } from "../../../../pages/finance/types";
+import type { CheckLeaf, Instrument } from "../../../../pages/finance/types";
 import { formatMoney, formatN2 } from "../../../components";
 import { FundSelect } from "./FundSelect";
 import type {
   CheckFieldsProps,
   CheckFieldsValue,
+  CheckLeafGuardResult,
   IssuedCheckMode,
   ReceivedCheckStatus,
 } from "./index";
-import { Help, PhaseNote, useModalText } from "./parts";
-import { dottedDate, endorsableLabel, todayIso } from "./settlementFormLogic";
+import { Help, useModalText } from "./parts";
+import { dottedDate, endorsableLabel } from "./settlementFormLogic";
+import { useCheckLeafGuard, type LeafGuardEditing } from "./useCheckLeafGuard";
 
 /*
- * Çek alanları (12.2a_TASARIM §5.9). issued = ödeme (APM:706-917): "Kendi Çekimiz" / "Müşteri Çeki
- * Ciro Et"; received = tahsilat (CMP:417-616): "Bankaya Yatırıldı" / "Portföyde (Elde)" / "Kasaya Al
- * (Ciro)". Koçan, manuel numara düğmesi, keşide tarihi, şube adı (tahsilat) ve çek açıklaması 12.3'e
- * kadar devre dışı (OK-12.2a-10); çek numarası her zaman elle girilir (`^\d{7}$` istemcide).
+ * Çek alanları (12.2a_TASARIM §5.9; 12.3 §5.10). issued = ödeme (APM:706-917): "Kendi Çekimiz" /
+ * "Müşteri Çeki Ciro Et"; received = tahsilat (CMP:417-616): "Bankaya Yatırıldı" / "Portföyde (Elde)"
+ * / "Kasaya Al (Ciro)". 12.3: koçan seçici (yalnız kullanılmamış yapraklar; düzenlemede kaydın kendi
+ * yaprağı başta), "Manuel Çek Numarası Gir" ↔ "Koçandan Seç" (payments.js:849-873), manuel numarada
+ * koçan yaprağı denetimi (CLG), keşide tarihi, şube adı ve çek açıklaması. Ciro seçicide düzenlenen
+ * kaydın ciro edilmiş çeki başa eklenir ve seçili gelir (Rev 1 F1).
  * Çek durumu/türü Bootstrap 4 `.btn-group-toggle` radyolarıdır (gerçek `input[type=radio]` + `label`,
  * grup `role="radiogroup"`; MWG forms).
  */
@@ -116,19 +121,40 @@ function IssuedCheck({
   onEndorsedCheck,
   errors = {},
   disabled,
+  editing,
+  onLeafGuardChange,
 }: CheckFieldsProps) {
   const { tm } = useModalText();
   const set = (patch: Partial<CheckFieldsValue>) => onChange({ ...value, ...patch });
   const endorse = value.mode === "ENDORSE";
   const checks = useEndorsableChecks(companyId, null, { enabled: endorse });
   const accounts = useAccountList({ active: true }, { enabled: endorse });
-  const [fund, setFund] = useState<Fund | null>(null);
   const drawerOf = useMemo(() => {
     const names = new Map((accounts.data ?? []).map((account) => [account.id, account.name]));
-    return (accountId: string) => names.get(accountId) ?? null;
+    return (accountId: string | null) => (accountId ? (names.get(accountId) ?? null) : null);
   }, [accounts.data]);
-  const list = checks.data ?? [];
+  // Düzenleme: kaydın ciro ettiği çek (ENDORSED) portföy listesinde yok; başa eklenir (Rev 1 F1).
+  const editedEndorsed: Instrument | null =
+    editing?.currentInstrument && editing.currentInstrument.direction === "RECEIVED"
+      ? editing.currentInstrument
+      : null;
+  const list = useMemo(() => {
+    const rows = checks.data ?? [];
+    if (!editedEndorsed) return rows;
+    return [editedEndorsed, ...rows.filter((check) => check.id !== editedEndorsed.id)];
+  }, [checks.data, editedEndorsed]);
   const selected = list.find((check) => check.id === value.instrumentId) ?? null;
+
+  // Ön seçili çek (derin bağlantı "Ciro Et", düzenleme) liste gelince bir kez bildirilir: tutar ve
+  // para birimi çekten kilitlenir.
+  const reportedCheck = useRef("");
+  const latestOnEndorsed = useRef(onEndorsedCheck);
+  latestOnEndorsed.current = onEndorsedCheck;
+  useEffect(() => {
+    if (!endorse || !selected || reportedCheck.current === selected.id) return;
+    reportedCheck.current = selected.id;
+    latestOnEndorsed.current?.(selected);
+  }, [endorse, selected]);
 
   const setMode = (mode: IssuedCheckMode) => {
     if (mode === value.mode) return;
@@ -138,6 +164,7 @@ function IssuedCheck({
 
   const pickCheck = (id: string) => {
     set({ instrumentId: id });
+    reportedCheck.current = id;
     onEndorsedCheck?.(list.find((check) => check.id === id) ?? null);
   };
 
@@ -173,7 +200,7 @@ function IssuedCheck({
         {helpText}
       </>
     );
-  } else if (checks.data && list.length === 0) {
+  } else if (checks.data && list.length === 0 && !editedEndorsed) {
     helpText = (
       <>
         <i className="fas fa-info-circle text-warning" aria-hidden="true" />{" "}
@@ -242,7 +269,7 @@ function IssuedCheck({
                       : tm("check.endorsablePlaceholder")}
                   </option>
                   {checks.isError && <option value="">{tm("check.endorsableLoadFailed")}</option>}
-                  {checks.data && list.length === 0 && (
+                  {checks.data && list.length === 0 && !editedEndorsed && (
                     <option value="" disabled>
                       {tm("check.endorsableEmpty")}
                     </option>
@@ -315,8 +342,18 @@ function IssuedCheck({
                   companyId={companyId}
                   value={value.fundAccountId}
                   onChange={(fundAccountId, picked) => {
-                    setFund(picked);
-                    set({ fundAccountId, bankName: picked?.bankName ?? "" });
+                    const bank = {
+                      fundAccountId,
+                      bankName: picked?.bankName ?? "",
+                      bankBranch: picked?.bankBranchName ?? "",
+                    };
+                    // Yalnız bildirim (ön seçim/düzenleme): numara ve yaprak korunur. Banka değişince
+                    // ZTO gibi numara temizlenir ve koçan kipine dönülür (payments.js:808-833).
+                    set(
+                      fundAccountId === value.fundAccountId
+                        ? bank
+                        : { ...bank, number: "", checkLeafId: "", manualNumber: false },
+                    );
                   }}
                   disabled={disabled}
                   ariaLabelledBy={
@@ -327,115 +364,22 @@ function IssuedCheck({
                 />
                 <Help icon="fa-filter">{tm("check.issuedBankHelp")}</Help>
               </div>
-              <div className="form-row">
-                <div className="col-md-6">
-                  <div className="form-group">
-                    <label htmlFor="CheckBookID">
-                      <i className="fas fa-book" aria-hidden="true" /> {tm("check.checkBook")}
-                    </label>
-                    <select
-                      id="CheckBookID"
-                      name="CheckBookID"
-                      className="form-control no-select2"
-                      disabled
-                      title={tm("shared.phase123")}
-                      aria-describedby="CheckBookID-phase"
-                    >
-                      <option value="">{tm("check.checkBookPlaceholder")}</option>
-                    </select>
-                    <PhaseNote id="CheckBookID-phase" step="12.3" />
-                    <small className="form-text text-muted">
-                      <i className="fas fa-info-circle" aria-hidden="true" />{" "}
-                      <span className="text-success">{tm("check.checkBookHelpGreen")}</span>{" "}
-                      {tm("check.checkBookHelpUsable")}{" "}
-                      <span className="text-muted">{tm("check.checkBookHelpGray")}</span>{" "}
-                      {tm("check.checkBookHelpUsed")}
-                    </small>
-                  </div>
-                </div>
-                <div className="col-md-6">
-                  <div className="form-group">
-                    <i className="fas fa-receipt" aria-hidden="true" /> {tm("check.action")}
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-info"
-                      id="toggleManualCheck"
-                      style={{ fontSize: 11 }}
-                      disabled
-                      title={tm("shared.phase123")}
-                      aria-describedby="toggleManualCheck-phase"
-                    >
-                      <i className="fas fa-edit" aria-hidden="true" /> {tm("check.manual")}
-                    </button>
-                    <PhaseNote id="toggleManualCheck-phase" step="12.3" />
-                    <Help>{tm("check.manualHelp")}</Help>
-                  </div>
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="col-md-6">
-                  <CheckNumberInput
-                    value={value.number}
-                    onChange={(number) => set({ number })}
-                    error={errors.number}
-                    disabled={disabled}
-                  />
-                </div>
-                <div className="col-md-6">
-                  <div className="form-group">
-                    <label htmlFor="BankName">
-                      <i className="fas fa-university" aria-hidden="true" /> {tm("check.bankName")}
-                    </label>
-                    <input
-                      type="text"
-                      id="BankName"
-                      name="BankName"
-                      className="form-control"
-                      placeholder={tm("check.autoFill")}
-                      readOnly
-                      value={value.bankName}
-                    />
-                    <Help>{tm("check.autoFillHelp")}</Help>
-                  </div>
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="col-md-6">
-                  <div className="form-group">
-                    <label htmlFor="BranchName">
-                      <i className="fas fa-code-branch" aria-hidden="true" />{" "}
-                      {tm("check.branchName")}
-                    </label>
-                    <input
-                      type="text"
-                      id="BranchName"
-                      name="BranchName"
-                      className="form-control"
-                      placeholder={tm("check.autoFill")}
-                      readOnly
-                      value={value.fundAccountId ? (fund?.bankBranchName ?? "") : ""}
-                    />
-                    <Help>{tm("check.autoFillHelp")}</Help>
-                  </div>
-                </div>
-                <div className="col-md-3">
-                  <IssueDateInput id="IssueDate" label={tm("check.issueDate")} />
-                </div>
-                <div className="col-md-3">
-                  <DueDateInput
-                    id="DueDate"
-                    label={tm("check.dueDate")}
-                    value={value.dueDate}
-                    onChange={(dueDate) => set({ dueDate })}
-                    error={errors.dueDate}
-                    disabled={disabled}
-                  />
-                </div>
-              </div>
-              <DisabledDescription
+              <OwnCheckNumberFields
+                value={value}
+                set={set}
+                companyId={companyId}
+                editing={editing}
+                errors={errors}
+                disabled={disabled}
+                onLeafGuardChange={onLeafGuardChange}
+              />
+              <DescriptionInput
                 id="CheckDescription"
                 label={tm("check.description")}
                 placeholder={tm("check.descriptionPlaceholder")}
+                value={value.description ?? ""}
+                onChange={(description) => set({ description })}
+                disabled={disabled}
               />
             </div>
           )}
@@ -499,7 +443,11 @@ function ReceivedCheck({ value, onChange, errors = {}, disabled }: CheckFieldsPr
               options={options}
               value={value.status}
               onChange={(status) =>
-                set({ status, fundAccountId: status === "AT_BANK" ? value.fundAccountId : "" })
+                set({
+                  status,
+                  fundAccountId: status === "AT_BANK" ? value.fundAccountId : "",
+                  custodyFundId: status === "AT_BANK" ? "" : value.custodyFundId,
+                })
               }
               disabled={disabled}
             />
@@ -556,16 +504,25 @@ function ReceivedCheck({ value, onChange, errors = {}, disabled }: CheckFieldsPr
                 name="BranchName"
                 className="form-control"
                 placeholder={tm("check.receivedBranchPlaceholder")}
-                disabled
-                title={tm("shared.phase123")}
-                aria-describedby="BranchName-phase"
+                maxLength={100}
+                autoComplete="off"
+                value={value.bankBranch ?? ""}
+                onChange={(event) => set({ bankBranch: event.target.value })}
+                disabled={disabled}
               />
-              <PhaseNote id="BranchName-phase" step="12.3" />
               <Help>{tm("check.receivedBranchHelp")}</Help>
             </div>
           </div>
           <div className="col-md-3">
-            <IssueDateInput id="IssueDate" label={tm("check.issueDate")} required />
+            <IssueDateInput
+              id="IssueDate"
+              label={tm("check.issueDate")}
+              required
+              value={value.issueDate ?? ""}
+              onChange={(issueDate) => set({ issueDate })}
+              error={errors.issueDate}
+              disabled={disabled}
+            />
           </div>
           <div className="col-md-3">
             <DueDateInput
@@ -579,10 +536,13 @@ function ReceivedCheck({ value, onChange, errors = {}, disabled }: CheckFieldsPr
             />
           </div>
         </div>
-        <DisabledDescription
+        <DescriptionInput
           id="CheckDescription"
           label={tm("check.description")}
           placeholder={tm("check.descriptionPlaceholder")}
+          value={value.description ?? ""}
+          onChange={(description) => set({ description })}
+          disabled={disabled}
         />
       </div>
     </div>
@@ -620,14 +580,25 @@ function CheckNumberInput({
   error,
   disabled,
   labelRequired,
+  readOnly,
+  guard,
 }: {
   value: string;
   onChange: (value: string) => void;
   error?: string;
   disabled?: boolean;
   labelRequired?: boolean;
+  /** "Kendi Çekimiz" koçan kipinde numara koçandan dolar (APM `readonly`). */
+  readOnly?: boolean;
+  /** Manuel numaranın koçan denetimi (CLG notu input altında; engelde kırmızı çerçeve). */
+  guard?: CheckLeafGuardResult;
 }) {
   const { tm } = useModalText();
+  const blocked = guard?.state === "leafUsed" || guard?.state === "leafManualForbidden";
+  const note = guard?.message ? "CheckNumber-leaf" : undefined;
+  const describedBy = [errorProps(error, "CheckNumber")["aria-describedby"], note]
+    .filter(Boolean)
+    .join(" ");
   return (
     <div className="form-group">
       <label htmlFor="CheckNumber" className={labelRequired ? "required-field" : undefined}>
@@ -637,36 +608,283 @@ function CheckNumberInput({
         type="text"
         id="CheckNumber"
         name="CheckNumber"
-        className="form-control"
+        className={blocked ? "form-control chk-leaf-blocked" : "form-control"}
         placeholder="1234567"
         maxLength={7}
         pattern="[0-9]{7}"
         inputMode="numeric"
         autoComplete="off"
         required
+        readOnly={readOnly}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
-        {...errorProps(error, "CheckNumber")}
+        aria-invalid={!!error || blocked}
+        aria-describedby={describedBy || undefined}
       />
       <small className="form-text text-muted">
         <i className="fas fa-info-circle" aria-hidden="true" /> {tm("check.numberHelp")}
       </small>
+      {guard?.message && (
+        <small
+          id="CheckNumber-leaf"
+          className={`form-text chk-leaf-note ${blocked ? "chk-bad" : "chk-ok"}`}
+        >
+          <i
+            className={`fas ${blocked ? "fa-ban" : "fa-check-circle"}`}
+            style={{ fontSize: 10 }}
+            aria-hidden="true"
+          />{" "}
+          {guard.message}
+        </small>
+      )}
     </div>
   );
 }
 
-/** Keşide / Düzenlenme tarihi: 12.3'e kadar devre dışı, bugün gösterilir (gönderilmez). */
+/**
+ * "Kendi Çekimiz" koçan / numara satırları (APM:825-901): Çek Koçanı (yalnız kullanılmamış yapraklar;
+ * ZTO seçenek metni "Yaprak {n} - Çek No: {no} ({seri})"), "Manuel Çek Numarası Gir" ↔ "Koçandan
+ * Seç", Çek Numarası (koçan kipinde salt okunur), Banka Adı / Şube Adı (bankadan), Keşide ve Vade.
+ */
+function OwnCheckNumberFields({
+  value,
+  set,
+  companyId,
+  editing,
+  errors,
+  disabled,
+  onLeafGuardChange,
+}: {
+  value: CheckFieldsValue;
+  set: (patch: Partial<CheckFieldsValue>) => void;
+  companyId: string | null;
+  editing: CheckFieldsProps["editing"];
+  errors: NonNullable<CheckFieldsProps["errors"]>;
+  disabled?: boolean;
+  onLeafGuardChange?: CheckFieldsProps["onLeafGuardChange"];
+}) {
+  const { tm } = useModalText();
+  const manual = !!value.manualNumber;
+  const fundAccountId = value.fundAccountId;
+  const leaves = useCheckLeaves(
+    { fundAccountId, status: "UNUSED", companyId },
+    { enabled: !!fundAccountId },
+  );
+  // Düzenleme: kaydın kendi yaprağı (USED) UNUSED listesinde yok; numarasıyla aranıp başa eklenir.
+  const currentLeafId = editing?.currentLeafId ?? null;
+  const currentInstrument = editing?.currentInstrument ?? null;
+  const ownLeafMissing =
+    !!currentLeafId && !(leaves.data?.rows ?? []).some((leaf) => leaf.id === currentLeafId);
+  const currentLookup = useCheckLeafLookup(
+    ownLeafMissing ? (currentInstrument?.number ?? null) : null,
+    fundAccountId,
+    { companyId, enabled: ownLeafMissing && !!fundAccountId },
+  );
+  const options = useMemo<CheckLeaf[]>(() => {
+    const rows = leaves.data?.rows ?? [];
+    const own = currentLeafId
+      ? (currentLookup.data ?? []).find((leaf) => leaf.id === currentLeafId)
+      : undefined;
+    return own ? [own, ...rows] : rows;
+  }, [leaves.data, currentLookup.data, currentLeafId]);
+
+  const guardEditing = useMemo<LeafGuardEditing | null>(
+    () =>
+      editing
+        ? {
+            currentLeafId,
+            currentNumber: currentInstrument?.number ?? null,
+            currentFundAccountId: currentInstrument?.fundAccountId ?? null,
+          }
+        : null,
+    [editing, currentLeafId, currentInstrument],
+  );
+  const guard = useCheckLeafGuard(value.number, fundAccountId, guardEditing, {
+    enabled: manual && !disabled,
+    companyId,
+  });
+  const latestGuardChange = useRef(onLeafGuardChange);
+  latestGuardChange.current = onLeafGuardChange;
+  useEffect(() => {
+    latestGuardChange.current?.(guard.state);
+  }, [guard.state]);
+  // Bölüm kapanınca (yöntem/tür değişimi) engel kalkar.
+  useEffect(() => () => latestGuardChange.current?.("idle"), []);
+
+  /** ZTO GetAvailableCheckBooks displayText: "Yaprak {n} - Çek No: {no} ({seri})". */
+  const leafOptionText = (leaf: CheckLeaf) => {
+    const text = tm("check.leafOption", { leaf: leaf.leafNo, number: leaf.number });
+    return leaf.checkBookSerial
+      ? `${text} ${tm("check.leafOptionSerial", { serial: leaf.checkBookSerial })}`
+      : text;
+  };
+
+  const pickLeaf = (leafId: string) => {
+    const leaf = options.find((item) => item.id === leafId) ?? null;
+    set({ checkLeafId: leaf ? leaf.id : "", number: leaf ? leaf.number : "" });
+  };
+
+  const toggleManual = () => {
+    if (manual) {
+      set({ manualNumber: false, number: "", checkLeafId: "" });
+    } else {
+      set({ manualNumber: true, checkLeafId: "" });
+      requestAnimationFrame(() => document.getElementById("CheckNumber")?.focus());
+    }
+  };
+
+  let placeholder = tm("check.checkBookPlaceholder");
+  if (fundAccountId) {
+    if (leaves.isPending) placeholder = tm("check.checkBookLoading");
+    else if (leaves.isError) placeholder = tm("check.checkBookLoadFailed");
+    else if (options.length === 0) placeholder = tm("check.checkBookEmpty");
+    else placeholder = tm("check.checkBook");
+  }
+
+  return (
+    <>
+      <div className="form-row">
+        <div className="col-md-6">
+          <div className="form-group">
+            <label htmlFor="CheckBookID">
+              <i className="fas fa-book" aria-hidden="true" /> {tm("check.checkBook")}
+            </label>
+            <select
+              id="CheckBookID"
+              name="CheckBookID"
+              className="form-control no-select2"
+              value={manual ? "" : value.checkLeafId || ""}
+              onChange={(event) => pickLeaf(event.target.value)}
+              disabled={disabled || manual || !fundAccountId}
+              aria-describedby="CheckBookID-help"
+            >
+              <option value="">{placeholder}</option>
+              {options.map((leaf) => (
+                <option key={leaf.id} value={leaf.id} style={{ color: "#28a745" }}>
+                  {leafOptionText(leaf)}
+                </option>
+              ))}
+            </select>
+            <small className="form-text text-muted" id="CheckBookID-help">
+              <i className="fas fa-info-circle" aria-hidden="true" />{" "}
+              <span className="text-success">{tm("check.checkBookHelpGreen")}</span>{" "}
+              {tm("check.checkBookHelpUsable")}{" "}
+              <span className="text-muted">{tm("check.checkBookHelpGray")}</span>{" "}
+              {tm("check.checkBookHelpUsed")}
+            </small>
+          </div>
+        </div>
+        <div className="col-md-6">
+          <div className="form-group">
+            <i className="fas fa-receipt" aria-hidden="true" /> {tm("check.action")}
+            <button
+              type="button"
+              className="btn btn-sm btn-info"
+              id="toggleManualCheck"
+              style={{ fontSize: 11 }}
+              onClick={toggleManual}
+              disabled={disabled}
+              aria-pressed={manual}
+            >
+              <i className={`fas ${manual ? "fa-book" : "fa-edit"}`} aria-hidden="true" />{" "}
+              {manual ? tm("check.fromBook") : tm("check.manual")}
+            </button>
+            <Help>{tm("check.manualHelp")}</Help>
+          </div>
+        </div>
+      </div>
+      <div className="form-row">
+        <div className="col-md-6">
+          <CheckNumberInput
+            value={value.number}
+            onChange={(number) => set({ number })}
+            error={errors.number}
+            disabled={disabled}
+            readOnly={!manual}
+            guard={manual ? guard : undefined}
+          />
+        </div>
+        <div className="col-md-6">
+          <div className="form-group">
+            <label htmlFor="BankName">
+              <i className="fas fa-university" aria-hidden="true" /> {tm("check.bankName")}
+            </label>
+            <input
+              type="text"
+              id="BankName"
+              name="BankName"
+              className="form-control"
+              placeholder={tm("check.autoFill")}
+              readOnly
+              value={value.bankName}
+            />
+            <Help>{tm("check.autoFillHelp")}</Help>
+          </div>
+        </div>
+      </div>
+      <div className="form-row">
+        <div className="col-md-6">
+          <div className="form-group">
+            <label htmlFor="BranchName">
+              <i className="fas fa-code-branch" aria-hidden="true" /> {tm("check.branchName")}
+            </label>
+            <input
+              type="text"
+              id="BranchName"
+              name="BranchName"
+              className="form-control"
+              placeholder={tm("check.autoFill")}
+              readOnly
+              value={fundAccountId ? (value.bankBranch ?? "") : ""}
+            />
+            <Help>{tm("check.autoFillHelp")}</Help>
+          </div>
+        </div>
+        <div className="col-md-3">
+          <IssueDateInput
+            id="IssueDate"
+            label={tm("check.issueDate")}
+            value={value.issueDate ?? ""}
+            onChange={(issueDate) => set({ issueDate })}
+            error={errors.issueDate}
+            disabled={disabled}
+          />
+        </div>
+        <div className="col-md-3">
+          <DueDateInput
+            id="DueDate"
+            label={tm("check.dueDate")}
+            value={value.dueDate}
+            onChange={(dueDate) => set({ dueDate })}
+            error={errors.dueDate}
+            disabled={disabled}
+          />
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** Keşide / Düzenlenme tarihi (APM/CMP; varsayılan bugün, vadeden sonra olamaz). */
 export function IssueDateInput({
   id,
   label,
   required,
+  value,
+  onChange,
+  error,
+  disabled,
 }: {
   id: string;
   label: string;
+  /** Tahsilatta (CMP) etiket yıldızlı; ödemede (APM) etiket yıldızsız, alan yine `required`. */
   required?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  disabled?: boolean;
 }) {
-  const { tm } = useModalText();
   return (
     <div className="form-group">
       <label htmlFor={id} className={required ? "required-field" : undefined}>
@@ -677,13 +895,12 @@ export function IssueDateInput({
         id={id}
         name={id}
         className="form-control"
-        value={todayIso()}
-        readOnly
-        disabled
-        title={tm("shared.phase123")}
-        aria-describedby={`${id}-phase`}
+        required
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
+        {...errorProps(error, id)}
       />
-      <PhaseNote id={`${id}-phase`} step="12.3" />
     </div>
   );
 }
@@ -726,17 +943,22 @@ export function DueDateInput({
   );
 }
 
-/** Çek / senet açıklaması: 12.3'e kadar devre dışı (kolonu yok). */
-export function DisabledDescription({
+/** Çek / senet açıklaması (`instrument.description`, ≤ 500). */
+export function DescriptionInput({
   id,
   label,
   placeholder,
+  value,
+  onChange,
+  disabled,
 }: {
   id: string;
   label: string;
   placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
 }) {
-  const { tm } = useModalText();
   return (
     <div className="form-group">
       <label htmlFor={id}>
@@ -747,12 +969,12 @@ export function DisabledDescription({
         name={id}
         className="form-control"
         rows={2}
+        maxLength={500}
         placeholder={placeholder}
-        disabled
-        title={tm("shared.phase123")}
-        aria-describedby={`${id}-phase`}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
       />
-      <PhaseNote id={`${id}-phase`} step="12.3" />
     </div>
   );
 }

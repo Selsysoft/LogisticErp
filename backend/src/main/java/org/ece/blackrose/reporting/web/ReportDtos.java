@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 import org.ece.blackrose.finance.web.FinanceDtos.CurrencyTotal;
 
 public final class ReportDtos {
@@ -77,8 +78,13 @@ public final class ReportDtos {
       BigDecimal outflow,
       BigDecimal net) {}
 
+  /**
+   * Döviz pozisyonu satırı. 12.8: {@code companyId} şirket kırılımında ({@code byCompany}) satırın
+   * şirketi, şirket seçiliyse o şirket; konsolide satırda boş.
+   */
   public record PositionRow(
       String currency,
+      UUID companyId,
       BigDecimal cash,
       BigDecimal receivable,
       BigDecimal payable,

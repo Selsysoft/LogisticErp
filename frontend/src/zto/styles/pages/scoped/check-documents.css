@@ -1,0 +1,231 @@
+/*
+ * Kaynak: ZtoFabrika/Views/Checks/CheckDocuments.cshtml <style> :13-239 (12.3_TASARIM §5.3).
+ * Birebir kopya (FE-2); kurallar .zto-finans.zto-page-check-documents altına
+ * alınır (prefixTransform.ts).
+ */
+/* --- Views/Checks/CheckDocuments.cshtml <style> :13-239 (Razor @@ → @) --- */
+/* Treeview container stilini ayarlayın */
+.treeview {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  height: 480px;
+  display: flex;
+  flex-direction: column;
+}
+
+.document-text {
+  margin: 15px;
+  flex-shrink: 0;
+}
+
+.treeview-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 10px 10px 10px;
+}
+
+.treeview-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.treeview-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.treeview-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.treeview-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.treeview ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.treeview li {
+  padding: 5px 10px;
+  position: relative;
+  transition: background-color 0.3s;
+}
+
+.caret {
+  user-select: none;
+  position: relative;
+}
+
+.caret::before {
+  content: "\25B8";
+  display: inline-block;
+  margin-right: 6px;
+  transition: transform 0.3s;
+}
+
+.caret-down::before {
+  transform: rotate(90deg);
+}
+
+.nested {
+  display: none;
+  padding-left: 0px;
+}
+
+.active {
+  display: block;
+}
+
+.treeview .nested li {
+  padding-left: 60px;
+}
+
+.upload-area {
+  background: #fff;
+  border: 2px dashed #dee2e6;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  text-align: center;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  height: 550px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.upload-area.drag-over {
+  border: 2px dashed #007bff;
+  background-color: rgba(0, 123, 255, 0.05);
+  box-shadow: 0 0 20px rgba(0, 123, 255, 0.2);
+}
+
+.drag-drop-icon {
+  font-size: 64px;
+  color: #007bff;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.upload-area.drag-over .drag-drop-icon {
+  transform: scale(1.1);
+  color: #0056b3;
+}
+
+.drag-drop-text {
+  font-size: 18px;
+  font-weight: 500;
+  color: #495057;
+  margin-bottom: 10px;
+}
+
+.upload-area.drag-over .drag-drop-text {
+  color: #007bff;
+}
+
+.drag-drop-subtext {
+  font-size: 14px;
+  color: #6c757d;
+  margin-bottom: 20px;
+}
+
+.file-select-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  margin-bottom: 15px;
+}
+
+.file-select-btn:hover {
+  background: #0056b3;
+}
+
+.or-text {
+  color: #6c757d;
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+.custom-file-input {
+  width: 100%;
+  margin: 0;
+  opacity: 0;
+}
+
+.custom-file-label {
+  overflow: hidden;
+}
+
+.custom-file-label::after {
+  content: attr(data-browse);
+}
+
+#upload-button {
+  height: calc(1.5em + 0.75rem + 2px);
+  border-radius: 0.25rem;
+}
+
+.custom-context-menu {
+  position: absolute;
+  z-index: 1000;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 5px 0;
+  min-width: 150px;
+}
+
+.custom-context-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.custom-context-menu ul li {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.custom-context-menu ul li i {
+  margin-right: 8px;
+}
+
+.custom-context-menu ul li:hover {
+  background-color: #f4f4f4;
+}
+
+@media (max-width: 768px) {
+  .treeview {
+    height: 480px;
+  }
+
+  .upload-area {
+    height: 480px;
+  }
+
+  .drag-drop-icon {
+    font-size: 48px;
+  }
+
+  .drag-drop-text {
+    font-size: 16px;
+  }
+}

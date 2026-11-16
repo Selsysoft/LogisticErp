@@ -6,6 +6,9 @@ import {
   DEC_SCALE,
   fromScaled,
   minDec,
+  mulDec,
+  percentOf,
+  roundDec,
   subDec,
   sumDec,
   toScaled,
@@ -134,5 +137,41 @@ describe("işlemler", () => {
     expect(sumDec(new Set(["1.0001", "2.0002"]))).toBe("3.0003");
     expect(sumDec(Array.from({ length: 10 }, () => "0.1"))).toBe("1.00");
     expect(() => sumDec(["1", "x"])).toThrow(RangeError);
+  });
+});
+
+describe("12.7 mulDec / percentOf / roundDec (HALF_UP, §5.2)", () => {
+  it("mulDec: 4 hane varsayılan, istenen haneye tek adım yuvarlama", () => {
+    expect(mulDec("2.5", "3.333")).toBe("8.3325");
+    expect(mulDec("0.0001", "0.5")).toBe("0.0001"); // 0.00005 → yukarı
+    expect(mulDec("0.0001", "0.4")).toBe("0.00");
+    expect(mulDec("3", "33.335", 2)).toBe("100.01"); // 100.005 → 100.01
+    expect(mulDec("-3", "33.335", 2)).toBe("-100.01"); // sıfırdan uzağa
+    expect(mulDec("1.5", "2", 0)).toBe("3.00");
+    expect(mulDec(null, "5")).toBe("0.00");
+    expect(mulDec("12", "1000")).toBe("12000.00");
+  });
+
+  it("percentOf: amount × oran / 100; çift yuvarlama yok", () => {
+    expect(percentOf("1000", "18")).toBe("180.00");
+    expect(percentOf("1000", "18", 2)).toBe("180.00");
+    expect(percentOf("0.33", "1.5")).toBe("0.005"); // 0.00495 → 4 hane 0.0050
+    expect(percentOf("0.33", "1.5", 2)).toBe("0.00"); // tek adım: 0.00495 → 0.00
+    expect(percentOf("10.05", "10", 2)).toBe("1.01"); // 1.005 → 1.01
+    expect(percentOf("-10.05", "10", 2)).toBe("-1.01");
+    expect(percentOf("250", "0")).toBe("0.00");
+    expect(percentOf("250", "100", 2)).toBe("250.00");
+  });
+
+  it("roundDec: varsayılan 2 hane, HALF_UP, negatif sıfırdan uzağa, 0–4 kırpılır", () => {
+    expect(roundDec("1.005")).toBe("1.01");
+    expect(roundDec("1.0049")).toBe("1.00");
+    expect(roundDec("-1.005")).toBe("-1.01");
+    expect(roundDec("-1.0049")).toBe("-1.00");
+    expect(roundDec("2.5", 0)).toBe("3.00");
+    expect(roundDec("1.23456", 3)).toBe("1.235");
+    expect(roundDec("1.23456", 9)).toBe("1.2346");
+    expect(roundDec("1.25", -1)).toBe("1.00");
+    expect(roundDec(null)).toBe("0.00");
   });
 });

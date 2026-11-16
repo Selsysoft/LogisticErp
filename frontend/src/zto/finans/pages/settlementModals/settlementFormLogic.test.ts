@@ -72,7 +72,8 @@ const keys = (errors: { key: string }[]) => errors.map((error) => error.key);
 describe("yöntem yardımcıları", () => {
   it("ZTO yöntem sırası ve düzenleme alt kümesi; Diğer yok", () => {
     expect(PAY_METHODS).toEqual(["CASH", "BANK", "CHECK", "NOTE", "CREDIT_CARD"]);
-    expect(EDIT_METHODS).toEqual(["CASH", "BANK", "CREDIT_CARD"]);
+    // 12.3 Rev 1 F3: düzenlemede beş yöntem (ZTO EPM:242-246).
+    expect(EDIT_METHODS).toEqual(["CASH", "BANK", "CHECK", "NOTE", "CREDIT_CARD"]);
     expect(methodOptions("add")).toBe(PAY_METHODS);
     expect(methodOptions("edit")).toBe(EDIT_METHODS);
     expect(isPayMethod("NOTE")).toBe(true);
@@ -226,6 +227,223 @@ describe("doğrulama — tahsilat", () => {
   });
 });
 
+describe("12.3 çek/senet alanları", () => {
+  it("kendi çek: yaprak yalnız koçan kipinde; keşide, şube, açıklama; boş metin gönderilmez", () => {
+    const own = form({ method: "CHECK" });
+    own.check = {
+      ...own.check,
+      number: "0001234",
+      fundAccountId: "fb",
+      checkLeafId: "l1",
+      bankBranch: "Konak",
+      description: "  ",
+    };
+    expect(paymentBody(own).instrument).toMatchObject({
+      checkLeafId: "l1",
+      issueDate: TODAY,
+      bankBranch: "Konak",
+      description: undefined,
+    });
+    const manual = { ...own, check: { ...own.check, manualNumber: true } };
+    expect(paymentBody(manual).instrument?.checkLeafId).toBeUndefined();
+  });
+
+  it("senet: tür, keşideci (yalnız tahsilat); tahsilatta banka gönderilmez", () => {
+    const note = form({ method: "NOTE" });
+    note.note = {
+      ...note.note,
+      number: "S-1",
+      noteType: "BOND",
+      fundAccountId: "fb",
+      drawerName: " Ali ",
+      description: "x",
+    };
+    expect(paymentBody(note).instrument).toMatchObject({
+      kind: "NOTE",
+      noteType: "BOND",
+      fundAccountId: "fb",
+      description: "x",
+    });
+    expect(paymentBody(note).instrument?.drawerName).toBeUndefined();
+    expect(collectionBody(note).instrument).toMatchObject({
+      noteType: "BOND",
+      drawerName: "Ali",
+      initialStatus: "PORTFOLIO",
+    });
+    expect(collectionBody(note).instrument?.fundAccountId).toBeUndefined();
+  });
+
+  it("tahsilat çeki: Kasaya Al ve Portföyde emanet kasası; Bankaya Yatırıldı kasa göndermez", () => {
+    const check = form({ method: "CHECK" });
+    check.check = { ...check.check, number: "1234567", custodyFundId: "k1", fundAccountId: "fb" };
+    expect(collectionBody(check).instrument).toMatchObject({
+      initialStatus: "AT_BANK",
+      fundAccountId: "fb",
+      custodyFundId: undefined,
+    });
+    const portfolio = { ...check, check: { ...check.check, status: "PORTFOLIO" as const } };
+    expect(collectionBody(portfolio).instrument).toMatchObject({
+      initialStatus: "PORTFOLIO",
+      custodyFundId: "k1",
+    });
+  });
+
+  it("doğrulama: keşide/düzenlenme tarihi, tarih sırası, Kasaya Al kasası, koçan engeli", () => {
+    const own = form({ method: "CHECK" });
+    own.check = {
+      ...own.check,
+      number: "1234567",
+      fundAccountId: "fb",
+      issueDate: "",
+      manualNumber: true,
+    };
+    expect(keys(validatePayment(own))).toContain("issueDate");
+    own.check.issueDate = "2027-01-01";
+    expect(keys(validatePayment(own))).toContain("datesOrder");
+    own.check.issueDate = TODAY;
+    expect(keys(validatePayment(own, { leafGuard: "leafUsed" }))).toContain("checkLeafUsed");
+    expect(keys(validatePayment(own, { leafGuard: "leafManualForbidden" }))).toContain(
+      "checkLeafManual",
+    );
+    expect(keys(validatePayment(own, { leafGuard: "free" }))).toEqual([]);
+    // Koçan kipinde (yaprak seçili) denetim sonucu yok sayılır.
+    const fromBook = { ...own, check: { ...own.check, manualNumber: false } };
+    expect(keys(validatePayment(fromBook, { leafGuard: "leafUsed" }))).toEqual([]);
+    const note = form({ method: "NOTE" });
+    note.note = { ...note.note, number: "S", issueDate: "" };
+    expect(keys(validatePayment(note))).toContain("noteIssue");
+    const cashBox = form({ method: "CHECK" });
+    cashBox.check = { ...cashBox.check, number: "1234567", status: "CASH_BOX" };
+    expect(keys(validateCollection(cashBox))).toContain("checkCash");
+    const portfolio = { ...cashBox, check: { ...cashBox.check, status: "PORTFOLIO" as const } };
+    expect(keys(validateCollection(portfolio))).not.toContain("checkCash");
+  });
+
+  it("formFromDetail: çek/senet alt formu (Rev 1 F3)", () => {
+    const base = {
+      item: {
+        accountId: "a1",
+        documentNo: null,
+        displayMethod: "CHECK",
+        settlementDate: TODAY,
+        branchId: "b1",
+        money: { amount: "100", currency: "TRY" },
+        exchangeRate: null,
+        fundAccountId: null,
+        counterpartyBankAccountId: null,
+        description: null,
+      },
+      allocations: [],
+    };
+    const instrument = {
+      id: "i1",
+      kind: "CHECK",
+      direction: "ISSUED" as const,
+      number: "0001234",
+      bankName: "Ziraat",
+      fundAccountId: "fb",
+      dueDate: "2026-12-30",
+      status: "ISSUED",
+      issueDate: "2026-11-01",
+      bankBranch: "Konak",
+      description: null,
+      checkLeafId: "l1",
+    };
+    const own = formFromDetail(
+      { ...base, item: { ...base.item, type: "PAYMENT" }, instrument },
+      TODAY,
+    );
+    expect(own.method).toBe("CHECK");
+    expect(own.check).toMatchObject({
+      mode: "OWN",
+      fundAccountId: "fb",
+      checkLeafId: "l1",
+      manualNumber: false,
+      number: "0001234",
+      issueDate: "2026-11-01",
+      bankBranch: "Konak",
+      description: "",
+    });
+    const manual = formFromDetail(
+      {
+        ...base,
+        item: { ...base.item, type: "PAYMENT" },
+        instrument: { ...instrument, checkLeafId: null },
+      },
+      TODAY,
+    );
+    expect(manual.check).toMatchObject({ checkLeafId: "", manualNumber: true });
+    const endorse = formFromDetail(
+      {
+        ...base,
+        item: { ...base.item, type: "PAYMENT" },
+        instrument: { ...instrument, direction: "RECEIVED", status: "ENDORSED" },
+      },
+      TODAY,
+    );
+    expect(endorse.check).toMatchObject({ mode: "ENDORSE", instrumentId: "i1" });
+    const received = { ...instrument, direction: "RECEIVED" as const, checkLeafId: null };
+    const collection = { ...base, item: { ...base.item, type: "COLLECTION" as const } };
+    expect(
+      formFromDetail({ ...collection, instrument: { ...received, custodyFundId: "k1" } }, TODAY)
+        .check,
+    ).toMatchObject({ status: "CASH_BOX", custodyFundId: "k1" });
+    expect(
+      formFromDetail({ ...collection, instrument: { ...received, status: "AT_BANK" } }, TODAY)
+        .check,
+    ).toMatchObject({ status: "AT_BANK", fundAccountId: "fb" });
+    expect(
+      formFromDetail({ ...collection, instrument: { ...received, status: "PORTFOLIO" } }, TODAY)
+        .check.status,
+    ).toBe("PORTFOLIO");
+    const note = formFromDetail(
+      {
+        ...collection,
+        instrument: { ...received, kind: "NOTE", noteType: "ORDER", drawerName: "Ali" },
+      },
+      TODAY,
+    );
+    expect(note.method).toBe("NOTE");
+    expect(note.note).toMatchObject({
+      number: "0001234",
+      noteType: "ORDER",
+      drawerName: "Ali",
+      fundAccountId: "",
+    });
+    // Çeksiz kayıt: 12.2a davranışı.
+    expect(formFromDetail({ ...base, instrument: null }, TODAY).check).toEqual(
+      emptyForm(TODAY).check,
+    );
+  });
+
+  it("presetForm: Bankadan Cari Çek Ödemesi banka çekin bankası; Ciro Et ön seçimi", () => {
+    const bank = {
+      kind: "BANK" as const,
+      branchId: "b1",
+      currency: "USD",
+      bankName: "Ziraat",
+      bankBranchName: "Konak",
+    };
+    const check = presetForm({ fundAccountId: "fb", method: "CHECK" }, bank, TODAY);
+    expect(check).toMatchObject({
+      method: "CHECK",
+      branchId: "b1",
+      currency: "USD",
+      fundAccountId: "",
+    });
+    expect(check.check).toMatchObject({
+      fundAccountId: "fb",
+      bankName: "Ziraat",
+      bankBranch: "Konak",
+    });
+    const note = presetForm({ fundAccountId: "fb", method: "NOTE" }, bank, TODAY);
+    expect(note.note.fundAccountId).toBe("fb");
+    const endorse = presetForm({ endorseInstrumentId: "i9" }, null, TODAY);
+    expect(endorse.method).toBe("CHECK");
+    expect(endorse.check).toMatchObject({ mode: "ENDORSE", instrumentId: "i9" });
+  });
+});
+
 describe("istek gövdesi", () => {
   it("nakit: fon, ortak alanlar, metin tutar; boş açıklama/belge no gönderilmez", () => {
     expect(paymentBody(form({ description: "  ", documentNo: " F-1 " }))).toEqual({
@@ -264,6 +482,7 @@ describe("istek gövdesi", () => {
       bankName: "Ziraat",
       dueDate: "2026-12-15",
       fundAccountId: "fb",
+      issueDate: TODAY,
     });
     const endorse = form({ method: "CHECK" });
     endorse.check = { ...endorse.check, mode: "ENDORSE", instrumentId: "i1" };

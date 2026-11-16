@@ -584,7 +584,7 @@ class BranchScopeHardeningIT extends AbstractIntegrationTest {
             "kind",
             "CHECK",
             "number",
-            "C-1",
+            "0000001",
             "bankName",
             "Test Bank",
             "dueDate",

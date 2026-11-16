@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
  * tahsilatı, türetilmiş akışların kanalı, önizleme (çek bilgisi zorunlu değil, düzeltme önizlemesi)
  * ve idempotent tekrar.
  */
-class SettlementWriteIT extends SettlementTestSupport {
+class SettlementWriteIT extends InstrumentTestSupport {
 
   @Test
   void belgeNoKanalVeKarsiTarafHesabiSaklanir() throws Exception {
@@ -372,6 +372,119 @@ class SettlementWriteIT extends SettlementTestSupport {
         "IDEMPOTENCY_KEY_REUSED");
     // Hiçbiri kayıt yazmadı: personel ödemesi, ödeme ve düzeltmesi.
     assertThat(count(w, "select count(*) from %s.settlement")).isEqualTo(3);
+  }
+
+  /**
+   * 12.3 §3.3 çek/senet kuralları: 7 hane (CHECK 400, NOTE serbest), keşide > vade 400, elle
+   * girilen numara koçandaysa 409, başka fonun yaprağı 422, kullanılmış yaprak 409, yaprak yalnız
+   * kendi çekimizle ödemede 400, senet türü yalnız senette 400.
+   */
+  @Test
+  void cekNumarasiVeKocanYapragiKurallari() throws Exception {
+    World w = world("sw12");
+    String bank = bankFund(w, "BANKA-A1", w.a1(), "TRY");
+    String bank2 = bankFund(w, "BANKA2-A1", w.a1(), "TRY");
+    UUID customer = account(w, AccountType.CUSTOMER, null);
+    UUID supplier = account(w, AccountType.SUPPLIER, null);
+
+    expect(
+        collect(
+            w, null, instrumentBody(customer, w.a1(), "5", instrumentData("CHECK", "C-1")), null),
+        400,
+        "CHECK_NUMBER_INVALID");
+    expect(
+        collect(
+            w,
+            null,
+            instrumentBody(customer, w.a1(), "5", instrumentData("CHECK", "123456")),
+            null),
+        400,
+        "CHECK_NUMBER_INVALID");
+    collectInstrument(w, customer, w.a1(), "5", instrumentData("NOTE", "S-1/A"));
+    Map<String, Object> dates = instrumentData("CHECK", "1234567");
+    dates.put("issueDate", TODAY.plusDays(31).toString());
+    expect(
+        collect(w, null, instrumentBody(customer, w.a1(), "5", dates), null),
+        400,
+        "INSTRUMENT_DATES_INVALID");
+    Map<String, Object> noteType = instrumentData("CHECK", "1234567");
+    noteType.put("noteType", "BOND");
+    expect(
+        collect(w, null, instrumentBody(customer, w.a1(), "5", noteType), null),
+        400,
+        "NOTE_TYPE_INVALID");
+    Map<String, Object> bond = instrumentData("NOTE", "S-2");
+    bond.put("noteType", "BOND");
+    bond.put("drawerName", "Ali Veli");
+    String note = collectInstrument(w, customer, w.a1(), "5", bond).get("instrumentId").asText();
+    assertThat(instrumentRow(w, note))
+        .containsEntry("note_type", "BOND")
+        .containsEntry("drawer_name", "Ali Veli");
+    // Aynı numara aynı şirkette ikinci kez alınamaz.
+    collectInstrument(w, customer, w.a1(), "5", instrumentData("CHECK", "1234567"));
+    expect(
+        collect(
+            w,
+            null,
+            instrumentBody(customer, w.a1(), "5", instrumentData("CHECK", "1234567")),
+            null),
+        409,
+        "INSTRUMENT_NUMBER_TAKEN");
+
+    List<UUID> leaves = leaves(w, bank, w.a1(), "7000001", "7000002");
+    // Elle girilen numara koçanda: 409.
+    Map<String, Object> manual = instrumentData("CHECK", "7000001");
+    manual.put("fundAccountId", bank);
+    expect(
+        pay(w, null, instrumentBody(supplier, w.a1(), "5", manual), null),
+        409,
+        "CHECK_NUMBER_IN_CHECK_BOOK");
+    // Başka fonun yaprağı ya da farklı numara: 422.
+    Map<String, Object> wrongFund = instrumentData("CHECK", "7000001");
+    wrongFund.put("fundAccountId", bank2);
+    wrongFund.put("checkLeafId", leaves.get(0).toString());
+    expect(
+        pay(w, null, instrumentBody(supplier, w.a1(), "5", wrongFund), null),
+        422,
+        "CHECK_LEAF_MISMATCH");
+    // Yaprak yalnız kendi çekimizle ödemede.
+    Map<String, Object> received = instrumentData("CHECK", "7000001");
+    received.put("checkLeafId", leaves.get(0).toString());
+    expect(
+        collect(w, null, instrumentBody(customer, w.a1(), "5", received), null),
+        400,
+        "CHECK_LEAF_INVALID");
+    // Yapraklı ödeme; aynı yaprak ikinci kez 409.
+    Map<String, Object> own = instrumentData("CHECK", "7000001");
+    own.put("fundAccountId", bank);
+    own.put("checkLeafId", leaves.get(0).toString());
+    String issued = payInstrument(w, supplier, w.a1(), "5", own).get("instrumentId").asText();
+    assertThat(instrumentRow(w, issued).get("check_leaf_id")).isEqualTo(leaves.get(0));
+    assertThat(leafStatus(w, leaves.get(0))).isEqualTo("USED");
+    own.put("bankName", "Başka Banka");
+    expect(pay(w, null, instrumentBody(supplier, w.a1(), "5", own), null), 409, "CHECK_LEAF_USED");
+    expect(
+        pay(
+            w,
+            null,
+            instrumentBody(
+                supplier,
+                w.a1(),
+                "5",
+                Map.of(
+                    "kind",
+                    "CHECK",
+                    "number",
+                    "7000002",
+                    "dueDate",
+                    TODAY.plusDays(5).toString(),
+                    "fundAccountId",
+                    bank,
+                    "checkLeafId",
+                    UUID.randomUUID().toString())),
+            null),
+        404,
+        "CHECK_LEAF_NOT_FOUND");
   }
 
   // --- yardımcılar

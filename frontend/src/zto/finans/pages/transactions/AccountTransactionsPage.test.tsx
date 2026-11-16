@@ -233,4 +233,23 @@ describe("AccountTransactionsPage", { timeout: 60_000 }, () => {
     expect(screen.queryByRole("button", { name: /Tahsilat Ekle/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Ödeme Ekle/ })).toBeNull();
   });
+
+  it("12.8: KUR_FARKI belgesinde Düzenle yok, diğer belgede var", async () => {
+    api();
+    fakeApi.on("GET", /^\/finance\/account-transactions\?/, {
+      content: [
+        makeRow("r1"),
+        makeRow("r2", { documentNo: "KF-FTR-1", documentType: "KUR_FARKI", kind: "RECEIVABLE" }),
+      ],
+      page: 0,
+      size: 500,
+      totalElements: 2,
+      totalPages: 1,
+      facets: null,
+    });
+    open();
+    await screen.findByText("FTR-1", {}, { timeout: 20_000 });
+    expect(screen.getByRole("button", { name: "Düzenle: FTR-1" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Düzenle: KF-FTR-1" })).toBeNull();
+  });
 });

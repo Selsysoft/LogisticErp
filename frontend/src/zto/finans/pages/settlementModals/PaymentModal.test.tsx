@@ -295,10 +295,13 @@ describe("PaymentModal", { timeout: 60_000 }, () => {
       expect((root.querySelector("#editWorkPlaceID") as HTMLSelectElement).value).toBe("b2"),
     );
     const method = root.querySelector("#editPaymentMethod") as HTMLSelectElement;
+    // 12.3 (OK-12.3-25): düzenlemede beş yöntem (ZTO EPM:242-246).
     expect([...method.options].map((option) => option.value)).toEqual([
       "",
       "CASH",
       "BANK",
+      "CHECK",
+      "NOTE",
       "CREDIT_CARD",
     ]);
     expect(method.value).toBe("BANK");
@@ -411,29 +414,97 @@ describe("PaymentModal", { timeout: 60_000 }, () => {
     expect((body as { instrument?: unknown }).instrument).toBeUndefined();
   });
 
-  it("kendi çek: 12.3 alanları devre dışı (title + sr-only), 7 hane iletisi", async () => {
+  it("kendi çek: yöntem kilitli, koçandan yaprak, manuel numara + koçan denetimi (CLG), 12.3 gövdesi", async () => {
+    const leaf = {
+      id: "l1",
+      checkBookId: "cb1",
+      checkBookSerial: "A-1",
+      leafNo: 3,
+      number: "0001234",
+      micrCode: null,
+      status: "UNUSED",
+      usedDate: null,
+      voidReason: null,
+      fundAccountId: "bk1",
+      fundName: "Ziraat Ana",
+      fundBankName: "Ziraat",
+      fundBankBranchName: "Konak",
+      fundIban: null,
+      branchId: "b1",
+      branchName: "Merkez",
+      companyId: "c1",
+      instrumentId: null,
+      instrumentStatus: null,
+    };
+    fakeApi.on("GET", /^\/finance\/check-leaves\?/, page([leaf]));
+    fakeApi.on("GET", /^\/finance\/check-leaves\/lookup/, ({ path }: ApiCall) =>
+      path.includes("number=1234567") ? [{ ...leaf, number: "1234567" }] : [],
+    );
+    fakeApi.on("POST", "/finance/payments", settlement({ method: "CHECK" }));
     open({ presetAccountId: "a1", presetBranchId: "b1", presetMethod: "CHECK" });
     const root = await modal();
     await waitFor(() => expect(root.querySelector("#ownCheckFields")).not.toBeNull());
-    for (const id of ["CheckBookID", "toggleManualCheck", "IssueDate", "CheckDescription"]) {
-      const element = root.querySelector(`#${id}`) as HTMLInputElement;
-      expect(element.disabled).toBe(true);
-      expect(element.title).toBe("Faz 12.3'te");
-      expect(
-        document.getElementById(element.getAttribute("aria-describedby") as string)?.className,
-      ).toBe("sr-only");
-    }
+    expect((root.querySelector("#PaymentMethod") as HTMLSelectElement).disabled).toBe(true);
     const number = root.querySelector("#CheckNumber") as HTMLInputElement;
+    expect(number.readOnly).toBe(true);
+    expect((root.querySelector("#CheckBookID") as HTMLSelectElement).disabled).toBe(true);
+    expect((root.querySelector("#IssueDate") as HTMLInputElement).disabled).toBe(false);
+    // Banka → koçan yaprakları (ZTO seçenek metni).
+    fireEvent.click(root.querySelector("#CheckBankID") as HTMLElement);
+    fireEvent.click(await within(root).findByRole("option", { name: /Ziraat - Konak/ }));
+    const book = root.querySelector("#CheckBookID") as HTMLSelectElement;
+    await waitFor(() => expect(book.options.length).toBe(2));
+    expect(book.options[1].textContent).toBe("Yaprak 3 - Çek No: 0001234 (A-1)");
+    expect((root.querySelector("#BranchName") as HTMLInputElement).value).toBe("Konak");
+    fireEvent.change(book, { target: { value: "l1" } });
+    expect(number.value).toBe("0001234");
+    // Manuel kip: koçan devre dışı, numara yazılabilir; koçanda kayıtlı numara engellenir.
+    fireEvent.click(within(root).getByRole("button", { name: /Manuel Çek Numarası Gir/ }));
+    expect(book.disabled).toBe(true);
     expect(number.readOnly).toBe(false);
-    expect(number.getAttribute("pattern")).toBe("[0-9]{7}");
+    expect(within(root).getByRole("button", { name: /Koçandan Seç/ })).toBeTruthy();
     fireEvent.change(number, { target: { value: "12345" } });
     fireEvent.change(root.querySelector("#PaymentAmountInput") as HTMLInputElement, {
       target: { value: "5" },
     });
     fireEvent.click(within(root).getByRole("button", { name: /Kaydet/ }));
     await waitFor(() => expect(root.textContent).toContain("Çek numarası 7 haneli olmalıdır."));
-    expect(root.textContent).toContain("Çek için banka seçiniz.");
     expect(number.getAttribute("aria-invalid")).toBe("true");
+    fireEvent.change(number, { target: { value: "1234567" } });
+    await waitFor(
+      () =>
+        expect(root.querySelector("#CheckNumber-leaf")?.textContent).toContain(
+          "manuel olarak kullanılamaz, lütfen koçandan seçiniz.",
+        ),
+      { timeout: 5_000 },
+    );
+    expect(number.classList.contains("chk-leaf-blocked")).toBe(true);
+    fireEvent.click(within(root).getByRole("button", { name: /Kaydet/ }));
+    await waitFor(() =>
+      expect(root.textContent).toContain(
+        "Bu çek numarası koçan yaprağı olarak kayıtlı — manuel olarak kullanılamaz",
+      ),
+    );
+    expect(fakeApi.calls.some((call) => call.path === "/finance/payments")).toBe(false);
+    // Koçana dönüp yaprağı seçince kayıt yapraklı gider.
+    fireEvent.click(within(root).getByRole("button", { name: /Koçandan Seç/ }));
+    fireEvent.change(book, { target: { value: "l1" } });
+    fireEvent.change(root.querySelector("#CheckDescription") as HTMLTextAreaElement, {
+      target: { value: "Kira" },
+    });
+    fireEvent.click(within(root).getByRole("button", { name: /Kaydet/ }));
+    await waitFor(() => expect(onHide).toHaveBeenCalled(), { timeout: 20_000 });
+    const body = fakeApi.calls.find((call) => call.path === "/finance/payments")?.body as {
+      instrument: Record<string, unknown>;
+    };
+    expect(body.instrument).toMatchObject({
+      kind: "CHECK",
+      number: "0001234",
+      fundAccountId: "bk1",
+      checkLeafId: "l1",
+      bankBranch: "Konak",
+      description: "Kira",
+    });
   });
 
   it("karşı taraf banka hesabı: maskeli IBAN cümlesi (sahip adı yok); personel carisinde cümle yok", async () => {

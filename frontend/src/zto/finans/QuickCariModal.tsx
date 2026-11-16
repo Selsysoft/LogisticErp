@@ -5,6 +5,7 @@ import { useCan } from "../../pages/finance/common";
 import type { Account } from "../../pages/finance/types";
 import { QCA_SEARCH_IDS, ZtoAccountSearch, ZtoModal, groupIcon } from "../components";
 import { quickCariCards } from "./quickCariCards";
+import { restoreSidebarFocusLater } from "./sidebarFocus";
 
 export type QuickCariModalProps = {
   show: boolean;
@@ -53,6 +54,7 @@ export function QuickCariModal({ show, onHide }: QuickCariModalProps) {
       contentClassName="qca-content"
       ariaLabelledBy={TITLE_ID}
       onEntered={() => document.getElementById(QCA_SEARCH_IDS.input ?? "")?.focus()}
+      onExited={() => restoreSidebarFocusLater()}
     >
       <div className="qca-header">
         <div className="qca-title" id={TITLE_ID}>

@@ -1,0 +1,1530 @@
+/*
+ * Kaynak: ZtoFabrika/wwwroot/css/report-page.css :1-416 ve wwwroot/css/stat-filter.css :1-167
+ * (12.8_TASARIM §5.3; FinanceReport/Index ve _ReportLayout, _ReportHeader, _ReportFilterBar,
+ * _StatFilterCards). Birebir kopya (FE-0); kurallar .zto-finans.zto-page-finance-report altına alınır
+ * (prefixTransform.ts). Değişiklikler (Rev 1 FE-ROOT-CLASS): iki "body.rp-page" kuralı (report-page.css
+ * :7 ve yazdırma içi :297) ".rp-page" yapıldı — ZTO'da rp-page <body> sınıfıdır; Blackrose'da sayfa
+ * içeriği div.rp-page sarmalayıcısındadır ve font/arka plan kabuğa yayılmaz. @page (yazdırma)
+ * prefixTransform tarafından çıkarılır. Dosya sonunda yazdırmada kabuk gizleme eki.
+ */
+/* --- wwwroot/css/report-page.css :1-416 --- */
+/* Rapor sayfalari icin ortak kabuk (Views/Shared/_ReportLayout.cshtml, _ReportHeader.cshtml, _ReportFilterBar.cshtml).
+   Iskelet IncomingMaterialsReport / NonconformityReport / ShipmentLedger sayfalarindaki elle kopyalanmis stilden (im- / ncr- / sl-)
+   ortak dosyaya cikarildi: klasik ERP gorunumu (4px kose, en fazla 0 1px 2px golge, #007bff olcegi, #d8dee7 cerceveli 34px kontroller;
+   gradyan, pastel ikon kutusu, CSS uppercase YOK). Kartli hizli filtrenin kendi stili wwwroot/css/stat-filter.css'te, burada yalniz
+   Bootstrap'siz sayfalar icin temizle dugmesi kurali var. Yon bagimli ozellikler mantiksal (inline-start/end) yazildi; ar kulturunde dir=rtl. */
+
+.rp-page {
+  /* Blackrose eki: body.rp-page → .rp-page */
+  margin: 0;
+  background: #f4f6f9;
+  color: #203047;
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.rp-page *,
+.rp-page *::before,
+.rp-page *::after {
+  box-sizing: border-box;
+}
+/* hidden niteligi: .rp-btn { display: inline-flex } gibi yazar kurallari tarayici varsayilanini ezer; betik hidden ile gizler. */
+.rp-page [hidden] {
+  display: none !important;
+}
+
+.rp-wrap {
+  max-width: 1680px;
+  margin: 16px auto;
+  padding: 0 16px;
+}
+
+.rp-card {
+  background: #fff;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+
+/* ---- Baslik ---- */
+.rp-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  border-top: 3px solid #007bff;
+}
+.rp-head img.rp-logo {
+  max-height: 46px;
+  max-width: 90px;
+}
+.rp-head h1 {
+  font-size: 20px;
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+.rp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.rp-chip {
+  display: inline-block;
+  font-size: 12px;
+  color: #4a5a70;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  padding: 2px 8px;
+  background: #f8f9fb;
+}
+.rp-chip[hidden] {
+  display: none;
+}
+.rp-chip i {
+  margin-inline-end: 4px;
+  color: #738299;
+}
+.rp-actions {
+  margin-inline-start: auto;
+  display: flex;
+  gap: 8px;
+}
+
+/* ---- Dugmeler ---- */
+.rp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #203047;
+  background: #fff;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.rp-btn:hover {
+  background: #f4f6f9;
+}
+.rp-btn:focus-visible {
+  outline: none;
+  border-color: #7cbaff;
+  box-shadow: 0 0 0 2px #e8f2ff;
+}
+.rp-btn.primary {
+  background: #007bff;
+  border-color: #007bff;
+  color: #fff;
+}
+.rp-btn.primary:hover {
+  background: #0062cc;
+  border-color: #0062cc;
+}
+.rp-btn.active,
+.rp-btn[aria-pressed="true"] {
+  background: #e8f2ff;
+  border-color: #7cbaff;
+  color: #0056b3;
+  font-weight: 600;
+}
+.rp-btn.rp-more {
+  margin: 8px auto 0;
+}
+
+/* ---- Filtre cubugu ---- */
+.rp-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rp-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rp-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px 12px;
+  align-items: end;
+}
+.rp-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4a5a70;
+  margin-bottom: 3px;
+}
+.rp-field input,
+.rp-field select {
+  width: 100%;
+  height: 34px;
+  padding: 0 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #203047;
+  background: #fff;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+}
+.rp-field input:focus,
+.rp-field select:focus {
+  outline: none;
+  border-color: #7cbaff;
+  box-shadow: 0 0 0 2px #e8f2ff;
+}
+.rp-buttons {
+  display: flex;
+  gap: 8px;
+}
+/* Enter tusu icin ilk (varsayilan) submit; gorunmez ama display:none degil (tarayicilar varsayilan dugmeyi gizliyse yok sayabilir). */
+.rp-hidden-submit {
+  position: absolute;
+  width: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- Uyari / bos durum / not ---- */
+.rp-notice {
+  border: 1px solid #f0c36d;
+  background: #fff8e6;
+  color: #7a5200;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+.rp-notice.bad {
+  border-color: #ef9a9a;
+  background: #fdecea;
+  color: #7f1d1d;
+}
+.rp-notice i {
+  margin-inline-end: 6px;
+}
+.rp-empty {
+  text-align: center;
+  padding: 28px 16px;
+  color: #4a5a70;
+}
+.rp-empty h2 {
+  font-size: 15px;
+  margin: 0 0 6px;
+  font-weight: 600;
+  color: #203047;
+}
+.rp-note {
+  font-size: 12px;
+  color: #738299;
+  margin: 4px 0 8px;
+}
+
+/* ---- Ozet kutulari ---- */
+.rp-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.rp-tile {
+  flex: 1 1 150px;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  padding: 8px 12px;
+  background: #fff;
+}
+.rp-tile b {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.rp-tile span {
+  font-size: 12px;
+  color: #738299;
+}
+.rp-tile.warn b {
+  color: #b45309;
+}
+.rp-tile.bad b {
+  color: #c62828;
+}
+
+/* ---- Bolum basligi: kartin ustunde lacivert bant (karta ic bosluk kadar tasar) ---- */
+.rp-sec-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: -12px -16px 10px;
+  padding: 7px 12px;
+  background: #0f3257;
+  border-bottom: 2px solid #007bff;
+  border-radius: 0;
+  color: #fff;
+}
+.rp-sec-head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+.rp-sec-head .rp-sec-meta {
+  font-size: 12px;
+  color: #bfd0e4;
+  font-variant-numeric: tabular-nums;
+}
+.rp-sec-head .rp-sec-tools {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---- Arac cubugu (gorunum secimi) ---- */
+.rp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.rp-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.rp-seg {
+  display: inline-flex;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.rp-seg button {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #203047;
+  background: #fff;
+  border: 0;
+  border-inline-end: 1px solid #d8dee7;
+  cursor: pointer;
+}
+.rp-seg button:last-child {
+  border-inline-end: 0;
+}
+.rp-seg button:hover {
+  background: #f4f6f9;
+}
+.rp-seg button[aria-pressed="true"] {
+  background: #e8f2ff;
+  color: #0056b3;
+  font-weight: 600;
+}
+
+/* ---- Gruplar ---- */
+.rp-group {
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+.rp-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 7px 12px;
+  background: #0f3257;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 2px solid #007bff;
+}
+.rp-group-head:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #7cbaff;
+}
+.rp-group-head .rp-caret {
+  width: 12px;
+  color: #bfd0e4;
+}
+.rp-group-meta {
+  font-weight: 400;
+  color: #bfd0e4;
+}
+.rp-group-head .rp-group-total {
+  color: #bfd0e4;
+}
+.rp-group-body {
+  padding: 10px 12px 12px;
+}
+.rp-group-body[hidden],
+.rp-group.closed > .rp-group-body {
+  display: none;
+}
+
+/* ---- Tablo ---- */
+.rp-scroll {
+  overflow-x: auto;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+}
+table.rp {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+table.rp th,
+table.rp td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #e2e9f2;
+  text-align: start;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+table.rp thead th {
+  background: #f4f6f9;
+  font-weight: 600;
+  color: #4a5a70;
+  border-bottom: 1px solid #d8dee7;
+  position: sticky;
+  top: 0;
+}
+table.rp .num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+table.rp tr.rp-total td {
+  background: #f8f9fb;
+  font-weight: 600;
+}
+table.rp td.empty {
+  text-align: center;
+  color: #738299;
+  padding: 24px;
+}
+.rp-blank {
+  color: #738299;
+  font-style: italic;
+}
+.rp-date {
+  unicode-bidi: isolate;
+}
+
+/* ---- Liste raporlari (Hammadde Stok, Malzeme Takip, Malzeme Stok, Siparis Partileri): arama, durum etiketi, gizleme ---- */
+.rp-search {
+  height: 34px;
+  min-width: 220px;
+  padding: 0 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #203047;
+  background: #fff;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+}
+.rp-search:focus {
+  outline: none;
+  border-color: #7cbaff;
+  box-shadow: 0 0 0 2px #e8f2ff;
+}
+.rp-search::placeholder {
+  color: #738299;
+  opacity: 1;
+}
+.rp-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: #eef2f7;
+  color: #4a5a70;
+}
+.rp-tag.ok {
+  background: #e4f3e8;
+  color: #1b7431;
+}
+.rp-tag.warn {
+  background: #fff3d9;
+  color: #955a00;
+}
+.rp-tag.bad {
+  background: #fdecec;
+  color: #c62828;
+}
+.rp-tag.info {
+  background: #e8f2ff;
+  color: #0056b3;
+}
+.rp-ok {
+  color: #1b7431;
+}
+.rp-warn {
+  color: #b45309;
+}
+.rp-bad {
+  color: #c62828;
+}
+.rp-muted {
+  color: #738299;
+}
+.rp-pop-wrap {
+  position: relative;
+  display: inline-block;
+}
+.rp-pop {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  inset-inline-start: 0;
+  min-width: 220px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.rp-pop strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #4a5a70;
+}
+.rp-pop label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 13px;
+  cursor: pointer;
+}
+.rp-hide-find,
+.rp-hide-used {
+  display: none !important;
+}
+.rp-group-total {
+  margin-inline-start: auto;
+  font-weight: 400;
+  color: #4a5a70;
+  font-variant-numeric: tabular-nums;
+}
+table.rp tfoot td {
+  background: #f8f9fb;
+  font-weight: 600;
+  border-top: 1px solid #d8dee7;
+}
+.rp-tile.ok b {
+  color: #1b7431;
+}
+.rp-page .rs-flt-bar {
+  border-radius: 4px;
+  max-width: none;
+  justify-content: flex-start;
+  margin: 0 0 10px;
+  background: #f8f9fb;
+  border-color: #d8dee7;
+}
+.rp-page .rs-dd-btn {
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+/* ---- Palet Dokum: grafik, tedarikci / arac alt satirlari ---- */
+.rp-chart {
+  padding: 12px;
+}
+.rp-sub-sup td {
+  background: #e8f2ff;
+  color: #0f3257;
+  font-weight: 600;
+  border-top: 1px solid #b9d6f5;
+}
+.rp-sub-truck td {
+  background: #f3f6fa;
+  color: #1f2d3d;
+  font-weight: 600;
+  padding-inline-start: 24px;
+}
+.rp-sub-meta {
+  margin-inline-start: 8px;
+  font-weight: 400;
+  color: #4a5a70;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Tedarikci Uretim Performansi: arac karti ---- */
+.rp-notice.info {
+  border-color: #b9d6f5;
+  background: #e8f2ff;
+  color: #0056b3;
+}
+.sp-badges {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.sp-metrics {
+  margin-bottom: 10px;
+}
+.sp-metrics .rp-tile {
+  flex: 1 1 130px;
+}
+.sp-metrics .rp-tile b {
+  font-size: 15px;
+}
+.sp-note {
+  margin-bottom: 8px;
+}
+.sp-bar {
+  height: 10px;
+  background: #e8edf3;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.sp-bar > div {
+  height: 100%;
+  background: #007bff;
+}
+.sp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 4px 0 10px;
+  font-size: 12px;
+  color: #738299;
+}
+.sp-legend b {
+  color: #203047;
+}
+.sp-img {
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
+  vertical-align: -4px;
+  margin-inline-end: 4px;
+}
+.sp-mix td {
+  background: #f5f8fc;
+}
+.sp-src {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  padding: 1px 8px;
+  margin-block: 1px;
+  margin-inline-end: 3px;
+  font-size: 12px;
+}
+.sp-src.foreign {
+  border-color: #ef9a9a;
+  background: #fdecea;
+}
+.sp-empty {
+  margin: 6px 0;
+}
+
+/* ---- Eksik Listesi (Dikkat seridi raporlari): satir tonlari, siralanabilir baslik, baglanti ---- */
+.rp-row-red td {
+  background-color: #fdecec;
+}
+.rp-row-amber td {
+  background-color: #fff8e6;
+}
+table.rp th[data-sort-col] {
+  cursor: pointer;
+  user-select: none;
+}
+table.rp th[data-sort-col]:hover {
+  color: #0056b3;
+}
+table.rp th[aria-sort="ascending"]::after {
+  content: "\25B2";
+  font-size: 9px;
+  color: #0056b3;
+}
+table.rp th[aria-sort="descending"]::after {
+  content: "\25BC";
+  font-size: 9px;
+  color: #0056b3;
+}
+table.rp td a {
+  color: #0056b3;
+  text-decoration: none;
+  font-weight: 600;
+}
+table.rp td a:hover {
+  text-decoration: underline;
+}
+.rp-card > .rp-tiles {
+  margin-bottom: 10px;
+}
+
+/* ---- Kalite dagilimi (dokulen / uretilen / fark) ---- */
+.rp-mix {
+  margin: 0 0 10px;
+}
+.rp-mix-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-bottom: 6px;
+}
+.rp-mix-figures b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.rp-mix-fig > span {
+  color: #4a5a70;
+  margin-inline-end: 6px;
+}
+.rp-mix-note {
+  font-size: 12px;
+  color: #738299;
+  margin: 0 0 6px;
+}
+.rp-mix-bar {
+  display: flex;
+  height: 22px;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f4f6f9;
+}
+.rp-mix-bar i {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+}
+.rp-mix-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  font-size: 12px;
+}
+.rp-mix-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.rp-mix-legend .sw {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+}
+.rp-mix .q1,
+.rp-mix .sw.q1 {
+  background: #2e7d32;
+}
+.rp-mix .q2,
+.rp-mix .sw.q2 {
+  background: #81c784;
+}
+.rp-mix .juice,
+.rp-mix .sw.juice {
+  background: #f9a825;
+}
+.rp-mix .waste,
+.rp-mix .sw.waste {
+  background: #ef6c00;
+}
+.rp-mix .scrap,
+.rp-mix .sw.scrap {
+  background: #8d3b0c;
+}
+.rp-mix .other,
+.rp-mix .sw.other {
+  background: #94a3b8;
+}
+.rp-mix .diff,
+.rp-mix .sw.diff {
+  background: #c62828;
+}
+
+/* ---- Kartli hizli filtre: Bootstrap'siz sayfalarda temizle dugmesi ---- */
+.rp-page .stat-filter .stat-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #203047;
+  background: #fff;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.rp-page .stat-filter .stat-clear-btn:hover {
+  background: #f4f6f9;
+}
+
+/* ---- Yazdirma: A4 yatay; filtre cubugu, kartlar ve dugmeler gizlenir, baslik cipleri ve etkin secim basilir ---- */
+@media print {
+  .rp-page {
+    /* Blackrose eki: body.rp-page → .rp-page */
+    background: #fff;
+    font-size: 9px;
+  }
+  .rp-wrap {
+    margin: 0;
+    max-width: none;
+    padding: 0;
+  }
+  .rp-actions,
+  .rp-filter-card,
+  .rp-toolbar,
+  .rp-btn.rp-more,
+  .rp-page .stat-filter,
+  .rp-page .rs-flt-bar,
+  .rp-search,
+  .rp-pop-wrap {
+    display: none !important;
+  }
+  .rp-card {
+    border: 0;
+    box-shadow: none;
+    padding: 0 0 8px;
+  }
+  .rp-head {
+    border-top: 0;
+  }
+  .rp-group {
+    border-color: #999;
+  }
+  .rp-group-head,
+  .rp-sec-head {
+    background: #f4f6f9;
+    color: #203047;
+    border-bottom: 1px solid #999;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .rp-group-meta,
+  .rp-group-head .rp-group-total,
+  .rp-group-head .rp-caret,
+  .rp-sec-head h2,
+  .rp-sec-head .rp-sec-meta {
+    color: #203047;
+  }
+  .rp-sec-head {
+    margin: 0 0 6px;
+  }
+  .rp-scroll {
+    overflow: visible;
+    border: 0;
+  }
+  table.rp {
+    font-size: 8px;
+  }
+  table.rp th,
+  table.rp td {
+    padding: 2px 4px;
+    white-space: normal;
+  }
+  table.rp thead th {
+    position: static;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tr {
+    page-break-inside: avoid;
+  }
+  .rp-tile {
+    flex: 1 1 110px;
+    padding: 4px 8px;
+  }
+  .rp-mix-figures,
+  .rp-mix-legend,
+  .rp-mix-note {
+    font-size: 10px;
+  }
+  .rp-mix-bar {
+    height: 14px;
+  }
+  .rp-tile b {
+    font-size: 12px;
+  }
+  .rp-mix-bar,
+  .rp-mix .sw {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page {
+    size: landscape;
+    margin: 8mm;
+  }
+}
+
+/* ---- Patron Finans Raporlari (Views/FinanceReport/Index.cshtml, wwwroot/js/finance-report.js) ---- */
+.fr-neg {
+  color: #c62828;
+}
+.fr-sub {
+  color: #738299;
+  font-size: 11px;
+  font-weight: 400;
+}
+.fr-hidden {
+  display: none !important;
+}
+table.rp td.fr-closing strong {
+  font-weight: 600;
+}
+table.rp tr.fr-open td,
+table.rp tr.fr-close td {
+  background: #f8f9fb;
+  font-weight: 600;
+}
+table.rp td.fr-fallback::after {
+  content: " *";
+  color: #b45309;
+}
+.fr-cards {
+  margin-bottom: 10px;
+}
+.fr-account .rp-sec-meta {
+  color: #4a5a70;
+}
+.fr-block .rp-sec-head h2 {
+  font-size: 15px;
+}
+@media (max-width: 600px) {
+  /* Telefonda "ne kadar borcum var" tek bakista: cari, para birimi, kalan (ve bekleyen); ara sutunlar ekstrede ve Excel'de. */
+  table.rp .fr-opt,
+  table.rp .fr-mid {
+    display: none;
+  }
+  .fr-page table.rp th,
+  .fr-page table.rp td {
+    white-space: normal;
+  }
+  table.rp .fr-sticky {
+    position: sticky;
+    inset-inline-start: 0;
+    background: #fff;
+    z-index: 1;
+  }
+  table.rp thead th.fr-sticky {
+    background: #f4f6f9;
+    z-index: 2;
+  }
+  .fr-search {
+    width: 100%;
+  }
+}
+@media print {
+  .fr-search,
+  .fr-cards {
+    display: none !important;
+  }
+  table.rp tr.fr-open td,
+  table.rp tr.fr-close td {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* ---- Kartli ust filtre (GET formu): KK Uygunsuzluk / Hammadde KK raporundaki kart seridinin kit karsiligi (ilk kullanan: Drencher Takip
+   Formu). Ince baslik seridi + kucuk renkli ikon kutusu; govde yatay kayan kutucuklar (wwwroot/js/ncr-filter.js tiklayinca hemen uygular)
+   ya da etiketi ustte alan. 12 sutunlu izgara; Listele / Temizle son kartin baslik seridinde. Beyaz glif / ikon zemini >= 4,5:1. ---- */
+.rp-fbar {
+  margin-bottom: 12px;
+}
+.rp-fcards {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 8px;
+  align-items: stretch;
+}
+.rp-fcard {
+  grid-column: span 3;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+}
+.rp-fcard.w2 {
+  grid-column: span 2;
+}
+.rp-fcard.w4 {
+  grid-column: span 4;
+}
+.rp-fcard-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 8px;
+  min-height: 28px;
+  background: #f4f6f9;
+  border-bottom: 1px solid #d8dee7;
+}
+.rp-fcard-head h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #203047;
+}
+.rp-ficon {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 10px;
+  color: #fff;
+  background: #0062cc;
+}
+.rp-ficon.teal {
+  background: #0e7490;
+}
+.rp-ficon.amber {
+  background: #b45309;
+}
+.rp-ficon.green {
+  background: #1b7431;
+}
+.rp-ftiles {
+  display: flex;
+  gap: 5px;
+  padding: 5px 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.rp-ftile {
+  flex: 0 0 auto;
+  padding: 2px 9px;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  background: #f8fafc;
+  color: #334155;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.rp-ftile:hover {
+  background: #eef2f7;
+}
+.rp-ftile[aria-pressed="true"] {
+  background: #e8f2ff;
+  border-color: #7cbaff;
+  color: #0056b3;
+}
+.rp-ftile:focus-visible {
+  outline: none;
+  border-color: #7cbaff;
+  box-shadow: 0 0 0 2px #e8f2ff;
+}
+.rp-fchips {
+  display: flex;
+  gap: 6px;
+  padding: 5px 8px 6px;
+}
+.rp-fchip {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 1px 7px 2px;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  background: #f8fafc;
+}
+.rp-fchip:focus-within {
+  border-color: #7cbaff;
+  box-shadow: 0 0 0 2px #e8f2ff;
+}
+.rp-fchip > span {
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 600;
+  color: #4a5a70;
+}
+.rp-fchip input,
+.rp-fchip select {
+  width: 100%;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #203047;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rp-fchip input:focus,
+.rp-fchip select:focus {
+  outline: none;
+}
+.rp-fhint {
+  margin: 0;
+  padding: 7px 8px;
+  font-size: 12px;
+  color: #4a5a70;
+}
+.rp-fbuttons {
+  margin-inline-start: auto;
+  display: flex;
+  gap: 4px;
+}
+.rp-btn.rp-btn-sm {
+  height: 20px;
+  padding: 0 8px;
+  font-size: 11px;
+  gap: 4px;
+}
+@media (max-width: 1359px) {
+  .rp-fcards {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .rp-fcard,
+  .rp-fcard.w2,
+  .rp-fcard.w4 {
+    grid-column: span 3;
+  }
+}
+@media (max-width: 719px) {
+  .rp-fcards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rp-fcard,
+  .rp-fcard.w2,
+  .rp-fcard.w4 {
+    grid-column: auto;
+  }
+}
+
+/* ---- Drencher Takip Formu (FR.107 Postharvest Gunluk Takip Tablosu; Views/DrencherTracking/Index.cshtml, wwwroot/js/drencher-tracking.js):
+   baslikta dokuman blogu, karisim grubu basinda kalin cizgi (FR.107'deki kalin kenarlik), KK'da Red alan aracin satiri kirmizi. ---- */
+.dt-doc {
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-inline-start: auto;
+}
+.dt-doc th,
+.dt-doc td {
+  border: 1px solid #d8dee7;
+  padding: 2px 8px;
+  text-align: start;
+  white-space: nowrap;
+}
+.dt-doc th {
+  background: #f4f6f9;
+  font-weight: 600;
+  color: #4a5a70;
+}
+.dt-doc td {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.dt-doc + .rp-actions {
+  margin-inline-start: 0;
+}
+table.rp.dt-table td {
+  vertical-align: top;
+}
+/* FR.107 gibi uzun basliklar sarilir (12 sutun 1600px ekrana sigar); hucreler tek satir kalir. */
+table.rp.dt-table thead th {
+  white-space: normal;
+  vertical-align: bottom;
+  min-width: 64px;
+}
+table.rp.dt-table td .sub {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: #4a5a70;
+}
+table.rp.dt-table th sup {
+  color: #b45309;
+}
+table.rp.dt-table tr.dt-grp td {
+  border-top: 2px solid #5c6c7f;
+}
+table.rp.dt-table tr.dt-red td,
+table.rp.dt-table tr.dt-red td .sub {
+  color: #c62828;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+table.rp.dt-table tfoot td {
+  background: #f8f9fb;
+  font-weight: 600;
+  border-top: 2px solid #5c6c7f;
+}
+table.rp.dt-table .t-warn {
+  color: #955a00;
+}
+.dt-red-key {
+  color: #c62828;
+  font-weight: 600;
+}
+.dt-notes {
+  font-size: 12px;
+  color: #4a5a70;
+}
+.dt-notes p {
+  margin: 2px 0;
+}
+dialog.dt-dialog {
+  padding: 0;
+  width: min(440px, calc(100vw - 32px));
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  color: #203047;
+}
+dialog.dt-dialog::backdrop {
+  background: rgba(15, 50, 87, 0.35);
+}
+.dt-dialog h2 {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  border-bottom: 1px solid #d8dee7;
+}
+.dt-dialog-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  padding: 12px 16px;
+}
+.dt-dialog-body label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4a5a70;
+}
+.dt-dialog-body input {
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid #d8dee7;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 13px;
+  color: #203047;
+}
+.dt-dialog-body input:focus {
+  outline: none;
+  border-color: #7cbaff;
+  box-shadow: 0 0 0 2px #e8f2ff;
+}
+.dt-dialog-body .rp-note {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.dt-dialog-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid #d8dee7;
+  background: #f8f9fb;
+}
+@media (max-width: 719px) {
+  .dt-doc {
+    margin-inline-start: 0;
+  }
+  .dt-dialog-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media print {
+  .rp-fbar,
+  dialog.dt-dialog,
+  .dt-hide-print {
+    display: none !important;
+  }
+  .dt-doc th,
+  .dt-doc td {
+    border-color: #999;
+    padding: 1px 4px;
+    font-size: 8px;
+  }
+  table.rp.dt-table tr.dt-grp td,
+  table.rp.dt-table tfoot td {
+    border-top-color: #000;
+  }
+}
+
+/* --- wwwroot/css/stat-filter.css :1-167 --- */
+/* Kartlı hızlı filtre — Views/Shared/_StatFilterCards.cshtml + wwwroot/js/stat-filter.js.
+   Görünüm "Satış, Sevk ve Lojistik" ekranının kart şeridinden alındı: beyaz kart, renkli üst kenar,
+   renkli ikon kutusu, kaydırılabilir değer listesi ve sağda sayı hapı. Kartlar genişliği eşit
+   sütunlarla doldurur, dar ekranda alt satıra iner.
+
+   Kurallar .stat-filter köküne bağlıdır: .stat-* sınıflarını satır içi <style> ile kullanan eski
+   sayfalarla (SalesProductLogistic, OrderHeader, ...) aynı sayfada çakışmaz.
+   Nötrler KK sayfa kitinin değişkenlerinden (--qc-*) okunur, kit yoksa kurumsal nötrlere düşer.
+   Seçili durum kurumsal ZTO mavisidir (#007bff ölçeği: 500 dolgu, 700 metin, 300 kenar, 100 zemin).
+   İkonlar Font Awesome 5 SVG'ye dönüştüğü için hedef etiket değil sınıftır. */
+
+.stat-filter {
+  --sf-accent: #007bff;
+  --sf-accent-ink: #0056b3;
+  --sf-accent-line: #7cbaff;
+  --sf-accent-soft: #e8f2ff;
+  --sf-text: var(--qc-text, #203047);
+  --sf-muted: var(--qc-muted, #738299);
+  --sf-line: var(--qc-border, #e2e9f2);
+  margin-bottom: 14px;
+}
+
+.stat-filter .stat-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.stat-filter .stat-main-card {
+  --sf-theme: #94a3b8;
+  --sf-icon: #64748b;
+  --sf-theme-soft: #f1f5f9;
+  min-width: 0;
+  padding: 10px 12px 12px;
+  background: #fff;
+  border: 1px solid var(--sf-line);
+  border-top: 3px solid var(--sf-theme);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+/* Tema = üst kenar + ikon. Yalnız sistemde zaten kullanılan tonlar. */
+.stat-filter .stat-main-card.theme-product {
+  --sf-theme: #1e293b;
+  --sf-icon: #15803d;
+  --sf-theme-soft: #e8f5ec;
+}
+.stat-filter .stat-main-card.theme-subproduct {
+  --sf-theme: #0e7490;
+  --sf-icon: #0e7490;
+  --sf-theme-soft: #e0f2f6;
+}
+.stat-filter .stat-main-card.theme-supplier {
+  --sf-theme: #64748b;
+  --sf-icon: #475569;
+  --sf-theme-soft: #eef2f6;
+}
+.stat-filter .stat-main-card.theme-neutral {
+  --sf-theme: #94a3b8;
+  --sf-icon: #64748b;
+  --sf-theme-soft: #f1f5f9;
+}
+.stat-filter .stat-main-card.theme-primary {
+  --sf-theme: #007bff;
+  --sf-icon: #007bff;
+  --sf-theme-soft: #e8f2ff;
+}
+
+.stat-filter .stat-main-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--sf-line);
+}
+
+.stat-filter .stat-main-icon {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--sf-icon);
+  background: var(--sf-theme-soft);
+}
+
+.stat-filter .stat-main-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sf-text);
+}
+
+/* Liste: üç satır görünür, gerisi kayar. */
+.stat-filter .stat-items-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 106px;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.stat-filter .stat-items-wrapper::-webkit-scrollbar {
+  width: 4px;
+}
+.stat-filter .stat-items-wrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.stat-filter .stat-item {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px 6px 10px;
+  background: #f8fafc;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.stat-filter .stat-item:hover {
+  background: #eef2f7;
+}
+.stat-filter .stat-item:focus-visible {
+  outline: 2px solid var(--sf-accent);
+  outline-offset: 1px;
+}
+
+.stat-filter .stat-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.stat-filter .stat-item-value {
+  flex: 0 0 auto;
+  min-width: 24px;
+  padding: 1px 7px;
+  border: 1px solid var(--sf-line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #334155;
+  text-align: center;
+}
+
+.stat-filter .stat-item.active {
+  background: var(--sf-accent-soft);
+  border-color: var(--sf-accent-line);
+}
+.stat-filter .stat-item.active .stat-item-label {
+  color: var(--sf-accent-ink);
+}
+.stat-filter .stat-item.active .stat-item-value {
+  background: var(--sf-accent);
+  border-color: var(--sf-accent);
+  color: #fff;
+}
+
+/* Diğer kartların seçimiyle hiç satırı kalmayan değer: soluk ve tıklanamaz. */
+.stat-filter .stat-item-empty {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Boş değer kovası ("Atanmadı"). */
+.stat-filter .stat-item-blank .stat-item-label {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--sf-muted);
+}
+
+/* Sonuç satırı ve temizle düğmesi yalnız bir seçim varken görünür. */
+.stat-filter .stat-filter-footer {
+  display: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--sf-muted);
+}
+
+.stat-filter.is-filtered .stat-filter-footer {
+  display: flex;
+}
+.stat-filter .stat-result-icon {
+  margin-right: 4px;
+  color: var(--sf-accent);
+}
+.stat-filter .stat-clear-btn {
+  font-size: 11px;
+}
+
+/* Öğe kipi (DataTable olmayan listeler): süzülen öğe. Kapsayıcının dışında olduğu için köke bağlı değil;
+   !important, sayfanın jQuery .show() ile yazdığı satır içi display'i yener. Sayfanın kendi gizlemesine
+   dokunulmaz: öğe ancak iki filtre de izin verirse görünür. */
+.stat-filter-hidden {
+  display: none !important;
+}
+
+/* --- Blackrose eki (12.8 §5.3, OK-12.8-14): sayfa kabuk içinde; yazdırmada ZTO kabuğunun finans yan
+   menüsü gizlenir ve içerik tam genişlik basılır. Kök sınıfları ZtoFinansLayout (.zto-finans-layout,
+   .zto-finans-content) ve ZtoFinanceSidebar (.zt-sidebar#ztSidebar). MUI AppBar/Drawer ZTO kökünün
+   dışındadır; kapsamlı CSS onlara erişemez (AppShell'in işi). --- */
+@media print {
+  .zt-sidebar {
+    display: none !important;
+  }
+
+  .zto-finans-layout {
+    display: block !important;
+  }
+
+  .zto-finans-layout > .zto-finans-content {
+    width: 100% !important;
+  }
+}

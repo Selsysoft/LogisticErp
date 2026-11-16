@@ -1,4 +1,5 @@
 import type navTexts from "../../locales/tr/ztoFinans/nav";
+import type { ReportType } from "../../pages/finance/types";
 
 /*
  * ZTO Finans menü kaydı. Sıra ve gruplar ZTO yan menüsüyle birebir:
@@ -20,9 +21,10 @@ export type ZtoNavSource = {
   line: number;
   /**
    * Kaynak menü dosyası: yoksa _SideMenu_FinanceItems; "_Layout" ZTO ana menüsü (Temel Tanımlar);
+   * "_SideMenu_Recipe_Finance" reçeteli finans yan menüsü (12.8: Kur Farkı Raporu, Nakit Akış);
    * "blackrose" ZTO'da olmayan Blackrose eki.
    */
-  file?: "_SideMenu_FinanceItems" | "_Layout" | "blackrose";
+  file?: "_SideMenu_FinanceItems" | "_Layout" | "_SideMenu_Recipe_Finance" | "blackrose";
 };
 
 export type ZtoNavItem = {
@@ -75,7 +77,25 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("FinanceReport", "Index", 12),
         step: "12.8",
-        implemented: false,
+        implemented: true,
+        permission: "FINANCE_VIEW",
+      },
+      {
+        // 12.8 (§5.3): ZTO'da menü bağlantısı yok (CustomerAccountReport/Reports; başlık ikonu CAR:13).
+        id: "customerAccountReport",
+        label: "customerAccountReport",
+        icon: "fas fa-chart-bar",
+        slug: "cari-raporlari",
+        kind: "page",
+        source: {
+          controller: "CustomerAccountReport",
+          action: "Reports",
+          line: 1,
+          file: "blackrose",
+        },
+        step: "12.8",
+        implemented: true,
+        permission: "FINANCE_VIEW",
       },
       {
         id: "allTransactions",
@@ -232,7 +252,9 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("Checks", "Checks", 112),
         step: "12.3",
-        implemented: false,
+        implemented: true,
+        // Alt yollar (kocanlar, {id}/duzenle, {id}/belgeler) öğeyi etkin yapar.
+        matchPrefix: true,
       },
       {
         id: "bills",
@@ -242,7 +264,8 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("Bills", "Bills", 118),
         step: "12.3",
-        implemented: false,
+        implemented: true,
+        matchPrefix: true,
       },
     ],
   },
@@ -280,7 +303,8 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
     icon: "fas fa-money-bill-wave",
     items: [
       {
-        // ZTO: #treasuryModal (MX1 §2 modal 9, yeni uç GET /finance/treasury).
+        // ZTO: #treasuryModal (12.8 §5.10; GET /finance/reports/treasury). Hızlı Bakiye Özeti modalı
+        // (ZtoFinansLayout, treasuryContext; `?treasury=1` ile de açılır).
         id: "quickBalance",
         label: "quickBalance",
         icon: "fas fa-coins",
@@ -288,7 +312,7 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "modal",
         source: FILE_LINE("CustomerAccounts", "#treasuryModal", 151),
         step: "12.8",
-        implemented: false,
+        implemented: true,
       },
       {
         id: "balanceSheet",
@@ -298,7 +322,42 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("FinancialBalanceSheet", "Index", 157),
         step: "12.8",
-        implemented: false,
+        implemented: true,
+        permission: "FINANCE_VIEW",
+      },
+      {
+        // 12.8: ZTO reçeteli finans menüsü (_SideMenu_Recipe_Finance.cshtml:86).
+        id: "fxReport",
+        label: "fxReport",
+        icon: "fas fa-exchange-alt",
+        slug: "kur-farki-raporu",
+        kind: "page",
+        source: {
+          controller: "RecipeFinance",
+          action: "FxReport",
+          line: 86,
+          file: "_SideMenu_Recipe_Finance",
+        },
+        step: "12.8",
+        implemented: true,
+        permission: "FINANCE_VIEW",
+      },
+      {
+        // 12.8: _SideMenu_Recipe_Finance.cshtml:100.
+        id: "cashFlow",
+        label: "cashFlow",
+        icon: "fas fa-water",
+        slug: "nakit-akis",
+        kind: "page",
+        source: {
+          controller: "RecipeFinance",
+          action: "CashFlow",
+          line: 100,
+          file: "_SideMenu_Recipe_Finance",
+        },
+        step: "12.8",
+        implemented: true,
+        permission: "FINANCE_VIEW",
       },
     ],
   },
@@ -344,7 +403,9 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("SalesTruckExpenses", "Index", 240),
         step: "12.7",
-        implemented: false,
+        implemented: true,
+        permission: "SHIPMENT_VIEW",
+        matchPrefix: true,
       },
     ],
   },
@@ -362,7 +423,8 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
         kind: "page",
         source: FILE_LINE("ProductionExpenses", "IndexExpenses", 265),
         step: "12.7",
-        implemented: false,
+        implemented: true,
+        matchPrefix: true,
       },
     ],
   },
@@ -428,6 +490,31 @@ export const ZTO_NAV_SECTIONS: readonly ZtoNavSection[] = [
     label: "sectionBasicDefinitions",
     icon: "fas fa-sitemap",
     items: [
+      {
+        // 12.7 (§5.3): ZTO _Layout.cshtml:1201 "Masraf Kalemleri" (Temel Tanımlar; 1201 < 1284).
+        id: "expenseItems",
+        label: "expenseItems",
+        icon: "fas fa-receipt",
+        slug: "tanimlar/masraf-kalemleri",
+        kind: "page",
+        source: { controller: "ExpenseItems", action: "Index", line: 1201, file: "_Layout" },
+        step: "12.7",
+        implemented: true,
+        permission: "FINANCE_VIEW",
+        matchPrefix: true,
+      },
+      {
+        // 12.8 (§5.9): ZTO _Layout.cshtml:1268 "Para Birimleri" (salt okunur kur ekranı, OK-12.8-13).
+        id: "currencies",
+        label: "currencies",
+        icon: "fas fa-dollar-sign",
+        slug: "tanimlar/para-birimleri",
+        kind: "page",
+        source: { controller: "Currency", action: "Index", line: 1268, file: "_Layout" },
+        step: "12.8",
+        implemented: true,
+        permission: "FINANCE_VIEW",
+      },
       {
         id: "workPlaces",
         label: "workPlaces",
@@ -604,6 +691,18 @@ export const ZTO_SLUGS = {
   transferCenter: "transfer-merkezi",
   payments: "odemeler",
   collections: "tahsilatlar",
+  checks: "cekler",
+  bills: "senetler",
+  expenseItems: "tanimlar/masraf-kalemleri",
+  generalExpenses: "genel-masraflar",
+  expenseCalendar: "genel-masraflar/takvim",
+  shipmentExpenses: "sevk-nakliye-masraflari",
+  financeReports: "finans-raporlari",
+  customerAccountReport: "cari-raporlari",
+  balanceSheet: "bilanco",
+  fxReport: "kur-farki-raporu",
+  cashFlow: "nakit-akis",
+  currencies: "tanimlar/para-birimleri",
 } as const;
 
 /** Uygulama kabuğu dışındaki yazdırma sayfaları (ZTO `Layout = null`, yeni sekme). */
@@ -883,6 +982,193 @@ export function dailySettlementReportPath(
   // Kimlikler tek tek kodlanır; ayırıcı virgül ZTO'daki gibi düz kalır.
   const list = ids.map((id) => encodeURIComponent(id)).join(",");
   return `${base}${base.includes("?") ? "&" : "?"}workPlaceIds=${list}`;
+}
+
+// ---------------------------------------------------------------------------------------------
+// 12.3 çek / senet yolları (12.3_TASARIM §5.3). Parametre adları ZTO ile birebir
+// (`_AccountCardsListPartial.cshtml:281-285`); kimlikler UUID.
+// ---------------------------------------------------------------------------------------------
+
+export type ChecksQuery = {
+  /** Banka hesabı (ZTO `bankId`; "Bankadan Cari Çek Ödemesi" ön seçimi). */
+  bankId?: string;
+  workPlaceId?: string;
+  currencyId?: string;
+  /** "Yeni Ödeme Çeki" modalını açar (yalnız FINANCE_PAYMENT_CREATE izninde dikkate alınır). */
+  openCheckPaymentModal?: boolean;
+  /** Cari süzgeci. */
+  accountId?: string;
+  /** Durum süzgeci (`InstrumentStatus`). */
+  status?: string;
+};
+
+export type BillsQuery = {
+  accountId?: string;
+  /** "Yeni Ödeme Senedi" modalını açar. */
+  openBillPaymentModal?: boolean;
+};
+
+/** Çekler (ZTO Checks/Checks). */
+export function checksPath(query: ChecksQuery = {}): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.checks}${queryOf({
+    bankId: query.bankId,
+    workPlaceId: query.workPlaceId,
+    currencyId: query.currencyId,
+    openCheckPaymentModal: query.openCheckPaymentModal,
+    accountId: query.accountId,
+    status: query.status,
+  })}`;
+}
+
+/** Senetler (ZTO Bills/Bills). */
+export function billsPath(query: BillsQuery = {}): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.bills}${queryOf({
+    accountId: query.accountId,
+    openBillPaymentModal: query.openBillPaymentModal,
+  })}`;
+}
+
+/** Çek Koçanları (ZTO CheckBooks/Index; kenar çubuğunda yok, Çekler'in alt yolu). */
+export function checkBooksPath(): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.checks}/kocanlar`;
+}
+
+/** Çek Düzenle (ZTO Checks/EditCheck). */
+export function checkEditPath(id: string): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.checks}/${segment(id)}/duzenle`;
+}
+
+/** Senet Düzenle (ZTO Bills/EditBill). */
+export function billEditPath(id: string): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.bills}/${segment(id)}/duzenle`;
+}
+
+/** Çek Belgeleri (ZTO Checks/CheckDocuments; yeni sekme). */
+export function checkDocumentsPath(id: string): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.checks}/${segment(id)}/belgeler`;
+}
+
+/** Detaylı Çek Raporu (ZTO Checks/CheckDetailedReport; kabuksuz yazdırma sayfası, OK-12.3-13). */
+export function checkDetailedReportPath(range: { from?: string; to?: string } = {}): string {
+  return `${ZTO_PRINT_BASE}/cek-raporu${queryOf({ from: range.from, to: range.to })}`;
+}
+
+// ---------------------------------------------------------------------------------------------
+// 12.7 masraf ve taşeron gideri yolları (12.7_TASARIM §5.3).
+// ---------------------------------------------------------------------------------------------
+
+/** Masraf Kalemleri — Yeni Kayıt (ZTO ExpenseItems/Add). */
+export function newExpenseItemPath(): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.expenseItems}/yeni`;
+}
+
+/** Masraf Kalemi Düzenle (ZTO ExpenseItems/Edit). */
+export function expenseItemEditPath(id: string): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.expenseItems}/${segment(id)}/duzenle`;
+}
+
+/** Genel Masraf listesi (ZTO ProductionExpenses/IndexExpenses). */
+export function generalExpensesPath(): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.generalExpenses}`;
+}
+
+/** Genel Masraf takvimi (ZTO ProductionExpenses/Index). */
+export function expenseCalendarPath(): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.expenseCalendar}`;
+}
+
+/** Kalemin faturaları (ZTO ProductionExpenses/ExpenseGroupDetails). */
+export function expenseItemInvoicesPath(itemId: string): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.generalExpenses}/kalem/${segment(itemId)}`;
+}
+
+/** Yeni Genel Masraf (ZTO ProductionExpenses/Add). */
+export function newExpensePath(): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.generalExpenses}/yeni`;
+}
+
+/** Genel Masraf Düzenle (ZTO ProductionExpenses/Edit; düzeltme = revise). */
+export function expenseEditPath(id: string): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.generalExpenses}/${segment(id)}/duzenle`;
+}
+
+/** Sevk Nakliye Masrafları (ZTO SalesTruckExpenses/Index). */
+export function shipmentExpensesPath(days?: number): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.shipmentExpenses}${queryOf({
+    days: days === undefined ? undefined : String(days),
+  })}`;
+}
+
+/** Nakliye firması detayı (ZTO SalesTruckExpenses/CustomerShippingDetails); `?days`. */
+export function carrierDetailPath(accountId: string, days?: number): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.shipmentExpenses}/firma/${segment(accountId)}${queryOf({
+    days: days === undefined ? undefined : String(days),
+  })}`;
+}
+
+// ---------------------------------------------------------------------------------------------
+// 12.8 rapor yolları (12.8_TASARIM §5.3). FinanceReport parametreleri: `branchGroupId` = ZTO `bp`
+// (şube), `branchId` = ZTO `wp` (iş yeri; Rev 1 FE-FRI-BRANCHGROUP).
+// ---------------------------------------------------------------------------------------------
+
+/** FinanceReport hazır dönem aralıkları (ZTO `_ReportFilterBar`). */
+export type FinanceReportRange = "all" | "30" | "7" | "today";
+
+export type FinanceReportQuery = {
+  /** Doluysa liste kipi. */
+  type?: ReportType;
+  range?: FinanceReportRange;
+  from?: string;
+  to?: string;
+  cur?: string;
+  /** Doluysa cari ekstre kipi. */
+  account?: string;
+  branchGroupId?: string;
+  branchId?: string;
+  companyId?: string;
+};
+
+/** Finans Raporları (ZTO FinanceReport/Index; kabuk içi, OK-12.8-14). Tüm süzgeçler korunur. */
+export function financeReportPath(query: FinanceReportQuery = {}): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.financeReports}${queryOf({
+    type: query.type,
+    range: query.range,
+    from: query.from,
+    to: query.to,
+    cur: query.cur,
+    account: query.account,
+    branchGroupId: query.branchGroupId,
+    branchId: query.branchId,
+    companyId: query.companyId,
+  })}`;
+}
+
+/** Cari Hesap Raporları sekmeleri (ZTO CustomerAccountReport/Reports `#reportTabs`). */
+export type CustomerAccountReportTab = "aging" | "checks" | "bills" | "performance" | "position";
+
+/** Cari Hesap Raporları (ZTO CustomerAccountReport/Reports); `?tab`. */
+export function customerAccountReportPath(tab?: CustomerAccountReportTab): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.customerAccountReport}${queryOf({ tab })}`;
+}
+
+/** Finansal Varlıklar & Bilanço (ZTO FinancialBalanceSheet/Index). */
+export function balanceSheetPath(): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.balanceSheet}`;
+}
+
+/** Kur Farkı Raporu (ZTO RecipeFinance/FxReport). */
+export function fxReportPath(): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.fxReport}`;
+}
+
+/** Nakit Akış (ZTO RecipeFinance/CashFlow). */
+export function cashFlowPath(): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.cashFlow}`;
+}
+
+/** Para Birimleri (ZTO Currency/Index; salt okunur). */
+export function currenciesPath(): string {
+  return `${ZTO_FINANS_BASE}/${ZTO_SLUGS.currencies}`;
 }
 
 function queryOf(query: Record<string, string | boolean | undefined>): string {

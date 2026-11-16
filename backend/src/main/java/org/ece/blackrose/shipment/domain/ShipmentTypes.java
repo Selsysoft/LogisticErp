@@ -44,4 +44,19 @@ public final class ShipmentTypes {
     BORDER_FEE,
     OTHER
   }
+
+  /** Sefer giderinin cari durumu: OPEN yazılmadı, POSTED cariye yazıldı, REVERSED ters çevrildi. */
+  public enum TripCostStatus {
+    OPEN,
+    POSTED,
+    REVERSED
+  }
+
+  /** Etabın nakliye türü (ZTO "Sevk Nakliye" / "Gemi Nakliye"). */
+  public enum TransportMode {
+    ROAD,
+    SEA,
+    RAIL,
+    AIR
+  }
 }

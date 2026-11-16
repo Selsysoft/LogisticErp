@@ -19,6 +19,9 @@ import org.ece.blackrose.finance.domain.AccountTransaction;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountDocumentSide;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountDocumentStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
+import org.ece.blackrose.finance.domain.FinanceTypes.DocumentPaymentMethod;
+import org.ece.blackrose.finance.domain.FinanceTypes.IncomeExpenseCategory;
+import org.ece.blackrose.finance.domain.FinanceTypes.IncomeExpenseDirection;
 import org.ece.blackrose.finance.repository.AccountRepositories.AccountDocumentRepository;
 import org.ece.blackrose.finance.repository.AccountRepositories.AccountDocumentTaxRepository;
 import org.ece.blackrose.finance.repository.AccountRepositories.AccountDocumentTypeRepository;
@@ -57,6 +60,8 @@ public class AccountDocumentService {
 
   private static final String TARGET = "ACCOUNT_DOCUMENT:";
   private static final String IDEMPOTENCY_INDEX = "account_document_idempotency_uq";
+  private static final String FX_SOURCE_INDEX = "account_document_fx_source_uq";
+  private static final String TRY = "TRY";
   private static final String REVISE_REASON = "Revize";
 
   /** Belge ve taban sorgusu süzgeçleri; boş değer "tümü". */
@@ -70,6 +75,23 @@ public class AccountDocumentService {
       UUID companyId,
       List<UUID> branchIds) {}
 
+  /**
+   * Kur farkı belgesi komutu (12.8 §3.3). Kapsam, kilit, uygunluk ve fark hesabı çağıranda ({@link
+   * FxDifferenceService}) yapılmıştır; {@code amount} = |fark| &gt; 0, {@code signedDifference}
+   * denetim kaydı içindir.
+   */
+  public record FxDocumentCommand(
+      AccountTransaction source,
+      AccountDocumentSide side,
+      BigDecimal amount,
+      BigDecimal signedDifference,
+      LocalDate valuationDate,
+      String documentNo,
+      String description,
+      BigDecimal rate,
+      LocalDate rateDate,
+      IncomeExpenseDirection ieDirection) {}
+
   private final AccountDocumentRepository documents;
   private final AccountDocumentTypeRepository types;
   private final AccountDocumentTaxRepository taxes;
@@ -82,6 +104,7 @@ public class AccountDocumentService {
   private final BranchScopeService scope;
   private final AuditService audit;
   private final TenantClock clock;
+  private final IncomeExpenseService incomeExpense;
 
   @SuppressWarnings("java:S107")
   public AccountDocumentService(
@@ -96,7 +119,8 @@ public class AccountDocumentService {
       CompanyResolver companies,
       BranchScopeService scope,
       AuditService audit,
-      TenantClock clock) {
+      TenantClock clock,
+      IncomeExpenseService incomeExpense) {
     this.documents = documents;
     this.types = types;
     this.taxes = taxes;
@@ -109,6 +133,7 @@ public class AccountDocumentService {
     this.scope = scope;
     this.audit = audit;
     this.clock = clock;
+    this.incomeExpense = incomeExpense;
   }
 
   /** Aktif belge türleri; seçilemeyenler (Kur Farkı) de döner, ön yüz göstermez. */
@@ -174,6 +199,12 @@ public class AccountDocumentService {
       return toResponse(replay.get());
     }
     AccountDocument previous = lockVisible(id);
+    if (AccountDocument.TYPE_FX.equals(previous.getDocumentType())) {
+      throw new BusinessException(
+          HttpStatus.CONFLICT,
+          "FX_DOCUMENT_NOT_REVISABLE",
+          "Kur farkı belgesi düzenlenemez; iptal edip yeniden kesin.");
+    }
     replay = revisionFor(id, idempotencyKey);
     if (replay.isPresent()) {
       return toResponse(replay.get());
@@ -223,6 +254,104 @@ public class AccountDocumentService {
   @Transactional(readOnly = true)
   public Optional<AccountDocumentResponse> find(UUID id) {
     return documents.findById(id).map(this::toResponse);
+  }
+
+  // --- kur farkı (12.8 §3.3)
+
+  /**
+   * Kur farkı belgesi (Y8): {@code KUR_FARKI}, TRY, kaynak harekete bağlı; cari hareketi {@link
+   * LedgerService}, bilgi amaçlı {@code FX_DIFF} kaydı {@link IncomeExpenseService} yazar (ikisi de
+   * kaynak {@code ACCOUNT_DOCUMENT} / belge). Tür {@code selectable} değildir; yalnız bu yol yazar.
+   * Kaynak başına tek açık belge V28 {@code account_document_fx_source_uq} ile güvencelidir.
+   */
+  @Transactional
+  public AccountDocumentResponse createFxDifference(FxDocumentCommand cmd, String idempotencyKey) {
+    AccountTransaction src = cmd.source();
+    Account account = accounts.findById(src.getAccountId()).orElseThrow(AccountAccess::notFound);
+    types
+        .findById(new AccountDocumentType.Key(cmd.side(), AccountDocument.TYPE_FX))
+        .filter(AccountDocumentType::isActive)
+        .filter(type -> type.allowedFor(account.getType()))
+        .orElseThrow(AccountDocumentService::typeInvalid);
+    Money money = new Money(cmd.amount(), TRY);
+    AccountDocument document =
+        new AccountDocument(
+            src.getAccountId(),
+            src.getBranchId(),
+            src.getCompanyId(),
+            cmd.side(),
+            AccountDocument.TYPE_FX,
+            cmd.documentNo(),
+            cmd.valuationDate(),
+            null,
+            money,
+            null,
+            DocumentPaymentMethod.OTHER,
+            cmd.description(),
+            true,
+            cmd.amount(),
+            idempotencyKey);
+    document.linkFxSource(src.getId(), cmd.rate(), cmd.rateDate());
+    save(document);
+    String description = LedgerDescriptions.fit(cmd.description());
+    ledger.post(
+        new Posting(
+            src.getAccountId(),
+            src.getBranchId(),
+            document.ledgerDirection(),
+            money,
+            cmd.valuationDate(),
+            description,
+            SOURCE,
+            document.getId(),
+            null));
+    incomeExpense.record(
+        cmd.ieDirection(),
+        IncomeExpenseCategory.FX_DIFF,
+        SOURCE,
+        document.getId(),
+        cmd.valuationDate(),
+        money,
+        src.getBranchId(),
+        null,
+        description,
+        null);
+    audit.record(
+        AuditEvent.FX_DIFFERENCE_CREATED,
+        TARGET + document.getId(),
+        "fx "
+            + src.getId()
+            + " rate "
+            + cmd.rate()
+            + " date "
+            + cmd.rateDate()
+            + " diff "
+            + cmd.signedDifference());
+    return toResponse(document, account, typeNames());
+  }
+
+  /**
+   * Kur farkı kesiminin {@code Idempotency-Key} tekrarı (Rev 1 SEC-12.8-01): önce erişim (personel
+   * carisi izinsize 404 {@code FX_SOURCE_NOT_FOUND}, iş yeri kapsamı 403), ancak sonra kaynak
+   * karşılaştırması (başka kaynak 422 {@code IDEMPOTENCY_KEY_REUSED}). Anahtar yoksa boş.
+   */
+  @Transactional(readOnly = true)
+  Optional<AccountDocumentResponse> replayFx(String idempotencyKey, UUID sourceTransactionId) {
+    Optional<AccountDocument> existing = documents.findByIdempotencyKey(idempotencyKey);
+    if (existing.isEmpty()) {
+      return Optional.empty();
+    }
+    AccountDocument document = existing.get();
+    Account account = accounts.findById(document.getAccountId()).orElse(null);
+    if (account == null
+        || (account.getType() == AccountType.EMPLOYEE && !access.employeeVisible())) {
+      throw FxDifferenceService.sourceNotFound();
+    }
+    scope.requireVisible(document.getBranchId());
+    if (!sourceTransactionId.equals(document.getFxSourceTransactionId())) {
+      throw keyReused();
+    }
+    return Optional.of(toResponse(document, account, typeNames()));
   }
 
   // --- yazım
@@ -307,6 +436,9 @@ public class AccountDocumentService {
             "IDEMPOTENCY_IN_PROGRESS",
             "İstek işleniyor; lütfen tekrar deneyin.");
       }
+      if (String.valueOf(ex.getMostSpecificCause().getMessage()).contains(FX_SOURCE_INDEX)) {
+        throw FxDifferenceService.differenceExists(null);
+      }
       throw ex;
     }
   }
@@ -314,18 +446,18 @@ public class AccountDocumentService {
   private void cancelLocked(AccountDocument document, LocalDate date, String reason) {
     String cleanReason = blankToNull(reason);
     document.cancel(date, cleanReason);
+    String description =
+        LedgerDescriptions.fit(
+            "Belge iptali: "
+                + typeName(document)
+                + " "
+                + document.getDocumentNo()
+                + (cleanReason == null ? "" : " — " + cleanReason));
     if (document.isReflectToLedger()) {
-      ledger.reverseSource(
-          SOURCE,
-          document.getId(),
-          date,
-          LedgerDescriptions.fit(
-              "Belge iptali: "
-                  + typeName(document)
-                  + " "
-                  + document.getDocumentNo()
-                  + (cleanReason == null ? "" : " — " + cleanReason)));
+      ledger.reverseSource(SOURCE, document.getId(), date, description);
     }
+    // Kur farkı belgesinin FX_DIFF kaydı (12.8 §3.3); diğer belgelerde satır yok, işlem yok.
+    incomeExpense.reverseSource(SOURCE, document.getId(), date, description);
     audit.record(
         AuditEvent.ACCOUNT_DOCUMENT_CANCELLED,
         TARGET + document.getId(),
@@ -342,12 +474,14 @@ public class AccountDocumentService {
         .filter(AccountDocumentType::isActive)
         .filter(AccountDocumentType::isSelectable)
         .filter(type -> type.allowedFor(accountType))
-        .orElseThrow(
-            () ->
-                new BusinessException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
-                    "DOCUMENT_TYPE_INVALID",
-                    "Belge türü bu cari ve işlem için geçerli değil."));
+        .orElseThrow(AccountDocumentService::typeInvalid);
+  }
+
+  private static BusinessException typeInvalid() {
+    return new BusinessException(
+        HttpStatus.UNPROCESSABLE_ENTITY,
+        "DOCUMENT_TYPE_INVALID",
+        "Belge türü bu cari ve işlem için geçerli değil.");
   }
 
   private static AccountDocumentTax computeTax(
@@ -462,6 +596,9 @@ public class AccountDocumentService {
         document.getRevisedFromId(),
         revisedById,
         transactionId,
+        document.getFxSourceTransactionId(),
+        document.getFxRate(),
+        document.getFxRateDate(),
         tax,
         document.getCreatedBy(),
         document.getCreatedAt(),

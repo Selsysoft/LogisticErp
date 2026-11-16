@@ -1,0 +1,193 @@
+/*
+ * Kaynak: ZtoFabrika/Views/SalesTruckExpenses/Index.cshtml <style> :41-206 (12.7_TASARIM §5.3).
+ * Birebir kopya (FE-0); kurallar .zto-finans.zto-page-sales-truck-expenses altına alınır (prefixTransform.ts).
+ * Değişiklikler: Razor kaçışı @@ → @.
+ */
+/* --- Views/SalesTruckExpenses/Index.cshtml <style> :41-206 --- */
+.small-icon i {
+  font-size: 10px;
+}
+
+.custom-badge {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translate(0, -50%);
+  background-color: white;
+  color: black;
+  border-radius: 16%;
+  padding: 2px 6px;
+  font-size: 10px;
+  border: 0.5px solid gray;
+  margin-right: 5px;
+}
+
+.welcome {
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 24px;
+  text-align: center;
+}
+
+.welcome-content {
+  margin-bottom: 5px;
+}
+
+.content {
+  margin-top: 20px;
+  margin-left: 10px;
+}
+
+.lower-opacity {
+  opacity: 0.7;
+}
+
+.table th,
+.table td {
+  padding: 8px;
+  vertical-align: middle;
+}
+
+.amount-positive {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.amount-negative {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.amount-zero {
+  color: #6c757d;
+}
+
+/* Soft Kompakt Stat Kartları */
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  border-left: 4px solid var(--accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+  margin-bottom: 14px;
+}
+.stat-card.--blue {
+  --accent: #4e73df;
+}
+.stat-card.--purple {
+  --accent: #6f42c1;
+}
+.stat-card.--green {
+  --accent: #1cc88a;
+}
+.stat-card.--red {
+  --accent: #e74a3b;
+}
+.stat-label {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 3px;
+}
+.stat-label i {
+  color: var(--accent);
+  margin-right: 4px;
+}
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #2c3e50;
+  line-height: 1.2;
+}
+.stat-value.small-val {
+  font-size: 14px;
+}
+
+/* Tablo hücre renkleri */
+.td-normal {
+  color: #333;
+  font-weight: normal;
+}
+
+.td-balance {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+/* Toplam satırı stilleri */
+.total-row {
+  background-color: #f8f9fa !important;
+  font-weight: bold;
+  border-top: 2px solid #dee2e6 !important;
+  border-bottom: 2px solid #dee2e6 !important;
+  margin-top: 15px !important;
+}
+
+.total-row td {
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+}
+
+.total-label {
+  color: white;
+  font-size: 13px;
+}
+
+.total-value {
+  color: white;
+  font-weight: 600;
+}
+
+.total-balance {
+  font-weight: bold;
+  font-size: 13px !important;
+}
+
+.total-row-separator {
+  height: 15px;
+  background-color: transparent;
+}
+
+.snackbar {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 4px;
+  color: white;
+  z-index: 10000;
+  display: none;
+}
+
+.snackbar-success {
+  background-color: #28a745;
+}
+
+.snackbar-error {
+  background-color: #dc3545;
+}
+
+.snackbar-warning {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.dt-buttons .btn.btn-blue {
+  background-color: #007bff !important;
+  color: white !important;
+}
+
+.dt-buttons .btn.btn-green {
+  background-color: #28a745 !important;
+  color: white !important;
+}
+
+.dt-buttons .btn.btn-grey {
+  background-color: #505050 !important;
+  color: white !important;
+}
+
+.dt-buttons .btn.btn-red {
+  background-color: #dc3545 !important;
+  color: white !important;
+}

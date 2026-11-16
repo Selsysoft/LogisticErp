@@ -1,0 +1,52 @@
+// ztoFinans ad alanı, "checkDocuments" parçası: Çek Belgeleri (FE-2; 12.3_TASARIM §5.8, ZTO
+// Views/Checks/CheckDocuments.cshtml). Klasör ağacı, klasör seçici ve "Paylaş" çizilmez (OK-12.3-20).
+export default {
+  crumbChecks: "Çek",
+  crumbDocuments: "Dokümanlar",
+  heading: "{{number}} — {{bank}}",
+  hint: "Yüklediğiniz dosyaya sağ tıklayarak dosyayla ilgili işlemlere erişebilirsiniz.",
+  listTitle: "Çek Dokümanları",
+  empty: "Henüz dosya bulunmamaktadır.",
+  loading: "Yükleniyor...",
+  notFound: "Kayıt bulunamadı.",
+  upload: {
+    dropText: "Dosyaları buraya sürükleyip bırakın",
+    or: "veya",
+    pick: "Dosya Seç",
+    pickLabel: "Dosya seç",
+    inputLabel: "Dosya seç...",
+    selectedMany: "{{count}} dosya seçildi",
+    submit: "Yükle",
+    maxSize: "Maksimum dosya boyutu: 20MB",
+    progress: "Yükleme ilerlemesi",
+    oversize: "{{name}} 20MB sınırını aşıyor.",
+    noValid: "Lütfen geçerli boyutta dosya seçin!",
+    done: "Dosya {{name}} başarıyla yüklendi",
+    failed: "Dosya {{name}} yüklenemedi",
+    allDone: "Yükleme tamamlandı.",
+  },
+  menu: {
+    label: "Dosya işlemleri",
+    view: "Görüntüle",
+    download: "İndir",
+    delete: "Sil",
+  },
+  deleteModal: {
+    title: "Dosya Silme",
+    body: "Bu dosyayı silmek istediğinizden emin misiniz?",
+    file: "Dosya: {{name}}",
+    cancel: "İptal",
+    confirm: "Evet, Sil",
+  },
+  successModal: {
+    title: "Başarılı",
+    body: "Dosya başarıyla silindi.",
+    ok: "Tamam",
+  },
+  errorModal: {
+    title: "Hata",
+    body: "Dosya silinirken bir hata oluştu.",
+    detail: "Hata: {{error}}",
+    close: "Kapat",
+  },
+};

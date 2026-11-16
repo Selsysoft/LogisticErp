@@ -39,9 +39,14 @@ test("/zto-finans Günlük Tüm Cari İşlemleri'ne yönlenir; ZTO kökü ve yan
   await expect(sidebar).not.toHaveClass(/open/);
   await root.locator(".zt-sidebar-arrow").hover();
   await expect(sidebar).toHaveClass(/open/);
-  const checks = sidebar.locator("a", { hasText: "Çekler" });
-  await expect(checks).toHaveClass("disabled");
-  await expect(checks).toHaveAttribute("title", "Bu ekran Faz 12.3 ile gelecek.");
+  const approval = sidebar.locator("a", { hasText: "Ödeme Onay Yönetimi" });
+  await expect(approval).toHaveClass("disabled");
+  await expect(approval).toHaveAttribute("title", "Bu ekran Faz 12.4 ile gelecek.");
+  // 12.3: Çekler bağlantı.
+  await expect(sidebar.locator("a", { hasText: "Çekler" })).toHaveAttribute(
+    "href",
+    "/zto-finans/cekler",
+  );
   // 12.2a: Ödemeler bağlantı.
   await expect(sidebar.locator("a", { hasText: "Ödemeler" })).toHaveAttribute(
     "href",

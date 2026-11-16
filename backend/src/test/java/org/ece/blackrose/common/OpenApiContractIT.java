@@ -99,6 +99,26 @@ class OpenApiContractIT extends AbstractIntegrationTest {
     assertThat(types(schemas, "DailyFundBalanceResponse", "balanceAtDate"))
         .containsExactly("string");
     assertThat(property(schemas, "SettlementDetailResponse", "item").has("$ref")).isTrue();
+    // 12.3 §4.3–§4.4: çek satırı ve hareketin yeni null'lanabilir alanları; eski tip kaldırıldı.
+    assertThat(
+            property(schemas, "SettlementDetailResponse", "instrument")
+                .get("anyOf")
+                .get(0)
+                .get("$ref")
+                .asText())
+        .endsWith("/InstrumentListItemResponse");
+    assertThat(types(schemas, "InstrumentListItemResponse", "drawerName"))
+        .containsExactly("string", "null");
+    assertThat(types(schemas, "InstrumentListItemResponse", "leafNo"))
+        .containsExactly("integer", "null");
+    assertThat(types(schemas, "InstrumentListItemResponse", "number")).containsExactly("string");
+    assertThat(types(schemas, "InstrumentListItemResponse", "movementCount"))
+        .containsExactly("integer");
+    assertThat(types(schemas, "InstrumentMovementResponse", "fundName"))
+        .containsExactly("string", "null");
+    assertThat(types(schemas, "InstrumentNumberCheckResponse", "conflictId"))
+        .containsExactly("string", "null");
+    assertThat(schemas.has("InstrumentResponse")).isFalse();
     assertThat(spec.toString()).doesNotContain("\"nullable\"");
   }
 

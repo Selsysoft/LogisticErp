@@ -28,6 +28,7 @@ import org.ece.blackrose.shipment.service.ShipmentDocumentService;
 import org.ece.blackrose.shipment.service.ShipmentDocumentService.RenderedPdf;
 import org.ece.blackrose.shipment.service.ShipmentService;
 import org.ece.blackrose.shipment.service.ShipmentViews;
+import org.ece.blackrose.shipment.service.SubcontractCostService;
 import org.ece.blackrose.shipment.service.TripFinanceService;
 import org.ece.blackrose.shipment.service.TripFinanceService.InvoicePdf;
 import org.ece.blackrose.shipment.web.ShipmentDtos.AddEventRequest;
@@ -50,13 +51,18 @@ import org.ece.blackrose.shipment.web.ShipmentDtos.Option;
 import org.ece.blackrose.shipment.web.ShipmentDtos.PodResponse;
 import org.ece.blackrose.shipment.web.ShipmentDtos.ProfitResponse;
 import org.ece.blackrose.shipment.web.ShipmentDtos.QuoteLineOption;
+import org.ece.blackrose.shipment.web.ShipmentDtos.ReverseCostRequest;
 import org.ece.blackrose.shipment.web.ShipmentDtos.SaveCostRequest;
 import org.ece.blackrose.shipment.web.ShipmentDtos.SaveInternationalRequest;
 import org.ece.blackrose.shipment.web.ShipmentDtos.SaveLegRequest;
 import org.ece.blackrose.shipment.web.ShipmentDtos.SavePodRequest;
+import org.ece.blackrose.shipment.web.ShipmentDtos.SaveSubcontractCostRequest;
 import org.ece.blackrose.shipment.web.ShipmentDtos.ShipmentOptionsResponse;
 import org.ece.blackrose.shipment.web.ShipmentDtos.ShipmentResponse;
 import org.ece.blackrose.shipment.web.ShipmentDtos.ShipmentSummary;
+import org.ece.blackrose.shipment.web.ShipmentDtos.SubcontractCarrierDetailResponse;
+import org.ece.blackrose.shipment.web.ShipmentDtos.SubcontractCostRowResponse;
+import org.ece.blackrose.shipment.web.ShipmentDtos.SubcontractSummaryResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -99,6 +105,7 @@ public class ShipmentController {
   private final QuoteLineRepository quoteLines;
   private final LinkableExpenseService linkable;
   private final BranchScopeService scope;
+  private final SubcontractCostService subcontracts;
 
   public ShipmentController(
       ShipmentService shipments,
@@ -113,7 +120,9 @@ public class ShipmentController {
       QuoteRepository quotes,
       QuoteLineRepository quoteLines,
       LinkableExpenseService linkable,
-      BranchScopeService scope) {
+      BranchScopeService scope,
+      SubcontractCostService subcontracts) {
+    this.subcontracts = subcontracts;
     this.scope = scope;
     this.linkable = linkable;
     this.shipments = shipments;
@@ -353,6 +362,53 @@ public class ShipmentController {
     return finance.profitBetween(from, to);
   }
 
+  // Sevk Nakliye Masrafları: taşeron gideri (12.7 §4.2)
+
+  @GetMapping("/subcontract-costs/summary")
+  @PreAuthorize(VIEW)
+  SubcontractSummaryResponse subcontractSummary(
+      @RequestParam(required = false) Integer days,
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(required = false) List<UUID> branchIds) {
+    return subcontracts.summary(days, companyId, branchIds);
+  }
+
+  @GetMapping("/subcontract-costs")
+  @PreAuthorize(VIEW)
+  SubcontractCarrierDetailResponse subcontractDetail(
+      @RequestParam UUID carrierAccountId,
+      @RequestParam(required = false) Integer days,
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(required = false) List<UUID> branchIds) {
+    return subcontracts.detail(carrierAccountId, days, companyId, branchIds);
+  }
+
+  /** Kaydet + cariye işle (Y6). */
+  @PutMapping("/shipments/{id}/legs/{legId}/subcontract-cost")
+  @PreAuthorize(INVOICE)
+  SubcontractCostRowResponse saveSubcontractCost(
+      @PathVariable UUID id,
+      @PathVariable UUID legId,
+      @Valid @RequestBody SaveSubcontractCostRequest request) {
+    return subcontracts.save(id, legId, request);
+  }
+
+  @PostMapping("/subcontract-costs/{costId}/reverse")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @PreAuthorize(INVOICE)
+  void reverseSubcontractCost(
+      @PathVariable UUID costId, @Valid @RequestBody ReverseCostRequest request) {
+    subcontracts.reverse(costId, request);
+  }
+
+  /** Cariye işlenmemiş taşeron giderini siler (Rev 1 F6; SHIPMENT_DISPATCH gerekmez). */
+  @DeleteMapping("/subcontract-costs/{costId}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @PreAuthorize(INVOICE)
+  void removeSubcontractCost(@PathVariable UUID costId) {
+    subcontracts.remove(costId);
+  }
+
   @GetMapping("/options")
   @PreAuthorize(VIEW)
   ShipmentOptionsResponse options() {
@@ -418,7 +474,15 @@ public class ShipmentController {
         cost.getMoney(),
         cost.getTlAmount(),
         cost.getDescription(),
-        cost.getPostedAt());
+        cost.getPostedAt(),
+        cost.getStatus(),
+        cost.getVatAmount(),
+        cost.getWithholdingAmount(),
+        cost.getDeductionAmount(),
+        cost.payable(),
+        cost.getDocumentNo(),
+        cost.getDocumentType(),
+        cost.getCostDate());
   }
 
   private static ResponseEntity<byte[]> pdfResponse(String fileName, byte[] content) {

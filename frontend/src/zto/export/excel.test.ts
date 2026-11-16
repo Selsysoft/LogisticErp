@@ -4,12 +4,15 @@ import "../../i18n";
 import { downloadBlob } from "./download";
 import {
   XLSX_MIME,
+  buildMultiSheetWorkbook,
   buildWorkbook,
   columnLetter,
   defaultNumberFormat,
   exportExcel,
+  exportExcelWorkbook,
   loadExcelJs,
   sanitizeSheetName,
+  uniqueSheetName,
 } from "./excel";
 
 vi.mock("./download", async (original) => ({
@@ -121,5 +124,78 @@ describe("exportExcel", () => {
   it("modül default altında gelirse de çözülür", async () => {
     const mod = await loadExcelJs();
     expect(typeof mod.Workbook).toBe("function");
+  });
+});
+
+describe("uniqueSheetName (12.8; report-page.js sheetName kuralı)", () => {
+  it("yasak karakter, 31 karakter, boşsa varsayılan; sonuç used'a eklenir", () => {
+    const used: string[] = [];
+    expect(uniqueSheetName("Cari [A]: B/C", used)).toBe("Cari  A   B C");
+    expect(uniqueSheetName("x".repeat(40), used)).toHaveLength(31);
+    expect(uniqueSheetName("***", used, "Rapor")).toBe("Rapor");
+    expect(used).toEqual(["Cari  A   B C", "x".repeat(31), "Rapor"]);
+  });
+
+  it("büyük/küçük harf farksız tekilleştirme (2), (3); toplam 31'i geçmez", () => {
+    const used: string[] = [];
+    expect(uniqueSheetName("Bankalar", used)).toBe("Bankalar");
+    expect(uniqueSheetName("bankalar", used)).toBe("bankalar (2)");
+    expect(uniqueSheetName("BANKALAR", used)).toBe("BANKALAR (3)");
+    const long = "y".repeat(31);
+    expect(uniqueSheetName(long, used)).toBe(long);
+    const second = uniqueSheetName(long, used);
+    expect(second).toBe(`${"y".repeat(27)} (2)`);
+    expect(second).toHaveLength(31);
+  });
+
+  it("History ayrılmış ad; kesme işareti başta/sonda olmaz", () => {
+    const used: string[] = [];
+    expect(uniqueSheetName("History", used)).toBe("History (2)");
+    expect(uniqueSheetName("history", used)).toBe("history (3)");
+    expect(uniqueSheetName("'Özet'", used)).toBe("-Özet-");
+  });
+});
+
+describe("buildMultiSheetWorkbook / exportExcelWorkbook (12.8 §5.2)", () => {
+  it("her sayfa tek sayfa kuralıyla; adlar tekil", () => {
+    const wb = buildMultiSheetWorkbook(ExcelJS, {
+      fileName: "x",
+      sheets: [
+        { name: "Bankalar", title: "Bankalar", headers, rows },
+        { name: "bankalar", headers: ["Tutar"], rows: [[5]], numberFormats: ["0.000"] },
+        { name: "History", headers: ["A"], rows: [] },
+      ],
+    });
+    expect(wb.worksheets.map((ws) => ws.name)).toEqual(["Bankalar", "bankalar (2)", "History (2)"]);
+    const first = wb.worksheets[0];
+    expect(first.getCell("A1").value).toBe("Bankalar");
+    expect(first.getCell("D1").isMerged).toBe(true);
+    expect(first.getCell("C3").numFmt).toBe("#,##0.00");
+    const second = wb.worksheets[1];
+    expect(second.getCell("A1").value).toBe("Tutar");
+    expect(second.getCell("A2").numFmt).toBe("0.000");
+  });
+
+  it("sayfasız istekte tek boş sayfa", () => {
+    const wb = buildMultiSheetWorkbook(ExcelJS, { fileName: "x", sheets: [] });
+    expect(wb.worksheets.map((ws) => ws.name)).toEqual(["Rapor"]);
+  });
+
+  it("xlsx üretir ve indirir; dosya geri okunur", async () => {
+    await exportExcelWorkbook({
+      fileName: "Finans Raporu",
+      sheets: [
+        { name: "Genel", headers: ["A"], rows: [["1"]] },
+        { name: "Liste", headers: ["B"], rows: [[2.5]] },
+      ],
+    });
+    expect(downloadBlob).toHaveBeenCalledTimes(1);
+    const [blob, name] = vi.mocked(downloadBlob).mock.calls[0];
+    expect(name).toBe("Finans Raporu.xlsx");
+    expect(blob.type).toBe(XLSX_MIME);
+    const back = new ExcelJS.Workbook();
+    await back.xlsx.load(await blob.arrayBuffer());
+    expect(back.worksheets.map((ws) => ws.name)).toEqual(["Genel", "Liste"]);
+    expect(back.getWorksheet("Liste")!.getCell("A2").value).toBe(2.5);
   });
 });

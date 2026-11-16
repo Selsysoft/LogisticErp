@@ -6,9 +6,12 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.ece.blackrose.finance.domain.Account;
 import org.ece.blackrose.finance.domain.AccountTransaction;
+import org.ece.blackrose.finance.domain.CheckBook;
+import org.ece.blackrose.finance.domain.CheckLeaf;
 import org.ece.blackrose.finance.domain.DensityThreshold;
 import org.ece.blackrose.finance.domain.ExchangeRate;
 import org.ece.blackrose.finance.domain.ExpenseItem;
@@ -20,7 +23,6 @@ import org.ece.blackrose.finance.domain.FinanceTypes.FundAccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentDirection;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentKind;
-import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.InvoiceSide;
 import org.ece.blackrose.finance.domain.FinanceTypes.PlanStatus;
 import org.ece.blackrose.finance.domain.FundAccount;
@@ -38,6 +40,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -49,7 +52,7 @@ public final class FinanceRepositories {
   // kullanır. Taban satır: taşımanın orijinali (og), yoksa ters çevrilen satır (rv), yoksa
   // kendisi (t). Ters kayıt ve taşıma çıkışı kendi türünde eksi (sign = -1) sayılır.
 
-  private static final String KIND_JOINS =
+  static final String KIND_JOINS =
       """
        left join account_transaction rv
               on t.source_type = 'REVERSAL' and rv.id = t.source_id
@@ -60,15 +63,13 @@ public final class FinanceRepositories {
        left join account_transaction og on og.id = ln.account_transaction_id
       """;
 
-  private static final String BASE_TYPE =
-      " coalesce(og.source_type, rv.source_type, t.source_type) ";
+  static final String BASE_TYPE = " coalesce(og.source_type, rv.source_type, t.source_type) ";
 
-  private static final String BASE_ID = " coalesce(og.source_id, rv.source_id, t.source_id) ";
+  static final String BASE_ID = " coalesce(og.source_id, rv.source_id, t.source_id) ";
 
-  private static final String BASE_DIRECTION =
-      " coalesce(og.direction, rv.direction, t.direction) ";
+  static final String BASE_DIRECTION = " coalesce(og.direction, rv.direction, t.direction) ";
 
-  private static final String KIND =
+  static final String KIND =
       " (case when"
           + BASE_TYPE
           + "= 'SETTLEMENT' then (case"
@@ -77,11 +78,10 @@ public final class FinanceRepositories {
           + BASE_DIRECTION
           + "when 'DEBIT' then 'RECEIVABLE' else 'DEBT' end) end) ";
 
-  private static final String SIGN =
-      " (case when t.direction =" + BASE_DIRECTION + "then 1 else -1 end) ";
+  static final String SIGN = " (case when t.direction =" + BASE_DIRECTION + "then 1 else -1 end) ";
 
   /** Taban kaynağın belge bilgisi (belge no, tür, tarih, vade, ödeme şekli). */
-  private static final String DOCUMENT_JOINS =
+  static final String DOCUMENT_JOINS =
       " left join account_document d on"
           + BASE_TYPE
           + "= 'ACCOUNT_DOCUMENT' and d.id ="
@@ -239,6 +239,26 @@ public final class FinanceRepositories {
       """;
 
   /**
+   * Kaynağına açık kur farkı belgesi kesilmiş hareket (12.8 §2.2): belge iptal edilmeden taşınamaz
+   * ({@code FX_DOCUMENT_OPEN}).
+   */
+  private static final String OPEN_FX =
+      """
+       exists (select 1 from account_document fx where fx.fx_source_transaction_id = t.id
+                 and fx.status = 'OPEN' and fx.deleted = false)
+      """;
+
+  /**
+   * Açık kur farkı belgesinin kendi cari satırı (12.8 Rev 1 F5): taşınamaz ({@code FX_DOCUMENT}).
+   */
+  private static final String FX_DOC =
+      """
+       (t.source_type = 'ACCOUNT_DOCUMENT' and exists (
+          select 1 from account_document k where k.id = t.source_id
+            and k.document_type = 'KUR_FARKI' and k.status = 'OPEN' and k.deleted = false))
+      """;
+
+  /**
    * Taşınabilir hareket: ters kayıt ya da taşıma satırı değil, ters çevrilmemiş, etkin bir taşımada
    * değil.
    */
@@ -373,7 +393,7 @@ public final class FinanceRepositories {
                 or exists (select 1 from instrument
                            where (account_id = :accountId or endorsed_account_id = :accountId)
                              and deleted = false
-                             and status in ('PORTFOLIO', 'AT_BANK', 'ENDORSED', 'ISSUED')
+                             and status in ('PORTFOLIO', 'AT_BANK', 'ENDORSED', 'ISSUED', 'COLLATERAL')
                              and company_id <> :companyId)
                 or exists (select 1 from trip_cost c
                            join shipment s on s.id = c.shipment_id
@@ -670,22 +690,6 @@ public final class FinanceRepositories {
     String getCreatedBy();
   }
 
-  public interface AgingRow {
-    UUID getAccountId();
-
-    String getAccountName();
-
-    String getCurrency();
-
-    BigDecimal getCurrent();
-
-    BigDecimal getDays31To60();
-
-    BigDecimal getDays61To90();
-
-    BigDecimal getOver90();
-  }
-
   public interface OpeningInvoiceRepository extends JpaRepository<OpeningInvoice, UUID> {
 
     /** Numara tekilliği şirket + cari bazındadır (devir şirket bazında). */
@@ -866,7 +870,8 @@ public final class FinanceRepositories {
               select k.account_id, k.company_id, k.currency,
                      case k.kind when 'DEBT' then 'PAYABLE' else 'RECEIVABLE' end as side,
                      k.sign * k.amount as ledger,
-                     case when (k.base_type = 'ACCOUNT_DOCUMENT' and k.document_invoice)
+                     case when (k.base_type in ('ACCOUNT_DOCUMENT', 'TRIP_COST', 'EXPENSE')
+                                and k.document_invoice)
                             or (k.kind = 'DEBT'
                                 and k.base_type in ('PURCHASE_INVOICE', 'OPENING_INVOICE'))
                             or (k.kind = 'RECEIVABLE'
@@ -882,7 +887,9 @@ public final class FinanceRepositories {
                 + " as sign, "
                 + BASE_TYPE
                 + """
-                 as base_type, coalesce(ty.counts_as_invoice, false) as document_invoice
+                 as base_type,
+                       coalesce(ty.counts_as_invoice, cty.counts_as_invoice, ety.counts_as_invoice,
+                                false) as document_invoice
                 from account_transaction t
             """
                 + KIND_JOINS
@@ -893,6 +900,20 @@ public final class FinanceRepositories {
                 + "and d.deleted = false"
                 + """
                  left join account_document_type ty on ty.side = d.side and ty.code = d.document_type
+            """
+                + " left join trip_cost tc on"
+                + BASE_TYPE
+                + "= 'TRIP_COST' and tc.id ="
+                + BASE_ID
+                + " left join account_document_type cty on cty.side = 'PAYABLE'"
+                + " and cty.code = tc.document_type"
+                + " left join expense ex on"
+                + BASE_TYPE
+                + "= 'EXPENSE' and ex.id ="
+                + BASE_ID
+                + " left join account_document_type ety on ety.side = 'PAYABLE'"
+                + " and ety.code = ex.document_type"
+                + """
                  join account a on a.id = t.account_id
                 where t.deleted = false and a.deleted = false
                   and (:allAccounts = true or t.account_id in (:accountIds))
@@ -1173,6 +1194,8 @@ public final class FinanceRepositories {
                 + ") when 'VEHICLE_EXPENSE' then (select v.vehicle_id from vehicle_expense v"
                 + " where v.id ="
                 + BASE_ID
+                + ") when 'EXPENSE' then (select e.expense_item_id from expense e where e.id ="
+                + BASE_ID
                 + ") end as \"refId\" from account_transaction t "
                 + KIND_JOINS
                 + DOCUMENT_JOINS
@@ -1273,7 +1296,11 @@ public final class FinanceRepositories {
                 + INSTRUMENT_OF
                 + " as \"instrumentId\", case when "
                 + OPEN_PLAN
-                + " then 'OPEN_PLAN' end as \"blockedReason\""
+                + " then 'OPEN_PLAN' when "
+                + OPEN_FX
+                + " then 'FX_DOCUMENT_OPEN' when "
+                + FX_DOC
+                + " then 'FX_DOCUMENT' end as \"blockedReason\""
                 + " from account_transaction t "
                 + KIND_JOINS
                 + DOCUMENT_JOINS
@@ -1415,96 +1442,6 @@ public final class FinanceRepositories {
         @Param("companyId") UUID companyId,
         @Param("allBranches") boolean allBranches,
         @Param("branchIds") Collection<UUID> branchIds);
-
-    /**
-     * Vadesiz eskitme. Karşı yöndeki hareketler en eski kalemleri kapattığı için kapanan tutar,
-     * tarih sırasındaki kalemlerin başından düşülür; açık kalan her zaman en yeni kalemlerdir.
-     * Eşleştirme şirket kırılımlıdır (yasal kişi bazında), konsolidede de: A'daki borç B'deki
-     * ödemeyle kapanmaz; konsolide satır şirket satırlarının toplamıdır.
-     *
-     * <p>Cari taşıma (12.1 §3.11 F9): {@code asOf} tarihinde yürürlükte olan (taşıma tarihi ≤ asOf
-     * ve geri alınmamış ya da geri alma tarihi &gt; asOf) taşımanın orijinali, taşıma çıkışları (ve
-     * ters kayıtları; her zaman) ile asOf'a kadar geri alınmış taşımanın girişleri (ve ters
-     * kayıtları) eşleştirmeye girmez. Böylece geçmiş tarihli yaşlandırma o tarihteki bakiyeyle
-     * tutar: taşımadan önce kalem kaynakta kendi tarihiyle, taşıma yürürlükteyken hedefte taşıma
-     * tarihiyle, geri almadan sonra yine kaynakta kendi tarihiyle durur.
-     */
-    @Query(
-        value =
-            """
-            with moves as (
-              select t.account_id, t.company_id, t.currency, t.transaction_date, t.direction,
-                     t.amount,
-                     sum(case when t.direction = :open then t.amount else 0 end) over (
-                       partition by t.account_id, t.company_id, t.currency
-                       order by t.transaction_date, t.created_at, t.id) as opened,
-                     sum(case when t.direction <> :open then t.amount else 0 end) over (
-                       partition by t.account_id, t.company_id, t.currency) as closed
-              from account_transaction t
-              join account a on a.id = t.account_id
-              where t.transaction_date <= :asOf and t.deleted = false
-                and a.deleted = false and a.type in (:types)
-                and (:allCompanies = true or t.company_id = :companyId)
-                and (:allBranches = true or t.branch_id in (:branchIds))
-                and (:excludeIntercompany = false or a.represents_company_id is null)
-                and not exists (select 1 from account_transfer_line l
-                                join account_transfer tr on tr.id = l.account_transfer_id
-                                where l.account_transaction_id = t.id and l.deleted = false
-                                  and tr.deleted = false
-                                  and tr.transfer_date <= cast(:asOf as date)
-                                  and (tr.reverse_date is null
-                                       or tr.reverse_date > cast(:asOf as date)))
-                and not exists (
-                  select 1 from account_transaction x
-                  left join account_transfer_line xl on xl.id = x.source_id
-                  left join account_transfer xtr on xtr.id = xl.account_transfer_id
-                  where x.id = (case when t.source_type = 'REVERSAL' then t.source_id else t.id end)
-                    and (x.source_type = 'ACCOUNT_TRANSFER_OUT'
-                         or (x.source_type = 'ACCOUNT_TRANSFER_IN'
-                             and xtr.reverse_date is not null
-                             and xtr.reverse_date <= cast(:asOf as date))))
-            ),
-            open_items as (
-              select account_id, currency, cast(:asOf as date) - transaction_date as age,
-                     least(amount, opened - closed) as remaining
-              from moves where direction = :open and opened > closed
-            )
-            select i.account_id as "accountId", a.name as "accountName", i.currency as "currency",
-                   coalesce(sum(i.remaining) filter (where i.age <= 30), 0) as "current",
-                   coalesce(sum(i.remaining) filter (where i.age > 30 and i.age <= 60), 0) as "days31To60",
-                   coalesce(sum(i.remaining) filter (where i.age > 60 and i.age <= 90), 0) as "days61To90",
-                   coalesce(sum(i.remaining) filter (where i.age > 90), 0) as "over90"
-            from open_items i join account a on a.id = i.account_id
-            group by i.account_id, a.name, i.currency
-            order by a.name, i.account_id, i.currency
-            """,
-        nativeQuery = true)
-    List<AgingRow> agingRows(
-        @Param("asOf") LocalDate asOf,
-        @Param("open") String openDirection,
-        @Param("types") Collection<String> types,
-        @Param("allCompanies") boolean allCompanies,
-        @Param("companyId") UUID companyId,
-        @Param("allBranches") boolean allBranches,
-        @Param("branchIds") Collection<UUID> branchIds,
-        @Param("excludeIntercompany") boolean excludeIntercompany);
-
-    default List<AgingRow> agingRows(
-        LocalDate asOf,
-        String openDirection,
-        Collection<String> types,
-        BranchFilter filter,
-        boolean excludeIntercompany) {
-      return agingRows(
-          asOf,
-          openDirection,
-          types,
-          filter.companyId() == null,
-          companyOrNone(filter),
-          filter.allBranches(),
-          filter.branchIds(),
-          excludeIntercompany);
-    }
   }
 
   /**
@@ -1737,49 +1674,105 @@ public final class FinanceRepositories {
   public interface ExpenseItemRepository extends JpaRepository<ExpenseItem, UUID> {
 
     Optional<ExpenseItem> findByCode(String code);
+
+    boolean existsByCode(String code);
+
+    boolean existsByNameIgnoreCase(String name);
+
+    boolean existsByNameIgnoreCaseAndIdNot(String name, UUID id);
+
+    /** Kod girilmeyen yeni kalem için sıradaki numara ({@code MK-00001}; 12.7 §3.1). */
+    @Query(value = "select nextval('expense_item_code_seq')", nativeQuery = true)
+    long nextCode();
+
+    /** Kalem bir ödeme, fon transfer masrafı ya da masrafta kullanılmış mı (12.7 §2.3). */
+    @Query(
+        value =
+            """
+            select exists(select 1 from settlement where expense_item_id = :id)
+                or exists(select 1 from fund_transfer_cost where expense_item_id = :id)
+                or exists(select 1 from expense where expense_item_id = :id)
+            """,
+        nativeQuery = true)
+    boolean isInUse(@Param("id") UUID id);
+
+    /**
+     * Sistem dışı kalemin kodunu değiştirir (entity'de kod alanı değişmez; 12.7 §3.1). Bekleyen
+     * değişiklikler önce yazılır, sonra bağlam temizlenir; çağıran kalemi yeniden okur.
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        value = "update expense_item set code = :code where id = :id and is_system = false",
+        nativeQuery = true)
+    int updateCode(@Param("id") UUID id, @Param("code") String code);
   }
 
   public interface InstrumentRepository extends JpaRepository<Instrument, UUID> {
 
+    /**
+     * Aynı şirkette etkin (iptal/iade edilmemiş) aynı numaralı çek/senet var mı; {@code excludeId}
+     * ({@code null} olabilir) düzenlenen ya da düzeltilen çektir (12.3 §3.3 #2).
+     */
+    @Query(value = "select exists(select 1" + ACTIVE_NUMBER_WHERE + ")", nativeQuery = true)
+    boolean existsActiveNumber(
+        @Param("companyId") UUID companyId,
+        @Param("kind") String kind,
+        @Param("direction") String direction,
+        @Param("number") String number,
+        @Param("bankName") String bankName,
+        @Param("excludeId") UUID excludeId);
+
+    /** {@link #existsActiveNumber} ile aynı koşulda çakışan çek (durumunu iletmek için). */
+    @Query(value = "select i.*" + ACTIVE_NUMBER_WHERE + " limit 1", nativeQuery = true)
+    Optional<Instrument> findActiveByNumber(
+        @Param("companyId") UUID companyId,
+        @Param("kind") String kind,
+        @Param("direction") String direction,
+        @Param("number") String number,
+        @Param("bankName") String bankName,
+        @Param("excludeId") UUID excludeId);
+
+    /** Tür/yön enum'larıyla {@link #existsActiveNumber}. */
+    default boolean existsActiveNumber(
+        UUID companyId,
+        InstrumentKind kind,
+        InstrumentDirection direction,
+        String number,
+        String bankName,
+        UUID excludeId) {
+      return existsActiveNumber(
+          companyId, kind.name(), direction.name(), number, bankName, excludeId);
+    }
+
+    /** Tür/yön enum'larıyla {@link #findActiveByNumber}. */
+    default Optional<Instrument> findActiveByNumber(
+        UUID companyId,
+        InstrumentKind kind,
+        InstrumentDirection direction,
+        String number,
+        String bankName,
+        UUID excludeId) {
+      return findActiveByNumber(
+          companyId, kind.name(), direction.name(), number, bankName, excludeId);
+    }
+
+    /** Yaprağa bağlı çekler (iptal edilmişler dahil; etkin olan en çok bir tane). */
+    List<Instrument> findByCheckLeafIdAndDeletedFalse(UUID checkLeafId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from Instrument i where i.id = :id")
     Optional<Instrument> findForUpdate(@Param("id") UUID id);
-
-    /** Çek/senet listesi; {@code null} süzgeçler süzmez (12.2a §3.9: yön ve tür eklendi). */
-    @Query(
-        """
-        select i from Instrument i
-        where (:status is null or i.status = :status)
-          and (:direction is null or i.direction = :direction)
-          and (:kind is null or i.kind = :kind)
-          and (:companyId is null or i.companyId = :companyId)
-          and (:allBranches = true or i.branchId in :branchIds)
-        """)
-    Page<Instrument> search(
-        @Param("status") InstrumentStatus status,
-        @Param("direction") InstrumentDirection direction,
-        @Param("kind") InstrumentKind kind,
-        @Param("companyId") UUID companyId,
-        @Param("allBranches") boolean allBranches,
-        @Param("branchIds") Collection<UUID> branchIds,
-        Pageable pageable);
-
-    default Page<Instrument> search(
-        InstrumentStatus status,
-        InstrumentDirection direction,
-        InstrumentKind kind,
-        BranchFilter filter,
-        Pageable pageable) {
-      return search(
-          status,
-          direction,
-          kind,
-          filter.companyId(),
-          filter.allBranches(),
-          filter.branchIds(),
-          pageable);
-    }
   }
+
+  /** Çek/senet numara tekilliği koşulu (V37 {@code instrument_number_uq} ile aynı). */
+  private static final String ACTIVE_NUMBER_WHERE =
+      """
+       from instrument i
+      where i.company_id = :companyId and i.kind = :kind and i.direction = :direction
+        and i.number = :number and coalesce(i.bank_name, '') = coalesce(:bankName, '')
+        and i.deleted = false and i.status not in ('CANCELLED', 'RETURNED')
+        and (cast(:excludeId as uuid) is null or i.id <> cast(:excludeId as uuid))
+      """;
 
   public interface InstrumentMovementRepository extends JpaRepository<InstrumentMovement, UUID> {
 
@@ -1798,6 +1791,22 @@ public final class FinanceRepositories {
     /** Bu kaydı düzelten yeni kayıt (bir kayıt en çok bir kez düzeltilir; V35). */
     Optional<Settlement> findByCorrectsSettlementId(UUID correctsSettlementId);
 
+    /**
+     * Çeki doğuran köken kayıt: alınan çekte tahsilat, verilen çekte ödeme (iptal edilmişler dahil,
+     * en eski; 12.3 §0.1). Ciro kayıtları ({@code PAYMENT + RECEIVED}) dönmez.
+     */
+    @Query(
+        value =
+            """
+            select s.* from settlement s join instrument i on i.id = s.instrument_id
+            where s.instrument_id = :id and s.deleted = false
+              and ((s.type = 'COLLECTION' and i.direction = 'RECEIVED')
+                or (s.type = 'PAYMENT' and i.direction = 'ISSUED'))
+            order by s.created_at limit 1
+            """,
+        nativeQuery = true)
+    Optional<Settlement> findOriginByInstrumentId(@Param("id") UUID instrumentId);
+
     /** Settlement silinmemiş bir araç giderine bağlı mı (kullanıcı iptalini engeller; §3.5). */
     @Query(
         value =
@@ -1807,6 +1816,16 @@ public final class FinanceRepositories {
             """,
         nativeQuery = true)
     boolean existsVehicleExpenseLink(@Param("id") UUID id);
+
+    /** Settlement silinmemiş bir genel masrafa bağlı mı (kullanıcı iptalini engeller; 12.7 F1). */
+    @Query(
+        value =
+            """
+            select exists(select 1 from expense e
+                          where e.settlement_id = :id and e.deleted = false)
+            """,
+        nativeQuery = true)
+    boolean existsExpenseLink(@Param("id") UUID id);
 
     /**
      * Settlement'ın cari satırı cari taşımayla başka cariye taşınmış mı (aktif taşıma satırı; iptal
@@ -1963,6 +1982,28 @@ public final class FinanceRepositories {
     UUID getTargetId();
 
     BigDecimal getAllocated();
+  }
+
+  /** Çek koçanları (V38). Okuma sorguları {@code InstrumentQueryRepository}'de (B3). */
+  public interface CheckBookRepository extends JpaRepository<CheckBook, UUID> {
+
+    boolean existsByFundAccountIdAndSerialNoAndDeletedFalse(UUID fundAccountId, String serialNo);
+  }
+
+  /** Çek koçanı yaprakları (V38). */
+  public interface CheckLeafRepository extends JpaRepository<CheckLeaf, UUID> {
+
+    /** Yaprak kullanımı/serbest bırakması ile iptal yarışmasın diye satır kilidi. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select l from CheckLeaf l where l.id = :id")
+    Optional<CheckLeaf> findForUpdate(@Param("id") UUID id);
+
+    Optional<CheckLeaf> findByFundAccountIdAndNumberAndDeletedFalse(
+        UUID fundAccountId, String number);
+
+    /** Fonun silinmemiş yaprak numaraları (koçan oluştururken atlananlar). */
+    @Query("select l.number from CheckLeaf l where l.fundAccountId = :fundId and l.deleted = false")
+    Set<String> findNumbersByFundAccountId(@Param("fundId") UUID fundAccountId);
   }
 
   public interface PurchaseInvoiceRepository extends JpaRepository<PurchaseInvoice, UUID> {

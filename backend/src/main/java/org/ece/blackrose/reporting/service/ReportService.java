@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
+import org.ece.blackrose.finance.repository.FinanceReportRepositories;
 import org.ece.blackrose.organization.BranchFilter;
 import org.ece.blackrose.organization.BranchScopeService;
 import org.ece.blackrose.reporting.service.ForecastCalculator.Due;
@@ -33,7 +34,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Yönetim raporları. Hesaplar veritabanında yapılır. Gelir, kesilmiş faturanın net TL tutarı;
- * gider, sefere yazılan ve iptal edilmemiş giderdir. Faturalanmamış sefer kârlılığa girmez.
+ * gider, sefere yazılan ve iptal edilmemiş giderdir; 12.8 (OK-12.8-12): sefer bağlamlı kayıtlı
+ * masrafın KDV hariç net TL tutarı da gidere eklenir (ayna kayıt yok). Faturalanmamış sefer
+ * kârlılığa girmez.
  */
 @Service
 @Transactional(readOnly = true)
@@ -57,7 +60,10 @@ public class ReportService {
           coalesce((select sum(c.tl_amount) from trip_cost c
                     left join vehicle_expense ve on ve.id = c.vehicle_expense_id
                     where c.shipment_id = s.id and c.deleted = false
-                      and (c.vehicle_expense_id is null or ve.deleted = false)), 0) as cost
+                      and (c.vehicle_expense_id is null or ve.deleted = false)), 0)
+          + coalesce((select sum(round(e.net_amount * e.exchange_rate, 2)) from expense e
+                      where e.shipment_id = s.id and e.status = 'POSTED'
+                        and e.deleted = false), 0) as cost
         from shipment s
         where s.deleted = false and s.status in ('INVOICED', 'CLOSED')
           and s.planned_pickup >= :start and s.planned_pickup < :end %s
@@ -114,10 +120,13 @@ public class ReportService {
   @PersistenceContext private EntityManager entityManager;
   private final TenantClock clock;
   private final BranchScopeService scope;
+  private final FinanceReportRepositories financeReports;
 
-  public ReportService(TenantClock clock, BranchScopeService scope) {
+  public ReportService(
+      TenantClock clock, BranchScopeService scope, FinanceReportRepositories financeReports) {
     this.clock = clock;
     this.scope = scope;
+    this.financeReports = financeReports;
   }
 
   /**
@@ -266,38 +275,30 @@ public class ReportService {
 
   /** Cari ve banka/kasa bakiyelerinin para birimi kırılımı (kiracı geneli; LIMITED'e kapalı). */
   public List<PositionRow> position() {
+    return position(null, false);
+  }
+
+  /**
+   * Döviz pozisyonu (12.8 §3.4.10; finans {@code currency-position} ile tek SQL, R-15). Netleşme
+   * cari × şirket × para birimi (Rev 1 F3): A şirketindeki alacak B şirketindeki avansla netleşmez;
+   * konsolidede grup şirketi carileri dışlanır. {@code byCompany} satırı şirket başına kırar.
+   */
+  public List<PositionRow> position(UUID companyId, boolean byCompany) {
     scope.requireAll("POSITION");
-    String sql =
-        """
-        with balances as (
-          select currency,
-                 sum(case when direction = 'DEBIT' then amount else -amount end) as balance
-          from account_transaction where deleted = false group by account_id, currency
-        ),
-        cash as (
-          select currency, sum(case when direction = 'IN' then amount else -amount end) as cash
-          from fund_transaction where deleted = false group by currency
-        ),
-        accounts as (
-          select currency,
-                 coalesce(sum(balance) filter (where balance > 0), 0) as receivable,
-                 coalesce(-sum(balance) filter (where balance < 0), 0) as payable
-          from balances group by currency
-        )
-        select coalesce(a.currency, c.currency), coalesce(c.cash, 0),
-               coalesce(a.receivable, 0), coalesce(a.payable, 0)
-        from accounts a full join cash c on c.currency = a.currency
-        order by 1
-        """;
+    if (companyId != null) {
+      scope.requireCompanyVisible(companyId);
+    }
     List<PositionRow> rows = new ArrayList<>();
-    for (Object row : entityManager.createNativeQuery(sql).getResultList()) {
-      Object[] cells = (Object[]) row;
-      BigDecimal cash = money(cells[1]);
-      BigDecimal receivable = money(cells[2]);
-      BigDecimal payable = money(cells[3]);
+    for (FinanceReportRepositories.PositionItem item :
+        financeReports.currencyPosition(
+            BranchFilter.all(companyId), companyId == null, byCompany)) {
+      BigDecimal cash = money(item.cash());
+      BigDecimal receivable = money(item.receivable());
+      BigDecimal payable = money(item.payable());
       rows.add(
           new PositionRow(
-              String.valueOf(cells[0]).trim(),
+              item.currency(),
+              byCompany ? item.companyId() : companyId,
               cash,
               receivable,
               payable,
@@ -308,35 +309,48 @@ public class ReportService {
 
   /** Nakit öngörüsü (kiracı geneli; LIMITED'e kapalı). */
   public List<ForecastRow> forecast() {
+    return forecast(null);
+  }
+
+  /** Nakit öngörüsü; 12.8: {@code companyId} doluysa yalnız o şirketin kayıtları. */
+  public List<ForecastRow> forecast(UUID companyId) {
     scope.requireAll("FORECAST");
+    if (companyId != null) {
+      scope.requireCompanyVisible(companyId);
+    }
     Map<String, BigDecimal> balances = new HashMap<>();
     for (Object row :
-        entityManager
-            .createNativeQuery(
+        companyQuery(
                 """
                 select cast(account_id as varchar), currency,
                        sum(case when direction = 'DEBIT' then amount else -amount end)
-                from account_transaction where deleted = false group by account_id, currency
-                """)
+                from account_transaction
+                where deleted = false and (:allCompanies = true or company_id = :companyId)
+                group by account_id, currency
+                """,
+                companyId)
             .getResultList()) {
       Object[] cells = (Object[]) row;
       balances.put(cells[0] + "|" + String.valueOf(cells[1]).trim(), money(cells[2]));
     }
     List<OpenInvoice> invoices = new ArrayList<>();
     for (Object row :
-        entityManager
-            .createNativeQuery(
+        companyQuery(
                 """
                 select cast(account_id as varchar), currency, total_amount, due_date
                 from freight_invoice where status = 'ISSUED' and deleted = false
+                  and (:allCompanies = true or company_id = :companyId)
                 union all
                 select cast(account_id as varchar), currency, total_amount, due_date
                 from warehouse_invoice where status = 'ISSUED' and deleted = false
+                  and (:allCompanies = true or company_id = :companyId)
                 union all
                 select cast(account_id as varchar), currency, total_amount, due_date
                 from opening_invoice
                 where kind = 'RECEIVABLE' and status = 'OPEN' and deleted = false
-                """)
+                  and (:allCompanies = true or company_id = :companyId)
+                """,
+                companyId)
             .getResultList()) {
       Object[] cells = (Object[]) row;
       invoices.add(
@@ -345,12 +359,13 @@ public class ReportService {
     }
     List<Due> outflows = new ArrayList<>();
     for (Object row :
-        entityManager
-            .createNativeQuery(
+        companyQuery(
                 """
                 select currency, amount, due_date from payment_plan
                 where deleted = false and status in ('DRAFT', 'PENDING', 'APPROVED')
-                """)
+                  and (:allCompanies = true or company_id = :companyId)
+                """,
+                companyId)
             .getResultList()) {
       Object[] cells = (Object[]) row;
       outflows.add(new Due(String.valueOf(cells[0]).trim(), money(cells[1]), date(cells[2])));
@@ -364,10 +379,19 @@ public class ReportService {
 
   /** Tahsilat/ödeme performansı (kiracı geneli; LIMITED'e kapalı). */
   public List<SettlementPerformanceRow> settlementPerformance(LocalDate from, LocalDate to) {
+    return settlementPerformance(from, to, null);
+  }
+
+  /** Tahsilat/ödeme performansı; 12.8: {@code companyId} doluysa yalnız o şirket. */
+  public List<SettlementPerformanceRow> settlementPerformance(
+      LocalDate from, LocalDate to, UUID companyId) {
     scope.requireAll("SETTLEMENT_PERFORMANCE");
+    if (companyId != null) {
+      scope.requireCompanyVisible(companyId);
+    }
     ensurePeriod(from, to);
     Query query =
-        entityManager.createNativeQuery(
+        companyQuery(
             """
             select currency,
               coalesce(sum(amount) filter (where type = 'COLLECTION'), 0),
@@ -377,8 +401,10 @@ public class ReportService {
             from settlement
             where deleted = false and status = 'POSTED'
               and settlement_date between :from and :to
+              and (:allCompanies = true or company_id = :companyId)
             group by currency order by currency
-            """);
+            """,
+            companyId);
     query.setParameter("from", from);
     query.setParameter("to", to);
     List<SettlementPerformanceRow> rows = new ArrayList<>();
@@ -393,6 +419,14 @@ public class ReportService {
               ((Number) cells[4]).longValue()));
     }
     return rows;
+  }
+
+  /** Şirket süzgeçli sorgu (konsolidede nöbetçi; NULL UUID bağlanmaz). */
+  private Query companyQuery(String sql, UUID companyId) {
+    Query query = entityManager.createNativeQuery(sql);
+    query.setParameter("allCompanies", companyId == null);
+    query.setParameter("companyId", companyId == null ? BranchFilter.NONE : companyId);
+    return query;
   }
 
   private Query period(String sql, LocalDate from, LocalDate to, BranchCondition branch) {

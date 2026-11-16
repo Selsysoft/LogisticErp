@@ -52,6 +52,8 @@ public interface SettlementQueryRepository extends Repository<Settlement, UUID> 
            f.bank_branch_name as "fundBankBranchName", f.branch_id as "fundBranchId",
            s.instrument_id as "instrumentId", i.kind as "instrumentKind",
            i.number as "instrumentNumber", i.status as "instrumentStatus",
+           i.direction as "instrumentDirection",
+           i.endorsed_account_id as "instrumentEndorsedAccountId",
            s.expense_item_id as "expenseItemId", ei.name as "expenseItemName",
            s.plan_id as "planId", s.amount as "amount", s.currency as "currency",
            coalesce(atx.exchange_rate, ftx.exchange_rate) as "exchangeRate",
@@ -88,7 +90,9 @@ public interface SettlementQueryRepository extends Repository<Settlement, UUID> 
                     where (it.payment_settlement_id = s.id or it.collection_settlement_id = s.id)
                       and it.deleted = false) as "intercompanyLinked",
            exists (select 1 from vehicle_expense v
-                    where v.settlement_id = s.id and v.deleted = false) as "vehicleExpenseLinked"
+                    where v.settlement_id = s.id and v.deleted = false) as "vehicleExpenseLinked",
+           exists (select 1 from expense e
+                    where e.settlement_id = s.id and e.deleted = false) as "expenseLinked"
           """;
 
   /** Süzgeçlerin gerektirdiği birleşimler (sayım sorgusu da kullanır). */
@@ -791,6 +795,12 @@ public interface SettlementQueryRepository extends Repository<Settlement, UUID> 
 
     String getInstrumentStatus();
 
+    /** Çekin yönü (12.3 §3.8; kilit nedeni türetmesi). */
+    String getInstrumentDirection();
+
+    /** Ciro edilen cari (12.3 §3.8; yanıta yazılmaz). */
+    UUID getInstrumentEndorsedAccountId();
+
     UUID getExpenseItemId();
 
     String getExpenseItemName();
@@ -842,6 +852,8 @@ public interface SettlementQueryRepository extends Repository<Settlement, UUID> 
     Boolean getIntercompanyLinked();
 
     Boolean getVehicleExpenseLinked();
+
+    Boolean getExpenseLinked();
   }
 
   /** {@link #lines} satırı. */

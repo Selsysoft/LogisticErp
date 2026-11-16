@@ -256,11 +256,7 @@ public class AccountTransferService {
       }
       scope.requireVisible(tx.getBranchId());
       if (row.getBlockedReason() != null) {
-        throw new BusinessException(
-            HttpStatus.CONFLICT,
-            "TRANSACTION_HAS_OPEN_PLAN",
-            "Hareketin açık ödeme planı var; önce planı ödeyin ya da iptal edin.",
-            List.of("transactionId=" + tx.getId()));
+        throw blocked(row.getBlockedReason(), tx.getId());
       }
       identityRule.require(to, tx.getCompanyId());
     }
@@ -751,6 +747,28 @@ public class AccountTransferService {
 
   private static String blankToNull(String value) {
     return value == null || value.isBlank() ? null : value.trim();
+  }
+
+  /**
+   * Kilit altında engelli satır (12.8 §3.3.2): açık plan, kaynağına açık kur farkı kesilmiş hareket
+   * ya da açık kur farkı belgesinin kendi satırı.
+   */
+  private static BusinessException blocked(String reason, UUID transactionId) {
+    return switch (reason) {
+      case "FX_DOCUMENT_OPEN" -> LedgerService.fxDocumentOpen(transactionId);
+      case "FX_DOCUMENT" ->
+          new BusinessException(
+              HttpStatus.CONFLICT,
+              "FX_DOCUMENT_NOT_TRANSFERABLE",
+              "Kur farkı belgesi taşınamaz; kaynağıyla birlikte iptal edip yeniden kesin.",
+              List.of("transactionId=" + transactionId));
+      default ->
+          new BusinessException(
+              HttpStatus.CONFLICT,
+              "TRANSACTION_HAS_OPEN_PLAN",
+              "Hareketin açık ödeme planı var; önce planı ödeyin ya da iptal edin.",
+              List.of("transactionId=" + transactionId));
+    };
   }
 
   private static BusinessException notTransferable(UUID transactionId) {

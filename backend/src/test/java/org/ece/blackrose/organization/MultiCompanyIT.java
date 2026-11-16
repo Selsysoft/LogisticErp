@@ -291,7 +291,7 @@ class MultiCompanyIT extends AbstractIntegrationTest {
             jsonPath("$.message")
                 .value("Şirketler arası aktarım 'Şirketler Arası Virman' ile yapılır."));
     // Çek: başka şirketin kasasına tahsil ve başka şirketin portföyünden ciro edilemez.
-    JsonNode check = checkCollection(w, w.customer(), w.branchA(), "CK-2", "200");
+    JsonNode check = checkCollection(w, w.customer(), w.branchA(), "0000032", "200");
     String instrument = check.get("instrumentId").asText();
     expect(
         save(
@@ -371,16 +371,16 @@ class MultiCompanyIT extends AbstractIntegrationTest {
 
     // (n) A'nın müşteri çeki B'nin grup carisine ciro edilir; B aynı çeki A'nın grup carisinden
     // portföyüne alabilir (şirket başına tekillik); aynı şirkette ikinci kez alınamaz.
-    JsonNode received = checkCollection(w, w.customer(), w.branchA(), "CK-1", "300");
+    JsonNode received = checkCollection(w, w.customer(), w.branchA(), "0000031", "300");
     Map<String, Object> endorse = new HashMap<>(endorseFromB);
     endorse.put("accountId", w.groupB());
     endorse.put("branchId", w.branchA());
     endorse.put("instrumentId", received.get("instrumentId").asText());
     endorse.put("money", money("300"));
     save(w, post(FINANCE + "/payments"), endorse).andExpect(status().isCreated());
-    JsonNode inB = checkCollection(w, w.groupA(), w.branchB(), "CK-1", "300");
+    JsonNode inB = checkCollection(w, w.groupA(), w.branchB(), "0000031", "300");
     assertThat(inB.get("companyId").asText()).isEqualTo(w.companyB());
-    save(w, post(FINANCE + "/collections"), checkBody(w.groupA(), w.branchB(), "CK-1", "300"))
+    save(w, post(FINANCE + "/collections"), checkBody(w.groupA(), w.branchB(), "0000031", "300"))
         .andExpect(status().isConflict());
 
     // Liste uçları şirket süzgeçli; boş = konsolide.

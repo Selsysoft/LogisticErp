@@ -1,17 +1,19 @@
-import { useState } from "react";
-import type { Fund } from "../../../../pages/finance/types";
-import { DisabledDescription, DueDateInput, IssueDateInput } from "./CheckFields";
+import type { NoteType } from "../../../../pages/finance/types";
+import { DescriptionInput, DueDateInput, IssueDateInput } from "./CheckFields";
 import { FundSelect } from "./FundSelect";
 import type { NoteFieldsProps, NoteFieldsValue } from "./index";
-import { Help, PhaseNote, useBranchName, useModalText } from "./parts";
+import { Help, useBranchName, useModalText } from "./parts";
 
 /*
- * Senet alanları (12.2a_TASARIM §5.9). issued = ödeme (APM:919-1019): "İş Yeri Bankası (Opsiyonel)"
- * (`fundAccountId`), banka/şube adı salt okunur, "Keşideci (İş Yeri)" ödeme iş yerine kilitli (MX7
- * Ç21). received = tahsilat (CMP): banka adı serbest, şube adı 12.3, "Keşideci (Cari Hesap)" tahsilat
- * carisine kilitli (`drawer_account_id` 12.3). Düzenlenme tarihi ve senet açıklaması 12.3'e kadar
- * devre dışı.
+ * Senet alanları (12.2a_TASARIM §5.9; 12.3 §5.10). issued = ödeme (APM:919-1019): "İş Yeri Bankası
+ * (Opsiyonel)" (`fundAccountId`), banka/şube adı salt okunur (bankadan), "Keşideci (İş Yeri)" ödeme iş
+ * yerine kilitli (MX7 Ç21). received = tahsilat (CMP): banka ve şube adı serbest, "Keşideci (Cari
+ * Hesap)" tahsilat carisine kilitli; üçüncü kişi keşideci "Keşideci" metni (`drawerName`, boşsa cari
+ * adı; OK-12.3-9). BR eki (ZTO Bills addBill M, OK-12.3-12): "Senet Türü" ve devre dışı "Teminat
+ * Durumu" ("Normal Senet" sabit; OK-12.3-7). Düzenlenme tarihi ve senet açıklaması 12.3'te açık.
  */
+
+const NOTE_TYPES: readonly NoteType[] = ["PLAIN", "ORDER", "BOND"];
 
 export function NoteFields({
   variant,
@@ -25,7 +27,6 @@ export function NoteFields({
 }: NoteFieldsProps) {
   const { tm } = useModalText();
   const branchName = useBranchName();
-  const [fund, setFund] = useState<Fund | null>(null);
   const set = (patch: Partial<NoteFieldsValue>) => onChange({ ...value, ...patch });
   const issued = variant === "issued";
 
@@ -53,10 +54,13 @@ export function NoteFields({
               branchId={branchId}
               companyId={companyId}
               value={value.fundAccountId}
-              onChange={(fundAccountId, picked) => {
-                setFund(picked);
-                set({ fundAccountId, bankName: picked?.bankName ?? "" });
-              }}
+              onChange={(fundAccountId, picked) =>
+                set({
+                  fundAccountId,
+                  bankName: picked?.bankName ?? "",
+                  bankBranch: picked?.bankBranchName ?? "",
+                })
+              }
               disabled={disabled}
               ariaLabelledBy="BillBankID-label"
             />
@@ -110,22 +114,21 @@ export function NoteFields({
                   className="form-control"
                   placeholder={tm("check.autoFill")}
                   readOnly
-                  value={value.fundAccountId ? (fund?.bankBranchName ?? "") : ""}
+                  value={value.fundAccountId ? (value.bankBranch ?? "") : ""}
                 />
               ) : (
-                <>
-                  <input
-                    type="text"
-                    id="BillBranchName"
-                    name="BillBranchName"
-                    className="form-control"
-                    placeholder={tm("note.receivedBranchPlaceholder")}
-                    disabled
-                    title={tm("shared.phase123")}
-                    aria-describedby="BillBranchName-phase"
-                  />
-                  <PhaseNote id="BillBranchName-phase" step="12.3" />
-                </>
+                <input
+                  type="text"
+                  id="BillBranchName"
+                  name="BillBranchName"
+                  className="form-control"
+                  placeholder={tm("note.receivedBranchPlaceholder")}
+                  maxLength={100}
+                  autoComplete="off"
+                  value={value.bankBranch ?? ""}
+                  onChange={(event) => set({ bankBranch: event.target.value })}
+                  disabled={disabled}
+                />
               )}
               <Help>{issued ? tm("check.autoFillHelp") : tm("note.receivedBranchHelp")}</Help>
             </div>
@@ -155,6 +158,77 @@ export function NoteFields({
           </small>
         </div>
 
+        {!issued && (
+          <div className="form-group">
+            <label htmlFor="BillDrawerName">
+              <i className="fas fa-user" aria-hidden="true" /> {tm("note.drawerName")}
+            </label>
+            <input
+              type="text"
+              id="BillDrawerName"
+              name="BillDrawerName"
+              className="form-control"
+              placeholder={accountLabel || tm("note.drawerNamePlaceholder")}
+              maxLength={200}
+              autoComplete="off"
+              value={value.drawerName ?? ""}
+              onChange={(event) => set({ drawerName: event.target.value })}
+              disabled={disabled}
+              aria-describedby="BillDrawerName-help"
+            />
+            <small className="form-text text-muted" id="BillDrawerName-help">
+              {tm("note.drawerNameHelp")}
+            </small>
+          </div>
+        )}
+
+        <div className="form-row">
+          <div className="col-md-6">
+            <div className="form-group">
+              <label htmlFor="BillTypeModal" className="required-field">
+                <i className="fas fa-file-alt" aria-hidden="true" /> {tm("note.type")}
+              </label>
+              <select
+                id="BillTypeModal"
+                name="BillTypeModal"
+                className="form-control no-select2"
+                required
+                value={value.noteType ?? "PLAIN"}
+                onChange={(event) => set({ noteType: event.target.value as NoteType })}
+                disabled={disabled}
+              >
+                {NOTE_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {tm(`note.types.${type}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="col-md-6">
+            <div className="form-group">
+              <label htmlFor="BillIsCollateralModal">
+                <i className="fas fa-shield-alt" aria-hidden="true" /> {tm("note.collateral")}
+              </label>
+              <select
+                id="BillIsCollateralModal"
+                name="BillIsCollateralModal"
+                className="form-control no-select2"
+                value="false"
+                disabled
+                onChange={() => undefined}
+                aria-describedby="BillIsCollateralModal-help"
+              >
+                <option value="false">{tm("note.collateralNormal")}</option>
+                <option value="true">{tm("note.collateralYes")}</option>
+              </select>
+              <small className="form-text text-muted" id="BillIsCollateralModal-help">
+                {tm("note.collateralHelp")}
+              </small>
+            </div>
+          </div>
+        </div>
+
         <div className="form-row">
           <div className="col-md-6">
             <div className="form-group">
@@ -179,7 +253,15 @@ export function NoteFields({
             </div>
           </div>
           <div className="col-md-3">
-            <IssueDateInput id="BillIssueDate" label={tm("note.issueDate")} required={!issued} />
+            <IssueDateInput
+              id="BillIssueDate"
+              label={tm("note.issueDate")}
+              required={!issued}
+              value={value.issueDate ?? ""}
+              onChange={(issueDate) => set({ issueDate })}
+              error={errors.issueDate}
+              disabled={disabled}
+            />
           </div>
           <div className="col-md-3">
             <DueDateInput
@@ -193,10 +275,13 @@ export function NoteFields({
             />
           </div>
         </div>
-        <DisabledDescription
+        <DescriptionInput
           id="BillDescription"
           label={tm("note.description")}
           placeholder={tm("note.descriptionPlaceholder")}
+          value={value.description ?? ""}
+          onChange={(description) => set({ description })}
+          disabled={disabled}
         />
       </div>
     </div>

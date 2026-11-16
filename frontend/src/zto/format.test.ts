@@ -8,6 +8,7 @@ import {
   formatMoneyValue,
   formatN2,
   formatNumber,
+  maskTaxNumber,
   parseTrNumber,
   toIsoDate,
   toNumber,
@@ -212,5 +213,25 @@ describe("tarih biçimleri", () => {
     expect(toIsoDate("2026-13-01")).toBeNull();
     expect(toIsoDate(null)).toBeNull();
     expect(toIsoDate("x")).toBeNull();
+  });
+});
+
+describe("maskTaxNumber (12.8 SEC-12.8-05)", () => {
+  it("11 haneli TCKN yıldız + son 4 hane", () => {
+    expect(maskTaxNumber("12345678901", false)).toBe("*******8901");
+    expect(maskTaxNumber(" 12345678901 ", false)).toBe("*******8901");
+  });
+
+  it("10 haneli VKN, zaten maskeli ve diğer biçimler aynen", () => {
+    expect(maskTaxNumber("1234567890", false)).toBe("1234567890");
+    expect(maskTaxNumber("*******8901", true)).toBe("*******8901");
+    expect(maskTaxNumber("12345678901", true)).toBe("12345678901");
+    expect(maskTaxNumber("TR-123", false)).toBe("TR-123");
+  });
+
+  it("boş ve null → null", () => {
+    expect(maskTaxNumber(null, false)).toBeNull();
+    expect(maskTaxNumber("", false)).toBeNull();
+    expect(maskTaxNumber("   ", true)).toBeNull();
   });
 });

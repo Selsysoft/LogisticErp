@@ -24,7 +24,6 @@ import {
   ErrorBox,
   FixedNotice,
   Help,
-  PhaseNote,
   WarningLines,
   accountOptionLabel,
   useModalText,
@@ -50,7 +49,8 @@ import { useSettlementModal } from "./useSettlementModal";
  * 12.2a_TASARIM §5.8). Kök `.modal.fade.erp-modal#addCollectionModal` (`#editCollectionModal`,
  * başlık `bg-warning` + fa-edit, "Güncelle" `btn-primary btn-update`). Çapraz kur satırı ve "Farklı
  * Para Birimi ile Tahsilat" kutusu yok (Y9); "Sipariş Tahsisi" yerinde fatura eşleştirme. Çekte
- * "Bankaya Yatırıldı" = `initialStatus: AT_BANK` + banka; "Kasaya Al (Ciro)" = PORTFOLIO (kasa 12.3).
+ * "Bankaya Yatırıldı" = `initialStatus: AT_BANK` + banka; "Portföyde" / "Kasaya Al (Ciro)" = PORTFOLIO
+ * + "Çekin Tutulduğu Kasa" (emanet; Kasaya Al'da zorunlu, 12.3 §5.10). Senet tahsilatında banka yok.
  * Düzenlemede cari değiştirilemez ve karşı taraf banka bölümü yoktur (CMP birebir).
  */
 
@@ -148,54 +148,35 @@ export function CollectionModal(props: CollectionModalProps) {
                 </div>
               ) : (
                 <div id="checkCashSelection" className="form-group">
-                  <label htmlFor="CheckCashID">
+                  <label
+                    id="CheckCashID-label"
+                    className={form.check.status === "CASH_BOX" ? "required-field" : undefined}
+                  >
                     <i className="fas fa-wallet" aria-hidden="true" /> {tm("collection.checkCash")}
                   </label>
-                  <select
+                  <FundSelect
                     id="CheckCashID"
-                    name="CheckCashID"
-                    className="form-control no-select2"
-                    disabled
-                    title={tm("shared.phase123")}
-                    aria-describedby="CheckCashID-phase"
-                  >
-                    <option value="">{tm("fund.selectBranchFirst")}</option>
-                  </select>
-                  <PhaseNote id="CheckCashID-phase" step="12.3" />
+                    kind="CASH"
+                    branchId={form.branchId}
+                    currency={form.currency}
+                    companyId={m.companyId}
+                    value={form.check.custodyFundId ?? ""}
+                    onChange={(custodyFundId) =>
+                      setForm((f) => ({ ...f, check: { ...f.check, custodyFundId } }))
+                    }
+                    ariaLabelledBy={
+                      error("check.custodyFundId").describedBy
+                        ? `CheckCashID-label ${error("check.custodyFundId").describedBy}`
+                        : "CheckCashID-label"
+                    }
+                  />
                   <Help icon="fa-filter">{tm("collection.checkCashHelp")}</Help>
                 </div>
               )}
             </div>
           </div>
         );
-      case "NOTE":
-        return (
-          <div id="billTopFields">
-            <div className="field-group">
-              <div className="field-group-title">
-                <i className="fas fa-file-invoice-dollar" aria-hidden="true" />{" "}
-                {tm("collection.billTopTitle")}
-              </div>
-              <div className="form-group">
-                <label htmlFor="BillBankID">
-                  <i className="fas fa-university" aria-hidden="true" /> {tm("collection.billBank")}
-                </label>
-                <select
-                  id="BillBankID"
-                  name="BillBankID"
-                  className="form-control no-select2"
-                  disabled
-                  title={tm("shared.phase123")}
-                  aria-describedby="BillBankID-phase"
-                >
-                  <option value="">{tm("fund.selectBranchFirst")}</option>
-                </select>
-                <PhaseNote id="BillBankID-phase" step="12.3" />
-                <Help icon="fa-filter">{tm("collection.billBankHelp")}</Help>
-              </div>
-            </div>
-          </div>
-        );
+      // Senet tahsilatında banka hesabı seçilmez: portföydeki senede fon yok (12.3 §5.10).
       default:
         return null;
     }
@@ -333,7 +314,9 @@ export function CollectionModal(props: CollectionModalProps) {
                 errors={{
                   number: error("check.number").invalid ? "x" : undefined,
                   dueDate: error("check.dueDate").invalid ? "x" : undefined,
+                  issueDate: error("check.issueDate").invalid ? "x" : undefined,
                 }}
+                editing={m.checkEditing}
               />
             )}
             {form.method === "NOTE" && (
@@ -351,6 +334,7 @@ export function CollectionModal(props: CollectionModalProps) {
                 errors={{
                   number: error("note.number").invalid ? "x" : undefined,
                   dueDate: error("note.dueDate").invalid ? "x" : undefined,
+                  issueDate: error("note.issueDate").invalid ? "x" : undefined,
                 }}
               />
             )}

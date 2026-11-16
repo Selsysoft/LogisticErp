@@ -107,15 +107,18 @@ export function PeriodFilter({
 export function ExportButtons({
   report,
   params,
+  companyId,
 }: {
   report: string;
   params?: Record<string, string | undefined>;
+  /** 12.8 (§5.11): POSITION/FORECAST dışa aktarımının şirketi; null/yok = konsolide (parametre yok). */
+  companyId?: string | null;
 }) {
   const { t } = useTranslation();
   const download = useMutation({
     mutationFn: (format: "XLSX" | "PDF") =>
       apiDownload(
-        `/reports/export${reportQuery({ report, format, ...params })}`,
+        `/reports/export${reportQuery({ report, format, ...params, companyId })}`,
         `rapor.${format.toLowerCase()}`,
       ),
   });

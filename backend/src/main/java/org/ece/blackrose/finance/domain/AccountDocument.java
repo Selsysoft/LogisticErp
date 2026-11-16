@@ -1,5 +1,6 @@
 package org.ece.blackrose.finance.domain;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -7,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.UUID;
 import org.ece.blackrose.common.audit.AuditableEntity;
 import org.ece.blackrose.common.error.BusinessException;
@@ -26,6 +28,9 @@ import org.springframework.http.HttpStatus;
 @Table(name = "account_document")
 @SQLRestriction("deleted = false")
 public class AccountDocument extends AuditableEntity {
+
+  /** Kur farkı belge türü (V28 tohumu; yalnız kur farkı raporunun "Kes" akışı yazar, 12.8). */
+  public static final String TYPE_FX = "KUR_FARKI";
 
   @Id private UUID id;
   private UUID accountId;
@@ -61,6 +66,13 @@ public class AccountDocument extends AuditableEntity {
 
   /** Kur farkı belgesinin kaynak hareketi (12.8). */
   private UUID fxSourceTransactionId;
+
+  /** Kur farkı belgesinin kesim (değerleme) kuru; diğer belgelerde boş (V41). */
+  @Column(name = "fx_rate")
+  private BigDecimal fxRate;
+
+  /** Kesim kurunun tarihi; diğer belgelerde boş (V41). */
+  private LocalDate fxRateDate;
 
   private String idempotencyKey;
 
@@ -118,9 +130,20 @@ public class AccountDocument extends AuditableEntity {
     this.revisedFromId = previousId;
   }
 
-  /** Kur farkı belgesini kaynak harekete bağlar (12.8 akışı). */
-  public void linkFxSource(UUID transactionId) {
+  /**
+   * Kur farkı belgesini kaynak harekete bağlar ve kesim kuru ile kur tarihini saklar (12.8 akışı;
+   * V41 {@code account_document_fx_ck}). Yalnız {@link #TYPE_FX} belgesinde çağrılır.
+   */
+  public void linkFxSource(UUID transactionId, BigDecimal rate, LocalDate rateDate) {
+    Objects.requireNonNull(transactionId, "transactionId");
+    Objects.requireNonNull(rate, "rate");
+    Objects.requireNonNull(rateDate, "rateDate");
+    if (!TYPE_FX.equals(documentType)) {
+      throw new IllegalStateException("Kaynak hareket yalnız kur farkı belgesine bağlanır.");
+    }
     this.fxSourceTransactionId = transactionId;
+    this.fxRate = rate;
+    this.fxRateDate = rateDate;
   }
 
   /** Defter yönü: Alacak Ekle → DEBIT (cari bize borçlanır), Borç Ekle → CREDIT. */
@@ -214,6 +237,14 @@ public class AccountDocument extends AuditableEntity {
 
   public UUID getFxSourceTransactionId() {
     return fxSourceTransactionId;
+  }
+
+  public BigDecimal getFxRate() {
+    return fxRate;
+  }
+
+  public LocalDate getFxRateDate() {
+    return fxRateDate;
   }
 
   public String getIdempotencyKey() {

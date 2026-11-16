@@ -146,7 +146,8 @@ public class ShipmentViews {
                     leg.getDriverId(),
                     driverNames.get(leg.getDriverId()),
                     leg.getCarrierAccountId(),
-                    carriers.get(leg.getCarrierAccountId())))
+                    carriers.get(leg.getCarrierAccountId()),
+                    leg.getTransportMode()))
         .toList();
   }
 

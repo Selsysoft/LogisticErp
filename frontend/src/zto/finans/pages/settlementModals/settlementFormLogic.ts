@@ -2,6 +2,8 @@ import type {
   AccountBankAccount,
   AllocationBody,
   Fund,
+  Instrument,
+  InstrumentListItem,
   NewInstrumentBody,
   PayMethod,
   SettlementBody,
@@ -10,7 +12,7 @@ import type {
 } from "../../../../pages/finance/types";
 import { tryScaled, fromScaled } from "../../../decimal";
 import { currencySymbol } from "../../../format";
-import type { CheckFieldsValue, NoteFieldsValue } from "./index";
+import type { CheckFieldsValue, CheckLeafGuardResult, NoteFieldsValue } from "./index";
 
 /*
  * Ödeme / tahsilat modallarının saf mantığı (12.2a_TASARIM §5.7, §5.8): ZTO tutar girişi
@@ -21,8 +23,8 @@ import type { CheckFieldsValue, NoteFieldsValue } from "./index";
 
 /** ZTO yöntem sırası (APM/CMP `#PaymentMethod` / `#CollectionMethod`; "Diğer" yok). */
 export const PAY_METHODS: readonly PayMethod[] = ["CASH", "BANK", "CHECK", "NOTE", "CREDIT_CARD"];
-/** Düzenleme modalında yalnız Nakit / Banka Havalesi/Eft / Kredi Kartı (EPM, OK-12.2a-4). */
-export const EDIT_METHODS: readonly PayMethod[] = ["CASH", "BANK", "CREDIT_CARD"];
+/** Düzenleme modalı yöntemleri (ZTO EPM:242-246 sırası; 12.3 Rev 1 F3, OK-12.3-25). */
+export const EDIT_METHODS: readonly PayMethod[] = ["CASH", "BANK", "CHECK", "NOTE", "CREDIT_CARD"];
 
 export function isPayMethod(value: string): value is PayMethod {
   return (PAY_METHODS as readonly string[]).includes(value);
@@ -155,11 +157,27 @@ export function emptyCheck(today: string): CheckFieldsValue {
     number: "",
     bankName: "",
     dueDate: addDaysIso(today, 30),
+    checkLeafId: "",
+    manualNumber: false,
+    issueDate: today,
+    bankBranch: "",
+    description: "",
+    custodyFundId: "",
   };
 }
 
 export function emptyNote(today: string): NoteFieldsValue {
-  return { fundAccountId: "", number: "", bankName: "", dueDate: addDaysIso(today, 30) };
+  return {
+    fundAccountId: "",
+    number: "",
+    bankName: "",
+    dueDate: addDaysIso(today, 30),
+    noteType: "PLAIN",
+    issueDate: today,
+    bankBranch: "",
+    description: "",
+    drawerName: "",
+  };
 }
 
 export function emptyForm(today: string): SettlementFormValues {
@@ -199,8 +217,11 @@ export type FormField =
   | "check.fundAccountId"
   | "check.number"
   | "check.dueDate"
+  | "check.issueDate"
+  | "check.custodyFundId"
   | "note.number"
   | "note.dueDate"
+  | "note.issueDate"
   | "allocations"
   | "id";
 
@@ -222,9 +243,31 @@ function checkNumberErrors(number: string, emptyKey: string): ValidationError[] 
   return errors;
 }
 
-export type ValidateOptions = { allocationExceeded?: boolean };
+export type ValidateOptions = {
+  allocationExceeded?: boolean;
+  /** Elle girilen çek numarasının koçan denetimi (CLG; engelleyici durumlar kaydı durdurur). */
+  leafGuard?: CheckLeafGuardResult["state"];
+};
 
-/** Ödeme (pjs:2585-2650; "Keşide/Düzenlenme tarihi" 12.3'e kadar yok). */
+/** Keşide/Düzenlenme tarihi zorunlu ve vadeden sonra olamaz (pjs:2632, cjs:2934; 12.3 §3.3 #5). */
+function issueDateErrors(
+  issueDate: string | undefined,
+  dueDate: string,
+  field: "check.issueDate" | "note.issueDate",
+): ValidationError[] {
+  if (!issueDate) return [{ field, key: field === "check.issueDate" ? "issueDate" : "noteIssue" }];
+  if (dueDate && issueDate > dueDate) return [{ field, key: "datesOrder" }];
+  return [];
+}
+
+/** Koçan denetimi engeli (CLG:57-85 iletileri; yalnız elle girilen numarada). */
+function leafGuardErrors(state: CheckLeafGuardResult["state"] | undefined): ValidationError[] {
+  if (state === "leafUsed") return [{ field: "check.number", key: "checkLeafUsed" }];
+  if (state === "leafManualForbidden") return [{ field: "check.number", key: "checkLeafManual" }];
+  return [];
+}
+
+/** Ödeme (pjs:2585-2650). */
 export function validatePayment(
   form: SettlementFormValues,
   options: ValidateOptions = {},
@@ -245,10 +288,13 @@ export function validatePayment(
         errors.push({ field: "check.fundAccountId", key: "checkBank" });
       }
       errors.push(...checkNumberErrors(form.check.number, "checkNumberIssued"));
+      if (form.check.manualNumber) errors.push(...leafGuardErrors(options.leafGuard));
+      errors.push(...issueDateErrors(form.check.issueDate, form.check.dueDate, "check.issueDate"));
       if (!form.check.dueDate) errors.push({ field: "check.dueDate", key: "dueDate" });
     }
   } else if (form.method === "NOTE") {
     if (!form.note.number.trim()) errors.push({ field: "note.number", key: "noteNumber" });
+    errors.push(...issueDateErrors(form.note.issueDate, form.note.dueDate, "note.issueDate"));
     if (!form.note.dueDate) errors.push({ field: "note.dueDate", key: "dueDate" });
   } else if (form.method === "CASH") {
     if (!form.fundAccountId) errors.push({ field: "fundAccountId", key: "cash" });
@@ -276,12 +322,18 @@ export function validateCollection(
   if (!form.currency) errors.push({ field: "currency", key: "collectionCurrency" });
   if (form.method === "CHECK") {
     errors.push(...checkNumberErrors(form.check.number, "checkNumber"));
+    errors.push(...issueDateErrors(form.check.issueDate, form.check.dueDate, "check.issueDate"));
     if (!form.check.dueDate) errors.push({ field: "check.dueDate", key: "dueDate" });
     if (form.check.status === "AT_BANK" && !form.check.fundAccountId) {
       errors.push({ field: "check.fundAccountId", key: "checkDepositBank" });
     }
+    // "Kasaya Al (Ciro)" kasa ister; "Portföyde" kasası isteğe bağlı (12.3 §5.10).
+    if (form.check.status === "CASH_BOX" && !form.check.custodyFundId) {
+      errors.push({ field: "check.custodyFundId", key: "checkCash" });
+    }
   } else if (form.method === "NOTE") {
     if (!form.note.number.trim()) errors.push({ field: "note.number", key: "noteNumber" });
+    errors.push(...issueDateErrors(form.note.issueDate, form.note.dueDate, "note.issueDate"));
     if (!form.note.dueDate) errors.push({ field: "note.dueDate", key: "dueDate" });
   } else if (form.method === "CASH") {
     if (!form.fundAccountId) errors.push({ field: "fundAccountId", key: "cash" });
@@ -303,9 +355,22 @@ export function errorOf(errors: readonly ValidationError[], field: FormField): s
 // İstek gövdesi (§5.7 "Gövde kurma", §5.8 "Gövde")
 // ---------------------------------------------------------------------------------------------
 
-function optional(value: string): string | undefined {
-  const trimmed = value.trim();
+function optional(value: string | null | undefined): string | undefined {
+  const trimmed = (value ?? "").trim();
   return trimmed === "" ? undefined : trimmed;
+}
+
+/** Çek/senedin 12.3 ortak alanları (boş metin gönderilmez). */
+function instrumentDetails(value: {
+  issueDate?: string;
+  bankBranch?: string;
+  description?: string;
+}): Pick<NewInstrumentBody, "issueDate" | "bankBranch" | "description"> {
+  return {
+    issueDate: optional(value.issueDate),
+    bankBranch: optional(value.bankBranch),
+    description: optional(value.description),
+  };
 }
 
 /** Seçili ve tutarı > 0 eşleştirme satırları (ondalık metin). */
@@ -355,6 +420,9 @@ export function paymentBody(form: SettlementFormValues): SettlementBody {
         bankName: optional(form.check.bankName),
         dueDate: form.check.dueDate,
         fundAccountId: form.check.fundAccountId || undefined,
+        ...instrumentDetails(form.check),
+        // Koçan yaprağı yalnız koçandan seçimde (manuel kipte gönderilmez).
+        checkLeafId: (!form.check.manualNumber && form.check.checkLeafId) || undefined,
       };
       return { ...baseBody(form, "CHECK"), instrument };
     }
@@ -365,6 +433,8 @@ export function paymentBody(form: SettlementFormValues): SettlementBody {
         bankName: optional(form.note.bankName),
         dueDate: form.note.dueDate,
         fundAccountId: form.note.fundAccountId || undefined,
+        ...instrumentDetails(form.note),
+        noteType: form.note.noteType || undefined,
       };
       return { ...baseBody(form, "CHECK"), instrument };
     }
@@ -381,7 +451,10 @@ export function exchangeRateOf(form: SettlementFormValues): number | undefined {
   return text !== "" && Number.isFinite(rate) && rate > 0 ? rate : undefined;
 }
 
-/** Tahsilat gövdesi (`POST /finance/collections`). Kasaya Al (Ciro) = PORTFOLIO (kasa 12.3). */
+/**
+ * Tahsilat gövdesi (`POST /finance/collections`). Kasaya Al (Ciro) = PORTFOLIO + emanet kasası;
+ * Portföyde kasası isteğe bağlı (12.3 §5.10).
+ */
 export function collectionBody(form: SettlementFormValues): SettlementBody {
   const exchangeRate = exchangeRateOf(form);
   const withRate = (body: SettlementBody): SettlementBody =>
@@ -404,16 +477,22 @@ export function collectionBody(form: SettlementFormValues): SettlementBody {
         dueDate: form.check.dueDate,
         initialStatus: atBank ? "AT_BANK" : "PORTFOLIO",
         fundAccountId: atBank ? form.check.fundAccountId || undefined : undefined,
+        custodyFundId: atBank ? undefined : form.check.custodyFundId || undefined,
+        ...instrumentDetails(form.check),
       };
       return withRate({ ...baseBody(form, "CHECK"), instrument });
     }
     case "NOTE": {
+      // Senet tahsilatında banka hesabı seçilmez (portföydeki senede fon yok; 12.3 §5.10).
       const instrument: NewInstrumentBody = {
         kind: "NOTE",
         number: form.note.number.trim(),
         bankName: optional(form.note.bankName),
         dueDate: form.note.dueDate,
         initialStatus: "PORTFOLIO",
+        ...instrumentDetails(form.note),
+        noteType: form.note.noteType || undefined,
+        drawerName: optional(form.note.drawerName),
       };
       return withRate({ ...baseBody(form, "CHECK"), instrument });
     }
@@ -602,6 +681,7 @@ const LOCK_CODES: Record<SettlementLockReason, string> = {
   INTERCOMPANY: "SETTLEMENT_LINKED_TO_INTERCOMPANY",
   FX_SOURCE: "SETTLEMENT_USED_IN_FX_EXCHANGE",
   VEHICLE_EXPENSE: "SETTLEMENT_SOURCE_MANAGED",
+  EXPENSE: "SETTLEMENT_SOURCE_MANAGED",
   NO_ACCOUNT: "SETTLEMENT_NOT_CORRECTABLE",
 };
 
@@ -714,7 +794,7 @@ export function modalIds(type: SettlementType, mode: "add" | "edit"): ModalIds {
   };
 }
 
-/** Doğrulama alanının odaklanacak öğesi (çek/senet alanları yalnız ekleme kipindedir). */
+/** Doğrulama alanının odaklanacak öğesi (çek/senet alanları iki kipte de aynı kimlikle). */
 export function fieldElementId(
   ids: ModalIds,
   field: FormField,
@@ -743,10 +823,16 @@ export function fieldElementId(
       return "CheckNumber";
     case "check.dueDate":
       return "DueDate";
+    case "check.issueDate":
+      return "IssueDate";
+    case "check.custodyFundId":
+      return "CheckCashID";
     case "note.number":
       return "BillNumber";
     case "note.dueDate":
       return "BillDueDate";
+    case "note.issueDate":
+      return "BillIssueDate";
     case "allocations":
       return `${ids.allocationPrefix}${ids.allocationPrefix ? "S" : "s"}electAllInvoices`;
     default:
@@ -754,7 +840,7 @@ export function fieldElementId(
   }
 }
 
-/** Yöntem seçenekleri: ekleme beş yöntem, düzenleme yalnız Nakit / Banka / Kredi Kartı (EPM, CMP). */
+/** Yöntem seçenekleri: ekleme ve düzenleme beş yöntem (ZTO EPM:242-246; 12.3 OK-12.3-25). */
 export function methodOptions(mode: "add" | "edit"): readonly PayMethod[] {
   return mode === "edit" ? EDIT_METHODS : PAY_METHODS;
 }
@@ -770,8 +856,35 @@ export function rateText(rate: number | null | undefined, currency: string): str
   return rate.toFixed(4);
 }
 
+/**
+ * Detay yanıtının çeki (12.3 §3.8: `InstrumentListItem`; FE-0 tipi `Instrument` kaldı). 12.2a
+ * alanları zorunlu, 12.3 alanları isteğe bağlı okunur.
+ */
+export type InstrumentDetailFields = Pick<
+  Instrument,
+  "id" | "kind" | "direction" | "number" | "bankName" | "fundAccountId" | "dueDate" | "status"
+> &
+  Partial<
+    Pick<
+      InstrumentListItem,
+      | "issueDate"
+      | "bankBranch"
+      | "description"
+      | "checkLeafId"
+      | "checkBookSerial"
+      | "leafNo"
+      | "custodyFundId"
+      | "noteType"
+      | "drawerName"
+    >
+  >;
+
 type DetailLike = {
+  /** 12.3: doluysa yöntem çek/senet ve alt form bu çekten doldurulur. */
+  instrument?: InstrumentDetailFields | null;
   item: {
+    /** Kayıt türü (çekte OWN/ENDORSE ve tahsilat durumunu belirler); yoksa yöne göre. */
+    type?: SettlementType;
     accountId: string | null;
     documentNo: string | null;
     displayMethod: string;
@@ -798,8 +911,10 @@ type DetailLike = {
  */
 export function formFromDetail(detail: DetailLike, today: string): SettlementFormValues {
   const { item } = detail;
+  const base = emptyForm(today);
+  const instrumentPart = instrumentFormOf(detail.instrument ?? null, item.type, base);
   return {
-    ...emptyForm(today),
+    ...base,
     accountId: item.accountId ?? "",
     documentNo: item.documentNo ?? "",
     method: payMethodOf(item.displayMethod),
@@ -818,7 +933,72 @@ export function formFromDetail(detail: DetailLike, today: string): SettlementFor
         targetId: row.targetId as string,
         amount: inputAmount(row.money.amount),
       })),
+    ...instrumentPart,
   };
+}
+
+/**
+ * Düzenlemede çekin forma eşlenmesi (12.3 §5.10 Rev 1 F3): ödeme + ISSUED → "Kendi Çekimiz" (fon,
+ * yaprak; yapraksızsa manuel), ödeme + RECEIVED → ciro; tahsilat → emanet kasası varsa "Kasaya Al
+ * (Ciro)", AT_BANK ise banka, aksi halde portföy; senet → tür, keşideci, (ödemede) banka.
+ */
+export function instrumentFormOf(
+  instrument: InstrumentDetailFields | null,
+  type: SettlementType | undefined,
+  base: Pick<SettlementFormValues, "check" | "note">,
+): Partial<SettlementFormValues> {
+  if (!instrument) return {};
+  const common = {
+    number: instrument.number,
+    bankName: instrument.bankName ?? "",
+    dueDate: instrument.dueDate,
+    issueDate: instrument.issueDate ?? "",
+    bankBranch: instrument.bankBranch ?? "",
+    description: instrument.description ?? "",
+  };
+  const payment = type ? type === "PAYMENT" : instrument.direction === "ISSUED";
+  if (instrument.kind === "NOTE") {
+    return {
+      method: "NOTE",
+      note: {
+        ...base.note,
+        ...common,
+        fundAccountId: payment ? (instrument.fundAccountId ?? "") : "",
+        noteType: instrument.noteType ?? "PLAIN",
+        drawerName: instrument.drawerName ?? "",
+      },
+    };
+  }
+  const check: CheckFieldsValue = { ...base.check, ...common };
+  if (payment && instrument.direction === "RECEIVED") {
+    return { method: "CHECK", check: { ...check, mode: "ENDORSE", instrumentId: instrument.id } };
+  }
+  if (payment) {
+    const leafId = instrument.checkLeafId ?? "";
+    return {
+      method: "CHECK",
+      check: {
+        ...check,
+        mode: "OWN",
+        fundAccountId: instrument.fundAccountId ?? "",
+        checkLeafId: leafId,
+        manualNumber: leafId === "",
+      },
+    };
+  }
+  if (instrument.custodyFundId) {
+    return {
+      method: "CHECK",
+      check: { ...check, status: "CASH_BOX", custodyFundId: instrument.custodyFundId },
+    };
+  }
+  if (instrument.status === "AT_BANK") {
+    return {
+      method: "CHECK",
+      check: { ...check, status: "AT_BANK", fundAccountId: instrument.fundAccountId ?? "" },
+    };
+  }
+  return { method: "CHECK", check: { ...check, status: "PORTFOLIO" } };
 }
 
 export type FormPresets = {
@@ -827,6 +1007,8 @@ export type FormPresets = {
   fundAccountId?: string;
   method?: PayMethod;
   currency?: string;
+  /** 12.3 "Ciro Et": yöntem Çek, "Müşteri Çeki Ciro Et", bu portföy çeki seçili. */
+  endorseInstrumentId?: string;
 };
 
 /**
@@ -835,19 +1017,47 @@ export type FormPresets = {
  */
 export function presetForm(
   presets: FormPresets,
-  fund: Pick<Fund, "kind" | "branchId" | "currency"> | null,
+  fund:
+    | (Pick<Fund, "kind" | "branchId" | "currency"> &
+        Partial<Pick<Fund, "bankName" | "bankBranchName">>)
+    | null,
   today: string,
 ): SettlementFormValues {
-  const method = presets.method ?? (fund ? (fund.kind === "CASH" ? "CASH" : "BANK") : "");
+  const method = presets.endorseInstrumentId
+    ? "CHECK"
+    : (presets.method ?? (fund ? (fund.kind === "CASH" ? "CASH" : "BANK") : ""));
   const fundUsable = fund !== null && fundKindOf(method) === fund.kind;
-  return {
-    ...emptyForm(today),
+  const base = emptyForm(today);
+  const form: SettlementFormValues = {
+    ...base,
     accountId: presets.accountId ?? "",
     method,
     branchId: presets.branchId ?? fund?.branchId ?? "",
     currency: fundUsable ? fund.currency : (presets.currency ?? "TRY"),
     fundAccountId: fundUsable ? (presets.fundAccountId ?? "") : "",
   };
+  if (presets.endorseInstrumentId) {
+    return {
+      ...form,
+      check: { ...base.check, mode: "ENDORSE", instrumentId: presets.endorseInstrumentId },
+    };
+  }
+  // "Bankadan Cari Çek Ödemesi" / senet: banka çekin (senedin) bankası olur (12.3 §5.9).
+  const bank = fund !== null && fund.kind === "BANK" && presets.fundAccountId ? fund : null;
+  if (bank && (method === "CHECK" || method === "NOTE")) {
+    const own = {
+      fundAccountId: presets.fundAccountId ?? "",
+      bankName: bank.bankName ?? "",
+      bankBranch: bank.bankBranchName ?? "",
+    };
+    return {
+      ...form,
+      currency: method === "CHECK" ? bank.currency : form.currency,
+      check: method === "CHECK" ? { ...base.check, ...own } : base.check,
+      note: method === "NOTE" ? { ...base.note, ...own } : base.note,
+    };
+  }
+  return form;
 }
 
 /** Yöntem değişince yönteme ait olmayan alanlar temizlenir (ZTO `togglePaymentFields`). */
@@ -873,8 +1083,16 @@ export function withBranch(form: SettlementFormValues, branchId: string): Settle
     ...form,
     branchId,
     fundAccountId: "",
-    check: { ...form.check, fundAccountId: "", instrumentId: "", bankName: "" },
-    note: { ...form.note, fundAccountId: "", bankName: "" },
+    check: {
+      ...form.check,
+      fundAccountId: "",
+      instrumentId: "",
+      bankName: "",
+      bankBranch: "",
+      checkLeafId: "",
+      custodyFundId: "",
+    },
+    note: { ...form.note, fundAccountId: "", bankName: "", bankBranch: "" },
     allocations: [],
   };
 }

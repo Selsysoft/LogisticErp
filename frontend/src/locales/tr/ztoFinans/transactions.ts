@@ -310,6 +310,9 @@ export default {
     workplace: "İş Yeri",
     documentNo: "Belge No / Fatura No",
     documentType: "Belge Türü",
+    // 12.8 (§5.11): KUR_FARKI belgesinin kaynak hareketi.
+    fxSource: "Kaynak hareket",
+    fxRate: "Kesim kuru",
     due: "Vade Tarihi",
     amount: "Tutar",
     method: "Ödeme Yöntemi",
@@ -363,6 +366,9 @@ export default {
     check: "Çek",
     note: "Senet",
     blocked: "Açık ödeme planı var; önce planı ödeyin ya da iptal edin.",
+    // 12.8 (§5.11, Rev 1 F5): açık kur farkı belgesinin kaynağı / KUR_FARKI belgesinin kendisi.
+    blockedFx: "Açık kur farkı belgesi var; önce kur farkı belgesini iptal edin.",
+    blockedFxDocument: "Kur farkı belgesi taşınamaz; kaynağıyla birlikte iptal edip yeniden kesin.",
     instrumentNote:
       "Seçilen hareketlere bağlı tüm çek/senetler durumlarından bağımsız olarak hedef cariye taşınır.",
     history: "Geçmiş Taşımalar",

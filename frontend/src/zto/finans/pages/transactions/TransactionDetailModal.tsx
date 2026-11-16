@@ -12,6 +12,7 @@ import {
   formatDate,
   formatDateTime,
   formatN2,
+  formatNumber,
   currencySymbol,
 } from "../../../components";
 
@@ -63,6 +64,9 @@ export function TransactionDetailModal({ transactionId, onHide }: TransactionDet
   const source = useTransactionSource(transactionId ?? undefined);
   const row = detail.data?.row;
   const doc = detail.data?.document ?? null;
+  // 12.8 (§5.11): kur farkı belgesinde kaynak hareketin belge numarası.
+  const fxSource = useTransactionDetail(doc?.fxSourceTransactionId ?? undefined);
+  const fxSourceRow = fxSource.data?.row;
   const symbol = currencySymbol(row?.currency ?? "TRY");
   const kindLabel = row ? t(`transactions.kind.${row.kind}`) : "";
   const sourceLabel =
@@ -240,6 +244,26 @@ export function TransactionDetailModal({ transactionId, onHide }: TransactionDet
                           label={t("transactions.detail.documentType")}
                         >
                           <strong>{doc?.documentTypeName ?? row.documentType}</strong>
+                        </InfoItem>
+                      )}
+                      {doc?.fxSourceTransactionId && (
+                        <InfoItem
+                          icon="fas fa-exchange-alt"
+                          color="bg-info"
+                          label={t("transactions.detail.fxSource")}
+                        >
+                          <strong>
+                            {fxSourceRow
+                              ? fxSourceRow.documentNo ||
+                                `${formatDate(fxSourceRow.transactionDate)} ${formatN2(fxSourceRow.amount)} ${currencySymbol(fxSourceRow.currency)}`
+                              : "-"}
+                          </strong>
+                          {doc.fxRate !== null && (
+                            <small className="text-muted d-block">
+                              {t("transactions.detail.fxRate")}: {formatNumber(doc.fxRate, 4)}
+                              {doc.fxRateDate ? ` (${formatDate(doc.fxRateDate)})` : ""}
+                            </small>
+                          )}
                         </InfoItem>
                       )}
                       {row.dueDate && (

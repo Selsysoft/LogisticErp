@@ -268,7 +268,15 @@ class DeletedTransactionFilterIT extends AbstractIntegrationTest {
     collection.put("date", DATE);
     collection.put(
         "instrument",
-        Map.of("kind", "CHECK", "number", "C-1", "bankName", "Test Bank", "dueDate", "2027-01-15"));
+        Map.of(
+            "kind",
+            "CHECK",
+            "number",
+            "0000001",
+            "bankName",
+            "Test Bank",
+            "dueDate",
+            "2027-01-15"));
     String check =
         body(post(t, "/api/v1/finance/collections", collection).andExpect(status().isCreated()))
             .get("instrumentId")

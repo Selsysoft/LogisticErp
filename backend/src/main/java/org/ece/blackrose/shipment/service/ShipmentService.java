@@ -25,13 +25,16 @@ import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.domain.ShipmentCargo;
 import org.ece.blackrose.shipment.domain.ShipmentEvent;
 import org.ece.blackrose.shipment.domain.ShipmentLeg;
+import org.ece.blackrose.shipment.domain.ShipmentTypes.CostKind;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.EventType;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.ShipmentStatus;
+import org.ece.blackrose.shipment.domain.ShipmentTypes.TripCostStatus;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ProofOfDeliveryRepository;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentCargoRepository;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentEventRepository;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentLegRepository;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentRepository;
+import org.ece.blackrose.shipment.repository.ShipmentRepositories.TripCostRepository;
 import org.ece.blackrose.shipment.web.ShipmentDtos.CargoRequest;
 import org.ece.blackrose.shipment.web.ShipmentDtos.CreateShipmentRequest;
 import org.ece.blackrose.shipment.web.ShipmentDtos.SaveInternationalRequest;
@@ -76,6 +79,7 @@ public class ShipmentService {
   private final DeliveryNotifier deliveryNotifier;
   private final CompanyResolver companies;
   private final BranchScopeService scope;
+  private final TripCostRepository costs;
 
   public ShipmentService(
       ShipmentRepository shipments,
@@ -94,7 +98,9 @@ public class ShipmentService {
       org.ece.blackrose.saas.service.PlanLimitService planLimits,
       DeliveryNotifier deliveryNotifier,
       CompanyResolver companies,
-      BranchScopeService scope) {
+      BranchScopeService scope,
+      TripCostRepository costs) {
+    this.costs = costs;
     this.scope = scope;
     this.companies = companies;
     this.deliveryNotifier = deliveryNotifier;
@@ -183,6 +189,15 @@ public class ShipmentService {
     if (target == ShipmentStatus.PLANNED && !allLegsAssigned(id)) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "LEGS_NOT_ASSIGNED", "Tüm etaplara araç veya taşeron atanmalıdır.");
+    }
+    // Cariye işlenmiş taşeron gideri olan sefer iptal edilemez; önce ters kayıt (12.7 Rev 1 F2).
+    if (target == ShipmentStatus.CANCELLED
+        && costs.existsByShipmentIdAndKindAndStatus(
+            id, CostKind.SUBCONTRACTOR, TripCostStatus.POSTED)) {
+      throw new BusinessException(
+          HttpStatus.CONFLICT,
+          "COST_POSTED",
+          "Bu sefere ait cariye işlenmiş taşeron gideri var; iptalden önce ters kaydını yapın.");
     }
     if (target == ShipmentStatus.DELIVERED && pods.findByShipmentId(id).isEmpty()) {
       throw new BusinessException(

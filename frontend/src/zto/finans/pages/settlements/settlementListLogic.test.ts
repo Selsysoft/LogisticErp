@@ -13,6 +13,7 @@ import {
   amountText,
   canDelete,
   canEdit,
+  reverseInstrumentNotice,
   canShowDetail,
   defaultFilters,
   deleteMessageParts,
@@ -311,17 +312,33 @@ describe("hücreler", () => {
 });
 
 describe("Düzenle / Sil görünürlüğü", () => {
-  it("ödeme: Düzenle yalnız correctable Nakit/Banka (Kredi Kartı yok); Sil reversible ve çek değil", () => {
+  it("ödeme: Düzenle correctable Nakit/Banka/Çek/Senet (Kredi Kartı yok); Sil = reversible", () => {
     expect(canEdit("PAYMENT", makeItem())).toBe(true);
     expect(canEdit("PAYMENT", bankItem())).toBe(true);
     expect(canEdit("PAYMENT", makeItem({ displayMethod: "CREDIT_CARD" }))).toBe(false);
     expect(canEdit("PAYMENT", makeItem({ correctable: false }))).toBe(false);
     expect(canDelete("PAYMENT", makeItem({ displayMethod: "CREDIT_CARD" }))).toBe(true);
-    expect(canDelete("PAYMENT", makeItem({ displayMethod: "CHECK" }))).toBe(false);
-    expect(canDelete("PAYMENT", makeItem({ displayMethod: "NOTE" }))).toBe(false);
+    // 12.3: çekli/senetli kayıt sunucu bayraklarıyla (OK-12.2a-21 kapandı).
+    expect(canDelete("PAYMENT", makeItem({ displayMethod: "CHECK" }))).toBe(true);
+    expect(canDelete("PAYMENT", makeItem({ displayMethod: "NOTE" }))).toBe(true);
+    expect(canEdit("PAYMENT", makeItem({ displayMethod: "CHECK" }))).toBe(true);
+    expect(canEdit("PAYMENT", makeItem({ displayMethod: "NOTE" }))).toBe(true);
+    expect(canEdit("PAYMENT", makeItem({ displayMethod: "CHECK", correctable: false }))).toBe(
+      false,
+    );
+    expect(canDelete("PAYMENT", makeItem({ displayMethod: "CHECK", reversible: false }))).toBe(
+      false,
+    );
     expect(canDelete("PAYMENT", makeItem({ reversible: false }))).toBe(false);
     // Döviz bozumu ödemede Sil'i etkilemez (fxUsed hep 0; kural tahsilata özgü).
     expect(canDelete("PAYMENT", makeItem({ fxUsed: "5" }))).toBe(true);
+  });
+
+  it("çekli Sil uyarısı: köken kayıt ya da ciro (12.3)", () => {
+    expect(reverseInstrumentNotice("PAYMENT", null)).toBeNull();
+    expect(reverseInstrumentNotice("PAYMENT", { direction: "ISSUED" })).toBe("checkOrigin");
+    expect(reverseInstrumentNotice("COLLECTION", { direction: "RECEIVED" })).toBe("checkOrigin");
+    expect(reverseInstrumentNotice("PAYMENT", { direction: "RECEIVED" })).toBe("checkEndorse");
   });
 
   it("taşınmış (TRANSFERRED) satırda ikisi de gizli", () => {
@@ -337,15 +354,18 @@ describe("Düzenle / Sil görünürlüğü", () => {
     expect(canDelete("COLLECTION", moved)).toBe(false);
   });
 
-  it("tahsilat: Düzenle + Sil yalnız bozulmamış, çek/senet olmayan; Kredi Kartı düzenlenebilir", () => {
+  it("tahsilat: Düzenle + Sil yalnız bozulmamış; çek/senet ve Kredi Kartı dahil", () => {
     const row = makeItem({ type: "COLLECTION" });
     expect(canEdit("COLLECTION", row)).toBe(true);
     expect(canDelete("COLLECTION", row)).toBe(true);
     expect(canEdit("COLLECTION", makeItem({ displayMethod: "CREDIT_CARD" }))).toBe(true);
     expect(canEdit("COLLECTION", makeItem({ fxUsed: "10.00" }))).toBe(false);
     expect(canDelete("COLLECTION", makeItem({ fxUsed: "0.0001" }))).toBe(false);
-    expect(canDelete("COLLECTION", makeItem({ displayMethod: "CHECK" }))).toBe(false);
-    expect(canEdit("COLLECTION", makeItem({ displayMethod: "NOTE" }))).toBe(false);
+    expect(canDelete("COLLECTION", makeItem({ displayMethod: "CHECK" }))).toBe(true);
+    expect(canEdit("COLLECTION", makeItem({ displayMethod: "NOTE" }))).toBe(true);
+    expect(canDelete("COLLECTION", makeItem({ displayMethod: "CHECK", reversible: false }))).toBe(
+      false,
+    );
     expect(canEdit("COLLECTION", makeItem({ correctable: false }))).toBe(false);
     expect(canDelete("COLLECTION", makeItem({ correctable: false }))).toBe(true);
   });

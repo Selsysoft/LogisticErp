@@ -20,6 +20,7 @@ import org.ece.blackrose.finance.domain.FinanceTypes.DailyReportSort;
 import org.ece.blackrose.finance.domain.FinanceTypes.DocumentPaymentMethod;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundDirection;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundKind;
+import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentDirection;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.InvoiceSide;
@@ -31,7 +32,6 @@ import org.ece.blackrose.finance.domain.FinanceTypes.SettlementType;
 import org.ece.blackrose.finance.domain.FundAccount;
 import org.ece.blackrose.finance.repository.AccountRepositories.AccountBankAccountRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.FundAccountRepository;
-import org.ece.blackrose.finance.repository.FinanceRepositories.InstrumentRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.PaymentPlanRepository;
 import org.ece.blackrose.finance.repository.SettlementQueryRepository;
 import org.ece.blackrose.finance.repository.SettlementQueryRepository.AllocationRow;
@@ -95,7 +95,7 @@ public class SettlementQueryService {
   private final AccountBankAccountRepository bankAccounts;
   private final CompanyResolver companies;
   private final FundAccountRepository funds;
-  private final InstrumentRepository instruments;
+  private final InstrumentQueryService instruments;
   private final PaymentPlanRepository plans;
   private final FinanceMapper mapper;
 
@@ -107,7 +107,7 @@ public class SettlementQueryService {
       AccountBankAccountRepository bankAccounts,
       CompanyResolver companies,
       FundAccountRepository funds,
-      InstrumentRepository instruments,
+      InstrumentQueryService instruments,
       PaymentPlanRepository plans,
       FinanceMapper mapper) {
     this.queries = queries;
@@ -305,19 +305,34 @@ public class SettlementQueryService {
     boolean masked = Boolean.TRUE.equals(row.getEmployeeMasked());
     boolean transferred = Boolean.TRUE.equals(row.getTransferred());
     BigDecimal fxUsed = row.getFxUsed() == null ? BigDecimal.ZERO : row.getFxUsed();
+    boolean checkLocked =
+        method == SettlementMethod.CHECK
+            && !InstrumentRules.settlementReversible(
+                type,
+                row.getInstrumentDirection() == null
+                    ? null
+                    : InstrumentDirection.valueOf(row.getInstrumentDirection()),
+                row.getInstrumentStatus() == null
+                    ? null
+                    : InstrumentStatus.valueOf(row.getInstrumentStatus()),
+                row.getInstrumentEndorsedAccountId(),
+                row.getAccountId());
     SettlementLockReason lockReason =
         lockReason(
             status,
-            method,
+            checkLocked,
             row.getPlanId() != null,
             Boolean.TRUE.equals(row.getIntercompanyLinked()),
             Boolean.TRUE.equals(row.getVehicleExpenseLinked()),
+            Boolean.TRUE.equals(row.getExpenseLinked()),
             fxUsed,
             transferred);
     boolean reversible = lockReason == null && !masked;
     boolean correctable =
         reversible
-            && (method == SettlementMethod.CASH || method == SettlementMethod.BANK)
+            && (method == SettlementMethod.CASH
+                || method == SettlementMethod.BANK
+                || method == SettlementMethod.CHECK)
             && row.getAccountId() != null;
     return new SettlementListItemResponse(
         row.getId(),
@@ -377,23 +392,24 @@ public class SettlementQueryService {
   }
 
   /**
-   * İptal/düzeltmeyi engelleyen ilk neden (§3.7 sırası): iptal edilmiş, çekli, plan ödemesi,
-   * şirketler arası virman bacağı, araç gideri, döviz bozumu kaynağı, cari taşıması; yoksa {@code
-   * null}.
+   * İptal/düzeltmeyi engelleyen ilk neden (§3.7 sırası): iptal edilmiş, ilerlemiş çek ({@code
+   * checkLocked}, 12.3 §3.8), plan ödemesi, şirketler arası virman bacağı, araç gideri, genel
+   * masraf, döviz bozumu kaynağı, cari taşıması; yoksa {@code null}.
    */
   @SuppressWarnings("java:S107")
   static SettlementLockReason lockReason(
       SettlementStatus status,
-      SettlementMethod method,
+      boolean checkLocked,
       boolean plan,
       boolean intercompany,
       boolean vehicleExpense,
+      boolean expense,
       BigDecimal fxUsed,
       boolean transferred) {
     if (status == SettlementStatus.REVERSED) {
       return SettlementLockReason.REVERSED;
     }
-    if (method == SettlementMethod.CHECK) {
+    if (checkLocked) {
       return SettlementLockReason.CHECK;
     }
     if (plan) {
@@ -404,6 +420,9 @@ public class SettlementQueryService {
     }
     if (vehicleExpense) {
       return SettlementLockReason.VEHICLE_EXPENSE;
+    }
+    if (expense) {
+      return SettlementLockReason.EXPENSE;
     }
     if (fxUsed.signum() > 0) {
       return SettlementLockReason.FX_SOURCE;
@@ -448,9 +467,7 @@ public class SettlementQueryService {
     return new SettlementDetailResponse(
         item,
         lines,
-        row.getInstrumentId() == null
-            ? null
-            : instruments.findById(row.getInstrumentId()).map(mapper::toResponse).orElse(null),
+        row.getInstrumentId() == null ? null : instruments.viewOrNull(row.getInstrumentId()),
         row.getPlanId() == null
             ? null
             : plans.findById(row.getPlanId()).map(mapper::toResponse).orElse(null),

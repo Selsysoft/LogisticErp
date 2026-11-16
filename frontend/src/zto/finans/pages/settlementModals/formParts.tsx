@@ -89,6 +89,7 @@ export function MethodSelect({
   value,
   onChange,
   error,
+  disabled,
 }: {
   id: string;
   label: string;
@@ -96,6 +97,8 @@ export function MethodSelect({
   value: PayMethod | "";
   onChange: (method: PayMethod | "") => void;
   error: FieldError;
+  /** 12.3 "Yeni Ödeme Çeki/Senedi": yöntem kilitli (OK-12.3-12). */
+  disabled?: boolean;
 }) {
   const { tm } = useModalText();
   return (
@@ -108,6 +111,7 @@ export function MethodSelect({
         name={id}
         className="form-control no-select2"
         required
+        disabled={disabled}
         value={value}
         onChange={(event) => onChange(event.target.value as PayMethod | "")}
         aria-invalid={error.invalid}

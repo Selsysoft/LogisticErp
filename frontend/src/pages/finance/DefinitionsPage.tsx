@@ -21,7 +21,8 @@ import {
   useCurrencies,
   useMultiCompany,
 } from "./common";
-import { Branch, ExpenseItem, ExpenseType, Rate, Threshold } from "./types";
+import { useExchangeRates, useRefreshRates } from "./reportApi";
+import { Branch, ExpenseItem, ExpenseType, SaveExpenseItemRequest, Threshold } from "./types";
 
 export function DefinitionsPage() {
   return (
@@ -277,7 +278,25 @@ function ExpenseSection() {
           columns={[
             { header: t("finance.field.code"), render: (item) => item.code },
             { header: t("finance.field.name"), render: (item) => item.name },
-            { header: t("finance.field.type"), render: (item) => typeName(item.expenseTypeId) },
+            {
+              header: t("finance.field.type"),
+              render: (item) => item.expenseTypeName ?? typeName(item.expenseTypeId),
+            },
+            {
+              header: t("finance.field.description"),
+              render: (item) => item.description ?? "",
+            },
+            {
+              header: t("ztoFinans:salesTruckExpenses.mui.defaultUnit"),
+              render: (item) => item.defaultUnit ?? "",
+            },
+            {
+              header: t("finance.definitions.status"),
+              render: (item) =>
+                item.active === false ? (
+                  <Chip size="small" label={t("finance.definitions.passive")} />
+                ) : null,
+            },
           ]}
         />
       )}
@@ -292,11 +311,28 @@ function ExpenseSection() {
               required: true,
               options: (types.data ?? []).map((type) => ({ value: type.id, label: type.name })),
             },
-            { name: "code", label: t("finance.field.code"), required: true },
+            {
+              name: "code",
+              label: t("finance.field.code"),
+              helperText: t("finance.definitions.codeOptional"),
+            },
             { name: "name", label: t("finance.field.name"), required: true },
+            { name: "description", label: t("finance.field.description") },
+            { name: "defaultUnit", label: t("ztoFinans:salesTruckExpenses.mui.defaultUnit") },
           ]}
           onClose={() => setAdding(false)}
-          onSubmit={(values) => apiRequest("POST", "/finance/expense-items", values)}
+          onSubmit={(values) => {
+            // 12.7 §5.8: kod isteğe bağlı (boşsa sunucu MK-00001 dizisinden üretir).
+            const blank = (value: string | undefined) => (value?.trim() ? value.trim() : null);
+            const body: SaveExpenseItemRequest = {
+              expenseTypeId: values.expenseTypeId,
+              code: blank(values.code),
+              name: values.name.trim(),
+              description: blank(values.description),
+              defaultUnit: blank(values.defaultUnit),
+            };
+            return apiRequest("POST", "/finance/expense-items", body);
+          }}
           onSaved={() => {
             setAdding(false);
             void client.invalidateQueries({ queryKey: ["finance", "expense-items"] });
@@ -309,17 +345,11 @@ function ExpenseSection() {
 
 function RatesSection() {
   const { t } = useTranslation();
-  const client = useQueryClient();
   const canManage = useCan("FINANCE_MANAGE");
   const date = today();
-  const rates = useQuery({
-    queryKey: ["finance", "rates", date],
-    queryFn: () => apiGet<Rate[]>(`/finance/exchange-rates?date=${date}`),
-  });
-  const refresh = useMutation({
-    mutationFn: () => apiRequest("POST", "/finance/exchange-rates/refresh"),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["finance", "rates"] }),
-  });
+  // 12.8 (§5.2): ZTO Para Birimleri ekranıyla ortak anahtar ve mutasyon (iki ekran birbirini günceller).
+  const rates = useExchangeRates(date);
+  const refresh = useRefreshRates();
 
   return (
     <Box>

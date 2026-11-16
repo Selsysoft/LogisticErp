@@ -76,7 +76,7 @@ class FundTransactionQueryIT extends AccountTestSupport {
     Map<String, Object> checkBody = settlementBody("CHECK", customer, w.a1(), null, "40", null);
     checkBody.put(
         "instrument",
-        Map.of("kind", "CHECK", "number", "Q-1", "dueDate", TODAY.plusDays(30).toString()));
+        Map.of("kind", "CHECK", "number", "0000021", "dueDate", TODAY.plusDays(30).toString()));
     String check =
         body(sendJson(w.t(), null, post(FINANCE + "/collections"), checkBody)
                 .andExpect(status().isCreated()))
@@ -263,7 +263,7 @@ class FundTransactionQueryIT extends AccountTestSupport {
     assertThat(openingDetail.get("runningBalance").decimalValue()).isEqualByComparingTo("100");
     JsonNode checkDetail = detail(w, instrumentTx(w, check));
     assertThat(checkDetail.get("source").get("route").asText()).isEqualTo("/finance/instruments");
-    assertThat(checkDetail.get("source").get("code").asText()).isEqualTo("Q-1");
+    assertThat(checkDetail.get("source").get("code").asText()).isEqualTo("0000021");
     assertThat(checkDetail.get("source").get("id").asText()).isEqualTo(check);
     JsonNode manualDetail = detail(w, income);
     assertThat(manualDetail.get("source").get("kind").asText()).isEqualTo("MANUAL");

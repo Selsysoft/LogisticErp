@@ -1,0 +1,442 @@
+/*
+ * Kaynak: ZtoFabrika/Views/ProductionExpenses/Index.cshtml <style> :38-473 (12.7_TASARIM §5.3).
+ * Birebir kopya (FE-0); kurallar .zto-finans.zto-page-expense-calendar altına alınır (prefixTransform.ts).
+ * Değişiklikler: Razor kaçışı @@ → @.
+ */
+/* --- Views/ProductionExpenses/Index.cshtml <style> :38-473 --- */
+/* Mevcut stillerin korunması */
+.status-link {
+  font-size: 1em;
+}
+
+.small-icon i {
+  font-size: 10px;
+}
+
+.custom-badge {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translate(0%, 70%);
+  background-color: white;
+  color: black;
+  border-radius: 16%;
+  padding: 2px 6px;
+  font-size: 10px;
+  border: 0.5px solid gray;
+}
+
+.welcome {
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 24px;
+  text-align: center;
+}
+
+.welcome-content {
+  margin-bottom: 5px;
+}
+
+.content {
+  margin-top: 20px;
+  margin-left: 10px;
+}
+
+.lower-opacity {
+  opacity: 0.7;
+}
+
+/* Yeni eklenen stiller */
+.calendar-container {
+  margin-bottom: 20px;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.calendar-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.calendar-day {
+  text-align: center;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.calendar-day:hover {
+  background-color: #f0f0f0;
+}
+
+.calendar-day.active {
+  background-color: transparent;
+  color: inherit;
+  border: 2px solid #007bff;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.calendar-day.has-data {
+  background-color: #fd7e14;
+  color: white;
+}
+
+.calendar-day.today {
+  background-color: green;
+  color: white;
+}
+
+.calendar-day.weekend {
+  color: #dc3545;
+}
+
+.calendar-day.other-month {
+  opacity: 0.5;
+}
+
+.category-card2 {
+  margin-bottom: 20px;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+}
+
+.category-header {
+  background-color: #f8f9fa;
+  padding: 10px 15px;
+  border-bottom: 1px solid #dee2e6;
+  font-weight: bold;
+}
+
+.expense-item {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.expense-item:last-child {
+  border-bottom: none;
+}
+
+.expense-text {
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.expense-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.expense-meta-item {
+  align-items: center;
+}
+
+.expense-meta-item i {
+  margin-right: 5px;
+}
+
+.amount-indicator {
+  display: inline-block;
+  width: 100px;
+  height: 10px;
+  background-color: #e9ecef;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-left: 5px;
+}
+
+.amount-progress {
+  height: 100%;
+  background-color: #28a745;
+}
+
+.calendar-legend {
+  justify-content: center;
+  font-size: 0.9rem;
+  color: #333;
+  user-select: none;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  margin: 10px;
+}
+
+.legend-square {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 0;
+}
+
+.orange-square {
+  background-color: #fd7e14;
+}
+
+.green-square {
+  background-color: #28a745;
+}
+
+.blue-border-square {
+  background-color: transparent;
+  border: 2px solid #007bff;
+  box-sizing: border-box;
+}
+
+.custom-nav-tabs .nav-link {
+  color: #4a4a4a !important;
+  transition: color 0.3s ease !important;
+}
+
+.custom-nav-tabs .nav-link:hover,
+.custom-nav-tabs .nav-link:focus,
+.custom-nav-tabs .nav-link.active {
+  color: #000000 !important;
+}
+
+.small-icon-days {
+  font-size: 14px;
+  margin-left: 4px;
+}
+
+.text-white {
+  color: white;
+}
+
+.text-orange {
+  color: #fd7e14;
+}
+
+.text-green {
+  color: lightgreen;
+}
+
+.day-number {
+  font-weight: bold;
+}
+
+.total-amount-card {
+  background-color: #f8f9fa;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.amount-highlight {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #dc3545;
+}
+
+/* === Soft ERP Profesyonel Tasarım === */
+.pe-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  margin-bottom: 12px;
+}
+
+.pe-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pe-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.pe-legend-mini {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.pe-legend-mini .legend-square {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.pe-filter-select {
+  font-size: 11px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: #fff;
+  color: #2c3e50;
+  cursor: pointer;
+  min-width: 130px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.pe-filter-select:focus {
+  outline: none;
+  border-color: #5b86e5;
+  box-shadow: 0 0 0 2px rgba(91, 134, 229, 0.15);
+}
+
+.pe-filter-select[disabled] {
+  background: #f8f9fa;
+  color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.pe-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.pe-btn-primary {
+  background: linear-gradient(135deg, #5b86e5 0%, #36d1dc 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(91, 134, 229, 0.2);
+}
+
+.pe-btn-primary:hover {
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(91, 134, 229, 0.3);
+}
+
+.pe-btn-secondary {
+  background: #ffffff;
+  color: #495057;
+  border-color: #dee2e6;
+}
+
+.pe-btn-secondary:hover {
+  background: #f8f9fa;
+  color: #2c3e50;
+  border-color: #ced4da;
+}
+
+.pe-btn-success {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(17, 153, 142, 0.2);
+}
+
+.pe-btn-success:hover {
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(17, 153, 142, 0.3);
+}
+
+.pe-card {
+  border: 1px solid #e9ecef !important;
+  border-radius: 10px !important;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.pe-card-header {
+  padding: 10px 14px;
+  background: linear-gradient(180deg, #fbfcfd 0%, #f7f9fc 100%);
+  border-bottom: 1px solid #eef0f3;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pe-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.pe-card-title i {
+  color: #5b86e5;
+}
+
+.pe-calendar-compact .calendar-day {
+  padding: 6px 4px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.pe-calendar-compact .calendar-nav .btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 6px;
+}
+
+.pe-calendar-compact .form-control {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  height: auto;
+}
+
+.pe-calendar-compact .calendar-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.pe-summary-compact h6 {
+  font-size: 12px;
+  margin-bottom: 0;
+  color: #495057;
+  font-weight: 500;
+}
+
+.pe-summary-compact .amount-highlight {
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+.pe-hidden {
+  display: none !important;
+}

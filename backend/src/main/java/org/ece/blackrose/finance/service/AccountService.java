@@ -25,7 +25,6 @@ import org.ece.blackrose.finance.domain.AccountGroup;
 import org.ece.blackrose.finance.domain.AccountRollover;
 import org.ece.blackrose.finance.domain.AccountTransaction;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
-import org.ece.blackrose.finance.domain.FinanceTypes.AgingType;
 import org.ece.blackrose.finance.domain.FinanceTypes.BalanceGroupBy;
 import org.ece.blackrose.finance.domain.FinanceTypes.DateBasis;
 import org.ece.blackrose.finance.domain.FinanceTypes.InvoiceDirection;
@@ -56,7 +55,6 @@ import org.ece.blackrose.finance.web.AccountDtos.CurrencyAmountResponse;
 import org.ece.blackrose.finance.web.AccountDtos.ProfileBankAccountRequest;
 import org.ece.blackrose.finance.web.AccountDtos.SaveBankAccountRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.AccountResponse;
-import org.ece.blackrose.finance.web.FinanceDtos.AgingResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.BalanceResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.ManualAccountTransactionRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SaveAccountRequest;
@@ -812,43 +810,6 @@ public class AccountService {
         row.getPayment(),
         row.getReceivable(),
         row.getCollection());
-  }
-
-  /**
-   * Açık bakiyeyi vadesiz eskitme: karşı yöndeki hareketler en eski açık kalemleri kapatır, kalan
-   * kalemler işlem tarihine göre dilimlere ayrılır. Eşleştirme şirket kırılımlıdır (konsolidede
-   * de); grup şirketi carileri konsolidede {@code excludeIntercompany} ile dışlanır, şirket
-   * seçiliyken her zaman görünür.
-   */
-  @Transactional(readOnly = true)
-  public List<AgingResponse> aging(
-      AgingType type, LocalDate asOf, UUID companyId, boolean excludeIntercompany) {
-    String openDirection = type == AgingType.RECEIVABLE ? "DEBIT" : "CREDIT";
-    Collection<String> types =
-        type == AgingType.RECEIVABLE
-            ? List.of(AccountType.CUSTOMER.name(), AccountType.INTERCOMPANY.name())
-            : List.of(
-                AccountType.SUPPLIER.name(),
-                AccountType.CARRIER.name(),
-                AccountType.INTERCOMPANY.name());
-    boolean exclude = companyId == null && excludeIntercompany;
-
-    return transactions.agingRows(asOf, openDirection, types, filter(companyId), exclude).stream()
-        .map(
-            row ->
-                new AgingResponse(
-                    row.getAccountId(),
-                    row.getAccountName(),
-                    row.getCurrency(),
-                    row.getCurrent(),
-                    row.getDays31To60(),
-                    row.getDays61To90(),
-                    row.getOver90(),
-                    row.getCurrent()
-                        .add(row.getDays31To60())
-                        .add(row.getDays61To90())
-                        .add(row.getOver90())))
-        .toList();
   }
 
   /**

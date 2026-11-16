@@ -71,7 +71,29 @@ public final class FinanceTypes {
     COLLECTED_TO_CASH,
     BOUNCED,
     ISSUED,
-    PAID
+    PAID,
+    /** Köken ödeme/tahsilat kaydı iptal edildi (yalnız iptal yolundan; 12.3 §3.4). */
+    CANCELLED,
+    /** Alınan çek/senet keşideciye iade edildi (cari DEBIT; 12.3 §3.0). */
+    RETURNED,
+    /** Senet teminata verildi (yalnız NOTE + RECEIVED; defter etkisiz; 12.3 §3.1). */
+    COLLATERAL,
+    /** Senet protesto edildi (defter etkisi BOUNCED ile aynı; 12.3 §3.1). */
+    PROTESTED
+  }
+
+  /** Senet türü (V37 {@code instrument.note_type}; ZTO varsayılanı Adi Senet = PLAIN). */
+  public enum NoteType {
+    PLAIN,
+    ORDER,
+    BOND
+  }
+
+  /** Çek koçanı yaprağının durumu (V38 {@code check_leaf.status}). */
+  public enum CheckLeafStatus {
+    UNUSED,
+    USED,
+    VOID
   }
 
   public enum SettlementType {
@@ -119,6 +141,15 @@ public final class FinanceTypes {
   public enum AgingType {
     RECEIVABLE,
     PAYABLE
+  }
+
+  /**
+   * Yaşlandırma tabanı (12.8 §3.4.2): işlem tarihi ya da kaynak belgenin vadesi (yoksa işlem
+   * tarihi). Vade tabanında vadesi gelmemiş kalem "Güncel" ({@code notDue}) kovasındadır.
+   */
+  public enum AgingBasis {
+    TRANSACTION,
+    DUE
   }
 
   /** Borç/Alacak Ekle belgesinin yönü: RECEIVABLE → DEBIT, PAYABLE → CREDIT. */
@@ -364,7 +395,8 @@ public final class FinanceTypes {
 
   /**
    * Kaydın neden iptal edilemediği/düzeltilemediği. {@link #TRANSFERRED}: cari satırı cari
-   * taşımayla başka cariye taşınmış (Rev 1 F-2).
+   * taşımayla başka cariye taşınmış (Rev 1 F-2). {@link #CHECK}: kaydın çek/senedi işlem gördü
+   * (12.3'ten beri çekli kayıt kendiliğinden kilitli değildir).
    */
   public enum SettlementLockReason {
     REVERSED,
@@ -374,6 +406,43 @@ public final class FinanceTypes {
     FX_SOURCE,
     VEHICLE_EXPENSE,
     TRANSFERRED,
-    NO_ACCOUNT
+    NO_ACCOUNT,
+    /** Nakit/Banka genel masrafın ödemesi; yalnız Genel Masraf ekranından iptal edilir (12.7). */
+    EXPENSE
+  }
+
+  /** Masrafın bağlamı (12.7_TASARIM §1.2 {@code expense_context_ck}). */
+  public enum ExpenseContextType {
+    GENERAL,
+    VEHICLE,
+    SHIPMENT,
+    WAREHOUSE,
+    DRIVER
+  }
+
+  /** Masrafın ödeme şekli: Cari (LedgerService) ya da Nakit/Banka (SettlementService). */
+  public enum ExpensePaymentMethod {
+    ACCOUNT,
+    CASH,
+    BANK
+  }
+
+  public enum ExpenseStatus {
+    POSTED,
+    REVERSED
+  }
+
+  /** Lojistik departmanları (OK-12.7-19; DB {@code expense_department_ck}). */
+  public enum ExpenseDepartment {
+    OPERATION,
+    FLEET,
+    WAREHOUSE,
+    CUSTOMS,
+    ADMIN,
+    ACCOUNTING,
+    SALES,
+    IT,
+    HR,
+    OTHER
   }
 }

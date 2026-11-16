@@ -114,3 +114,63 @@ export function sumDec(values: Iterable<DecimalInput>): string {
   for (const value of values) total += toScaled(value);
   return fromScaled(total);
 }
+
+// ---------------------------------------------------------------------------------------------
+// 12.7 (§5.2): çarpım, yüzde ve yuvarlama. Sunucu `ExpenseCalculator` kuralıyla aynı sonucu vermek
+// için ara sonuç tek adımda yuvarlanır: `round2(q × p)` = `mulDec(q, p, 2)`,
+// `round2(x × oran / 100)` = `percentOf(x, oran, 2)` (önce 4 sonra 2 haneye yuvarlamak çift
+// yuvarlama hatası verir: 0.00495 → 0.0050 → 0.01, oysa doğrusu 0.00).
+// ---------------------------------------------------------------------------------------------
+
+/** |n| / d HALF_UP (sıfırdan uzağa); d > 0. */
+function divHalfUp(n: bigint, d: bigint): bigint {
+  const negative = n < 0n;
+  const abs = negative ? -n : n;
+  const q = (abs * 2n + d) / (2n * d);
+  return negative ? -q : q;
+}
+
+/** Hane sayısını 0–4'e kırpar. */
+function digitsOf(digits: number): number {
+  return Math.max(0, Math.min(DEC_SCALE, Math.trunc(Number.isFinite(digits) ? digits : DEC_SCALE)));
+}
+
+/**
+ * Çarpım tamsayı ölçeğinde (10⁸) yapılır, `digits` haneye HALF_UP yuvarlanır ve 10⁴ ölçeğe döner.
+ * `extraDivisor`: sonucu ayrıca bölen tam sayı (yüzde için 100) — bölme de aynı tek yuvarlamaya girer.
+ */
+function scaledProduct(
+  a: DecimalInput,
+  b: DecimalInput,
+  digits: number,
+  extraDivisor = 1n,
+): bigint {
+  const d = digitsOf(digits);
+  const product = toScaled(a) * toScaled(b); // 10⁸ ölçek
+  const step = 10n ** BigInt(DEC_SCALE - d); // 10⁴ ölçekte son haneden sonraki kısım
+  const rounded = divHalfUp(product, DEC_FACTOR * step * extraDivisor);
+  return rounded * step;
+}
+
+/** a × b; `digits` (vars. 4, en çok 4) haneye HALF_UP. `mulDec("2.5", "3.333")` → "8.3325". */
+export function mulDec(a: DecimalInput, b: DecimalInput, digits: number = DEC_SCALE): string {
+  return fromScaled(scaledProduct(a, b, digits));
+}
+
+/**
+ * amount × rate / 100; `digits` (vars. 4) haneye tek adımda HALF_UP.
+ * `percentOf("1000", "18")` → "180.00"; `percentOf("0.33", "1.5", 2)` → "0.00".
+ */
+export function percentOf(
+  amount: DecimalInput,
+  rate: DecimalInput,
+  digits: number = DEC_SCALE,
+): string {
+  return fromScaled(scaledProduct(amount, rate, digits, 100n));
+}
+
+/** Değeri `digits` (vars. 2, 0–4) haneye HALF_UP yuvarlar. `roundDec("-1.005")` → "-1.01". */
+export function roundDec(value: DecimalInput, digits = 2): string {
+  const step = 10n ** BigInt(DEC_SCALE - digitsOf(digits));
+  return fromScaled(divHalfUp(toScaled(value), step) * step);
+}

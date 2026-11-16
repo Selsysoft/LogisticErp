@@ -319,7 +319,7 @@ class FundAccountIT extends AccountTestSupport {
     collection.put("date", TODAY.toString());
     collection.put(
         "instrument",
-        Map.of("kind", "CHECK", "number", "P-1", "dueDate", TODAY.plusDays(30).toString()));
+        Map.of("kind", "CHECK", "number", "0000011", "dueDate", TODAY.plusDays(30).toString()));
     String instrument =
         body(sendJson(w.t(), null, post(FINANCE + "/collections"), collection)
                 .andExpect(status().isCreated()))

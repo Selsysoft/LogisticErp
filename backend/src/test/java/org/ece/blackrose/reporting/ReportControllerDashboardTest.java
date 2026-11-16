@@ -63,7 +63,7 @@ class ReportControllerDashboardTest {
         .thenReturn(
             List.of(
                 new PositionRow(
-                    "TRY", BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.TEN)));
+                    "TRY", null, BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.TEN)));
   }
 
   @AfterEach

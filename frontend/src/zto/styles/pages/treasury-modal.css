@@ -1,0 +1,13 @@
+/*
+ * Kaynak: ZtoFabrika/Views/CustomerAccounts/Index.cshtml #treasuryModal :5048-5322 (12.8_TASARIM §5.3,
+ * §5.10). ZTO <style> bloklarında #treasuryModal / #treasury* seçicisi yok (görünüm satır içi stil ve
+ * Bootstrap sınıflarıyla); satır içi stiller JSX'te kalır. Sayfa kapsamı yok (modal her sayfada açılır,
+ * quick-cari.css deseni); seçiciler #treasuryModal ile başlar.
+ */
+
+/* --- Blackrose eki (Rev 1 FE-TRM-FIDELITY): TRM:5049 .modal-dialog satır içi "max-width: 95%";
+   ZtoModal'ın diyalog style prop'u yok. Modal ZtoModal rootId="treasuryModal" +
+   dialogClassName="zto-treasury-dialog" ile çizilir. --- */
+#treasuryModal .modal-dialog.zto-treasury-dialog {
+  max-width: 95%;
+}

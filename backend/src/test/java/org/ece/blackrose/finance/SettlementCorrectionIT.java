@@ -132,6 +132,16 @@ class SettlementCorrectionIT extends SettlementTestSupport {
         "instrument",
         Map.of("kind", "CHECK", "number", "1112223", "dueDate", TODAY.plusDays(30).toString()));
     String checkPayment = id(pay(w, null, check, null));
+    // 12.3: çekli kayıt düzeltilebilir; çek ödendiyse (ilerlediyse) 409.
+    Object paidCheck =
+        row(w, "select instrument_id from %s.settlement where id = ?::uuid", checkPayment)
+            .get("instrument_id");
+    sendJson(
+            w.t(),
+            null,
+            post(FINANCE + "/instruments/" + paidCheck + "/transition"),
+            Map.of("toStatus", "PAID", "fundAccountId", bankA, "date", TODAY.toString()))
+        .andExpect(status().isOk());
     expect(
         correct(w, null, checkPayment, null, replacement, null),
         409,
@@ -212,13 +222,14 @@ class SettlementCorrectionIT extends SettlementTestSupport {
         409,
         "SETTLEMENT_NOT_CORRECTABLE");
 
-    // Yeni istek kuralları: çek yöntemi 400; başka şirketin iş yeri 422; pasif fon 422.
+    // Yeni istek kuralları: 7 haneli olmayan çek numarası 400; başka şirketin iş yeri 422; pasif
+    // fon 422.
     String payment = id(pay(w, null, body("CASH", supplier, w.a1(), w.fundA1(), "40"), null));
     Map<String, Object> toCheck = body("CHECK", supplier, w.a1(), null, "40");
     toCheck.put(
         "instrument",
-        Map.of("kind", "CHECK", "number", "1112224", "dueDate", TODAY.plusDays(30).toString()));
-    expect(correct(w, null, payment, null, toCheck, null), 400, "CORRECTION_METHOD_INVALID");
+        Map.of("kind", "CHECK", "number", "11122", "dueDate", TODAY.plusDays(30).toString()));
+    expect(correct(w, null, payment, null, toCheck, null), 400, "CHECK_NUMBER_INVALID");
     expect(
         correct(w, null, payment, null, body("CASH", supplier, w.b1(), w.fundB1(), "40"), null),
         422,

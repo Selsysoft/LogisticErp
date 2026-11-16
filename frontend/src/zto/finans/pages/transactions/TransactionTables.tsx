@@ -168,6 +168,8 @@ export function TransactionTables(props: TransactionTablesProps) {
       </button>
       {props.canEditDocuments &&
         row.sourceType === "ACCOUNT_DOCUMENT" &&
+        // 12.8 (§5.11, OK-12.8-1): kur farkı belgesi düzenlenemez; iptal edip yeniden kesilir.
+        row.documentType !== "KUR_FARKI" &&
         !row.reversal &&
         !row.reversed &&
         !row.transferredOut && (

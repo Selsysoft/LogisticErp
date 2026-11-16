@@ -25,7 +25,7 @@ public class FinanceOpenApiNullability implements OpenApiCustomizer {
   static final String NULL = "null";
 
   /** İşaretli record'ları taşıyan DTO kapları. */
-  static final List<Class<?>> HOLDERS = List.of(FinanceDtos.class);
+  static final List<Class<?>> HOLDERS = List.of(FinanceDtos.class, FinanceReportDtos.class);
 
   @Override
   public void customise(OpenAPI openApi) {

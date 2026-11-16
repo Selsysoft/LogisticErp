@@ -62,6 +62,12 @@ export function PaymentModal(props: PaymentModalProps) {
   const endorseLocked =
     form.method === "CHECK" && form.check.mode === "ENDORSE" && !!form.check.instrumentId;
   const fundLocked = fundKind !== null && !!form.fundAccountId;
+  /** "Yeni Ödeme Çeki/Senedi" ve "Ciro Et" açılışında yöntem kilitli (OK-12.3-12). */
+  const methodLocked =
+    !edit &&
+    (!!props.presetEndorseInstrumentId ||
+      props.presetMethod === "CHECK" ||
+      props.presetMethod === "NOTE");
   const symbol = currencySymbol(form.currency);
   const accountExtra =
     edit && m.detail?.item.accountId
@@ -188,6 +194,7 @@ export function PaymentModal(props: PaymentModalProps) {
                   value={form.method}
                   onChange={(method) => setForm((f) => withMethod(f, method))}
                   error={error("method")}
+                  disabled={methodLocked}
                 />
               </div>
               <div className="col-md-3">
@@ -316,7 +323,10 @@ export function PaymentModal(props: PaymentModalProps) {
                   fundAccountId: error("check.fundAccountId").invalid ? "x" : undefined,
                   number: error("check.number").invalid ? "x" : undefined,
                   dueDate: error("check.dueDate").invalid ? "x" : undefined,
+                  issueDate: error("check.issueDate").invalid ? "x" : undefined,
                 }}
+                editing={m.checkEditing}
+                onLeafGuardChange={m.setLeafGuard}
               />
             )}
             {form.method === "NOTE" && (
@@ -329,6 +339,7 @@ export function PaymentModal(props: PaymentModalProps) {
                 errors={{
                   number: error("note.number").invalid ? "x" : undefined,
                   dueDate: error("note.dueDate").invalid ? "x" : undefined,
+                  issueDate: error("note.issueDate").invalid ? "x" : undefined,
                 }}
               />
             )}

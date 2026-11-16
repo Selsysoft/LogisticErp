@@ -237,6 +237,7 @@ public class AccountTransactionQueryService {
               ref == null ? null : "/operations/shipments/" + ref;
           case "WAREHOUSE_INVOICE" -> ref == null ? null : "/warehouse/billing/" + ref;
           case "VEHICLE_EXPENSE" -> ref == null ? null : "/fleet/vehicles/" + ref;
+          case "EXPENSE" -> ref == null ? null : "/zto-finans/genel-masraflar/kalem/" + ref;
           case "INSTRUMENT", "INSTRUMENT_ENDORSEE_BOUNCE" -> "/finance/instruments";
           default -> null;
         };
@@ -254,6 +255,7 @@ public class AccountTransactionQueryService {
           case "WAREHOUSE_INVOICE" -> "Depo faturası";
           case "TRIP_COST" -> "Sefer maliyeti";
           case "VEHICLE_EXPENSE" -> "Araç gideri";
+          case "EXPENSE" -> "Genel masraf";
           case "INSTRUMENT", "INSTRUMENT_ENDORSEE_BOUNCE" -> "Çek/senet hareketi";
           case "OPENING" -> "Açılış bakiyesi";
           case "OPENING_INVOICE" -> "Açılış faturası";

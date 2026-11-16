@@ -178,6 +178,7 @@ public final class FleetDtos {
       BigDecimal repairTl,
       BigDecimal tireTl,
       BigDecimal fuelTl,
+      BigDecimal generalExpenseTl,
       BigDecimal totalTl,
       BigDecimal liters,
       BigDecimal distanceKm,

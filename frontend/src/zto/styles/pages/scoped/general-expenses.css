@@ -1,0 +1,770 @@
+/*
+ * Kaynak: ZtoFabrika/Views/ProductionExpenses/IndexExpenses.cshtml <style> :34-761 (12.7_TASARIM §5.3).
+ * Birebir kopya (FE-0); kurallar .zto-finans.zto-page-general-expenses altına alınır (prefixTransform.ts).
+ * Değişiklikler: Razor kaçışı @@ → @.
+ * @keyframes pulse → zto-gex-pulse (paket genelinde ad çakışması, check:zto-css).
+ */
+/* --- Views/ProductionExpenses/IndexExpenses.cshtml <style> :34-761 --- */
+/* Mevcut stiller aynı kalacak - değişiklik yok */
+.small-icon i {
+  font-size: 10px;
+}
+
+.custom-badge {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translate(0%, 70%);
+  background-color: white;
+  color: black;
+  border-radius: 16%;
+  padding: 2px 6px;
+  font-size: 10px;
+  border: 0.5px solid gray;
+}
+
+.welcome {
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 24px;
+  text-align: center;
+}
+
+.welcome-content {
+  margin-bottom: 5px;
+}
+
+.content {
+  margin-top: 20px;
+  margin-left: 10px;
+}
+
+.lower-opacity {
+  opacity: 0.7;
+}
+
+.dt-buttons .btn.btn-blue {
+  background-color: #007bff !important;
+  color: white !important;
+}
+
+.dt-buttons .btn.btn-green {
+  background-color: #28a745 !important;
+  color: white !important;
+}
+
+.dt-buttons .btn.btn-grey {
+  background-color: #505050 !important;
+  color: white !important;
+}
+
+.dt-buttons .btn.btn-red {
+  background-color: #dc3545 !important;
+  color: white !important;
+}
+
+.modal-lg-custom {
+  max-width: 90%;
+}
+
+.expense-item {
+  border-bottom: 1px solid #e9ecef;
+  padding: 10px 0;
+}
+
+.expense-item:last-child {
+  border-bottom: none;
+}
+
+.expense-header {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+.badge-success {
+  background-color: #28a745;
+}
+
+.badge-danger {
+  background-color: #dc3545;
+}
+
+.badge-warning {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.badge-secondary {
+  background-color: #6c757d;
+}
+
+.summary-card {
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 15px;
+  transition: all 0.3s ease;
+}
+
+.summary-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.summary-icon {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.progress-bar-custom {
+  height: 6px;
+  border-radius: 3px;
+}
+
+.amount-badge {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 10px;
+}
+
+.horizontal-scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: #007bff #f8f9fa;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar-thumb {
+  background: #007bff;
+  border-radius: 4px;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #0056b3;
+}
+
+.summary-card {
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.bg-primary {
+  background-color: #007bff !important;
+}
+
+.bg-success {
+  background-color: #28a745 !important;
+}
+
+.bg-info {
+  background-color: #17a2b8 !important;
+}
+
+.bg-warning {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+
+.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+.bg-secondary {
+  background-color: #6c757d !important;
+}
+
+.progress-bar.bg-white.bg-primary {
+  background-color: #007bff !important;
+}
+
+.progress-bar.bg-white.bg-success {
+  background-color: #28a745 !important;
+}
+
+.progress-bar.bg-white.bg-info {
+  background-color: #17a2b8 !important;
+}
+
+.progress-bar.bg-white.bg-warning {
+  background-color: #ffc107 !important;
+}
+
+.progress-bar.bg-white.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+.progress-bar.bg-white.bg-secondary {
+  background-color: #6c757d !important;
+}
+
+#categorySearch {
+  min-width: 200px;
+  transition: all 0.3s ease;
+}
+
+#categorySearch:focus {
+  box-shadow: 0 0 0 0.2rem rgba(23, 162, 184, 0.25);
+  border-color: #17a2b8;
+}
+
+#clearSearch {
+  transition: all 0.3s ease;
+}
+
+#clearSearch:hover {
+  background-color: #f8f9fa;
+  color: #dc3545;
+}
+
+.category-card {
+  transition: all 0.3s ease;
+}
+/* CURRENCY ROTATING STYLES */
+.currency-rotating-wrapper {
+  position: relative;
+  display: inline-block;
+  min-width: 100px;
+  height: 24px;
+  vertical-align: middle;
+}
+
+.currency-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s ease;
+  white-space: nowrap;
+}
+
+.currency-item.active {
+  opacity: 1;
+  visibility: visible;
+  z-index: 2;
+}
+
+.currency-item.exiting {
+  opacity: 0;
+  z-index: 1;
+}
+
+.currency-badge-rotating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.currency-badge-rotating:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.currency-badge-rotating.TRY {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.currency-badge-rotating.USD {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+}
+
+.currency-badge-rotating.EUR {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.currency-badge-rotating.GBP {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+}
+
+.currency-badge-rotating.RUB {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: white;
+}
+
+.currency-dots-container {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.currency-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.currency-dot:hover {
+  background: rgba(0, 0, 0, 0.4);
+  transform: scale(1.3);
+}
+
+.currency-dot.active {
+  background: #007bff;
+  transform: scale(1.2);
+}
+
+/* Pause indicator */
+tr.rotation-paused .currency-rotating-wrapper::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #fbbf24;
+  border-radius: 50%;
+  animation: zto-gex-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes zto-gex-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+/* Tooltip Styles */
+#currencyTooltipOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+  z-index: 9998;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s ease;
+}
+
+#currencyTooltipOverlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+#currencyTooltipContainer {
+  position: fixed;
+  z-index: 9999;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  min-width: 320px;
+  max-width: 400px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s ease,
+    transform 0.3s ease;
+}
+
+#currencyTooltipContainer.active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.currency-tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.currency-tooltip-title {
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.currency-tooltip-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.currency-tooltip-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.currency-tooltip-body {
+  padding: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.currency-tooltip-row {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.currency-tooltip-row:last-child {
+  margin-bottom: 0;
+}
+
+.currency-tooltip-currency {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.currency-tooltip-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.currency-tooltip-label {
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: 600;
+}
+
+.currency-tooltip-amounts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.currency-tooltip-amount-item {
+  background: white;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.currency-tooltip-amount-label {
+  font-size: 10px;
+  color: #6c757d;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.currency-tooltip-amount-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #212529;
+}
+
+.currency-tooltip-balance {
+  background: white;
+  padding: 10px;
+  border-radius: 6px;
+  border: 2px solid;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.currency-tooltip-balance-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+.currency-tooltip-balance-value {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Card rotating styles */
+.card-currency-wrapper {
+  position: relative;
+  min-height: 24px;
+}
+
+.card-currency-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s ease;
+}
+
+.card-currency-item.active {
+  opacity: 1;
+  visibility: visible;
+  z-index: 2;
+}
+
+.card-currency-item.exiting {
+  opacity: 0;
+  z-index: 1;
+}
+
+.summary-card:hover .card-currency-wrapper {
+  animation-play-state: paused;
+}
+
+/* === Soft ERP Profesyonel Tasarım (Index ile aynı) === */
+.pe-filter-select {
+  font-size: 11px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: #fff;
+  color: #2c3e50;
+  cursor: pointer;
+  min-width: 130px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.pe-filter-select:focus {
+  outline: none;
+  border-color: #5b86e5;
+  box-shadow: 0 0 0 2px rgba(91, 134, 229, 0.15);
+}
+
+.pe-filter-select[disabled] {
+  background: #f8f9fa;
+  color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.pe-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.pe-btn-primary {
+  background: linear-gradient(135deg, #5b86e5 0%, #36d1dc 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(91, 134, 229, 0.2);
+}
+
+.pe-btn-primary:hover {
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(91, 134, 229, 0.3);
+}
+
+.pe-btn-secondary {
+  background: #ffffff;
+  color: #495057;
+  border-color: #dee2e6;
+}
+
+.pe-btn-secondary:hover {
+  background: #f8f9fa;
+  color: #2c3e50;
+  border-color: #ced4da;
+}
+
+.pe-btn-success {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(17, 153, 142, 0.2);
+}
+
+.pe-btn-success:hover {
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(17, 153, 142, 0.3);
+}
+
+/* ========== MOBİL KART GÖRÜNÜMÜ (<= 768px) ========== */
+@media (max-width: 768px) {
+  .col-md-12[style*="padding-left"] {
+    padding-left: 20px !important;
+    padding-right: 6px !important;
+  }
+
+  .col-md-12,
+  .col-xl-12,
+  .col-md-7,
+  .col-md-2,
+  .col-md-3 {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  .welcome {
+    margin-top: 10px;
+    border-radius: 14px;
+  }
+
+  .custom-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+
+  .custom-card-header {
+    border-radius: 12px !important;
+    margin-bottom: 12px !important;
+    background: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+    padding: 12px !important;
+  }
+
+  .card-body {
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  .table-responsive {
+    overflow: visible !important;
+  }
+
+  #dataTable2,
+  #dataTable2 tbody,
+  #dataTable2 tr {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  #dataTable2 thead {
+    display: none !important;
+  }
+
+  #dataTable2 tbody tr {
+    margin-bottom: 10px !important;
+    background: #ffffff !important;
+    border: 1px solid #e1e8ed !important;
+    border-radius: 10px !important;
+    padding: 10px 12px !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05) !important;
+    position: relative !important;
+  }
+
+  #dataTable2 td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 6px 0 !important;
+    border-bottom: 1px dashed #f1f5f9 !important;
+    border-top: none !important;
+    text-align: right !important;
+    font-size: 11px !important;
+    word-break: break-word !important;
+  }
+
+  #dataTable2 td:last-child {
+    border-bottom: none !important;
+    padding-top: 8px !important;
+    justify-content: flex-end !important;
+  }
+
+  /* Hücre Etiketleri */
+  #dataTable2 tbody tr td::before {
+    font-weight: 700;
+    color: #4b5563;
+    text-align: left;
+    padding-right: 8px;
+    flex-shrink: 0;
+  }
+
+  #dataTable2 tbody tr td:nth-child(1)::before {
+    content: "Cari Hesap:";
+  }
+  #dataTable2 tbody tr td:nth-child(2)::before {
+    content: "Cari Kod:";
+  }
+  #dataTable2 tbody tr td:nth-child(3)::before {
+    content: "Vergi No:";
+  }
+  #dataTable2 tbody tr td:nth-child(4)::before {
+    content: "Telefon:";
+  }
+  #dataTable2 tbody tr td:nth-child(5)::before {
+    content: "Şehir:";
+  }
+  #dataTable2 tbody tr td:nth-child(6)::before {
+    content: "Masraf Türü:";
+  }
+  #dataTable2 tbody tr td:nth-child(7)::before {
+    content: "İş Yeri:";
+  }
+  #dataTable2 tbody tr td:nth-child(8)::before {
+    content: "Toplam Fatura Sayısı:";
+  }
+  #dataTable2 tbody tr td:nth-child(9)::before {
+    content: "Toplam Tutar:";
+  }
+  #dataTable2 tbody tr td:nth-child(10)::before {
+    content: "Son Fatura Tarihi:";
+  }
+  #dataTable2 tbody tr td:nth-child(11)::before {
+    content: "İşlemler:";
+  }
+}

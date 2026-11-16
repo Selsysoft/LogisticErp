@@ -1,0 +1,325 @@
+/*
+ * Kaynak: ZtoFabrika/wwwroot/css/recipe-theme.css :28-130, :132-144, :255-287, :290-353, :376-451,
+ * :460-475 (12.8_TASARIM §5.3). Kur Farkı Raporu ve Nakit Akış bu dosyayı link eder; yalnız
+ * .rcpdt-* (ZtoRcpTable DOM'u, §5.3a), :root renk değişkenleri, .rcp-page, .rcp-breadcrumb, .rcp-hero*
+ * ve .rcp-page altı kart/düğme/tablo/metrik kuralları birebir alındı. Alınmayanlar: ürün görseli
+ * (.rcp-pimg), .rg-* kart tablo kuralları (991 px bloğu), hoşgeldin kutusu, yardımcı rozet, Arapça
+ * kip kuralları ve DataTables araç çubuğu gizleme (ZtoRcpTable DataTables üretmez). Kurallar
+ * prefixTransform SHARED_SCOPES ile .zto-page-fx-report ve .zto-page-cash-flow köklerine yazılır.
+ */
+/* --- wwwroot/css/recipe-theme.css :28-130 --- */
+/* ✅ Ortak tablo aracı (recipe-table.js): solda Sayfada göster · sağda Ara · sağ altta numaralı sayfalama */
+.rcpdt-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.rcpdt-size {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.rcpdt-size select {
+  display: inline-block;
+  width: auto;
+  font-size: 12px;
+  padding: 2px 6px;
+  height: auto;
+}
+
+.rcpdt-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.rcpdt-search input {
+  width: 220px;
+  font-size: 12px;
+}
+
+.rcpdt-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #475569;
+}
+
+.rcpdt-pg {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  list-style: none;
+  margin: 0 0 0 auto;
+  padding: 0;
+}
+
+.rcpdt-btn {
+  min-width: 30px;
+  padding: 3px 8px;
+  font-size: 12px;
+  border: 1px solid #dbe4f0;
+  background: #fff;
+  color: #334155;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.rcpdt-btn:hover:not(:disabled) {
+  border-color: var(--rcp-primary);
+  color: var(--rcp-primary);
+}
+
+.rcpdt-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.rcpdt-btn.rcpdt-active {
+  background: var(--rcp-primary);
+  border-color: var(--rcp-primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+.rcpdt-dots {
+  color: #94a3b8;
+  padding: 0 2px;
+}
+
+:root {
+  --rcp-primary: #007bff;
+  --rcp-primary-dark: #0b5ed7;
+  --rcp-primary-light: #3d8bfd;
+  --rcp-soft: #e7f1ff;
+  --rcp-border: #cfe2ff;
+  --rcp-bg: #f5f8fd;
+  --rcp-card: #fbfcfe;
+  --rcp-text: #1e293b;
+  --rcp-muted: #64748b;
+}
+
+/* --- wwwroot/css/recipe-theme.css :132-144 --- */
+/* ---------- Sayfa sarmalayıcı: üst/sağ/sol boşluk standardı ----------
+   Üst padding, sabit (fixed) nav menünün altında kalmayı önler (≈3 satır boşluk). */
+.rcp-page {
+  padding: 78px 22px 28px;
+  background: var(--rcp-bg);
+  min-height: calc(100vh - 60px);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.rcp-page > br:first-child {
+  display: none;
+}
+
+/* --- wwwroot/css/recipe-theme.css :255-287 --- */
+@media (max-width: 576px) {
+  .rcpdt-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .rcpdt-search {
+    margin-left: 0;
+    width: 100%;
+  }
+  .rcpdt-search input {
+    width: 100% !important;
+    flex: 1;
+  }
+  .rcpdt-foot {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .rcpdt-pg {
+    margin-left: 0;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .rg-hero-btns {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 6px;
+  }
+  .rg-hero-btns .btn {
+    width: 100%;
+  }
+}
+
+/* --- wwwroot/css/recipe-theme.css :290-353 --- */
+/* ---------- Breadcrumb ---------- */
+.rcp-breadcrumb {
+  background: var(--rcp-soft) !important;
+  border: 1px solid var(--rcp-border);
+  border-radius: 10px;
+  padding: 8px 14px !important;
+  margin: 0 0 14px !important;
+  font-size: 12px;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.rcp-breadcrumb li {
+  display: inline-flex;
+  align-items: center;
+}
+
+.rcp-breadcrumb a {
+  color: var(--rcp-primary-dark);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.rcp-breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.rcp-breadcrumb .divider::after {
+  content: "\203A"; /* › (U+203A) — kodlama-bağımsız escape; charset sorununda 'â€º' olmaz */
+  color: var(--rcp-muted);
+  margin: 0 6px;
+  font-weight: 700;
+}
+
+.rcp-breadcrumb .active {
+  color: var(--rcp-text);
+  font-weight: 700;
+}
+
+/* ---------- Hero (başlık bandı) ---------- */
+.rcp-hero {
+  background: linear-gradient(135deg, var(--rcp-primary-dark), var(--rcp-primary-light)) !important;
+  color: #fff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 0 0 14px !important;
+  box-shadow: 0 6px 18px rgba(0, 123, 255, 0.18);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.rcp-hero .btn-light {
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  color: var(--rcp-primary-dark);
+  font-weight: 600;
+}
+
+.rcp-hero .btn-light:hover {
+  background: #fff;
+}
+
+/* --- wwwroot/css/recipe-theme.css :376-451 --- */
+/* ---------- Kartlar ---------- */
+.rcp-page .card,
+.rcp-card {
+  background: var(--rcp-card);
+  border: 1px solid var(--rcp-border) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 10px rgba(13, 110, 253, 0.06);
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.rcp-card-header,
+.rcp-page .card > .card-header {
+  background: var(--rcp-soft) !important;
+  color: var(--rcp-primary-dark) !important;
+  font-weight: 700;
+  border-bottom: 1px solid var(--rcp-border);
+  border-radius: 12px 12px 0 0 !important;
+}
+
+/* İstisna: anlamsal kart başlıkları (uyarı/kritik/başarı) sayfa içinde inline korunur */
+.rcp-page .card > .card-header.rcp-keep {
+  background: inherit !important;
+  color: inherit !important;
+}
+
+/* ---------- Butonlar ---------- */
+.rcp-btn,
+.rcp-page .btn-primary {
+  background: var(--rcp-primary) !important;
+  border-color: var(--rcp-primary) !important;
+  color: #fff !important;
+}
+
+.rcp-btn:hover,
+.rcp-page .btn-primary:hover {
+  background: var(--rcp-primary-dark) !important;
+}
+
+/* Filtre/segment butonları: mevcut btn-dark deseni maviye döner */
+.rcp-page .btn-dark {
+  background: var(--rcp-primary) !important;
+  border-color: var(--rcp-primary) !important;
+}
+
+.rcp-page .btn-outline-dark {
+  color: var(--rcp-primary-dark) !important;
+  border-color: var(--rcp-border) !important;
+  background: #fff !important;
+}
+
+.rcp-page .btn-outline-dark:hover {
+  background: var(--rcp-soft) !important;
+}
+
+/* ---------- Tablolar ---------- */
+.rcp-page table thead th {
+  background: var(--rcp-soft) !important;
+  color: var(--rcp-primary-dark) !important;
+  border-color: var(--rcp-border) !important;
+}
+
+.rcp-page .table-hover tbody tr:hover {
+  background: var(--rcp-soft) !important;
+}
+
+/* ---------- Metrik kutuları ---------- */
+.rcp-metric,
+.rcp-page .rr-metric,
+.rcp-page .yr-metric,
+.rcp-page .cr-metric,
+.rcp-page .rs-metric {
+  background: var(--rcp-card);
+  border: 1px solid var(--rcp-border) !important;
+  border-radius: 10px;
+}
+
+/* --- wwwroot/css/recipe-theme.css :460-475 --- */
+/* Kart grid köşeleri (reçeteli üretim ana sayfa kartları) */
+.rcp-page .rpx-card {
+  border-color: var(--rcp-border);
+}
+
+.rcp-page .rpx-card-head {
+  background: linear-gradient(135deg, var(--rcp-primary-dark), var(--rcp-primary-light)) !important;
+}
+
+.rcp-page .rpx-progress {
+  background: var(--rcp-soft);
+}
+
+.rcp-page .rpx-progress > div {
+  background: linear-gradient(90deg, var(--rcp-primary), var(--rcp-primary-light)) !important;
+}

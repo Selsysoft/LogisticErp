@@ -107,6 +107,7 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
               or exists(select 1 from warehouse_invoice where branch_id = :id)
               or exists(select 1 from shipment where branch_id = :id)
               or exists(select 1 from warehouse where branch_id = :id)
+              or exists(select 1 from expense where branch_id = :id)
           """,
       nativeQuery = true)
   boolean isReferenced(@Param("id") UUID id);

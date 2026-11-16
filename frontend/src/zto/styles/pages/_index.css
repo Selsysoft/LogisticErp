@@ -47,3 +47,38 @@
 @import "./scoped/collections.css";
 @import "./scoped/settlement-modals.css";
 @import "./scoped/daily-settlement-report.css";
+/*
+ * 12.3 sayfa CSS'leri (12.3_TASARIM §5.3): Çekler ve Detaylı Çek Raporu (FE-1), Senetler, Çek
+ * Koçanları, Çek/Senet Düzenle ve Çek Belgeleri (FE-2). Çekler ve Senetler ödeme modalını açtığı için
+ * settlement-modals.css SHARED_SCOPES ile bu iki köke de yazılır.
+ */
+@import "./scoped/checks.css";
+@import "./scoped/check-detailed-report.css";
+@import "./scoped/bills.css";
+@import "./scoped/check-books.css";
+@import "./scoped/edit-instrument.css";
+@import "./scoped/check-documents.css";
+/*
+ * 12.7 sayfa CSS'leri (12.7_TASARIM §5.3): Masraf Kalemleri, Genel Masraf listesi/takvimi/kalem
+ * faturaları ve formu (FE-1/FE-2), Sevk Nakliye Masrafları ve firma detayı (FE-3).
+ */
+@import "./scoped/expense-items.css";
+@import "./scoped/general-expenses.css";
+@import "./scoped/expense-calendar.css";
+@import "./scoped/expense-group-details.css";
+@import "./scoped/expense-form.css";
+@import "./scoped/sales-truck-expenses.css";
+@import "./scoped/sales-truck-details.css";
+/*
+ * 12.8 sayfa CSS'leri (12.8_TASARIM §5.3): Cari Hesap Raporları (FE-1), Finans Raporları ve Finansal
+ * Bilanço (FE-2), Kur Farkı Raporu ve Nakit Akış (FE-3; ortak reçeteli tema recipe-report-common.css
+ * SHARED_SCOPES ile iki köke yazılır). treasury-modal.css kapsamsızdır (Hızlı Bakiye Özeti modalı her
+ * sayfada açılır; quick-cari.css deseni). Para Birimleri sayfa CSS'i yoktur.
+ */
+@import "./scoped/customer-account-report.css";
+@import "./scoped/finance-report.css";
+@import "./scoped/financial-balance-sheet.css";
+@import "./scoped/recipe-report-common.css";
+@import "./scoped/fx-report.css";
+@import "./scoped/cash-flow.css";
+@import "./treasury-modal.css";

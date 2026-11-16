@@ -70,6 +70,14 @@ public class ExchangeRateService {
         .map(ExchangeRate::getRate);
   }
 
+  /**
+   * Verilen kurla TL karşılığı; {@link #convert} ile aynı kiracı yuvarlaması (12.8 §3.2.5). Kur
+   * farkı raporu ve kesimi farkı aynı yuvarlamayla hesaplar.
+   */
+  public BigDecimal tlAt(BigDecimal amount, BigDecimal rate) {
+    return round(amount.multiply(rate));
+  }
+
   private BigDecimal round(BigDecimal value) {
     return rounding().apply(value);
   }

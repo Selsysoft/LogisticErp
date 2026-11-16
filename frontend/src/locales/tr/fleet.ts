@@ -15,6 +15,9 @@ export default {
     blocks: "Takvim kapatmaları",
     fuel: "Yakıt tüketimi",
     costReport: "Araç maliyeti (TL)",
+    // 12.8 (OK-12.8-12, R-8): araca bağlanan genel masraflar okunarak eklenir; ayna kayıt yok.
+    generalExpenseNote:
+      "Genel Masraf ekranında araca bağlanan masraflar dahildir; aynı faturayı araç giderine ayrıca girmeyin.",
   },
   action: {
     newVehicle: "Araç ekle",
@@ -55,6 +58,7 @@ export default {
     issues: "Engel/uyarı",
     totalTl: "Toplam",
     costPerKm: "Km başına",
+    generalExpense: "Genel masraf",
   },
   settings: {
     blockOn: "Süresi dolmuş veya eksik belgeli kaynak atanamaz.",

@@ -815,7 +815,8 @@ class SettlementMigrationIT extends AccountTestSupport {
 
     // Yeni sabitler (B2–B4 kullanır).
     assertThat(SettlementLockReason.valueOf("TRANSFERRED")).isNotNull();
-    assertThat(SettlementLockReason.values()).hasSize(8);
+    // 12.7 (Rev 1 F1) sona EXPENSE ekledi.
+    assertThat(SettlementLockReason.values()).hasSize(9);
     assertThat(DailyReportSort.values())
         .containsExactly(DailyReportSort.TIME_ASC, DailyReportSort.TIME_DESC);
     assertThat(AuditEvent.valueOf("SETTLEMENT_CORRECTED")).isNotNull();

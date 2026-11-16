@@ -1,5 +1,6 @@
 package org.ece.blackrose.shipment.web;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -21,6 +22,8 @@ import org.ece.blackrose.shipment.domain.ShipmentTypes.DocumentType;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.EventType;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.InvoiceStatus;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.ShipmentStatus;
+import org.ece.blackrose.shipment.domain.ShipmentTypes.TransportMode;
+import org.ece.blackrose.shipment.domain.ShipmentTypes.TripCostStatus;
 
 public final class ShipmentDtos {
 
@@ -89,7 +92,8 @@ public final class ShipmentDtos {
       UUID driverId,
       String driverName,
       UUID carrierAccountId,
-      String carrierName) {}
+      String carrierName,
+      TransportMode transportMode) {}
 
   public record ShipmentSummary(
       UUID id,
@@ -166,13 +170,17 @@ public final class ShipmentDtos {
       @NotNull Instant plannedStart,
       @NotNull Instant plannedEnd) {}
 
-  /** Ya araç + sürücü (dorse isteğe bağlı) ya da taşeron + maliyet verilir. */
+  /**
+   * Ya araç + sürücü (dorse isteğe bağlı) ya da taşeron + maliyet verilir. {@code transportMode}
+   * isteğe bağlıdır; yalnız taşeron atamasında etaba yazılır (12.7 §3.3.3).
+   */
   public record AssignLegRequest(
       UUID vehicleId,
       UUID trailerId,
       UUID driverId,
       UUID carrierAccountId,
-      @Valid Money carrierCost) {}
+      @Valid Money carrierCost,
+      TransportMode transportMode) {}
 
   public record AssignmentResponse(LegResponse leg, List<String> warnings) {}
 
@@ -275,7 +283,19 @@ public final class ShipmentDtos {
       Money money,
       BigDecimal tlAmount,
       String description,
-      Instant postedAt) {}
+      Instant postedAt,
+      TripCostStatus status,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal vatAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal withholdingAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal deductionAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal payableAmount,
+      String documentNo,
+      String documentType,
+      LocalDate costDate) {}
 
   public record LinkableExpense(UUID id, String plate, LocalDate date, String kind, Money money) {}
 
@@ -305,4 +325,108 @@ public final class ShipmentDtos {
       List<Option> tariffs,
       List<Option> taxRates,
       List<QuoteLineOption> acceptedQuoteLines) {}
+
+  // 12.7 Sevk Nakliye Masrafları (taşeron gideri, §4.1, §4.3)
+
+  /**
+   * Taşeron giderini kaydeder ve hemen cariye işler (Y6). {@code money} NET tutardır; cariye
+   * yazılan = net + KDV − tevkifat − kesinti.
+   */
+  public record SaveSubcontractCostRequest(
+      @NotNull @Valid Money money,
+      @NotNull @PositiveOrZero @Schema(type = "string", format = "decimal") BigDecimal vatAmount,
+      @NotNull @PositiveOrZero @Schema(type = "string", format = "decimal")
+          BigDecimal withholdingAmount,
+      @NotNull @PositiveOrZero @Schema(type = "string", format = "decimal")
+          BigDecimal deductionAmount,
+      @Size(max = 50) String documentNo,
+      @Size(max = 40) String documentType,
+      @NotNull LocalDate costDate,
+      @Positive @Schema(type = "string", format = "decimal") BigDecimal exchangeRate,
+      @Size(max = 500) String description,
+      TransportMode transportMode) {}
+
+  public record ReverseCostRequest(
+      @NotNull LocalDate date, @NotBlank @Size(max = 500) String reason) {}
+
+  public record SubcontractCurrencyAmountResponse(
+      String currency,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal amount) {}
+
+  /** STI firma satırı; adres şifreli olduğu için gönderilmez. */
+  public record SubcontractCarrierRowResponse(
+      UUID accountId,
+      String accountName,
+      String accountCode,
+      String companyNames,
+      String phone,
+      String city,
+      String district,
+      long legCount,
+      List<SubcontractCurrencyAmountResponse> netTotals,
+      List<SubcontractCurrencyAmountResponse> payableTotals) {}
+
+  public record SubcontractSummaryResponse(
+      List<SubcontractCarrierRowResponse> carriers,
+      long carrierCount,
+      long legCount,
+      List<SubcontractCurrencyAmountResponse> netTotals) {}
+
+  public record SubcontractLedgerRefResponse(
+      UUID transactionId, LocalDate transactionDate, String description) {}
+
+  /**
+   * CSD satırı = taşerona verilen etap. Gider yoksa {@code costId} ve sonrası null. {@code
+   * totalAmount} = net + KDV; {@code advanceAmount} her zaman 0 (OK-12.7-7).
+   */
+  public record SubcontractCostRowResponse(
+      UUID shipmentId,
+      String shipmentNumber,
+      UUID legId,
+      int legSequenceNo,
+      ShipmentStatus shipmentStatus,
+      String customerName,
+      String cargoDescription,
+      String freightInvoiceNumber,
+      String vehiclePlate,
+      String trailerPlate,
+      String driverName,
+      UUID branchId,
+      String branchName,
+      LocalDate loadingDate,
+      TransportMode transportMode,
+      UUID carrierAccountId,
+      String carrierName,
+      UUID costId,
+      TripCostStatus status,
+      Money money,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal vatAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal withholdingAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal deductionAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal totalAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal payableAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal advanceAmount,
+      String documentNo,
+      String documentType,
+      LocalDate costDate,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal exchangeRate,
+      String description,
+      Instant postedAt,
+      SubcontractLedgerRefResponse ledger) {}
+
+  public record SubcontractCarrierDetailResponse(
+      UUID accountId,
+      String accountName,
+      String accountCode,
+      List<SubcontractCostRowResponse> rows,
+      List<SubcontractCurrencyAmountResponse> netTotals,
+      List<SubcontractCurrencyAmountResponse> payableTotals) {}
 }

@@ -1,4 +1,4 @@
-import { TextField } from "@mui/material";
+import { Alert, TextField } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -45,6 +45,9 @@ export function FleetReportsPage() {
           slotProps={{ inputLabel: { shrink: true } }}
         />
       </SectionHeader>
+      <Alert severity="info" sx={{ mb: 2 }}>
+        {t("fleet.sections.generalExpenseNote")}
+      </Alert>
       <QueryState isPending={costs.isPending} error={costs.error} />
       {costs.data && (
         <DataTable
@@ -56,6 +59,12 @@ export function FleetReportsPage() {
               header: t("fleet.expenseKind.FUEL"),
               align: "right",
               render: (r) => amount(r.fuelTl),
+            },
+            {
+              // 12.8 (OK-12.8-12): VEHICLE bağlamlı genel masrafların KDV hariç TL toplamı.
+              header: t("fleet.field.generalExpense"),
+              align: "right",
+              render: (r) => amount(r.generalExpenseTl ?? 0),
             },
             {
               header: t("fleet.expenseKind.MAINTENANCE"),

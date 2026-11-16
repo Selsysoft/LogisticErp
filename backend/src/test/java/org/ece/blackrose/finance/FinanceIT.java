@@ -236,7 +236,7 @@ class FinanceIT extends AbstractIntegrationTest {
     String bank = fund(t, "B1", "BANK", "TRY", branch);
     manual(t, customer, branch, "DEBIT", "500", "TRY", null).andExpect(status().isCreated());
 
-    String check = receiveCheck(t, customer, branch, "C-100", "500");
+    String check = receiveCheck(t, customer, branch, "0000100", "500");
     assertBalance(
         body(send(t, get("/api/v1/finance/accounts/" + customer))).get("balances"),
         "TRY",
@@ -261,9 +261,10 @@ class FinanceIT extends AbstractIntegrationTest {
     String customer = account(t, "M1", "CUSTOMER");
     String bank = fund(t, "B1", "BANK", "TRY", branch);
     String cash = fund(t, "K1", "CASH", "TRY", branch);
-    String check = receiveCheck(t, customer, branch, "C-200", "100");
+    String check = receiveCheck(t, customer, branch, "0000200", "100");
 
-    move(t, check, "COLLECTED", bank)
+    // 12.3: PORTFOLIO → COLLECTED tek adımda izinli (InstrumentLifecycleIT); portföyde kalma değil.
+    move(t, check, "PORTFOLIO", null)
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("INSTRUMENT_INVALID_TRANSITION"));
     move(t, check, "PAID", bank).andExpect(status().isConflict());
@@ -274,8 +275,8 @@ class FinanceIT extends AbstractIntegrationTest {
 
     move(t, check, "AT_BANK", bank).andExpect(status().isOk());
     move(t, check, "COLLECTED", null).andExpect(status().isOk());
-    // Tahsil edilmiş çek ciro edilemez, yeniden tahsil de edilemez.
-    move(t, check, "ENDORSED", null).andExpect(status().isConflict());
+    // Tahsil edilmiş çek ciro edilemez (ciro yalnız ödemeyle, 400), yeniden tahsil de edilemez.
+    move(t, check, "ENDORSED", null).andExpect(status().isBadRequest());
     move(t, check, "COLLECTED_TO_CASH", cash).andExpect(status().isConflict());
     assertThat(fundBalance(t, bank)).isEqualByComparingTo("100");
     assertThat(fundBalance(t, cash)).isEqualByComparingTo("0");
@@ -289,7 +290,7 @@ class FinanceIT extends AbstractIntegrationTest {
     String supplier = account(t, "T1", "SUPPLIER");
     String bank = fund(t, "B1", "BANK", "TRY", branch);
 
-    String direct = receiveCheck(t, customer, branch, "C-1", "100");
+    String direct = receiveCheck(t, customer, branch, "0000001", "100");
     move(t, direct, "AT_BANK", bank).andExpect(status().isOk());
     move(t, direct, "BOUNCED", null).andExpect(status().isOk());
     assertBalance(
@@ -298,7 +299,7 @@ class FinanceIT extends AbstractIntegrationTest {
         "0",
         "0");
 
-    String endorsed = receiveCheck(t, customer, branch, "C-2", "300");
+    String endorsed = receiveCheck(t, customer, branch, "0000002", "300");
     Map<String, Object> payment = settlementBody("CHECK", supplier, branch, null, "300");
     payment.put("instrumentId", endorsed);
     settlement(t, "payments", payment, null).andExpect(status().isCreated());
@@ -331,7 +332,7 @@ class FinanceIT extends AbstractIntegrationTest {
     manual(t, supplier, branch, "CREDIT", "400", "TRY", null).andExpect(status().isCreated());
 
     Map<String, Object> payment = settlementBody("CHECK", supplier, branch, null, "400");
-    payment.put("instrument", newCheck("V-1"));
+    payment.put("instrument", newCheck("9000001"));
     String id =
         body(settlement(t, "payments", payment, null).andExpect(status().isCreated()))
             .get("instrumentId")
@@ -903,7 +904,7 @@ class FinanceIT extends AbstractIntegrationTest {
     String bank = fund(t, "B1", "BANK", "TRY", branch);
     String usdBank = fund(t, "B2", "BANK", "USD", branch);
     String cash = fund(t, "K1", "CASH", "TRY", branch);
-    String check = receiveCheck(t, customer, branch, "C-300", "250");
+    String check = receiveCheck(t, customer, branch, "0000300", "250");
 
     // Bankaya verme banka hesabı ister; tür ve para birimi çekle uyumlu olmalıdır.
     move(t, check, "AT_BANK", null)
@@ -929,7 +930,7 @@ class FinanceIT extends AbstractIntegrationTest {
     assertThat(fundBalance(t, bank)).isEqualByComparingTo("0");
 
     // Ciroda ödeme tutarı çek tutarıyla aynı olmalıdır; ödeme yazılmaz.
-    String other = receiveCheck(t, customer, branch, "C-301", "300");
+    String other = receiveCheck(t, customer, branch, "0000301", "300");
     Map<String, Object> endorse = settlementBody("CHECK", supplier, branch, null, "200");
     endorse.put("instrumentId", other);
     settlement(t, "payments", endorse, null)
@@ -940,7 +941,7 @@ class FinanceIT extends AbstractIntegrationTest {
     // Verilen çek karşılıksız çıkınca tedarikçiye borcumuz geri gelir.
     manual(t, supplier, branch, "CREDIT", "400", "TRY", null).andExpect(status().isCreated());
     Map<String, Object> issue = settlementBody("CHECK", supplier, branch, null, "400");
-    issue.put("instrument", newCheck("V-9"));
+    issue.put("instrument", newCheck("9000009"));
     String issued =
         body(settlement(t, "payments", issue, null).andExpect(status().isCreated()))
             .get("instrumentId")
@@ -1019,13 +1020,7 @@ class FinanceIT extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.status").value("REVERSED"));
     assertThat(fundBalance(t, cash)).isEqualByComparingTo("0");
 
-    // Çekli ve plana bağlı kayıtlar ters çevrilemez.
-    Map<String, Object> checkBody = settlementBody("CHECK", customer, branch, null, "50");
-    checkBody.put("instrument", newCheck("C-900"));
-    String checkSettlement = created(settlement(t, "collections", checkBody, null));
-    reverse(t, "/api/v1/finance/settlements/" + checkSettlement + "/reverse")
-        .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.code").value("SETTLEMENT_CHECK_NOT_REVERSIBLE"));
+    // Plana bağlı kayıt ters çevrilemez (çekli kayıt 12.3'ten beri: SettlementCheckReverseIT).
 
     String plan = plan(t, supplier, branch, "100", "TRY", "2026-11-10");
     post(t, "/api/v1/finance/payment-plans/" + plan + "/submit", null).andExpect(status().isOk());

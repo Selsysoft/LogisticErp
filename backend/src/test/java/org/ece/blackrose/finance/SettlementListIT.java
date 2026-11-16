@@ -147,8 +147,10 @@ class SettlementListIT extends SettlementTestSupport {
     assertThat(checkRow.get("instrumentNumber").asText()).isEqualTo("7777777");
     assertThat(checkRow.get("instrumentKind").asText()).isEqualTo("CHECK");
     assertThat(checkRow.get("instrumentStatus").asText()).isEqualTo("PORTFOLIO");
-    assertThat(checkRow.get("lockReason").asText()).isEqualTo("CHECK");
-    assertThat(checkRow.get("reversible").asBoolean()).isFalse();
+    // 12.3 §3.8: portföydeki çekli kayıt kilitli değil (iptal ve düzeltme açık).
+    assertThat(checkRow.get("lockReason").isNull()).isTrue();
+    assertThat(checkRow.get("reversible").asBoolean()).isTrue();
+    assertThat(checkRow.get("correctable").asBoolean()).isTrue();
     assertThat(rows.get(s5).get("displayMethod").asText()).isEqualTo("NOTE");
     JsonNode reversed = rows.get(s7);
     assertThat(reversed.get("lockReason").asText()).isEqualTo("REVERSED");
@@ -173,6 +175,22 @@ class SettlementListIT extends SettlementTestSupport {
     assertThat(ids(list(w, null, COLLECTIONS, "sort", "settlementDate,asc")).get(0)).isEqualTo(s6);
     assertThat(ids(list(w, null, COLLECTIONS, "sort", "createdAt", "sort", "accountName")))
         .hasSize(8);
+
+    // Kasaya tahsil edilen çekin kaydı CHECK nedeniyle kilitli.
+    Map<String, Object> collect = new HashMap<>();
+    collect.put("toStatus", "COLLECTED_TO_CASH");
+    collect.put("fundAccountId", w.fundA1());
+    collect.put("date", TODAY.toString());
+    sendJson(
+            w.t(),
+            null,
+            post(FINANCE + "/instruments/" + checkRow.get("instrumentId").asText() + "/transition"),
+            collect)
+        .andExpect(status().isOk());
+    JsonNode locked = byId(list(w, null, COLLECTIONS, "size", "50")).get(s4);
+    assertThat(locked.get("lockReason").asText()).isEqualTo("CHECK");
+    assertThat(locked.get("reversible").asBoolean()).isFalse();
+    assertThat(locked.get("correctable").asBoolean()).isFalse();
   }
 
   @Test

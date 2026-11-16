@@ -146,7 +146,6 @@ export default {
     ALLOCATION_EXCEEDS_SETTLEMENT: "Toplam tahsis tutarı tahsilat tutarını aşıyor!",
     ALLOCATION_EXCEEDS_SETTLEMENT_PAYMENT: "Toplam tahsis tutarı ödeme tutarını aşıyor!",
     ALLOCATION_EXCEEDS_REMAINING: "Toplam tahsis tutarı aşıldı!",
-    CORRECTION_METHOD_INVALID: "Çekli/senetli kayıt düzenlenemez.",
     SETTLEMENT_ALREADY_CORRECTED: "Bu kayıt zaten düzenlenmiş; güncel kaydı açın.",
     SETTLEMENT_REVERSED: "İptal edilmiş kayıt düzenlenemez.",
     SETTLEMENT_NOT_CORRECTABLE: "Bu kayıt düzenlenemez.",
@@ -155,7 +154,19 @@ export default {
     SETTLEMENT_NOT_FOUND: "Ödeme bilgileri alınamadı.",
     SETTLEMENT_NOT_FOUND_COLLECTION: "Tahsilat bilgileri alınamadı.",
     // 12.2 kodları (kilit nedeni metinleri; iletiler sunucudakiyle aynı).
-    SETTLEMENT_CHECK_NOT_REVERSIBLE: "Çekli kayıt ters çevrilemez; çekin durumunu güncelleyin.",
+    SETTLEMENT_CHECK_NOT_REVERSIBLE: "Çek/senet işlem gördü; önce çekin durumunu güncelleyin.",
+    // 12.3 çek/senet kodları (12.3 §3.11; ZTO metni varsa o).
+    CHECK_NUMBER_INVALID: "Çek numarası 7 haneli sayısal değer olmalıdır.",
+    INSTRUMENT_DATES_INVALID: "Vade tarihi, keşide tarihinden önce olamaz!",
+    INSTRUMENT_CUSTODY_INVALID: "Çekin tutulduğu kasa yalnız portföydeki çekte seçilir.",
+    NOTE_TYPE_INVALID: "Senet türü yalnız senette seçilir.",
+    CHECK_LEAF_INVALID: "Koçan yaprağı yalnız kendi çekimizle ödemede seçilir.",
+    CHECK_LEAF_NOT_FOUND: "Kayıt bulunamadı.",
+    INSTRUMENT_NUMBER_TAKEN: "Bu çek numarası zaten kullanılıyor!",
+    CHECK_LEAF_USED: "Bu çek zaten kullanılmış (ödemesi mevcut), tekrar kullanılamaz.",
+    CHECK_NUMBER_IN_CHECK_BOOK:
+      "Bu çek numarası koçan yaprağı olarak kayıtlı — manuel olarak kullanılamaz, lütfen koçandan seçiniz.",
+    CHECK_LEAF_MISMATCH: "Seçilen koçan yaprağı bu banka hesabına ait değil.",
     SETTLEMENT_LINKED_TO_PLAN: "Ödeme planına bağlı kayıt ters çevrilemez.",
     SETTLEMENT_LINKED_TO_INTERCOMPANY:
       "Şirketler arası virmana bağlı kayıt transfer merkezinden iptal edilir.",
@@ -297,6 +308,11 @@ export default {
     BOUNCED: "Karşılıksız",
     ISSUED: "Verildi",
     PAID: "Ödendi",
+    // 12.3 (§3.1).
+    CANCELLED: "İptal",
+    RETURNED: "İade edildi",
+    COLLATERAL: "Teminatta",
+    PROTESTED: "Protestolu",
   },
   planStatus: {
     DRAFT: "Taslak",
@@ -329,6 +345,8 @@ export default {
     INSTRUMENT_ENDORSEE_BOUNCE: "Karşılıksız ciro",
     PURCHASE_INVOICE: "Fatura",
     VEHICLE_EXPENSE: "Araç gideri",
+    // 12.7 (Rev 1 F1): masraf kaynağı.
+    EXPENSE: "Genel masraf",
     // 12.1 (§5.13): MUI ekstresinde eksik kaynak etiketleri.
     FREIGHT_INVOICE: "Navlun faturası",
     TRIP_COST: "Sefer maliyeti",

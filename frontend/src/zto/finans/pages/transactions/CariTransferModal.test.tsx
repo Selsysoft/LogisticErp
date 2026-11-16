@@ -29,6 +29,8 @@ beforeEach(() => {
     transferable("t2", { instruments: [check], instrumentGroup: "g1" }),
     transferable("t3", { instruments: [check], instrumentGroup: "g1", kind: "PAYMENT" }),
     transferable("t4", { blockedReason: "OPEN_PLAN" }),
+    transferable("t5", { blockedReason: "FX_DOCUMENT_OPEN" }),
+    transferable("t6", { blockedReason: "FX_DOCUMENT" }),
   ]);
   fakeApi.on(
     "GET",
@@ -111,5 +113,25 @@ describe("CariTransferModal", () => {
       toAccountId: "a2",
       transactionIds: ["t2", "t3"],
     });
+  });
+
+  it("12.8: engel nedenine göre başlık (plan, açık kur farkı kaynağı, kur farkı belgesi)", async () => {
+    open();
+    await screen.findByText("B-t5");
+    const row = (id: string) => document.getElementById(`ct-chk-${id}`)?.closest("tr");
+    expect(row("t4")?.getAttribute("title")).toBe(
+      "Açık ödeme planı var; önce planı ödeyin ya da iptal edin.",
+    );
+    expect(row("t5")?.getAttribute("title")).toBe(
+      "Açık kur farkı belgesi var; önce kur farkı belgesini iptal edin.",
+    );
+    expect(row("t6")?.getAttribute("title")).toBe(
+      "Kur farkı belgesi taşınamaz; kaynağıyla birlikte iptal edip yeniden kesin.",
+    );
+    const box = document.getElementById("ct-chk-t6") as HTMLInputElement;
+    expect(box.disabled).toBe(true);
+    expect(document.getElementById("ct-chk-t6-blocked")?.textContent).toBe(
+      "Kur farkı belgesi taşınamaz; kaynağıyla birlikte iptal edip yeniden kesin.",
+    );
   });
 });

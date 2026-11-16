@@ -3,6 +3,8 @@ package org.ece.blackrose.finance.web;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -20,10 +22,15 @@ import org.ece.blackrose.common.money.Money;
 import org.ece.blackrose.common.web.NullableInSchema;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.AllocationTargetType;
+import org.ece.blackrose.finance.domain.FinanceTypes.CheckLeafStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.CompanyType;
 import org.ece.blackrose.finance.domain.FinanceTypes.DensityLevel;
 import org.ece.blackrose.finance.domain.FinanceTypes.Direction;
 import org.ece.blackrose.finance.domain.FinanceTypes.DocumentPaymentMethod;
+import org.ece.blackrose.finance.domain.FinanceTypes.ExpenseContextType;
+import org.ece.blackrose.finance.domain.FinanceTypes.ExpenseDepartment;
+import org.ece.blackrose.finance.domain.FinanceTypes.ExpensePaymentMethod;
+import org.ece.blackrose.finance.domain.FinanceTypes.ExpenseStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundAccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundCategory;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundDirection;
@@ -33,6 +40,7 @@ import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentMovementType;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.InvoiceStatus;
+import org.ece.blackrose.finance.domain.FinanceTypes.NoteType;
 import org.ece.blackrose.finance.domain.FinanceTypes.PlanStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementChannel;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementLockReason;
@@ -270,6 +278,11 @@ public final class FinanceDtos {
     }
   }
 
+  /**
+   * Yaşlandırma satırı (12.8 §3.4.2; alanlar eklemeli, sayı biçimi korunur). {@code total} {@code
+   * notDue}'yu da içerir (işlem tarihi tabanında {@code notDue = 0}); {@code tlTotal} işlem günü
+   * kuruyla. {@code phone} personel carisinde boş.
+   */
   public record AgingResponse(
       UUID accountId,
       String accountName,
@@ -278,7 +291,13 @@ public final class FinanceDtos {
       BigDecimal days31To60,
       BigDecimal days61To90,
       BigDecimal daysOver90,
-      BigDecimal total) {}
+      BigDecimal total,
+      String accountCode,
+      String subGroup,
+      String subGroupName,
+      @NullableInSchema String phone,
+      BigDecimal notDue,
+      BigDecimal tlTotal) {}
 
   /**
    * Yeni banka/kasa hesabı. 12.2: hesap türü (kullanıcı yolunda yalnız DEMAND), hesap no (şifreli
@@ -389,6 +408,9 @@ public final class FinanceDtos {
    * Yeni çek/senet. {@code fundAccountId}: ödemede çekin çekildiği banka hesabı, tahsilatta {@code
    * initialStatus = AT_BANK} iken yatırılan banka hesabı. {@code initialStatus} yalnız tahsilatta
    * ({@code PORTFOLIO} varsayılan; {@code AT_BANK} yalnız çekte, fon hareketi yazmaz — 12.2a §3.2).
+   * 12.3 §4.1: {@code custodyFundId} portföydeki alınan çekin emanet kasası (CASH), {@code
+   * checkLeafId} kendi çekimizle ödemede koçan yaprağı, {@code noteType} yalnız senette ({@code
+   * null} → {@code PLAIN}), {@code drawerName} yalnız alınan çek/senette.
    */
   public record NewInstrument(
       @NotNull InstrumentKind kind,
@@ -396,35 +418,219 @@ public final class FinanceDtos {
       @Size(max = 100) String bankName,
       @NotNull LocalDate dueDate,
       @NullableInSchema UUID fundAccountId,
-      @NullableInSchema InstrumentStatus initialStatus) {
+      @NullableInSchema InstrumentStatus initialStatus,
+      @NullableInSchema LocalDate issueDate,
+      @NullableInSchema @Size(max = 100) String bankBranch,
+      @NullableInSchema @Size(max = 200) String drawerName,
+      @NullableInSchema @Size(max = 500) String description,
+      @NullableInSchema UUID custodyFundId,
+      @NullableInSchema UUID checkLeafId,
+      @NullableInSchema NoteType noteType) {
 
     /** 12.2 biçimi (yalnız dört alan). */
     public NewInstrument(InstrumentKind kind, String number, String bankName, LocalDate dueDate) {
       this(kind, number, bankName, dueDate, null, null);
     }
+
+    /** 12.2a biçimi (12.3 ek alanları boş). */
+    public NewInstrument(
+        InstrumentKind kind,
+        String number,
+        String bankName,
+        LocalDate dueDate,
+        UUID fundAccountId,
+        InstrumentStatus initialStatus) {
+      this(
+          kind,
+          number,
+          bankName,
+          dueDate,
+          fundAccountId,
+          initialStatus,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null);
+    }
   }
 
-  public record InstrumentResponse(
+  /**
+   * Çek/senet liste satırı (12.3 §4.3; eski {@code InstrumentResponse} alanlarının üst kümesi).
+   * İzinsiz kullanıcıda personel carili satırın cari, keşideci ve açıklama alanları {@code null}
+   * ({@code employeeMasked = true}, {@code allowedTransitions} boş); ciro edilen personel carisi de
+   * maskelenir. {@code originSettlement*}: çeki kaydeden ödeme/tahsilat (en eskisi).
+   */
+  public record InstrumentListItemResponse(
       UUID id,
       InstrumentKind kind,
       InstrumentDirection direction,
       String number,
-      String bankName,
-      UUID accountId,
-      UUID endorsedAccountId,
-      UUID branchId,
-      UUID companyId,
-      UUID fundAccountId,
-      Money money,
+      @NullableInSchema String bankName,
+      @NullableInSchema String bankBranch,
+      @NullableInSchema LocalDate issueDate,
       LocalDate dueDate,
-      InstrumentStatus status) {}
+      Money money,
+      InstrumentStatus status,
+      @NullableInSchema UUID accountId,
+      @NullableInSchema String accountCode,
+      @NullableInSchema String accountName,
+      @NullableInSchema AccountType accountType,
+      boolean employeeMasked,
+      @NullableInSchema UUID endorsedAccountId,
+      @NullableInSchema String endorsedAccountName,
+      @NullableInSchema String drawerName,
+      UUID branchId,
+      String branchName,
+      UUID companyId,
+      String companyName,
+      @NullableInSchema UUID fundAccountId,
+      @NullableInSchema String fundName,
+      @NullableInSchema FundKind fundKind,
+      @NullableInSchema String fundBankName,
+      @NullableInSchema UUID custodyFundId,
+      @NullableInSchema String custodyFundName,
+      @NullableInSchema UUID checkLeafId,
+      @NullableInSchema UUID checkBookId,
+      @NullableInSchema String checkBookSerial,
+      @NullableInSchema Integer leafNo,
+      @NullableInSchema String description,
+      @NullableInSchema NoteType noteType,
+      boolean collateral,
+      @NullableInSchema LocalDate settledDate,
+      @NullableInSchema UUID originSettlementId,
+      @NullableInSchema SettlementStatus originSettlementStatus,
+      int movementCount,
+      @NullableInSchema LocalDate lastMovementDate,
+      List<InstrumentStatus> allowedTransitions) {}
 
+  /** {@code GET /instruments/{id}}: satır ve hareket geçmişi. */
+  public record InstrumentDetailResponse(
+      InstrumentListItemResponse item, List<InstrumentMovementResponse> movements) {}
+
+  /**
+   * Çek numarası ön denetimi (12.3 §3.9). {@code valid}: biçim (CHECK 7 hane); çakışan satır kapsam
+   * dışında ya da maskeliyse {@code conflictAccountName = null}.
+   */
+  public record InstrumentNumberCheckResponse(
+      boolean valid,
+      boolean available,
+      @NullableInSchema UUID conflictId,
+      @NullableInSchema InstrumentStatus conflictStatus,
+      @NullableInSchema String conflictAccountName) {}
+
+  /**
+   * Çek/senet durum geçişi. {@code custodyFundId}: {@code AT_BANK → PORTFOLIO} geçişinde çekin
+   * tutulacağı kasa (sunucuda isteğe bağlı, OK-12.3-19).
+   */
   public record InstrumentTransitionRequest(
       @NotNull InstrumentStatus toStatus,
       UUID fundAccountId,
       @NotNull LocalDate date,
       @Size(max = 500) String note,
-      @Positive BigDecimal exchangeRate) {}
+      @Positive BigDecimal exchangeRate,
+      @NullableInSchema UUID custodyFundId) {
+
+    /** 12.2a biçimi (emanet kasası yok). */
+    public InstrumentTransitionRequest(
+        InstrumentStatus toStatus,
+        UUID fundAccountId,
+        LocalDate date,
+        String note,
+        BigDecimal exchangeRate) {
+      this(toStatus, fundAccountId, date, note, exchangeRate, null);
+    }
+  }
+
+  /**
+   * Çek/senedin finansal olmayan alanlarının düzeltmesi (PATCH, 12.3 §3.2): yalnız gönderilen (null
+   * olmayan) alanlar değişir; {@code bankBranch}, {@code drawerName}, {@code description} boş
+   * metinle temizlenir. Defter ve hareket satırı yazılmaz.
+   */
+  public record InstrumentUpdateRequest(
+      @NullableInSchema @Size(max = 50) String number,
+      @NullableInSchema @Size(max = 100) String bankName,
+      @NullableInSchema @Size(max = 100) String bankBranch,
+      @NullableInSchema LocalDate issueDate,
+      @NullableInSchema LocalDate dueDate,
+      @NullableInSchema @Size(max = 200) String drawerName,
+      @NullableInSchema @Size(max = 500) String description,
+      @NullableInSchema NoteType noteType) {}
+
+  /**
+   * Portföydeki alınan çekin emanet kasasını değiştirir (PUT custody, 12.3 §3.2); {@code
+   * custodyFundId = null} emaneti kaldırır. Para hareketi değildir.
+   */
+  public record InstrumentCustodyRequest(
+      @NullableInSchema UUID custodyFundId,
+      @NotNull LocalDate date,
+      @NullableInSchema @Size(max = 500) String note) {}
+
+  /**
+   * Yeni çek koçanı (12.3 §3.6). Numaralar 7 hane; banka/şube kodu ikisi birlikte boş ya da ikisi
+   * de 4 hane (MICR). Biçim hataları servis tarafında 400 {@code CHECK_BOOK_INVALID} döner.
+   */
+  public record CheckBookRequest(
+      @NotNull UUID fundAccountId,
+      @NotBlank @Size(max = 50) String serialNo,
+      @NotBlank String startNumber,
+      @NotBlank String endNumber,
+      @NullableInSchema String bankCode,
+      @NullableInSchema String branchCode) {}
+
+  /** Yaprak iptali (12.3 §3.6); gerekçe isteğe bağlı. */
+  public record CheckLeafVoidRequest(@NullableInSchema @Size(max = 500) String reason) {}
+
+  /** Sayımlı çek koçanı (12.3 §4.3). */
+  public record CheckBookResponse(
+      UUID id,
+      UUID companyId,
+      UUID branchId,
+      String branchName,
+      UUID fundAccountId,
+      String fundName,
+      @NullableInSchema String fundBankName,
+      String serialNo,
+      @NullableInSchema String bankCode,
+      @NullableInSchema String branchCode,
+      String startNumber,
+      String endNumber,
+      int leafCount,
+      int unusedCount,
+      int usedCount,
+      int voidCount,
+      Instant createdAt) {}
+
+  /** Koçan oluşturma sonucu; {@code skippedNumbers} fonda zaten kayıtlı olduğu için atlananlar. */
+  public record CheckBookCreatedResponse(
+      CheckBookResponse book, int createdCount, List<String> skippedNumbers) {}
+
+  /**
+   * Koçan yaprağı (12.3 §4.3). {@code fundIban} düz (OK-12.2-18); {@code instrument*} yaprağı
+   * gösteren etkin ya da en son çek.
+   */
+  public record CheckLeafResponse(
+      UUID id,
+      UUID checkBookId,
+      String checkBookSerial,
+      int leafNo,
+      String number,
+      @NullableInSchema String micrCode,
+      CheckLeafStatus status,
+      @NullableInSchema LocalDate usedDate,
+      @NullableInSchema String voidReason,
+      UUID fundAccountId,
+      String fundName,
+      @NullableInSchema String fundBankName,
+      @NullableInSchema String fundBankBranchName,
+      @NullableInSchema String fundIban,
+      UUID branchId,
+      String branchName,
+      UUID companyId,
+      @NullableInSchema UUID instrumentId,
+      @NullableInSchema InstrumentStatus instrumentStatus) {}
 
   /**
    * {@code movementType = TRANSFERRED}: cari taşıma (12.1 §3.11); durum değişmez, bağlı cari {@code
@@ -440,7 +646,9 @@ public final class FinanceDtos {
       InstrumentMovementType movementType,
       UUID fromAccountId,
       UUID toAccountId,
-      UUID accountTransferId) {}
+      UUID accountTransferId,
+      @NullableInSchema UUID fundAccountId,
+      @NullableInSchema String fundName) {}
 
   /**
    * Ödeme/tahsilat. {@code confirmWarnings} yalnız kullanıcı kayıt uçlarında anlamlıdır: şirket
@@ -634,7 +842,7 @@ public final class FinanceDtos {
   public record SettlementDetailResponse(
       SettlementListItemResponse item,
       List<SettlementLineResponse> lines,
-      @NullableInSchema InstrumentResponse instrument,
+      @NullableInSchema InstrumentListItemResponse instrument,
       @NullableInSchema PlanResponse plan,
       List<SettlementAllocationResponse> allocations,
       @NullableInSchema String fundIbanMasked,
@@ -833,12 +1041,254 @@ public final class FinanceDtos {
 
   public record ExpenseTypeResponse(UUID id, String code, String name) {}
 
+  /**
+   * Masraf kalemi (12.7 §4.1). {@code code} boşsa {@code MK-00001} dizisinden üretilir; MUI kodu
+   * yine gönderir.
+   */
   public record SaveExpenseItemRequest(
       @NotNull UUID expenseTypeId,
-      @NotBlank @Size(max = 50) String code,
-      @NotBlank @Size(max = 100) String name) {}
+      @NullableInSchema @Size(max = 50) String code,
+      @NotBlank @Size(max = 100) String name,
+      @NullableInSchema @Size(max = 500) String description,
+      @NullableInSchema @Size(max = 30) String defaultUnit) {}
 
-  public record ExpenseItemResponse(UUID id, UUID expenseTypeId, String code, String name) {}
+  /** ZTO "Sil": kalemi pasifleştirir ya da yeniden etkinleştirir. */
+  public record ExpenseItemActiveRequest(@NotNull Boolean active) {}
+
+  public record ExpenseItemResponse(
+      UUID id,
+      UUID expenseTypeId,
+      @NullableInSchema String expenseTypeName,
+      String code,
+      String name,
+      @NullableInSchema String description,
+      @NullableInSchema String defaultUnit,
+      boolean active,
+      boolean system,
+      Instant createdAt) {}
+
+  /** Masraf satırı; boş iskonto oranı, tevkifat ve diğer vergi 0 sayılır (12.7 §4.1). */
+  public record SaveExpenseLineRequest(
+      @NullableInSchema @Size(max = 300) String description,
+      @NotNull @Positive BigDecimal quantity,
+      @NullableInSchema @Size(max = 20) String unit,
+      @NotNull @PositiveOrZero BigDecimal unitPrice,
+      @NullableInSchema @DecimalMin("0") @DecimalMax("100") BigDecimal discountRate,
+      @NotNull @DecimalMin("0") @DecimalMax("100") BigDecimal vatRate,
+      @NullableInSchema @PositiveOrZero BigDecimal withholdingAmount,
+      @NullableInSchema @PositiveOrZero BigDecimal otherTaxAmount) {}
+
+  /**
+   * Genel masraf (12.7 §4.1). Şirket iş yerinden türetilir; bağlam kimliklerinden yalnız {@code
+   * contextType}'a karşılık gelen dolu olur. Tutarlar satırlardan sunucuda hesaplanır.
+   */
+  public record SaveExpenseRequest(
+      @NotNull UUID branchId,
+      @NotNull UUID expenseItemId,
+      @NotNull ExpenseContextType contextType,
+      @NullableInSchema UUID vehicleId,
+      @NullableInSchema UUID shipmentId,
+      @NullableInSchema UUID warehouseId,
+      @NullableInSchema UUID driverId,
+      @NotNull ExpensePaymentMethod paymentMethod,
+      @NullableInSchema UUID supplierAccountId,
+      @NullableInSchema UUID fundAccountId,
+      @NullableInSchema @Size(max = 50) String invoiceNumber,
+      @NotNull LocalDate invoiceDate,
+      @NullableInSchema LocalDate dueDate,
+      @NotBlank @Size(max = 40) String documentType,
+      @NotNull ExpenseDepartment department,
+      @NullableInSchema @Size(max = 500) String description,
+      @NotBlank @Pattern(regexp = "^[A-Z]{3}$") String currency,
+      @NullableInSchema @Positive BigDecimal exchangeRate,
+      @NotNull @Size(min = 1, max = 100) List<@NotNull @Valid SaveExpenseLineRequest> lines) {}
+
+  /** Şema adı filo {@code ReverseExpenseRequest} (araç gideri) ile çakışmasın diye ayrıdır. */
+  @Schema(name = "ExpenseReverseRequest")
+  public record ReverseExpenseRequest(
+      @NotNull LocalDate date, @NotBlank @Size(max = 500) String reason) {}
+
+  /** Düzeltme: eski kayıt ters çevrilir, yeni kayıt yazılır (12.7 §3.2.2). */
+  public record ReviseExpenseRequest(
+      @NotNull @Valid SaveExpenseRequest expense,
+      @NotBlank @Size(max = 500) String reason,
+      boolean removeDocument) {}
+
+  public record ExpenseLineResponse(
+      UUID id,
+      int lineNo,
+      @NullableInSchema String description,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal quantity,
+      @NullableInSchema String unit,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal unitPrice,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal subTotal,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal discountRate,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal discountAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal netAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal vatRate,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal vatAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal withholdingAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal otherTaxAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal totalAmount) {}
+
+  public record ExpenseDetailResponse(
+      UUID id,
+      UUID companyId,
+      UUID branchId,
+      String branchName,
+      UUID expenseItemId,
+      @NullableInSchema String expenseItemName,
+      @NullableInSchema String expenseTypeName,
+      ExpenseContextType contextType,
+      @NullableInSchema UUID vehicleId,
+      @NullableInSchema UUID shipmentId,
+      @NullableInSchema UUID warehouseId,
+      @NullableInSchema UUID driverId,
+      @NullableInSchema String contextLabel,
+      ExpensePaymentMethod paymentMethod,
+      @NullableInSchema UUID supplierAccountId,
+      @NullableInSchema String supplierName,
+      @NullableInSchema UUID fundAccountId,
+      @NullableInSchema String fundName,
+      @NullableInSchema UUID settlementId,
+      @NullableInSchema String invoiceNumber,
+      LocalDate invoiceDate,
+      @NullableInSchema LocalDate dueDate,
+      String documentType,
+      ExpenseDepartment department,
+      @NullableInSchema String description,
+      String currency,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal exchangeRate,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal subTotal,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal discountAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal netAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal vatAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal withholdingAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal otherTaxAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal totalAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal tlAmount,
+      ExpenseStatus status,
+      @NullableInSchema UUID replacesExpenseId,
+      @NullableInSchema LocalDate reversedOn,
+      @NullableInSchema String reverseReason,
+      List<ExpenseLineResponse> lines,
+      Instant createdAt,
+      String createdBy) {}
+
+  public record ExpenseListItemResponse(
+      UUID id,
+      @NullableInSchema String invoiceNumber,
+      @NullableInSchema String description,
+      UUID expenseItemId,
+      @NullableInSchema String expenseItemName,
+      @NullableInSchema String expenseTypeName,
+      ExpenseDepartment department,
+      UUID companyId,
+      UUID branchId,
+      String branchName,
+      ExpenseContextType contextType,
+      @NullableInSchema String contextLabel,
+      ExpensePaymentMethod paymentMethod,
+      @NullableInSchema String supplierName,
+      String currency,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal totalAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal tlAmount,
+      LocalDate invoiceDate,
+      @NullableInSchema LocalDate dueDate,
+      String documentType,
+      boolean hasDocument,
+      Instant createdAt) {}
+
+  /** Para birimi başına masraf sayısı ve toplamı (Rev 1 F3: CurrencyTotal kaydından ayrı). */
+  public record ExpenseCurrencyTotalResponse(
+      String currency,
+      long count,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal totalAmount) {}
+
+  /** Kalem özeti (ZTO IndexExpenses); son tedarikçinin VKN/TCKN'si yalnız maskeli. */
+  public record ExpenseItemSummaryResponse(
+      UUID expenseItemId,
+      String expenseItemName,
+      String expenseItemCode,
+      @NullableInSchema String expenseTypeName,
+      @NullableInSchema UUID lastSupplierAccountId,
+      @NullableInSchema String lastSupplierName,
+      @NullableInSchema String lastSupplierTaxNumberMasked,
+      @NullableInSchema String lastSupplierPhone,
+      @NullableInSchema String lastSupplierCity,
+      List<String> branchNames,
+      long invoiceCount,
+      List<ExpenseCurrencyTotalResponse> totals,
+      @NullableInSchema LocalDate lastInvoiceDate) {}
+
+  public record ExpenseCalendarEntryResponse(
+      UUID id,
+      UUID expenseItemId,
+      @NullableInSchema String expenseItemName,
+      @NullableInSchema String expenseTypeName,
+      @NullableInSchema String invoiceNumber,
+      ExpenseContextType contextType,
+      @NullableInSchema String contextLabel,
+      @NullableInSchema String supplierName,
+      ExpenseDepartment department,
+      LocalDate invoiceDate,
+      String currency,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal totalAmount) {}
+
+  public record ExpenseCalendarDayResponse(
+      LocalDate date, List<ExpenseCalendarEntryResponse> expenses) {}
+
+  public record ExpenseAllTimeResponse(
+      String currency,
+      long count,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal netAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal vatAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal discountAmount,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal totalAmount) {}
+
+  public record ExpenseCalendarResponse(
+      int year,
+      int month,
+      List<ExpenseCalendarDayResponse> days,
+      List<ExpenseAllTimeResponse> allTime) {}
+
+  public record ExpenseMonthlyResponse(
+      String month,
+      @NullableInSchema UUID expenseTypeId,
+      @NullableInSchema String expenseTypeName,
+      @JsonFormat(shape = JsonFormat.Shape.STRING) @Schema(type = "string", format = "decimal")
+          BigDecimal tlAmount) {}
+
+  public record ExpenseContextOptionResponse(
+      UUID id, String label, @NullableInSchema UUID branchId) {}
 
   public record CurrencyResponse(String code, String name) {}
 

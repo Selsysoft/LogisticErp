@@ -288,6 +288,90 @@ const ZtoDailySettlementReportPage = lazyPage(
   () => import("./zto/finans/pages/settlements/DailySettlementReportPage"),
   "DailySettlementReportPage",
 );
+// 12.3 çek / senet (12.3_TASARIM §5.3): listeler, koçanlar, düzenle ve belgeler kabuk içinde; Detaylı
+// Çek Raporu kabuk dışında yazdırma sayfası.
+const ZtoChecksPage = lazyPage(
+  () => import("./zto/finans/pages/instruments/ChecksPage"),
+  "ChecksPage",
+);
+const ZtoBillsPage = lazyPage(
+  () => import("./zto/finans/pages/instruments/BillsPage"),
+  "BillsPage",
+);
+const ZtoCheckBooksPage = lazyPage(
+  () => import("./zto/finans/pages/instruments/CheckBooksPage"),
+  "CheckBooksPage",
+);
+const ZtoEditInstrumentPage = lazyPage(
+  () => import("./zto/finans/pages/instruments/EditInstrumentPage"),
+  "EditInstrumentPage",
+);
+const ZtoCheckDocumentsPage = lazyPage(
+  () => import("./zto/finans/pages/instruments/CheckDocumentsPage"),
+  "CheckDocumentsPage",
+);
+const ZtoCheckDetailedReportPage = lazyPage(
+  () => import("./zto/finans/pages/instruments/CheckDetailedReportPage"),
+  "CheckDetailedReportPage",
+);
+// 12.7 (§5.3): masraf kalemleri, genel masraf ve sevk nakliye masrafları (adlı dışa aktarım).
+const ZtoExpenseItemsPage = lazyPage(
+  () => import("./zto/finans/pages/expenses/ExpenseItemsPage"),
+  "ExpenseItemsPage",
+);
+const ZtoExpenseItemFormPage = lazyPage(
+  () => import("./zto/finans/pages/expenses/ExpenseItemFormPage"),
+  "ExpenseItemFormPage",
+);
+const ZtoGeneralExpensesPage = lazyPage(
+  () => import("./zto/finans/pages/expenses/GeneralExpensesPage"),
+  "GeneralExpensesPage",
+);
+const ZtoGeneralExpensesCalendarPage = lazyPage(
+  () => import("./zto/finans/pages/expenses/GeneralExpensesCalendarPage"),
+  "GeneralExpensesCalendarPage",
+);
+const ZtoExpenseItemInvoicesPage = lazyPage(
+  () => import("./zto/finans/pages/expenses/ExpenseItemInvoicesPage"),
+  "ExpenseItemInvoicesPage",
+);
+const ZtoGeneralExpenseFormPage = lazyPage(
+  () => import("./zto/finans/pages/expenses/GeneralExpenseFormPage"),
+  "GeneralExpenseFormPage",
+);
+const ZtoSubcontractCostsPage = lazyPage(
+  () => import("./zto/finans/pages/subcontract/SubcontractCostsPage"),
+  "SubcontractCostsPage",
+);
+const ZtoSubcontractCarrierDetailPage = lazyPage(
+  () => import("./zto/finans/pages/subcontract/SubcontractCarrierDetailPage"),
+  "SubcontractCarrierDetailPage",
+);
+// 12.8 (§5.3): finans raporları, kur farkı, nakit akışı, para birimleri.
+const ZtoFinanceReportPage = lazyPage(
+  () => import("./zto/finans/pages/reports/FinanceReportPage"),
+  "FinanceReportPage",
+);
+const ZtoCustomerAccountReportPage = lazyPage(
+  () => import("./zto/finans/pages/reports/CustomerAccountReportPage"),
+  "CustomerAccountReportPage",
+);
+const ZtoBalanceSheetPage = lazyPage(
+  () => import("./zto/finans/pages/reports/BalanceSheetPage"),
+  "BalanceSheetPage",
+);
+const ZtoFxDifferenceReportPage = lazyPage(
+  () => import("./zto/finans/pages/reports/FxDifferenceReportPage"),
+  "FxDifferenceReportPage",
+);
+const ZtoCashFlowPage = lazyPage(
+  () => import("./zto/finans/pages/reports/CashFlowPage"),
+  "CashFlowPage",
+);
+const ZtoCurrenciesPage = lazyPage(
+  () => import("./zto/finans/pages/definitions/CurrenciesPage"),
+  "CurrenciesPage",
+);
 // Bileşen vitrini yalnız geliştirme ortamında; üretim paketine girmez.
 const ZtoShowcasePage = import.meta.env.DEV
   ? lazyPage(() => import("./zto/finans/pages/ShowcasePage"), "ShowcasePage")
@@ -376,6 +460,19 @@ export function App() {
                 <ZtoFinansRoot className="zto-print zto-page-fund-activity-report">
                   <Suspense fallback={null}>
                     <ZtoFundActivityReportPage />
+                  </Suspense>
+                </ZtoFinansRoot>
+              </RequirePermission>
+            }
+          />
+          {/* 12.3 Detaylı Çek Raporu (ZTO CheckDetailedReport): aynı kabuk dışı yazdırma deseni. */}
+          <Route
+            path="/zto-finans-yazdir/cek-raporu"
+            element={
+              <RequirePermission permission="FINANCE_VIEW">
+                <ZtoFinansRoot className="zto-print zto-page-check-detailed-report">
+                  <Suspense fallback={null}>
+                    <ZtoCheckDetailedReportPage />
                   </Suspense>
                 </ZtoFinansRoot>
               </RequirePermission>
@@ -506,6 +603,132 @@ export function App() {
               <Route
                 path="tahsilatlar/gunluk-rapor"
                 element={<ZtoDailySettlementReportPage key="COLLECTION" type="COLLECTION" />}
+              />
+              <Route path="cekler" element={<ZtoChecksPage />} />
+              <Route path="cekler/kocanlar" element={<ZtoCheckBooksPage />} />
+              <Route
+                path="cekler/:id/duzenle"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_PAYMENT_CREATE">
+                    <ZtoEditInstrumentPage key="CHECK" kind="CHECK" />
+                  </ZtoRequirePermission>
+                }
+              />
+              {/* Belgeleri görmek FINANCE_VIEW (kabuk); yükleme/silme düğmeleri sayfada izne bağlı. */}
+              <Route path="cekler/:id/belgeler" element={<ZtoCheckDocumentsPage />} />
+              <Route path="senetler" element={<ZtoBillsPage />} />
+              <Route
+                path="senetler/:id/duzenle"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_PAYMENT_CREATE">
+                    <ZtoEditInstrumentPage key="NOTE" kind="NOTE" />
+                  </ZtoRequirePermission>
+                }
+              />
+              {/* 12.7 (§5.3): sevk nakliye masrafları SHIPMENT_VIEW; masraf yazımı FINANCE_MANAGE. */}
+              <Route
+                path="sevk-nakliye-masraflari"
+                element={
+                  <ZtoRequirePermission permission="SHIPMENT_VIEW">
+                    <ZtoSubcontractCostsPage />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="sevk-nakliye-masraflari/firma/:accountId"
+                element={
+                  <ZtoRequirePermission permission="SHIPMENT_VIEW">
+                    <ZtoSubcontractCarrierDetailPage />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route path="genel-masraflar" element={<ZtoGeneralExpensesPage />} />
+              <Route path="genel-masraflar/takvim" element={<ZtoGeneralExpensesCalendarPage />} />
+              <Route
+                path="genel-masraflar/kalem/:itemId"
+                element={<ZtoExpenseItemInvoicesPage />}
+              />
+              <Route
+                path="genel-masraflar/yeni"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_MANAGE">
+                    <ZtoGeneralExpenseFormPage />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="genel-masraflar/:id/duzenle"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_MANAGE">
+                    <ZtoGeneralExpenseFormPage />
+                  </ZtoRequirePermission>
+                }
+              />
+              {/* 12.8 (§5.3): rapor ekranları FINANCE_VIEW (kabuk da ister; ZTO erişim reddi görünümü). */}
+              <Route
+                path="finans-raporlari"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_VIEW">
+                    <ZtoFinanceReportPage />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="cari-raporlari"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_VIEW">
+                    <ZtoCustomerAccountReportPage />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="bilanco"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_VIEW">
+                    <ZtoBalanceSheetPage />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="kur-farki-raporu"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_VIEW">
+                    <ZtoFxDifferenceReportPage />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="nakit-akis"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_VIEW">
+                    <ZtoCashFlowPage />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="tanimlar/para-birimleri"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_VIEW">
+                    <ZtoCurrenciesPage />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route path="tanimlar/masraf-kalemleri" element={<ZtoExpenseItemsPage />} />
+              <Route
+                path="tanimlar/masraf-kalemleri/yeni"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_MANAGE">
+                    <ZtoExpenseItemFormPage />
+                  </ZtoRequirePermission>
+                }
+              />
+              <Route
+                path="tanimlar/masraf-kalemleri/:id/duzenle"
+                element={
+                  <ZtoRequirePermission permission="FINANCE_MANAGE">
+                    <ZtoExpenseItemFormPage />
+                  </ZtoRequirePermission>
+                }
               />
               <Route
                 path="tanimlar/is-yerleri"

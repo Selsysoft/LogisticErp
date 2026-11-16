@@ -1,0 +1,493 @@
+/*
+ * Kaynak: ZtoFabrika/Views/SalesTruckExpenses/CompanySalesDetails.cshtml <style> :86-387, :1680-1784 (12.7_TASARIM §5.3).
+ * Birebir kopya (FE-0); kurallar .zto-finans.zto-page-sales-truck-details altına alınır (prefixTransform.ts).
+ * Değişiklikler: Razor kaçışı @@ → @.
+ */
+/* --- Views/SalesTruckExpenses/CompanySalesDetails.cshtml <style> :86-387 --- */
+/* ESKİ CSS KODLARI - AYNEN KALIYOR */
+.detail-container {
+  margin-top: 20px;
+}
+
+.detail-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 8px;
+}
+
+.detail-table td {
+  font-size: 11px;
+  vertical-align: middle;
+  padding: 8px;
+}
+
+.table-bordered {
+  border: none !important;
+}
+
+.table-bordered th,
+.table-bordered td {
+  border: none !important;
+}
+
+.table-bordered thead th {
+  border-bottom: 1px solid #dee2e6 !important;
+}
+
+.table-bordered tbody tr {
+  border-bottom: 1px solid #f1f1f1 !important;
+}
+
+.table-bordered tbody tr:last-child {
+  border-bottom: none !important;
+}
+
+.amount-positive {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.amount-negative {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.amount-zero {
+  color: #6c757d;
+}
+
+/* --- Soft Kompakt Stat Kartları --- */
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  border-left: 4px solid var(--accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+  margin-bottom: 14px;
+}
+.stat-card.--blue {
+  --accent: #4e73df;
+}
+.stat-card.--purple {
+  --accent: #6f42c1;
+}
+.stat-card.--green {
+  --accent: #1cc88a;
+}
+.stat-card.--red {
+  --accent: #e74a3b;
+}
+.stat-label {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 3px;
+}
+.stat-label i {
+  color: var(--accent);
+  margin-right: 4px;
+}
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #2c3e50;
+  line-height: 1.2;
+}
+.stat-value.small-val {
+  font-size: 13px;
+}
+
+/* Tablo hücre renkleri */
+.td-normal {
+  color: #333;
+  font-weight: normal;
+}
+
+.td-balance {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+/* Toplam satırı stilleri */
+.total-row {
+  background-color: #667eea !important;
+  color: white !important;
+  font-weight: bold;
+}
+
+.total-row td {
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+}
+
+.total-label {
+  color: white !important;
+  font-size: 13px;
+  text-align: center !important;
+}
+
+/* ✅ TOPLAM satırını her zaman en üstte tutmak için tfoot → table-header-group hilesi.
+   Sıralama (asc/desc) ve pagination'dan bağımsız olarak başlığın hemen altında sabit kalır. */
+#dataTable2 tfoot.total-row-foot {
+  display: table-header-group;
+}
+
+#dataTable2 tfoot.total-row-foot tr.total-row {
+  background-color: #667eea !important;
+  color: #fff !important;
+}
+
+#dataTable2 tfoot.total-row-foot tr.total-row td {
+  border-top: 2px solid #4f46e5 !important;
+  border-bottom: 2px solid #4f46e5 !important;
+}
+
+.total-value {
+  color: white !important;
+  font-weight: 600;
+}
+
+.total-balance {
+  font-weight: bold;
+  font-size: 13px !important;
+}
+
+.custom-breadcrumb {
+  display: block !important;
+  background-color: transparent;
+  padding: 15px 0 0 0 !important;
+  margin-bottom: 20px !important;
+}
+
+.custom-breadcrumb .breadcrumb {
+  background: transparent !important;
+  padding: 0.75rem 1rem !important;
+  margin: 0 !important;
+  border-radius: 0.25rem;
+}
+
+.custom-breadcrumb .breadcrumb-item + .breadcrumb-item::before {
+  content: ">" !important;
+  color: #6c757d !important;
+}
+
+.custom-breadcrumb .breadcrumb-item a {
+  color: #007bff !important;
+  text-decoration: none !important;
+}
+
+.custom-breadcrumb .breadcrumb-item.active {
+  color: #6c757d !important;
+}
+
+.page-header {
+  margin-bottom: 25px;
+  padding: 0;
+}
+
+.page-title {
+  color: #2c3e50;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.page-subtitle {
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.plate-badge {
+  background-color: #6c757d !important;
+  color: white !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  display: inline-block !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+/* Layout düzenlemeleri */
+.main-content {
+  padding: 0 15px;
+}
+
+/* Tablo düzenlemeleri */
+.table-container {
+  margin-top: 0;
+}
+
+/* Card header filtre stili */
+.card-header-with-filter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  background-color: #007bff !important;
+  color: white !important;
+}
+
+.card-header-with-filter h6 {
+  color: white !important;
+  margin: 0;
+}
+
+.card-header-with-filter i {
+  color: white !important;
+}
+
+.record-count-badge {
+  background-color: white;
+  color: #007bff;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.dt-buttons .btn.btn-blue {
+  background-color: #007bff !important;
+  color: white !important;
+}
+
+.dt-buttons .btn.btn-green {
+  background-color: #28a745 !important;
+  color: white !important;
+}
+
+.dt-buttons .btn.btn-grey {
+  background-color: #505050 !important;
+  color: white !important;
+}
+
+.dt-buttons .btn.btn-red {
+  background-color: #dc3545 !important;
+  color: white !important;
+}
+
+.main-content {
+  padding: 20px 15px 0 15px !important;
+}
+
+.btn-info {
+  color: black !important;
+  background-color: #ffc107 !important;
+  border-color: #ffc107 !important;
+}
+
+/* YENİ: Summary card başlık stilleri */
+.stat-card h6,
+.stat-card h4 {
+  margin: 0;
+}
+
+/* Modal backdrop için */
+.modal-backdrop {
+  opacity: 0.5;
+}
+
+/* Toast için */
+.toast {
+  min-width: 300px;
+  max-width: 400px;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.toast-header {
+  border-bottom: none;
+}
+
+/* Loading spinner */
+.spinner-border {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Modal section styles */
+.modal-section {
+  border-bottom: 1px solid #f0f0f0;
+}
+.modal-section:last-child {
+  border-bottom: none;
+}
+.modal-section-header {
+  background: #f8f9fa;
+  padding: 7px 16px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  border-bottom: 1px solid #eee;
+}
+.modal-section-body {
+  padding: 12px 16px;
+}
+.modal-label {
+  font-size: 11px;
+  color: #6c757d;
+  font-weight: 500;
+  margin-bottom: 3px;
+  display: block;
+}
+.modal-content {
+  border-radius: 12px;
+  overflow: hidden;
+  border: none;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
+}
+.modal-header.modal-header-gradient {
+  background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+  border-bottom: none;
+  padding: 14px 18px;
+}
+
+/* --- Views/SalesTruckExpenses/CompanySalesDetails.cshtml <style> :1680-1784 --- */
+.modern-stat-card {
+  background: white;
+  border-radius: 10px;
+  padding: 0.9rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  border-left: 4px solid;
+  margin-bottom: 0.75rem;
+  height: 100%;
+  min-width: 0;
+}
+.modern-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+.modern-stat-card.primary {
+  border-left-color: #0d6efd;
+}
+.modern-stat-card.success {
+  border-left-color: #198754;
+}
+.modern-stat-card.info {
+  border-left-color: #0dcaf0;
+}
+.modern-stat-card.warning {
+  border-left-color: #ffc107;
+}
+.modern-stat-card.danger {
+  border-left-color: #dc3545;
+}
+.modern-stat-card.purple {
+  border-left-color: #6f42c1;
+}
+.modern-stat-card.teal {
+  border-left-color: #20c997;
+}
+.modern-stat-card.orange {
+  border-left-color: #fd7e14;
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+.stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.stat-icon.primary {
+  background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+  color: white;
+}
+.stat-icon.success {
+  background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+  color: white;
+}
+.stat-icon.info {
+  background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);
+  color: white;
+}
+.stat-icon.warning {
+  background: linear-gradient(135deg, #ffc107 0%, #cc9a06 100%);
+  color: white;
+}
+.stat-icon.danger {
+  background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
+  color: white;
+}
+.stat-icon.purple {
+  background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+  color: white;
+}
+.stat-icon.teal {
+  background: linear-gradient(135deg, #20c997 0%, #1aa179 100%);
+  color: white;
+}
+.stat-icon.orange {
+  background: linear-gradient(135deg, #fd7e14 0%, #dc6502 100%);
+  color: white;
+}
+
+.stat-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.stat-content {
+  display: grid;
+  gap: 0.6rem;
+}
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  transition: background 0.2s;
+  min-width: 0;
+}
+.stat-item:hover {
+  background: #e9ecef;
+}
+.stat-item-icon {
+  color: #6c757d;
+  font-size: 0.9rem;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.stat-item-label {
+  font-size: 0.78rem;
+  color: #6c757d;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 95px;
+}
+.stat-item-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #212529;
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 55%;
+}
+.stat-item-value.highlight {
+  color: #dc3545;
+  font-weight: 700;
+}

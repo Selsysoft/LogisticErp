@@ -5,11 +5,33 @@ import {
   accountEditPath,
   accountTransactionsPath,
   activeItemIds,
+  balanceSheetPath,
   bankAccountEditPath,
+  cashFlowPath,
+  currenciesPath,
+  customerAccountReportPath,
+  financeReportPath,
+  fxReportPath,
+  carrierDetailPath,
+  expenseCalendarPath,
+  expenseEditPath,
+  expenseItemEditPath,
+  expenseItemInvoicesPath,
+  generalExpensesPath,
+  newExpenseItemPath,
+  newExpensePath,
+  shipmentExpensesPath,
   bankDetailPath,
   bankEditPath,
+  billEditPath,
+  billsPath,
   canonicalTransferType,
   cashEditPath,
+  checkBooksPath,
+  checkDetailedReportPath,
+  checkDocumentsPath,
+  checkEditPath,
+  checksPath,
   collectionsPath,
   dailySettlementReportPath,
   exchangeBreakReportPath,
@@ -39,10 +61,11 @@ import {
 } from "./navItems";
 
 const items = ZTO_NAV_SECTIONS.flatMap((s) => s.items);
-// ZTO finans yan menüsünün (_SideMenu_FinanceItems) öğeleri; TEMEL TANIMLAR (_Layout + Blackrose eki)
-// ve vitrin bu sıra/sayım testlerine girmez.
+// ZTO finans yan menüsünün (_SideMenu_FinanceItems) öğeleri; TEMEL TANIMLAR (_Layout + Blackrose eki),
+// 12.8 ekleri (Cari Hesap Raporları, reçeteli finans menüsü) ve vitrin bu sıra/sayım testlerine girmez.
 const ztoItems = items.filter((i) => !i.devOnly && isFinanceMenuItem(i));
-const definitionItems = items.filter((i) => !i.devOnly && !isFinanceMenuItem(i));
+// 12.8 (§5.3): TEMEL TANIMLAR öğeleri kaynak dosyasıyla değil bölüm kimliğiyle türetilir.
+const definitionItems = ZTO_NAV_SECTIONS.find((s) => s.id === "basic-definitions")!.items;
 const STEPS = [
   "12.1",
   "12.1a",
@@ -112,8 +135,10 @@ describe("ZTO finans menü kaydı", () => {
     for (const item of ztoItems) expect(STEPS, item.id).toContain(item.step);
   });
 
-  it("uygulanmış ekranlar: 12.1 cari, 12.2 banka/kasa, 12.2a ödeme/tahsilat, tanımlar, vitrin", () => {
+  it("uygulanmış ekranlar: 12.1 cari, 12.2 banka/kasa, 12.2a ödeme/tahsilat, 12.3 çek/senet, 12.7 masraf, 12.8 raporlar, tanımlar, vitrin", () => {
     expect(items.filter((i) => i.implemented).map((i) => i.id)).toEqual([
+      "financeReports",
+      "customerAccountReport",
       "allTransactions",
       "quickTransaction",
       "accounts",
@@ -125,6 +150,16 @@ describe("ZTO finans menü kaydı", () => {
       "transferCenter",
       "payments",
       "collections",
+      "checks",
+      "bills",
+      "quickBalance",
+      "balanceSheet",
+      "fxReport",
+      "cashFlow",
+      "shipmentTransportExpenses",
+      "generalExpenses",
+      "expenseItems",
+      "currencies",
       "workPlaces",
       "branchGroups",
       "companies",
@@ -145,7 +180,34 @@ describe("ZTO finans menü kaydı", () => {
       transferCenter: "transfer-merkezi",
       payments: "odemeler",
       collections: "tahsilatlar",
+      checks: "cekler",
+      bills: "senetler",
+      expenseItems: "tanimlar/masraf-kalemleri",
+      generalExpenses: "genel-masraflar",
+      expenseCalendar: "genel-masraflar/takvim",
+      shipmentExpenses: "sevk-nakliye-masraflari",
+      financeReports: "finans-raporlari",
+      customerAccountReport: "cari-raporlari",
+      balanceSheet: "bilanco",
+      fxReport: "kur-farki-raporu",
+      cashFlow: "nakit-akis",
+      currencies: "tanimlar/para-birimleri",
     });
+    // 12.7: Sevk Nakliye Masrafları (SHIPMENT_VIEW) ve Genel Masraf alt yollarda da etkin.
+    const transport = items.find((i) => i.id === "shipmentTransportExpenses")!;
+    expect([transport.step, transport.permission, transport.matchPrefix]).toEqual([
+      "12.7",
+      "SHIPMENT_VIEW",
+      true,
+    ]);
+    const general = items.find((i) => i.id === "generalExpenses")!;
+    expect([general.step, general.permission, general.matchPrefix]).toEqual([
+      "12.7",
+      undefined,
+      true,
+    ]);
+    expect(isActive(general, "/zto-finans/genel-masraflar/takvim")).toBe(true);
+    expect(isActive(transport, "/zto-finans/sevk-nakliye-masraflari/firma/a1")).toBe(true);
     const accounts = items.find((i) => i.id === "accounts")!;
     expect(accounts.matchPrefix).toBe(true);
     const add = items.find((i) => i.id === "newAccount")!;
@@ -160,16 +222,16 @@ describe("ZTO finans menü kaydı", () => {
       ["kasa-hareketleri", "12.2", true, false],
       ["transfer-merkezi", "12.2", true, false],
     ]);
-    // 12.2a: Ödemeler ve Tahsilatlar sayfa bağlantısı, günlük rapor alt yolunda da etkin; Çekler ve
-    // Senetler 12.3'te.
+    // 12.2a: Ödemeler ve Tahsilatlar sayfa bağlantısı, günlük rapor alt yolunda da etkin; 12.3: Çekler
+    // ve Senetler alt yollarda (koçanlar, düzenle, belgeler) da etkin.
     const paymentCollection = ZTO_NAV_SECTIONS.find((s) => s.id === "paymentCollection")!.items;
     expect(
       paymentCollection.map((i) => [i.slug, i.step, isNavigable(i), i.matchPrefix ?? false]),
     ).toEqual([
       ["odemeler", "12.2a", true, true],
       ["tahsilatlar", "12.2a", true, true],
-      ["cekler", "12.3", false, false],
-      ["senetler", "12.3", false, false],
+      ["cekler", "12.3", true, true],
+      ["senetler", "12.3", true, true],
     ]);
     // Tüm Planlamalar 12.4'te (plan modalları).
     expect(items.find((i) => i.id === "allPlans")!.implemented).toBe(false);
@@ -182,24 +244,40 @@ describe("ZTO finans menü kaydı", () => {
     expect(section.label).toBe("sectionBasicDefinitions");
     expect(section.icon).toBe("fas fa-sitemap");
     expect(definitionItems.map((i) => [i.id, i.slug, i.source.file, i.source.line])).toEqual([
+      ["expenseItems", "tanimlar/masraf-kalemleri", "_Layout", 1201],
+      ["currencies", "tanimlar/para-birimleri", "_Layout", 1268],
       ["workPlaces", "tanimlar/is-yerleri", "_Layout", 1284],
       ["branchGroups", "tanimlar/subeler", "_Layout", 1288],
       ["companies", "tanimlar/sirketler", "blackrose", 0],
     ]);
-    for (const item of definitionItems) {
-      expect(item.permission).toBe("BRANCH_VIEW");
+    // 12.8 (§5.3): Para Birimleri ayrı doğrulanır (FINANCE_VIEW, alt yolu yok).
+    const currencies = definitionItems.find((i) => i.id === "currencies")!;
+    expect([currencies.permission, currencies.step, currencies.matchPrefix]).toEqual([
+      "FINANCE_VIEW",
+      "12.8",
+      undefined,
+    ]);
+    expect(isNavigable(currencies)).toBe(true);
+    for (const item of definitionItems.filter((i) => i.id !== "currencies")) {
+      // 12.7: Masraf Kalemleri finans izniyle; diğer tanımlar iş yeri izniyle (12.1a).
+      const expense = item.id === "expenseItems";
+      expect(item.permission).toBe(expense ? "FINANCE_VIEW" : "BRANCH_VIEW");
       expect(item.matchPrefix).toBe(true);
-      expect(item.step).toBe("12.1a");
+      expect(item.step).toBe(expense ? "12.7" : "12.1a");
       expect(isNavigable(item)).toBe(true);
     }
     expect(isFinanceMenuItem(items.find((i) => i.id === "payments")!)).toBe(true);
   });
 
   it("izin süzgeci: izinsiz öğe gizli, boş kalan bölüm atılır", () => {
-    const withoutBranch = visibleSections(false, ZTO_NAV_SECTIONS, (p) => p !== "BRANCH_VIEW");
+    const withoutBranch = visibleSections(
+      false,
+      ZTO_NAV_SECTIONS,
+      (p) => p !== "BRANCH_VIEW" && p !== "FINANCE_VIEW",
+    );
     expect(withoutBranch.some((s) => s.id === "basic-definitions")).toBe(false);
     const all = visibleSections(false, ZTO_NAV_SECTIONS, () => true);
-    expect(all.find((s) => s.id === "basic-definitions")?.items).toHaveLength(3);
+    expect(all.find((s) => s.id === "basic-definitions")?.items).toHaveLength(5);
     // Varsayılan can: hepsi görünür.
     expect(visibleSections(false)).toEqual(all);
     const asked: string[] = [];
@@ -207,7 +285,9 @@ describe("ZTO finans menü kaydı", () => {
       asked.push(p);
       return true;
     });
-    expect(new Set(asked)).toEqual(new Set(["BRANCH_VIEW", "FINANCE_MANAGE"]));
+    expect(new Set(asked)).toEqual(
+      new Set(["BRANCH_VIEW", "FINANCE_MANAGE", "FINANCE_VIEW", "SHIPMENT_VIEW"]),
+    );
     const withoutManage = visibleSections(false, ZTO_NAV_SECTIONS, (p) => p !== "FINANCE_MANAGE");
     expect(withoutManage.flatMap((s) => s.items).some((i) => i.id === "newAccount")).toBe(false);
   });
@@ -490,5 +570,175 @@ describe("12.2a yol yardımcıları (§5.3)", () => {
       dailySettlementReportPath("PAYMENT", { reportDate: "", workPlaceIds: ["a,b", "", "c"] }),
     ).toBe("/zto-finans/odemeler/gunluk-rapor?workPlaceIds=a%2Cb,c");
     expect(stepOf("tahsilatlar")).toBe("12.2a");
+  });
+});
+
+describe("12.3 çek / senet yolları (§5.3)", () => {
+  it("çekler: ZTO parametre adları; false/boş yazılmaz", () => {
+    expect(checksPath()).toBe("/zto-finans/cekler");
+    expect(
+      checksPath({
+        bankId: "f1",
+        workPlaceId: "w1",
+        currencyId: "USD",
+        openCheckPaymentModal: true,
+      }),
+    ).toBe("/zto-finans/cekler?bankId=f1&workPlaceId=w1&currencyId=USD&openCheckPaymentModal=true");
+    expect(
+      checksPath({ accountId: "a 1", status: "PORTFOLIO", openCheckPaymentModal: false }),
+    ).toBe("/zto-finans/cekler?accountId=a%201&status=PORTFOLIO");
+  });
+
+  it("senetler, koçanlar, düzenle, belgeler, rapor", () => {
+    expect(billsPath()).toBe("/zto-finans/senetler");
+    expect(billsPath({ accountId: "a1", openBillPaymentModal: true })).toBe(
+      "/zto-finans/senetler?accountId=a1&openBillPaymentModal=true",
+    );
+    expect(checkBooksPath()).toBe("/zto-finans/cekler/kocanlar");
+    expect(checkEditPath("i/1")).toBe("/zto-finans/cekler/i%2F1/duzenle");
+    expect(billEditPath("n1")).toBe("/zto-finans/senetler/n1/duzenle");
+    expect(checkDocumentsPath("i1")).toBe("/zto-finans/cekler/i1/belgeler");
+    expect(checkDetailedReportPath({ from: "2026-11-01", to: "2026-11-30" })).toBe(
+      "/zto-finans-yazdir/cek-raporu?from=2026-11-01&to=2026-11-30",
+    );
+    expect(checkDetailedReportPath()).toBe("/zto-finans-yazdir/cek-raporu");
+  });
+
+  it("alt yollar Çekler / Senetler öğesini etkin yapar", () => {
+    const checks = items.find((i) => i.id === "checks")!;
+    const bills = items.find((i) => i.id === "bills")!;
+    expect(isActive(checks, checkBooksPath())).toBe(true);
+    expect(isActive(checks, checkEditPath("i1"))).toBe(true);
+    expect(isActive(bills, billEditPath("n1"))).toBe(true);
+    expect(isActive(bills, checkEditPath("i1"))).toBe(false);
+    expect(stepOf("cekler")).toBe("12.3");
+  });
+});
+
+describe("12.7 masraf ve taşeron yolları (§5.3)", () => {
+  it("masraf kalemleri, genel masraf, takvim, kalem faturaları; kimlik kodlanır", () => {
+    expect(newExpenseItemPath()).toBe("/zto-finans/tanimlar/masraf-kalemleri/yeni");
+    expect(expenseItemEditPath("k/1")).toBe("/zto-finans/tanimlar/masraf-kalemleri/k%2F1/duzenle");
+    expect(generalExpensesPath()).toBe("/zto-finans/genel-masraflar");
+    expect(expenseCalendarPath()).toBe("/zto-finans/genel-masraflar/takvim");
+    expect(expenseItemInvoicesPath("k1")).toBe("/zto-finans/genel-masraflar/kalem/k1");
+    expect(newExpensePath()).toBe("/zto-finans/genel-masraflar/yeni");
+    expect(expenseEditPath("e1")).toBe("/zto-finans/genel-masraflar/e1/duzenle");
+  });
+
+  it("sevk nakliye masrafları ve firma detayı; gün isteğe bağlı", () => {
+    expect(shipmentExpensesPath()).toBe("/zto-finans/sevk-nakliye-masraflari");
+    expect(shipmentExpensesPath(90)).toBe("/zto-finans/sevk-nakliye-masraflari?days=90");
+    expect(carrierDetailPath("a 1")).toBe("/zto-finans/sevk-nakliye-masraflari/firma/a%201");
+    expect(carrierDetailPath("a1", 150)).toBe(
+      "/zto-finans/sevk-nakliye-masraflari/firma/a1?days=150",
+    );
+  });
+
+  it("alt yollar Masraf Kalemleri öğesini etkin yapar", () => {
+    const expenseItems = items.find((i) => i.id === "expenseItems")!;
+    expect(isActive(expenseItems, newExpenseItemPath())).toBe(true);
+    expect(isActive(expenseItems, expenseItemEditPath("k1"))).toBe(true);
+    expect(stepOf("tanimlar/masraf-kalemleri")).toBe("12.7");
+    expect(stepOf("genel-masraflar")).toBe("12.7");
+  });
+});
+
+describe("12.8 rapor menüsü ve yolları (§5.3)", () => {
+  it("Cari İşlemleri: Finans Raporları ardından Cari Hesap Raporları (Blackrose eki)", () => {
+    const accounts = ZTO_NAV_SECTIONS.find((s) => s.id === "accounts")!.items.map((i) => i.id);
+    expect(accounts.slice(0, 3)).toEqual([
+      "financeReports",
+      "customerAccountReport",
+      "allTransactions",
+    ]);
+    const report = items.find((i) => i.id === "customerAccountReport")!;
+    expect(report).toMatchObject({
+      label: "customerAccountReport",
+      icon: "fas fa-chart-bar",
+      slug: "cari-raporlari",
+      kind: "page",
+      source: {
+        controller: "CustomerAccountReport",
+        action: "Reports",
+        line: 1,
+        file: "blackrose",
+      },
+      step: "12.8",
+      implemented: true,
+      permission: "FINANCE_VIEW",
+    });
+    expect(isFinanceMenuItem(report)).toBe(false);
+    const finance = items.find((i) => i.id === "financeReports")!;
+    expect([finance.implemented, finance.permission, isNavigable(finance)]).toEqual([
+      true,
+      "FINANCE_VIEW",
+      true,
+    ]);
+  });
+
+  it("Finansal İşlemler: Hızlı Bakiye (modal), Bilanço, Kur Farkı Raporu, Nakit Akış", () => {
+    const financial = ZTO_NAV_SECTIONS.find((s) => s.id === "financial")!.items;
+    expect(
+      financial.map((i) => [i.id, i.slug, i.kind, i.step, i.source.file ?? null, i.source.line]),
+    ).toEqual([
+      ["quickBalance", "cari-kartlar", "modal", "12.8", null, 151],
+      ["balanceSheet", "bilanco", "page", "12.8", null, 157],
+      ["fxReport", "kur-farki-raporu", "page", "12.8", "_SideMenu_Recipe_Finance", 86],
+      ["cashFlow", "nakit-akis", "page", "12.8", "_SideMenu_Recipe_Finance", 100],
+    ]);
+    const [quick, balance, fx, cash] = financial;
+    expect(isModalAction(quick)).toBe(true);
+    expect(isNavigable(quick)).toBe(false);
+    expect(fx.icon).toBe("fas fa-exchange-alt");
+    expect(cash.icon).toBe("fas fa-water");
+    for (const item of [balance, fx, cash]) {
+      expect(item.permission, item.id).toBe("FINANCE_VIEW");
+      expect(isNavigable(item), item.id).toBe(true);
+    }
+  });
+
+  it("etkin öğe ve adım", () => {
+    const ids = (path: string) => [...activeItemIds(items, path)].sort();
+    expect(ids("/zto-finans/finans-raporlari")).toEqual(["financeReports"]);
+    expect(ids("/zto-finans/cari-raporlari")).toEqual(["customerAccountReport"]);
+    expect(ids("/zto-finans/bilanco")).toEqual(["balanceSheet"]);
+    expect(ids("/zto-finans/kur-farki-raporu")).toEqual(["fxReport"]);
+    expect(ids("/zto-finans/nakit-akis")).toEqual(["cashFlow"]);
+    expect(ids("/zto-finans/tanimlar/para-birimleri")).toEqual(["currencies"]);
+    expect(stepOf("nakit-akis")).toBe("12.8");
+    expect(stepOf("tanimlar/para-birimleri")).toBe("12.8");
+  });
+
+  it("financeReportPath tüm süzgeçleri (branchGroupId dahil) sırayla yazar; boşlar yazılmaz", () => {
+    expect(financeReportPath()).toBe("/zto-finans/finans-raporlari");
+    expect(
+      financeReportPath({
+        type: "SALES",
+        range: "30",
+        from: "2026-10-17",
+        to: "2026-11-16",
+        cur: "USD",
+        account: "a 1",
+        branchGroupId: "g1",
+        branchId: "w1",
+        companyId: "c1",
+      }),
+    ).toBe(
+      "/zto-finans/finans-raporlari?type=SALES&range=30&from=2026-10-17&to=2026-11-16&cur=USD" +
+        "&account=a%201&branchGroupId=g1&branchId=w1&companyId=c1",
+    );
+    expect(financeReportPath({ branchGroupId: "g1", cur: "", account: undefined })).toBe(
+      "/zto-finans/finans-raporlari?branchGroupId=g1",
+    );
+  });
+
+  it("diğer rapor yolları", () => {
+    expect(customerAccountReportPath()).toBe("/zto-finans/cari-raporlari");
+    expect(customerAccountReportPath("position")).toBe("/zto-finans/cari-raporlari?tab=position");
+    expect(balanceSheetPath()).toBe("/zto-finans/bilanco");
+    expect(fxReportPath()).toBe("/zto-finans/kur-farki-raporu");
+    expect(cashFlowPath()).toBe("/zto-finans/nakit-akis");
+    expect(currenciesPath()).toBe("/zto-finans/tanimlar/para-birimleri");
   });
 });

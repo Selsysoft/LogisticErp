@@ -181,3 +181,267 @@ S3 taklidi kimlik bilgisi denetlemez. Gerçek AWS'de yetki ve bölge ayarları, 
 - Ana sayfa her açılışta bütün cari hareketleri topluyor ve kapasiteyi yarıdan fazla düşürüyordu. Firma ve yetki bazında 30 saniyelik önbellek eklendi (`DASHBOARD_CACHE_TTL`). Ana sayfa rakamları bu kadar eski olabilir; rapor ekranları önbellek kullanmaz.
 
 **Bilinen sınırlar:** Önbellek örnek başınadır. Uzun dönemli raporlar veri büyüdükçe yavaşlar; özet tablo yok. Yaşlandırma ve dışa aktarımlar arka plan işi değildir, istek süresince çalışır. Ters vekilde zaman aşımı firma veri dışa aktarımına göre ayarlanmalıdır.
+Tümünü uygulamanın gerçek ayarlarına bakarak yazdım (application*.yml, .env.example, docs/URETIM_KURULUM.md). Kuruluma başlamadan önce okumanız gereken üç önemli nokta var:
+
+Şifreleme anahtarı: TC kimlik no ve IBAN gibi kişisel veriler TOTP_ENCRYPTION_KEY anahtarıyla şifreleniyor. Sunucuda yeni bir anahtar kullanılacağı için bilgisayarınızdaki demo verisini sunucuya taşımayın. Sunucuda temiz kurulum yapıp firmayı orada açın.
+Anahtarın yedeği: Bu anahtar kaybolur ya da değiştirilirse şifreli veriler bir daha açılamaz. Kasada ya da şifre yöneticisinde yedekleyin.
+Kodun durumu: 12.3, 12.7 ve 12.8 henüz commit edilmedi; 12.8'in takip incelemesi de sürüyor. Yayın paketini inceleme bitip kod commit edildikten sonra üretin.
+1. Tüm kullanıcı adları ve şifreler (yalnız bu bilgisayardaki geliştirme ortamı)
+Ne	Adres	Kullanıcı	Şifre
+Firma girişi (demo veri)	http://localhost:5173	Firma kodu kara, e-posta karaali@gmail.com	kara123456*
+SaaS yönetici konsolu	http://localhost:5173/saas/login	admin@blackrose.local	Dev-Admin-12345 (iki adımlı doğrulama kapalı)
+Firma acme	—	patron@acme.test	Şifresi yok; davet kabul edilmemiş
+PostgreSQL (Docker)	localhost:5432, veritabanı blackrose	blackrose	blackrose
+Şoförlerin uygulamaya giriş hesabı yok; yalnız şoför ve personel kaydı var.
+Bilgisayarınızdaki ayrı PostgreSQL 15 servisi (durdurulmuş) bu projeye ait değil; şifresini bilmiyorum.
+Bu şifrelerin hiçbirini sunucuda kullanmayın. Sunucudaki şifreleri aşağıda siz belirleyeceksiniz.
+2. Windows Server 2022 PostgreSQL kurulumu
+Lojistik başlığı: pgAdmin'de bu yalnız görsel bir klasördür (Server Group). pgAdmin'de Servers üzerinde sağ tıklayıp Register → Server Group… ile Lojistik adlı grubu açın, sunucunuzu bu grubun altına ekleyin.
+
+Tablolar: Uygulama tabloları kendisi kurar; elle tablo açmayın. İlk açılışta Flyway admin şemasını, her firma açıldığında da tenant_<kod> şemasını kendiliğinden oluşturur. Sizin hazırlamanız gereken yalnız veritabanı ve kullanıcısı.
+
+Önerilen PostgreSQL sürümü 16; testler bu sürümle yapıldı. Aşağıdaki sorguları postgres süper kullanıcısıyla, pgAdmin → Query Tool'da, postgres veritabanına bağlıyken çalıştırın:
+
+
+-- 1) Uygulama kullanıcısı (şifreyi değiştirin; en az 20 karakter önerilir)
+CREATE ROLE blackrose_app WITH LOGIN PASSWORD 'BURAYA-GUCLU-BIR-SIFRE'
+  NOSUPERUSER NOCREATEDB NOCREATEROLE;
+
+-- 2) Veritabanı (sahibi uygulama kullanıcısı: şemaları kendisi açabilsin)
+CREATE DATABASE blackrose
+  WITH OWNER = blackrose_app
+       ENCODING = 'UTF8'
+       TEMPLATE = template0
+       LOCALE_PROVIDER = icu
+       ICU_LOCALE = 'en-US'
+       LC_COLLATE = 'C'
+       LC_CTYPE = 'C';
+-- Not: Bu satır hata verirse LOCALE_PROVIDER, ICU_LOCALE, LC_COLLATE ve LC_CTYPE
+-- satırlarını silip yalnız ENCODING ve TEMPLATE ile tekrar çalıştırın.
+-- (Geliştirme ortamı en_US.utf8 ile test edildi; ICU en-US buna en yakın seçenek.)
+
+-- 3) Başka kullanıcıların bu veritabanına bağlanmasını kapat
+REVOKE ALL ON DATABASE blackrose FROM PUBLIC;
+GRANT CONNECT, TEMPORARY ON DATABASE blackrose TO blackrose_app;
+Ardından blackrose veritabanına bağlanıp şunu çalıştırın:
+
+
+-- 4) public şemasını kilitle (uygulama public kullanmaz)
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+ALTER SCHEMA public OWNER TO blackrose_app;
+İlk açılıştan sonra kontrol sorgusu:
+
+
+SELECT schema_name FROM information_schema.schemata
+WHERE schema_name = 'admin' OR schema_name LIKE 'tenant_%';
+
+SELECT version, description, success
+FROM admin.flyway_schema_history
+ORDER BY installed_rank DESC LIMIT 3;
+Ayarlar:
+
+Backend aynı sunucuda çalışacak. postgresql.conf içindeki listen_addresses = 'localhost' ayarı kalabilir.
+5432 portunu dışarıya açmayın.
+pg_hba.conf dosyasındaki varsayılan 127.0.0.1/32 scram-sha-256 satırı yeterli.
+Günlük yedek için Görev Zamanlayıcı'da her gece şu komutu çalıştırın:
+
+
+"C:\Program Files\PostgreSQL\16\bin\pg_dump.exe" -h localhost -U blackrose_app -d blackrose -Fc -f "D:\Yedek\blackrose_%DATE:~-4%%DATE:~3,2%%DATE:~0,2%.dump"
+Şifreyi %APPDATA%\postgresql\pgpass.conf dosyasına yazın. Ayrıca D:\Blackrose\files klasörünü de (yüklenen belgeler) yedekleyin.
+
+3. Standart Plesk ile yayın (uygulama desteği olmadan)
+Mantık: Plesk Java çalıştıramaz, buna gerek de yok. İş üçe bölünüyor:
+
+Backend: Java uygulaması Windows servisi olarak çalışır ve yalnız 127.0.0.1:8080 adresini dinler.
+Ön yüz: Plesk'teki site yalnız derlenmiş dosyaları (dist) sunar.
+Yönlendirme: IIS, /api/... isteklerini arka plandaki backend'e iletir (ters vekil). Uygulama, site ile API'nin aynı alan adında ve HTTPS üzerinde olmasını zorunlu tutuyor (oturum çerezi bu yüzden).
+Varsayım: Plesk bu Windows Server 2022 üzerinde ve sunucuya Uzak Masaüstü (RDP) ile yönetici olarak girebiliyorsunuz. Yalnız paylaşımlı Plesk hesabınız varsa (RDP yok) Java çalıştırılamaz; o durumda VPS gerekir.
+
+Adım 1: Paketleri kendi bilgisayarınızda hazırlayın
+
+cd "f:\visual studio zto\LogisticErp\backend"
+mvn -B -DskipTests package
+# Çıktı: backend\target\blackrose-backend-1.0-SNAPSHOT.jar
+
+cd "f:\visual studio zto\LogisticErp\frontend"
+npm ci
+npm run build
+# Çıktı: frontend\dist\ klasörü
+Adım 2: Sunucuda Java 21
+Eclipse Temurin JDK 21 (Windows x64 MSI) kurun; kurulumda "Set JAVA_HOME" seçeneğini işaretleyin.
+Kontrol: java -version komutu 21 göstermeli.
+Adım 3: Klasörler ve gizli anahtarlar
+Klasörler:
+
+D:\Blackrose\app: jar ve servis dosyaları buraya.
+D:\Blackrose\files: yüklenen belgeler.
+D:\Blackrose\logs: günlükler.
+Gizli anahtarlar: iki ayrı değer üretin; PowerShell'de aşağıdaki komutu iki kez çalıştırın:
+
+
+$b = New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)
+Birincisi JWT_SECRET, ikincisi TOTP_ENCRYPTION_KEY olacak.
+TOTP_ENCRYPTION_KEY'i mutlaka yedekleyin. Kişisel veriler bu anahtarla şifreleniyor; kaybolursa bu veriler açılamaz.
+Adım 4: Backend'i Windows servisi yapın (WinSW)
+GitHub'dan WinSW v2.12.0 WinSW-x64.exe dosyasını indirin.
+Dosyayı D:\Blackrose\app\blackrose-backend.exe olarak kaydedin.
+Jar'ı D:\Blackrose\app\blackrose-backend.jar adıyla kopyalayın.
+Aynı klasöre aşağıdaki blackrose-backend.xml dosyasını koyun:
+
+<service>
+  <id>BlackroseBackend</id>
+  <name>Blackrose Backend</name>
+  <description>Blackrose ERP API (Spring Boot)</description>
+  <executable>%JAVA_HOME%\bin\java.exe</executable>
+  <arguments>-Xms512m -Xmx2g -XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8 -jar "D:\Blackrose\app\blackrose-backend.jar" --server.address=127.0.0.1 --server.port=8080</arguments>
+  <workingdirectory>D:\Blackrose\app</workingdirectory>
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+  <depend>postgresql-x64-16</depend>
+  <onfailure action="restart" delay="10 sec"/>
+  <logpath>D:\Blackrose\logs</logpath>
+  <log mode="roll-by-size"><sizeThreshold>10240</sizeThreshold><keepFiles>10</keepFiles></log>
+
+  <env name="SPRING_PROFILES_ACTIVE" value="prod"/>
+  <env name="DB_URL" value="jdbc:postgresql://localhost:5432/blackrose"/>
+  <env name="DB_USERNAME" value="blackrose_app"/>
+  <env name="DB_PASSWORD" value="BURAYA-VERITABANI-SIFRESI"/>
+  <env name="JWT_SECRET" value="BURAYA-1.-URETILEN-ANAHTAR"/>
+  <env name="TOTP_ENCRYPTION_KEY" value="BURAYA-2.-URETILEN-ANAHTAR"/>
+
+  <env name="FRONTEND_BASE_URL" value="https://erp.firmaniz.com"/>
+  <env name="TENANCY_BASE_DOMAIN" value="erp.firmaniz.com"/>
+  <env name="FORWARD_HEADERS_STRATEGY" value="native"/>
+  <env name="REFRESH_COOKIE_SECURE" value="true"/>
+
+  <env name="ADMIN_BOOTSTRAP_EMAIL" value="yonetici@firmaniz.com"/>
+  <env name="ADMIN_BOOTSTRAP_PASSWORD" value="BURAYA-YONETICI-SIFRESI"/>
+
+  <env name="SPRING_MAIL_HOST" value="mail.firmaniz.com"/>
+  <env name="SPRING_MAIL_PORT" value="587"/>
+  <env name="SPRING_MAIL_USERNAME" value="noreply@firmaniz.com"/>
+  <env name="SPRING_MAIL_PASSWORD" value="BURAYA-EPOSTA-SIFRESI"/>
+  <env name="MAIL_FROM" value="Blackrose &lt;noreply@firmaniz.com&gt;"/>
+
+  <env name="FILE_STORAGE" value="local"/>
+  <env name="FILES_ROOT" value="D:\Blackrose\files"/>
+  <env name="FILE_SCAN_MODE" value="none"/>
+</service>
+Ayarlarla ilgili notlar:
+
+--server.address=127.0.0.1: 8080 portu dışarıya kapalı kalır; güvenlik duvarında açmayın.
+TENANCY_BASE_DOMAIN'e sitenin tam adını yazın (ör. erp.firmaniz.com). Yalnız firmaniz.com yazarsanız uygulama erp'yi firma kodu sanar ve "Firma bulunamadı" hatası verir.
+E-posta zorunlu: e-posta ayarı yoksa uygulama açılmaz. Plesk'te oluşturacağınız noreply@ kutusunun SMTP bilgilerini kullanabilirsiniz.
+Virüs taraması: FILE_SCAN_MODE=none yüklenen dosyaları taramaz. ClamAV kurulumunu ertelediğimiz güvenlik maddelerine ekledim. Bu satırı yazmazsanız üretim profili ClamAV ister ve dosya yükleme çalışmaz.
+Servis adı: <depend> satırındaki ad, PostgreSQL servisinizin adı olmalı (services.msc'den bakın).
+Dosya izni: XML dosyası şifre içerdiği için klasörü yalnız Administrators ve servis hesabı okuyabilmeli.
+Kurulum ve kontrol (yönetici olarak açılmış PowerShell'de):
+
+
+cd D:\Blackrose\app
+.\blackrose-backend.exe install
+.\blackrose-backend.exe start
+Invoke-RestMethod http://127.0.0.1:8080/api/v1/ping   # açılış bitince {"status":"ok"}
+İlk açılışta migration'lar çalıştığı için yanıt bir süre 503 döner; bu normal. Hata olursa D:\Blackrose\logs klasörüne bakın.
+
+Adım 5: IIS'e ters vekil desteği (bir kez, RDP ile)
+Plesk standart kurulumunda URL Rewrite modülü genelde vardır, ancak ARR (Application Request Routing 3.0) ayrıca kurulmalı.
+
+Microsoft IIS sitesinden ARR 3.0 (x64) kurulum dosyasını indirip kurun.
+IIS Manager'da sunucu düğümüne gelin → Application Request Routing Cache → sağdaki Server Proxy Settings ekranında:
+Enable proxy seçeneğini işaretleyin.
+Time-out değerini 300 saniye yapın; firma verisi dışa aktarımı uzun sürebiliyor.
+Preserve client IP in the following header: X-Forwarded-For seçeneğini işaretleyin ve kaydedin.
+Yönetici olarak açılmış komut isteminde (cmd) şunları çalıştırın:
+
+%windir%\system32\inetsrv\appcmd.exe set config -section:system.webServer/proxy /preserveHostHeader:"True" /commit:apphost
+%windir%\system32\inetsrv\appcmd.exe set config -section:system.webServer/rewrite/allowedServerVariables /+"[name='HTTP_X_FORWARDED_PROTO']" /commit:apphost
+Adım 6: Plesk'te site
+Plesk'te alan adını ya da alt alan adını ekleyin (ör. erp.firmaniz.com); barındırma türü "Web sitesi".
+SSL/TLS → Let's Encrypt sertifikası alın.
+Barındırma Ayarları'nda "HTTP'den HTTPS'ye kalıcı 301 yönlendirme" seçeneğini açın.
+Dosya Yöneticisi ya da FTP ile frontend\dist klasörünün içindekileri httpdocs klasörüne yükleyin: index.html, assets\, sw.js, manifest.webmanifest ve diğerleri.
+Aynı httpdocs klasörüne aşağıdaki web.config dosyasını koyun:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <system.webServer>
+    <rewrite>
+      <rules>
+        <rule name="API ters vekil" stopProcessing="true">
+          <match url="^api/(.*)" />
+          <serverVariables>
+            <set name="HTTP_X_FORWARDED_PROTO" value="https" />
+          </serverVariables>
+          <action type="Rewrite" url="http://127.0.0.1:8080/api/{R:1}" />
+        </rule>
+        <rule name="SPA" stopProcessing="true">
+          <match url=".*" />
+          <conditions logicalGrouping="MatchAll">
+            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+            <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+          </conditions>
+          <action type="Rewrite" url="/index.html" />
+        </rule>
+      </rules>
+    </rewrite>
+
+    <security>
+      <requestFiltering>
+        <requestLimits maxAllowedContentLength="22020096" />
+      </requestFiltering>
+    </security>
+
+    <staticContent>
+      <remove fileExtension=".webmanifest" />
+      <mimeMap fileExtension=".webmanifest" mimeType="application/manifest+json" />
+      <remove fileExtension=".woff2" />
+      <mimeMap fileExtension=".woff2" mimeType="font/woff2" />
+    </staticContent>
+
+    <httpProtocol>
+      <customHeaders>
+        <remove name="X-Powered-By" />
+        <add name="Content-Security-Policy" value="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+        <add name="Strict-Transport-Security" value="max-age=31536000; includeSubDomains" />
+        <add name="Referrer-Policy" value="same-origin" />
+        <add name="Permissions-Policy" value="camera=(self), geolocation=(self), microphone=(), payment=(), usb=()" />
+        <add name="X-Content-Type-Options" value="nosniff" />
+        <add name="X-Frame-Options" value="DENY" />
+      </customHeaders>
+    </httpProtocol>
+  </system.webServer>
+
+  <!-- Dosya adları içerikle değişir: 1 yıl önbellek -->
+  <location path="assets">
+    <system.webServer>
+      <staticContent>
+        <clientCache cacheControlMode="UseMaxAge" cacheControlMaxAge="365.00:00:00" />
+      </staticContent>
+    </system.webServer>
+  </location>
+  <!-- Sayfa ve service worker her açılışta doğrulanır -->
+  <location path="index.html">
+    <system.webServer><staticContent><clientCache cacheControlMode="DisableCache" /></staticContent></system.webServer>
+  </location>
+  <location path="sw.js">
+    <system.webServer><staticContent><clientCache cacheControlMode="DisableCache" /></staticContent></system.webServer>
+  </location>
+</configuration>
+Tarayıcıda https://erp.firmaniz.com/api/v1/ping adresini açın; {"status":"ok"} görmelisiniz.
+Adım 7: İlk kullanım
+https://erp.firmaniz.com/saas/login adresinden ADMIN_BOOTSTRAP_EMAIL ve şifresiyle girin.
+Üretimde iki adımlı doğrulama zorunlu: ekrandaki anahtarı Google/Microsoft Authenticator'a ekleyip kodla kurulumu tamamlayın.
+Konsoldan firmayı oluşturun: firma kodu (ör. kara), adı ve sahip e-postası.
+Sahibe davet e-postası gider. Bağlantıdan şifresini belirledikten sonra ana sayfadan firma kodu, e-posta ve şifreyle giriş yapılır.
+Konsoldaki Sistem sağlığı → Dış bağlantılar tablosunda e-posta ve dosya deposunun yeşil olduğunu kontrol edin.
+Güncelleme yaparken
+Backend:
+.\blackrose-backend.exe stop
+Jar'ı değiştirin.
+.\blackrose-backend.exe start
+Yeni migration'lar kendiliğinden uygulanır; güncellemeden önce veritabanı yedeği alın.
+Ön yüz: httpdocs içindekileri yeni dist ile değiştirin; web.config dosyasını silmeyin.
+Plesk'iniz Windows değil de Linux üzerindeyse 5. ve 6. adımlar farklıdır (IIS yerine nginx "ek yönergeleri"); söylerseniz onu da yazarım.
+
+İsterseniz bu rehberi docs/URETIM_KURULUM_WINDOWS_PLESK.md olarak projeye ekleyebilirim. 12.8 takip incelemesi arka planda sürüyor; bitince sonucunu yazacağım.

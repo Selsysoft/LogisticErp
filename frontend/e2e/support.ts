@@ -37,7 +37,10 @@ export async function api<T>(
   if (!response.ok) {
     throw new Error(`${method} ${path} -> ${response.status}: ${await response.text()}`);
   }
-  return (response.status === 204 ? undefined : await response.json()) as T;
+  // 204 ve gövdesiz 202 (ör. POST /finance/exchange-rates/refresh) undefined döner.
+  if (response.status === 204) return undefined as T;
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 /** Alıcıya gelen son e-postadaki uygulama bağlantısını döner; e-posta gelene kadar bekler. */

@@ -84,8 +84,8 @@ class BranchScopeIT extends AbstractIntegrationTest {
     created(w, FINANCE + "/payments", cash(w.supplier(), w.a2(), w.cashA2(), "20"));
     created(w, FINANCE + "/purchase-invoices", invoice(w, w.a1(), "F-A1"));
     created(w, FINANCE + "/purchase-invoices", invoice(w, w.a2(), "F-A2"));
-    created(w, FINANCE + "/collections", check(w.customer(), w.a1(), "C-A1"));
-    created(w, FINANCE + "/collections", check(w.customer(), w.a2(), "C-A2"));
+    created(w, FINANCE + "/collections", check(w.customer(), w.a1(), "1000001"));
+    created(w, FINANCE + "/collections", check(w.customer(), w.a2(), "1000002"));
 
     // Kapsam değişmeden önce yönetici her şeyi görür.
     assertThat(asManager(w, get(ORG + "/branches")).get("totalElements").asInt()).isEqualTo(3);

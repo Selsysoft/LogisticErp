@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.common.money.Money;
 import org.ece.blackrose.finance.domain.FinanceTypes.Direction;
+import org.ece.blackrose.finance.repository.ExpenseRepositories.ExpenseRepository;
 import org.ece.blackrose.finance.service.ExchangeRateService;
 import org.ece.blackrose.finance.service.LedgerService;
 import org.ece.blackrose.finance.service.LedgerService.Posting;
@@ -31,6 +32,7 @@ import org.ece.blackrose.shipment.domain.Shipment;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.CostKind;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.InvoiceStatus;
 import org.ece.blackrose.shipment.domain.ShipmentTypes.ShipmentStatus;
+import org.ece.blackrose.shipment.domain.ShipmentTypes.TripCostStatus;
 import org.ece.blackrose.shipment.domain.TripCost;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.FreightInvoiceRepository;
 import org.ece.blackrose.shipment.repository.ShipmentRepositories.ShipmentRepository;
@@ -73,6 +75,7 @@ public class TripFinanceService {
   private final List<InvoiceCancelGuard> cancelGuards;
   private final DocumentNumberService numbers;
   private final BranchScopeService scope;
+  private final ExpenseRepository expenses;
 
   public TripFinanceService(
       ShipmentRepository shipments,
@@ -89,8 +92,10 @@ public class TripFinanceService {
       List<InvoiceCancelGuard> cancelGuards,
       CompanyResolver companies,
       DocumentNumberService numbers,
-      BranchScopeService scope) {
+      BranchScopeService scope,
+      ExpenseRepository expenses) {
     this.scope = scope;
+    this.expenses = expenses;
     this.numbers = numbers;
     this.companies = companies;
     this.cancelGuards = cancelGuards;
@@ -288,7 +293,7 @@ public class TripFinanceService {
                     new BusinessException(
                         HttpStatus.NOT_FOUND, "COST_NOT_FOUND", "Gider bulunamadı."));
     requireVisible(cost.getShipmentId());
-    if (cost.getPostedAt() != null) {
+    if (cost.getPostedAt() != null || cost.getStatus() != TripCostStatus.OPEN) {
       throw new BusinessException(
           HttpStatus.CONFLICT, "COST_POSTED", "Finansa yazılmış gider silinemez.");
     }
@@ -297,7 +302,9 @@ public class TripFinanceService {
 
   /**
    * Cariye bağlı giderleri borç ve taslak ödeme planı olarak yazar. Kapanmış sefer yeniden
-   * kapatılırsa hiçbir kayıt oluşmaz.
+   * kapatılırsa hiçbir kayıt oluşmaz. Yalnız OPEN satırlar yazılır (ZTO ekranından hemen yazılan
+   * taşeron gideri POSTED'dır, atlanır); tutar ödenecek tutardır: net + KDV − tevkifat − kesinti
+   * (12.7 §3.3.3).
    */
   @Transactional
   public Shipment close(UUID shipmentId, CloseShipmentRequest request) {
@@ -311,16 +318,19 @@ public class TripFinanceService {
     }
     Instant now = Instant.now();
     for (TripCost cost : costs.findByShipmentIdOrderByCreatedAt(shipmentId)) {
-      if (cost.getAccountId() == null || cost.getPostedAt() != null) {
+      if (cost.getAccountId() == null
+          || cost.getPostedAt() != null
+          || cost.getStatus() != TripCostStatus.OPEN) {
         continue;
       }
       String description = shipment.getNumber() + " " + costLabel(cost.getKind());
+      Money payable = new Money(cost.payable(), cost.getMoney().currency());
       ledger.post(
           new Posting(
               cost.getAccountId(),
               shipment.getBranchId(),
               Direction.CREDIT,
-              cost.getMoney(),
+              payable,
               request.date(),
               description,
               SOURCE_COST,
@@ -328,11 +338,7 @@ public class TripFinanceService {
               null));
       plans.create(
           new CreatePlanRequest(
-              cost.getAccountId(),
-              shipment.getBranchId(),
-              cost.getMoney(),
-              request.dueDate(),
-              description),
+              cost.getAccountId(), shipment.getBranchId(), payable, request.dueDate(), description),
           null);
       cost.markPosted(now);
     }
@@ -379,6 +385,14 @@ public class TripFinanceService {
                 Collectors.groupingBy(
                     TripCost::getShipmentId,
                     Collectors.reducing(BigDecimal.ZERO, TripCost::getTlAmount, BigDecimal::add)));
+    // 12.8 OK-12.8-12: sefer bağlamlı kayıtlı masrafın KDV hariç net TL'si (ayna kayıt yok).
+    Map<UUID, BigDecimal> totals = new java.util.HashMap<>(costTotals);
+    if (!ids.isEmpty()) {
+      for (Object[] row : expenses.netTlByShipment(ids)) {
+        totals.merge(toUuid(row[0]), toDecimal(row[1]), BigDecimal::add);
+      }
+    }
+    costTotals = totals;
     Map<UUID, FreightInvoice> invoiceByShipment =
         ShipmentViews.index(
             invoices.findByShipmentIdInAndStatus(ids, InvoiceStatus.ISSUED),
@@ -408,6 +422,14 @@ public class TripFinanceService {
               invoice != null));
     }
     return rows;
+  }
+
+  private static UUID toUuid(Object value) {
+    return value instanceof UUID uuid ? uuid : UUID.fromString(value.toString());
+  }
+
+  private static BigDecimal toDecimal(Object value) {
+    return value instanceof BigDecimal decimal ? decimal : new BigDecimal(value.toString());
   }
 
   /** Fatura kesilmeden gelir tahminidir; kur bulunamazsa boş döner. */

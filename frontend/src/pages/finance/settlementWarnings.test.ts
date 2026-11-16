@@ -296,6 +296,7 @@ describe("iptal tarihi ve kilit nedenleri (12.2a §3.5, §3.12)", () => {
       ["INTERCOMPANY", "SETTLEMENT_LINKED_TO_INTERCOMPANY"],
       ["FX_SOURCE", "SETTLEMENT_USED_IN_FX_EXCHANGE"],
       ["VEHICLE_EXPENSE", "SETTLEMENT_SOURCE_MANAGED"],
+      ["EXPENSE", "SETTLEMENT_SOURCE_MANAGED"],
       ["TRANSFERRED", "TRANSACTION_TRANSFERRED"],
       ["NO_ACCOUNT", "SETTLEMENT_NOT_CORRECTABLE"],
       [null, "SETTLEMENT_NOT_CORRECTABLE"],
@@ -310,6 +311,29 @@ describe("iptal tarihi ve kilit nedenleri (12.2a §3.5, §3.12)", () => {
     expect(t("finance.error.TRANSACTION_TRANSFERRED")).toBe(
       "Cari taşıma geri alınmadan düzenlenemez/silinemez.",
     );
+  });
+
+  it("12.3 çek/senet hata kodlarının Türkçe iletisi var; CORRECTION_METHOD_INVALID kaldırıldı", () => {
+    for (const code of [
+      "CHECK_NUMBER_INVALID",
+      "CHECK_LEAF_USED",
+      "CHECK_NUMBER_IN_CHECK_BOOK",
+      "INSTRUMENT_NUMBER_TAKEN",
+      "INSTRUMENT_DATES_INVALID",
+      "CHECK_LEAF_MISMATCH",
+      "CHECK_LEAF_INVALID",
+      "INSTRUMENT_CUSTODY_INVALID",
+      "NOTE_TYPE_INVALID",
+    ]) {
+      expect(t(`finance.error.${code}`).length).toBeGreaterThan(0);
+    }
+    expect(t("finance.error.CHECK_LEAF_USED")).toBe(
+      "Bu çek zaten kullanılmış (ödemesi mevcut), tekrar kullanılamaz.",
+    );
+    expect(() => t("finance.error.CORRECTION_METHOD_INVALID")).toThrow();
+    for (const status of ["CANCELLED", "RETURNED", "COLLATERAL", "PROTESTED"]) {
+      expect(t(`finance.instrumentStatus.${status}`).length).toBeGreaterThan(0);
+    }
   });
 
   it("hata anahtar adayları en özelden genele; tür/neden ekli ZTO iletileri", () => {

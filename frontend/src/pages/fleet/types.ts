@@ -99,6 +99,8 @@ export interface VehicleCost {
   repairTl: number;
   tireTl: number;
   fuelTl: number;
+  /** 12.8 (OK-12.8-12): araca bağlanan genel masrafların (VEHICLE bağlamı) KDV hariç TL toplamı. */
+  generalExpenseTl: number;
   totalTl: number;
   liters: number;
   distanceKm: number;

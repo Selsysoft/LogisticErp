@@ -476,7 +476,7 @@ class AccountProfileIT extends AccountTestSupport {
     collection.put("date", TODAY.toString());
     collection.put(
         "instrument",
-        Map.of("kind", "CHECK", "number", "C-77", "bankName", "Banka", "dueDate", "2027-06-01"));
+        Map.of("kind", "CHECK", "number", "0000077", "bankName", "Banka", "dueDate", "2027-06-01"));
     sendJson(w.t(), null, post(FINANCE + "/collections"), collection)
         .andExpect(status().isCreated());
     // Yalnız çek kalsın: hareket ve tahsilat satırları silinmiş sayılır.

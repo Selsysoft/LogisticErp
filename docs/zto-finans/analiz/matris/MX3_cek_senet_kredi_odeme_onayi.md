@@ -5,6 +5,8 @@ Salt-okunur analiz. ZTO satır numaraları bugünkü dosya hâlidir (controller 
 
 Karar kodları: **UI-mevcut-API** (BR ucu yeterli) · **UI+API-genişlet** (mevcut BR servis/DTO'ya alan/uç eklenir) · **UI+yeni-API** (yeni uç, mevcut tablo) · **UI+yeni-tablo (V22+)** · **ÇIKAR** (gerekçeli).
 
+> **12.3 uygulandı (2026-11-16); uygulama belgesi [`docs/zto-finans/uygulama/12.3_TASARIM.md`](../../uygulama/12.3_TASARIM.md)** (bu matrisin §2.1–§2.4 ve §4 V22/V23 kısmını düzeltir; sapmalar belge §0.4, otonom kararlar §9 OK-12.3-1…25). Uygulanan: tenant `V37__instrument_extensions` (Z08), `V38__check_book` (Z09); Çekler, Senetler, Çek Koçanları, Çek/Senet Düzenle, Çek Belgeleri, Detaylı Çek Raporu; çek/senet yaşam döngüsü (CANCELLED/RETURNED/COLLATERAL/PROTESTED), çekli/senetli ödeme-tahsilatın düzeltmesi ve iptali, "Bankadan Cari Çek Ödemesi". Bu matristen kalanlar: §2.6 kredi → 12.5; §2.7 plan/onay → 12.4; teminat senedi (`is_collateral`) UI'da devre dışı (OK-12.3-7).
+
 ---
 
 ## 0. Kapsam ve dosya listesi

@@ -5,6 +5,7 @@ import { ZtoTooltip, formatN2 } from "../../../components";
 import {
   bankDetailPath,
   bankEditPath,
+  checksPath,
   fundExtractPath,
   fundTransactionsPath,
   transferCenterPath,
@@ -419,14 +420,20 @@ export function BankAccountCard({
                       newTab
                       className="dropdown-item"
                     />
+                    <MenuItem
+                      icon="fas fa-money-check text-warning"
+                      label={<span>{m("checkPayment")}</span>}
+                      href={checksPath({
+                        bankId: fund.id,
+                        workPlaceId: fund.branchId,
+                        currencyId: fund.currency,
+                        openCheckPaymentModal: true,
+                      })}
+                      newTab
+                      className="dropdown-item"
+                    />
                   </>
                 )}
-                <PhaseMenuItem
-                  icon="fas fa-money-check text-warning"
-                  label={<span>{m("checkPayment")}</span>}
-                  step="12.3"
-                  className="dropdown-item"
-                />
                 <MenuDivider />
                 <MenuItem
                   icon="fas fa-file-alt text-dark"

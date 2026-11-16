@@ -1,0 +1,2003 @@
+/*
+ * Kaynak: ZtoFabrika/wwwroot/css/zt/checks/checks.css (tamamı, 1-1572) + Views/Checks/Checks.cshtml
+ * <style> :84-163, :1125-1137, :1318-1365 (12.3_TASARIM §5.3). Birebir kopya; sayfa kapsamı
+ * .zto-finans.zto-page-checks (prefixTransform.ts; modallar sayfa köküne portal'lanır).
+ * Değişiklikler: Razor kaçışı @@ → @. CHK:1321 `.c3d-tilt` ve :1322 `.c3d-card` `transition`
+ * bildirimleri buradan çıkarıldı ve sondaki "BR eki"nde `prefers-reduced-motion: no-preference`
+ * içine taşındı (MWG `motion`: hareket yalnız izin veren kullanıcıda; azaltılmış harekette yüz
+ * anında değişir, son durum korunur). Satır içi stiller (M1 başlık gradyanı, M4 gövde rengi) React'te
+ * stil nesnesi değil kural olarak sondaki BR ekindedir.
+ */
+/* ============================================ */
+/* PROFESYONEL ERP HEADER STİLLERİ - SOFT LIGHT */
+/* ============================================ */
+
+/* Header Genel */
+.card-header.bg-white {
+  background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+  border-bottom: 1px solid #f1f5f9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+/* Icon Box */
+.erp-header-icon {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  margin-right: 6px;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 16px;
+}
+
+.eventpointer {
+  pointer-events: none;
+}
+
+/* Breadcrumb */
+.erp-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.erp-breadcrumb .separator {
+  color: #cbd5e0;
+  font-weight: 300;
+}
+
+.erp-breadcrumb i {
+  font-size: 10px;
+  margin-right: 3px;
+}
+
+/* Info Chips */
+.erp-info-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.erp-info-chip:hover {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border-color: #cbd5e0;
+}
+
+.erp-info-chip i {
+  font-size: 10px;
+}
+
+/* Chip Varyantları - Soft Light */
+.erp-info-chip.chip-success {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.erp-info-chip.chip-warning {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.erp-info-chip.chip-danger {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.erp-info-chip.chip-primary {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.erp-info-chip.chip-info {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+
+/* ERP Butonlar - Soft Light */
+.erp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+  background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+}
+
+.erp-btn i {
+  font-size: 13px;
+}
+
+/* Buton Varyantları - Soft Light */
+.erp-btn-success {
+  color: #166534;
+  border-color: #bbf7d0;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.erp-btn-success:hover {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  border-color: #86efac;
+  color: #166534;
+}
+
+.erp-btn-danger {
+  color: #991b1b;
+  border-color: #fecaca;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+
+.erp-btn-danger:hover {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.erp-btn-primary {
+  color: #1e40af;
+  border-color: #bfdbfe;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.erp-btn-primary:hover {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
+.erp-btn-secondary {
+  color: #475569;
+  border-color: #e2e8f0;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.erp-btn-secondary:hover {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border-color: #cbd5e0;
+  color: #475569;
+}
+
+.erp-btn-info {
+  color: #0369a1;
+  border-color: #bae6fd;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+.erp-btn-info:hover {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+.erp-btn-warning {
+  color: #92400e;
+  border-color: #fcd34d;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.erp-btn-warning:hover {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #fbbf24;
+  color: #92400e;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card-header.bg-white {
+    padding: 8px 15px !important;
+  }
+
+  .erp-header-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+
+  .card-header h6 {
+    font-size: 13px !important;
+  }
+
+  .erp-breadcrumb {
+    font-size: 10px;
+  }
+
+  .erp-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+
+  .erp-btn span {
+    display: none !important;
+  }
+
+  .erp-btn i {
+    margin: 0;
+  }
+}
+
+/* Print Style */
+@media print {
+  .erp-btn,
+  .erp-info-chip {
+    display: none !important;
+  }
+
+  .card-header.bg-white {
+    border-bottom: 2px solid #000;
+  }
+}
+
+/* Focus States */
+.erp-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+}
+
+/* Loading State */
+.erp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================ */
+/* KOMPAKT FİLTRE KARTI - SOFT LIGHT */
+/* ============================================ */
+
+.erp-filter-card {
+  background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.filter-field {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12px;
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+  background: #ffffff;
+  transition: all 0.2s;
+}
+
+.filter-field:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  height: 100%;
+  align-items: flex-end;
+}
+
+.filter-btn {
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 5px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-filter-apply {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border-color: #2563eb;
+}
+
+.btn-filter-apply:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.btn-filter-clear {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #64748b;
+  border-color: #cbd5e0;
+}
+
+.btn-filter-clear:hover {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+/* Responsive Filtre */
+@media (max-width: 768px) {
+  .erp-filter-card .col-md-3,
+  .erp-filter-card .col-md-2 {
+    margin-bottom: 10px;
+  }
+
+  .filter-actions {
+    margin-top: 10px;
+    justify-content: flex-start;
+  }
+}
+
+/* ============================================ */
+/* KOMPAKT DATATABLE - SOFT LIGHT */
+/* ============================================ */
+
+.table-compact {
+  font-size: 13px;
+}
+
+.table-compact thead th {
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+  border-bottom: 2px solid #e2e8f0;
+  color: #475569;
+}
+
+.table-compact tbody td {
+  padding: 6px 10px;
+  vertical-align: middle;
+  background: #ffffff;
+}
+
+.table-compact tbody tr:nth-child(even) td {
+  background: #fafbfc;
+}
+
+.table-compact tbody tr:hover td {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+.table-compact .btn-sm {
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+/* DataTables Kompakt Stil */
+.dataTables_wrapper .dataTables_length select {
+  padding: 2px 8px;
+  font-size: 12px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+/* Checks tablosu için DataTables default arama alanını gizle
+   (kendi arama kutumuzu kullanıyoruz) */
+#checksTable_wrapper .dataTables_filter {
+  display: none !important;
+}
+
+.dataTables_wrapper .dataTables_info {
+  font-size: 12px;
+  padding-top: 8px;
+  color: #64748b;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  font-size: 12px;
+}
+
+/* Badge Stiller - Soft Light */
+.badge {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+}
+
+.badge-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+}
+
+.badge-info {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  color: #ffffff;
+}
+
+.badge-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+}
+
+.badge-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+}
+
+.badge-secondary {
+  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+  color: #ffffff;
+}
+
+/* ============================================ */
+/* SOFT LIGHT ÖZET KARTLARI */
+/* ============================================ */
+
+.erp-stat-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f1f5f9;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  margin-bottom: 10px;
+  position: relative;
+  cursor: pointer;
+}
+
+.erp-stat-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+  border-color: #e2e8f0;
+}
+
+.erp-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--card-color-start), var(--card-color-end));
+  z-index: 1;
+  border-radius: 8px 0 0 8px;
+}
+
+/* Card Varyantları */
+.erp-stat-card.card-total {
+  --card-color-start: #3b82f6;
+  --card-color-end: #06b6d4;
+}
+
+.erp-stat-card.card-overdue {
+  --card-color-start: #ef4444;
+  --card-color-end: #f97316;
+}
+
+.erp-stat-card.card-collected {
+  --card-color-start: #10b981;
+  --card-color-end: #14b8a6;
+}
+
+.erp-stat-card.card-bounced {
+  --card-color-start: #ef4444;
+  --card-color-end: #f97316;
+}
+
+.erp-stat-card.card-portfolio {
+  --card-color-start: #17a2b8;
+  --card-color-end: #0891b2;
+}
+
+.erp-stat-card.card-endorsable {
+  --card-color-start: #8b5cf6;
+  --card-color-end: #a855f7;
+}
+
+.erp-stat-card.card-deposited {
+  --card-color-start: #f59e0b;
+  --card-color-end: #f97316;
+}
+
+.erp-stat-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px 12px 15px;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+}
+
+.erp-stat-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--card-color-start), var(--card-color-end)) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: all 0.3s ease;
+}
+
+.erp-stat-card:hover .erp-stat-icon {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.erp-stat-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 3px;
+  display: block;
+}
+
+.erp-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.erp-stat-currency {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.erp-stat-subtext {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.erp-stat-progress {
+  height: 3px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.erp-stat-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--card-color-start), var(--card-color-end));
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px var(--card-color-end);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .erp-stat-value {
+    font-size: 16px;
+  }
+
+  .erp-stat-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 15px;
+  }
+
+  .erp-stat-label {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 768px) {
+  .erp-stat-value {
+    font-size: 15px;
+  }
+
+  .erp-stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .erp-stat-content {
+    padding: 10px 10px 10px 12px;
+    gap: 8px;
+  }
+
+  .erp-stat-label {
+    font-size: 9px;
+    margin-bottom: 2px;
+  }
+
+  .erp-stat-subtext {
+    font-size: 9px;
+  }
+
+  .erp-stat-card::before {
+    width: 3px;
+  }
+}
+
+@media (max-width: 576px) {
+  .erp-stat-card {
+    margin-bottom: 8px;
+  }
+
+  .erp-stat-value {
+    font-size: 14px;
+  }
+
+  .erp-stat-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+  }
+
+  .erp-stat-content {
+    padding: 8px 8px 8px 10px;
+  }
+}
+
+/* ============================================ */
+/* ERP MODAL STİLLERİ - SOFT LIGHT */
+/* ============================================ */
+
+.erp-modal {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.erp-modal .modal-header {
+  background: linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 20px;
+}
+
+.erp-modal .modal-header .modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.erp-modal .modal-header .modal-title i {
+  color: #3b82f6;
+}
+
+.erp-modal .modal-body {
+  padding: 20px;
+  background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+}
+
+.erp-modal .form-group {
+  margin-bottom: 15px;
+}
+
+.erp-modal .form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.erp-modal .form-group label i {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.erp-modal .form-group .form-control {
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-size: 13px;
+  transition: all 0.2s;
+  background: #ffffff;
+}
+
+.erp-modal .form-group .form-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+  outline: none;
+}
+
+.erp-modal .form-group .form-control.is-invalid {
+  border-color: #ef4444;
+}
+
+.erp-modal .form-row {
+  margin-left: -5px;
+  margin-right: -5px;
+}
+
+.erp-modal .form-row > .col,
+.erp-modal .form-row > [class*="col-"] {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.erp-modal .modal-footer {
+  border-top: 1px solid #e2e8f0;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%);
+}
+
+.erp-modal .modal-footer .btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 5px;
+  border: 1px solid;
+  min-width: 80px;
+}
+
+/* Required field indicator */
+.required-field::after {
+  content: "*";
+  color: #ef4444;
+  margin-left: 3px;
+}
+
+/* Field groups */
+.field-group {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.field-group .field-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-group .field-group-title i {
+  color: #3b82f6;
+}
+
+/* Responsive modal */
+@media (max-width: 768px) {
+  .erp-modal .modal-dialog {
+    margin: 10px;
+  }
+
+  .erp-modal .modal-body {
+    padding: 15px;
+  }
+
+  .erp-modal .form-row {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+/* ============================================ */
+/* MODAL VARYANTLARI - SOFT LIGHT */
+/* ============================================ */
+
+#confirmModal .modal-header {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-bottom: 1px solid #fde68a;
+}
+
+#confirmModal .modal-title {
+  font-weight: 600;
+  color: #92400e;
+}
+
+#confirmModal .btn-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border-color: #f59e0b;
+  color: white;
+  font-weight: 500;
+}
+
+#confirmModal .btn-warning:hover {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  border-color: #d97706;
+}
+
+.alert-warning {
+  border-left: 4px solid #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.alert-info {
+  border-left: 4px solid #06b6d4;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+/* ============================================ */
+/* DROPDOWN MENÜ - SOFT LIGHT */
+/* ============================================ */
+
+.dropdown-menu-custom {
+  display: none;
+  position: absolute;
+  z-index: 9999 !important;
+  background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  padding: 5px 0;
+  min-width: 180px;
+  font-size: 12px;
+}
+
+.dropdown-item-custom {
+  display: block;
+  width: 100%;
+  padding: 6px 15px;
+  clear: both;
+  font-weight: 400;
+  color: #475569;
+  text-align: inherit;
+  white-space: nowrap;
+  background-color: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.dropdown-item-custom:hover {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  text-decoration: none;
+  color: #1e40af;
+}
+
+.dropdown-item-custom i {
+  width: 20px;
+  margin-right: 8px;
+  text-align: center;
+}
+
+.dropdown-toggle-custom {
+  cursor: pointer;
+}
+
+.dropdown-header {
+  display: block;
+  padding: 6px 15px;
+  margin-bottom: 0;
+  font-size: 10px;
+  color: #94a3b8;
+  white-space: nowrap;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dropdown-divider {
+  height: 0;
+  margin: 0.5rem 0;
+  overflow: hidden;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* ============================================ */
+/* PRINT STİLLERİ */
+/* ============================================ */
+
+@media print {
+  .erp-stat-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    background: white !important;
+  }
+
+  .erp-stat-icon {
+    background: #f8fafc !important;
+    color: #475569 !important;
+    border: 2px solid #cbd5e0;
+  }
+
+  .erp-stat-card::before {
+    display: none;
+  }
+
+  .erp-stat-progress {
+    display: none;
+  }
+}
+
+/* ============================================ */
+/* ACCESSIBILITY */
+/* ============================================ */
+
+.erp-stat-card:focus-within {
+  outline: 2px solid var(--card-color-start);
+  outline-offset: 2px;
+}
+
+.erp-stat-card[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ============================================ */
+/* TABLO SATIRLARI - ÇEK SAHİPLİĞİNE GÖRE SOFT RENKLER */
+/* ============================================ */
+
+/* Kendi Çekimiz - Açık Mavi Ton */
+.table-compact tbody tr[data-check-ownership="Kendi Çekimiz"] td {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+}
+
+.table-compact tbody tr[data-check-ownership="Kendi Çekimiz"]:hover td {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+}
+
+/* Müşteri Çeki - Açık Turuncu Ton */
+.table-compact tbody tr[data-check-ownership="Müşteri Çeki"] td {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%) !important;
+}
+
+.table-compact tbody tr[data-check-ownership="Müşteri Çeki"]:hover td {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%) !important;
+}
+
+/* Tedarikçi Çeki - Açık Yeşil Ton (opsiyonel) */
+.table-compact tbody tr[data-check-ownership="Tedarikçi Çeki"] td {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+}
+
+.table-compact tbody tr[data-check-ownership="Tedarikçi Çeki"]:hover td {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
+}
+
+/* Zebra Striping Devre Dışı (Çünkü sahipliğe göre renklendiriyoruz) */
+.table-compact tbody tr:nth-child(even) td {
+  background: inherit !important;
+}
+
+/* ============================================ */
+/* SATIR SEÇİMİ VE FOCUS */
+/* ============================================ */
+
+.table-compact tbody tr {
+  transition: all 0.2s ease;
+}
+
+.table-compact tbody tr:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+/* Aktif/Seçili Satır */
+.table-compact tbody tr.selected td {
+  border-left: 3px solid #3b82f6;
+  font-weight: 500;
+}
+
+/* ============================================ */
+/* BADGE RENKLERİ SAHİPLİĞE GÖRE */
+/* ============================================ */
+
+/* Kendi Çekimiz için Badge - Mavi */
+tr[data-check-ownership="Kendi Çekimiz"] .badge-ownership {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+}
+
+/* Müşteri Çeki için Badge - Turuncu */
+tr[data-check-ownership="Müşteri Çeki"] .badge-ownership {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+}
+
+/* Tedarikçi Çeki için Badge - Yeşil */
+tr[data-check-ownership="Tedarikçi Çeki"] .badge-ownership {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+}
+
+/* ============================================ */
+/* RESPONSIVE DÜZENLEME */
+/* ============================================ */
+
+@media (max-width: 768px) {
+  .table-compact tbody tr[data-check-ownership="Kendi Çekimiz"] td {
+    background: #eff6ff !important;
+  }
+
+  .table-compact tbody tr[data-check-ownership="Müşteri Çeki"] td {
+    background: #fff7ed !important;
+  }
+
+  .table-compact tbody tr[data-check-ownership="Tedarikçi Çeki"] td {
+    background: #f0fdf4 !important;
+  }
+}
+
+/* ============================================ */
+/* PRINT STİLİ */
+/* ============================================ */
+
+@media print {
+  .table-compact tbody tr[data-check-ownership="Kendi Çekimiz"] td {
+    background: #f0f9ff !important;
+    border-left: 3px solid #3b82f6 !important;
+  }
+
+  .table-compact tbody tr[data-check-ownership="Müşteri Çeki"] td {
+    background: #fffbeb !important;
+    border-left: 3px solid #f59e0b !important;
+  }
+
+  .table-compact tbody tr[data-check-ownership="Tedarikçi Çeki"] td {
+    background: #f0fdf4 !important;
+    border-left: 3px solid #10b981 !important;
+  }
+}
+
+/* ============================================ */
+/* DURUM BADGE'LERİ İÇİN EK STİL */
+/* ============================================ */
+
+/* Tahsil Edildi - Yeşil */
+.badge.badge-collected {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+/* Portföyde - Info Mavi */
+.badge.badge-portfolio {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+}
+
+/* Bankada - Warning Turuncu */
+.badge.badge-deposited {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+/* Karşılıksız - Danger Kırmızı */
+.badge.badge-bounced {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+/* ============================================ */
+/* DROPDOWN MENÜ - BUTON YANINDA AÇILMA (Z-INDEX FİX) */
+/* ============================================ */
+/* ============================================ */
+/* DROPDOWN MENÜ - BOOTSTRAP NATIVE */
+/* ============================================ */
+
+/* Action Butonları */
+.action-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid;
+  transition: all 0.2s;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn-primary {
+  color: #1e40af;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.action-btn-primary:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.action-btn-info {
+  color: #0369a1;
+  border-color: #bae6fd;
+  background: #f0f9ff;
+}
+
+.action-btn-info:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+}
+
+.action-btn-warning {
+  color: #92400e;
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.action-btn-warning:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+}
+
+.action-btn-danger {
+  color: #991b1b;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.action-btn-danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.action-btn-success {
+  color: #166534;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.action-btn-success:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.action-btn-secondary {
+  color: #475569;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.action-btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e0;
+}
+
+/* Gap classes */
+.gap-1 {
+  gap: 4px;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.gap-3 {
+  gap: 12px;
+}
+
+/* Dropdown menü özelleştirmesi */
+.dropdown-menu {
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e2e8f0;
+  padding: 5px 0;
+}
+
+.dropdown-item {
+  padding: 7px 15px;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+.dropdown-item i {
+  width: 20px;
+  text-align: center;
+}
+
+.dropdown-header {
+  padding: 8px 15px 6px;
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.dropdown-divider {
+  margin: 5px 0;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* ============================================ */
+/* BOOTSTRAP DROPDOWN ÖZELLEŞTİRMESİ */
+/* ============================================ */
+
+/* Action Butonları */
+.action-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid;
+  transition: all 0.2s;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+}
+
+.action-btn-primary {
+  color: #1e40af;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.action-btn-primary:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.action-btn-info {
+  color: #0369a1;
+  border-color: #bae6fd;
+  background: #f0f9ff;
+}
+
+.action-btn-info:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+}
+
+.action-btn-warning {
+  color: #92400e;
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.action-btn-warning:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+}
+
+.action-btn-danger {
+  color: #991b1b;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.action-btn-danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.action-btn-success {
+  color: #166534;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.action-btn-success:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.action-btn-secondary {
+  color: #475569;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.action-btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e0;
+}
+
+/* Gap classes - CustomerAccounts gibi */
+.gap-1 {
+  gap: 4px;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.gap-3 {
+  gap: 12px;
+}
+
+/* Flex utilities */
+.d-flex {
+  display: flex !important;
+}
+
+.flex-wrap {
+  flex-wrap: wrap !important;
+}
+
+/* ============================================ */
+/* DROPDOWN MENÜ STİLLERİ */
+/* ============================================ */
+
+/* Dropdown container için relative pozisyon */
+.btn-group {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+/* Dropdown toggle buton */
+.dropdown-toggle::after {
+  display: inline-block;
+  margin-left: 0.255em;
+  vertical-align: 0.255em;
+  content: "";
+  border-top: 0.3em solid;
+  border-right: 0.3em solid transparent;
+  border-bottom: 0;
+  border-left: 0.3em solid transparent;
+}
+
+/* Dropdown menü */
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  display: none;
+  float: left;
+  min-width: 10rem;
+  padding: 0.5rem 0;
+  margin: 0.125rem 0 0;
+  font-size: 1rem;
+  color: #212529;
+  text-align: left;
+  list-style: none;
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 0.25rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Dropdown menü gösterme */
+.dropdown-menu.show {
+  display: block;
+}
+
+/* Sağa hizalı dropdown */
+.dropdown-menu-right {
+  right: 0;
+  left: auto;
+}
+
+/* Dropdown item */
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.25rem 1.5rem;
+  clear: both;
+  font-weight: 400;
+  color: #212529;
+  text-align: inherit;
+  white-space: nowrap;
+  background-color: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  color: #16181b;
+  text-decoration: none;
+  background-color: #f8f9fa;
+}
+
+.dropdown-item:active {
+  color: #fff;
+  text-decoration: none;
+  background-color: #3b82f6;
+}
+
+/* Dropdown item için icon spacing */
+.dropdown-item i {
+  width: 20px;
+  text-align: center;
+  margin-right: 8px;
+}
+
+/* Dropdown divider */
+.dropdown-divider {
+  height: 0;
+  margin: 0.5rem 0;
+  overflow: hidden;
+  border-top: 1px solid #e9ecef;
+}
+
+/* ============================================ */
+/* TABLO İÇİNDE DROPDOWN */
+/* ============================================ */
+
+/* Tablo satırlarında dropdown için z-index */
+.table-compact tbody tr {
+  position: relative;
+}
+
+/* Dropdown açıkken satırın z-index'ini artır */
+.table-compact .btn-group.show {
+  z-index: 1050;
+}
+
+/* ============================================ */
+/* RESPONSIVE */
+/* ============================================ */
+
+@media (max-width: 768px) {
+  .dropdown-menu {
+    font-size: 0.875rem;
+  }
+
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+
+  .action-btn {
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+}
+
+/* ============================================ */
+/* DROPDOWN Z-INDEX DÜZELTMESİ - KESİN ÇÖZÜM */
+/* ============================================ */
+
+/* Tablo wrapper'ının z-index'ini düşür */
+.table-responsive {
+  position: relative;
+  z-index: 1;
+}
+
+/* Tablo satırları için base z-index */
+.table-compact tbody tr {
+  position: relative;
+  z-index: 1;
+}
+
+/* Dropdown butonunun olduğu hücre */
+.table-compact tbody td {
+  position: relative;
+}
+
+/* Dropdown container - YÜKSEK Z-INDEX */
+.table-compact .btn-group {
+  position: relative;
+  z-index: 10; /* Base değer */
+}
+
+/* Dropdown AÇIKKEN - ÇOK YÜKSEK Z-INDEX */
+.table-compact .btn-group.show {
+  z-index: 1060 !important; /* Bootstrap modal'dan bile yüksek */
+}
+
+/* Dropdown menü - ÇOK YÜKSEK Z-INDEX */
+.table-compact .dropdown-menu {
+  z-index: 1070 !important; /* En yüksek */
+  position: absolute !important;
+}
+
+/* Açık dropdown'lu satırın z-index'ini artır */
+.table-compact tbody tr:has(.btn-group.show) {
+  z-index: 1050 !important;
+}
+
+/* DataTables wrapper için z-index düzeltmesi */
+.dataTables_wrapper {
+  position: relative;
+  z-index: 1;
+}
+
+/* Tablo thead'in z-index'ini düşür */
+.table-compact thead {
+  position: relative;
+  z-index: 2; /* Dropdown'dan düşük */
+}
+
+/* Tablo içeriği için overflow kontrolü */
+.card-body {
+  overflow: visible !important;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  overflow-y: visible !important; /* Y ekseninde taşmaya izin ver */
+}
+
+/* ============================================ */
+/* DROPDOWN POZİSYON - SOL ALTA */
+/* ============================================ */
+
+/* Dropdown menü - SOL ALTA */
+.table-compact .dropdown-menu {
+  z-index: 1070 !important;
+  position: absolute !important;
+  top: 100% !important; /* Butonun altı */
+  left: 0 !important; /* Sol tarafa hizalı */
+  right: auto !important; /* Sağ hizalamayı iptal et */
+  margin-top: 2px; /* Butondan 2px boşluk */
+}
+
+/* Dropdown-menu-right class'ını iptal et */
+.table-compact .dropdown-menu-right {
+  right: auto !important;
+  left: 0 !important;
+}
+
+/* Ekranın solunda kalırsa sağa kaydir */
+.table-compact .dropdown-menu.dropdown-menu-left {
+  left: 0 !important;
+  right: auto !important;
+}
+
+.card-endorsed {
+  border-left: 4px solid #7c3aed;
+}
+
+.card-endorsed .erp-stat-icon {
+  color: #7c3aed;
+}
+/* --- Views/Checks/Checks.cshtml <style> :84-163 --- */
+.btn-divider {
+  width: 1px;
+  height: 28px;
+  background: linear-gradient(180deg, transparent 0%, #cbd5e1 20%, #cbd5e1 80%, transparent 100%);
+  margin: 0 4px;
+  margin-right: 12px;
+  align-self: center;
+}
+
+.table-compact tbody td {
+  padding: 2px 4px !important;
+  vertical-align: middle !important;
+}
+
+/* DataTables varsayılan arama kutusu gizli (custom kullanıyoruz) */
+#checksTable_wrapper .dataTables_filter {
+  display: none !important;
+}
+/* DataTables varsayılan length gizli (custom kullanıyoruz) */
+#checksTable_wrapper .dataTables_length {
+  display: none !important;
+}
+
+/* ---------- MOBİL / TELEFON MODU (<=991px) SADECE KART FORMATI ---------- */
+@media (max-width: 991.98px) {
+  .container-fluid[style*="padding-left"] {
+    padding-left: 15px !important;
+  }
+  .card-header .btn-divider {
+    display: none !important;
+  }
+  .card-header .d-flex {
+    gap: 8px !important;
+  }
+  .erp-filter-card .row > [class*="col-"] {
+    margin-bottom: 8px !important;
+  }
+  .chk-phone-card-table,
+  .chk-phone-card-table tbody {
+    display: block !important;
+    width: 100% !important;
+  }
+  .chk-phone-card-table thead {
+    display: none !important;
+  }
+  .chk-phone-card-table tr {
+    display: block !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    margin-bottom: 12px !important;
+    padding: 12px 14px !important;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06) !important;
+  }
+  .chk-phone-card-table td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 7px 0 !important;
+    border: none !important;
+    border-bottom: 1px dashed #e2e8f0 !important;
+    font-size: 12.5px !important;
+    text-align: right !important;
+  }
+  .chk-phone-card-table td:last-child {
+    border-bottom: none !important;
+    justify-content: flex-end !important;
+    padding-top: 8px !important;
+  }
+  .chk-phone-card-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #64748b;
+    font-size: 11.5px;
+    text-align: left;
+    flex: 0 0 auto;
+  }
+}
+
+/* --- Views/Checks/Checks.cshtml <style> :1125-1137 (M1 Ciro Edilebilir Çekler) --- */
+#ciroChecksModal .modal-title {
+  color: #fff !important;
+}
+.ciro-modern-tbl {
+  font-size: 12px;
+  margin: 0;
+}
+.ciro-modern-tbl thead th {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border: none;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 9px 10px;
+  white-space: nowrap;
+}
+.ciro-modern-tbl tbody td {
+  padding: 8px 10px;
+  border: none;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+.ciro-modern-tbl tbody tr:hover {
+  background: #faf5ff;
+}
+.ciro-modern-tbl .badge {
+  font-weight: 600;
+}
+#ciroChecksModal .btn-ciro-et {
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  line-height: 1.4;
+}
+#ciroChecksModal .btn-ciro-et:hover {
+  background: #6d28d9;
+}
+#ciroChecksTable_wrapper .dataTables_filter input {
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 4px 9px;
+}
+#ciroChecksTable_wrapper .dataTables_length select {
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 3px 6px;
+}
+
+/* --- Views/Checks/Checks.cshtml <style> :1318-1365 (M4 3B çek yaprağı) --- */
+/* 3B sahne: perspektif + fare eğimi (tilt) + ön/arka çevirme (flip) ayrı katmanlarda */
+.c3d-stage {
+  perspective: 1400px;
+  display: flex;
+  justify-content: center;
+  padding: 16px 4px 8px;
+}
+.c3d-tilt {
+  width: 100%;
+  max-width: 640px;
+  transform-style: preserve-3d;
+}
+.c3d-card {
+  position: relative;
+  width: 100%;
+  padding-bottom: 46%;
+  transform-style: preserve-3d;
+}
+.c3d-card.is-flipped {
+  transform: rotateY(180deg);
+}
+.c3d-face {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow:
+    0 18px 42px rgba(15, 23, 42, 0.3),
+    0 2px 8px rgba(15, 23, 42, 0.16);
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  cursor: pointer;
+}
+.c3d-front {
+  background: linear-gradient(135deg, #f7faff 0%, #eef3fb 45%, #e4ecf9 100%);
+}
+.c3d-back {
+  transform: rotateY(180deg);
+  background: linear-gradient(135deg, #fafaf5 0%, #f0f1e8 100%);
+}
+/* Güvenlik deseni (giyoş benzeri ince halkalar) */
+.c3d-face::before {
+  content: "";
+  position: absolute;
+  top: -40%;
+  left: -20%;
+  right: -20%;
+  bottom: -40%;
+  pointer-events: none;
+  background:
+    repeating-radial-gradient(
+      circle at 30% 40%,
+      rgba(37, 99, 235, 0.05) 0 2px,
+      transparent 2px 9px
+    ),
+    repeating-radial-gradient(
+      circle at 75% 70%,
+      rgba(14, 116, 144, 0.05) 0 2px,
+      transparent 2px 11px
+    );
+}
+.c3d-pad {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 4.2% 4.5% 3%;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  color: #1e293b;
+}
+.c3d-row1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.c3d-bank-name {
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #1d4ed8;
+  font-size: 1.1em;
+  text-transform: uppercase;
+}
+.c3d-bank-branch {
+  font-size: 0.8em;
+  color: #475569;
+}
+.c3d-amt-box {
+  border: 1.6px solid #1d4ed8;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-weight: 800;
+  font-size: 1.05em;
+  background: rgba(255, 255, 255, 0.75);
+  color: #0f172a;
+  white-space: nowrap;
+}
+.c3d-body {
+  margin-top: 2.4%;
+  line-height: 1.45;
+}
+.c3d-words {
+  font-weight: 700;
+  color: #0f172a;
+  border-bottom: 1px dotted #94a3b8;
+  display: inline-block;
+  word-break: break-all;
+}
+.c3d-meta {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px;
+}
+.c3d-meta-left {
+  font-size: 0.82em;
+  color: #334155;
+}
+.c3d-sign {
+  text-align: center;
+  font-size: 0.78em;
+  color: #475569;
+  min-width: 130px;
+}
+.c3d-sign-line {
+  margin-top: 14px;
+  border-top: 1px solid #64748b;
+  padding-top: 2px;
+}
+.c3d-micr {
+  margin-top: 2%;
+  font-family: "Courier New", monospace;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #0f172a;
+  font-size: 0.95em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.c3d-stamp {
+  position: absolute;
+  top: 34%;
+  right: 7%;
+  transform: rotate(-14deg);
+  border: 3px double currentColor;
+  border-radius: 8px;
+  padding: 4px 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  font-size: 1em;
+  opacity: 0.5;
+  pointer-events: none;
+  text-transform: uppercase;
+}
+.c3d-back-title {
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #334155;
+  text-transform: uppercase;
+  font-size: 0.9em;
+}
+.c3d-endorse-line {
+  border-bottom: 1px dashed #94a3b8;
+  height: 24px;
+}
+.c3d-endorse-note {
+  font-size: 0.82em;
+  color: #475569;
+}
+/* Alt detay bölümü — iki sütunlu etiket/değer tabloları (eski detay modalı tarzı, modern) */
+.c3d-sec {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px 4px;
+  height: 100%;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+.c3d-sec-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+}
+.c3d-sec-title i {
+  margin-right: 4px;
+}
+table.c3d-table {
+  width: 100%;
+  margin-bottom: 4px;
+}
+table.c3d-table th {
+  width: 44%;
+  padding: 6px 8px 6px 0;
+  border: 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  vertical-align: middle;
+}
+table.c3d-table td {
+  padding: 6px 0;
+  border: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #0f172a;
+  vertical-align: middle;
+  word-break: break-word;
+}
+table.c3d-table tr + tr th,
+table.c3d-table tr + tr td {
+  border-top: 1px solid #f1f5f9;
+}
+.c3d-desc {
+  max-height: 120px;
+  overflow: auto;
+  white-space: pre-line;
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: #334155;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 4px;
+}
+
+/* --- BR eki (12.3 §5.4) --- */
+/* M1 başlığı ve gövdesi (CHK:1141-1147 satır içi stiller). */
+#ciroChecksModal .modal-dialog {
+  max-width: 1150px;
+}
+#ciroChecksModal .modal-header {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  border: none;
+}
+#ciroChecksModal .modal-header .close {
+  color: #fff;
+  opacity: 0.9;
+  text-shadow: none;
+}
+#ciroChecksModal .modal-body {
+  background: #f8fafc;
+}
+/* M4 gövde rengi (CHK:1376). */
+#checkLeafModal .modal-body {
+  background: #eef1f6;
+}
+/* Çek No tıklaması: ZTO <strong onclick> yerine düğme; görünüm aynı (alt çizgi yalnız üstünde). */
+#checksTable .btn-link {
+  font-size: inherit;
+  line-height: inherit;
+  vertical-align: baseline;
+  text-decoration: none;
+}
+#checksTable .btn-link:hover strong,
+#checksTable .btn-link:focus-visible strong {
+  text-decoration: underline;
+}
+/* MWG motion: çevirme ve eğim geçişleri yalnız hareket tercihine izin veren kullanıcıda. */
+@media (prefers-reduced-motion: no-preference) {
+  .c3d-tilt {
+    transition: transform 0.12s ease-out;
+  }
+  .c3d-card {
+    transition: transform 0.65s cubic-bezier(0.25, 0.8, 0.3, 1);
+  }
+}

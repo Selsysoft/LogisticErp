@@ -108,6 +108,16 @@ class SettlementDetailIT extends SettlementTestSupport {
     assertThat(checkDetail.get("instrument").get("number").asText()).isEqualTo("5555555");
     assertThat(checkDetail.get("fundIbanMasked").isNull()).isTrue();
     assertThat(ledgers(checkDetail)).containsExactly("ACCOUNT:CREDIT:false");
+    // 12.3 §3.8: portföydeki çekli kayıt iptal/düzeltilebilir; detayda keşide ve köken alanları.
+    assertThat(checkDetail.get("item").get("lockReason").isNull()).isTrue();
+    assertThat(checkDetail.get("item").get("reversible").asBoolean()).isTrue();
+    assertThat(checkDetail.get("item").get("correctable").asBoolean()).isTrue();
+    JsonNode checkItem = checkDetail.get("instrument");
+    assertThat(checkItem.get("issueDate").isNull()).isTrue();
+    assertThat(checkItem.get("checkBookSerial").isNull()).isTrue();
+    assertThat(checkItem.get("originSettlementId").asText()).isEqualTo(checkCollection);
+    assertThat(checkItem.get("originSettlementStatus").asText()).isEqualTo("POSTED");
+    assertThat(checkItem.get("allowedTransitions").size()).isPositive();
     UUID supplier = account(w, AccountType.SUPPLIER, null);
     UUID plan = manualPlan(w, supplier, w.a1(), "20");
     UUID planPayment = payPlan(w, plan, bank, "BANK");

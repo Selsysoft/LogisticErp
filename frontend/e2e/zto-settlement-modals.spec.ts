@@ -172,6 +172,8 @@ test("Yeni Ödeme: borcu aşınca uyarı → Vazgeç → Tamam; Kredi Kartı; Ö
     "Seçiniz",
     "Nakit",
     "Banka Havalesi/Eft",
+    "Çek",
+    "Senet",
     "Kredi Kartı",
   ]);
   await edit.locator("#editPaymentAmountInput").fill("90");
@@ -238,7 +240,8 @@ test("Yeni Tahsilat: çek Bankaya Yatırıldı → AT_BANK", async ({ page }) =>
   await modal.locator("#CollectionMethod").selectOption("CHECK");
   await modal.locator("#WorkPlaceID").selectOption({ label: f.branchName });
   await expect(modal.getByRole("radio", { name: /Bankaya Yatırıldı/ })).toBeChecked();
-  await expect(modal.locator("#IssueDate")).toBeDisabled();
+  // 12.3: keşide tarihi açık ve bugünle dolu.
+  await expect(modal.locator("#IssueDate")).toBeEnabled();
   await pick(modal, "CheckBankID", f.bankName);
   await modal.locator("#CheckNumber").fill("1234567");
   await modal.locator("#BankName").fill("Ziraat Bankası");

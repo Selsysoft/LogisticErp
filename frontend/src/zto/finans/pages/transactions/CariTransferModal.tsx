@@ -36,6 +36,20 @@ import {
   type TransferGroupBy,
 } from "./transferLogic";
 
+/**
+ * Taşınamayan satırın açıklama anahtarı (12.8 §5.11, Rev 1 F5): açık ödeme planı, açık kur farkı
+ * belgesinin kaynağı ya da KUR_FARKI belgesinin kendisi.
+ */
+const BLOCKED_KEYS: Record<NonNullable<TransferableTransaction["blockedReason"]>, string> = {
+  OPEN_PLAN: "transactions.transfer.blocked",
+  FX_DOCUMENT_OPEN: "transactions.transfer.blockedFx",
+  FX_DOCUMENT: "transactions.transfer.blockedFxDocument",
+};
+
+function blockedKey(reason: TransferableTransaction["blockedReason"]): string {
+  return (reason && BLOCKED_KEYS[reason]) || "transactions.transfer.blocked";
+}
+
 export type CariTransferModalProps = {
   show: boolean;
   onHide: () => void;
@@ -164,7 +178,7 @@ export function CariTransferModal({ show, onHide, account }: CariTransferModalPr
       <tr
         key={x.transactionId}
         className={blocked ? "ct-blocked" : undefined}
-        title={blocked ? t("transactions.transfer.blocked") : undefined}
+        title={blocked ? t(blockedKey(x.blockedReason)) : undefined}
       >
         <td>
           <input
@@ -178,7 +192,7 @@ export function CariTransferModal({ show, onHide, account }: CariTransferModalPr
           />
           {blocked && (
             <span id={`${checkboxId}-blocked`} className="sr-only">
-              {t("transactions.transfer.blocked")}
+              {t(blockedKey(x.blockedReason))}
             </span>
           )}
         </td>

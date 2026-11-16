@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, Stack, Tooltip, Typography } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -373,9 +373,38 @@ export function CostsSection({ shipment }: { shipment: Shipment }) {
             },
             { header: t("finance.field.description"), render: (c) => c.description },
             {
+              header: t("finance.definitions.status"),
+              render: (c) =>
+                c.status ? (
+                  <Chip
+                    size="small"
+                    color={c.status === "POSTED" ? "success" : "default"}
+                    label={t(`ztoFinans:salesTruckExpenses.mui.costStatus.${c.status}`)}
+                  />
+                ) : null,
+            },
+            {
+              // 12.7 §5.8: cariye yazılan tutar (net + KDV − tevkifat − kesinti); ipucunda kırılım.
               header: t("finance.field.amount"),
               align: "right",
-              render: (c) => formatMoney(c.money),
+              render: (c) => {
+                const payable = {
+                  amount: c.payableAmount ?? c.money.amount,
+                  currency: c.money.currency,
+                };
+                return (
+                  <Tooltip
+                    title={t("ztoFinans:salesTruckExpenses.mui.breakdown", {
+                      net: formatAmount(c.money.amount),
+                      vat: formatAmount(c.vatAmount ?? "0"),
+                      withholding: formatAmount(c.withholdingAmount ?? "0"),
+                      deduction: formatAmount(c.deductionAmount ?? "0"),
+                    })}
+                  >
+                    <span>{formatMoney(payable)}</span>
+                  </Tooltip>
+                );
+              },
             },
             {
               header: t("operations.field.tlAmount"),
@@ -386,7 +415,7 @@ export function CostsSection({ shipment }: { shipment: Shipment }) {
               header: t("common.actions"),
               align: "right",
               render: (c) =>
-                c.postedAt ? (
+                c.postedAt || (c.status && c.status !== "OPEN") ? (
                   t("operations.field.posted")
                 ) : canDispatch && open && c.kind !== "SUBCONTRACTOR" ? (
                   <Button size="small" color="error" onClick={() => remove.mutate(c.id)}>

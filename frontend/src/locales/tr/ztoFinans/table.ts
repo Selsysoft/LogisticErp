@@ -33,4 +33,24 @@ export default {
     copyTitle: "Panoya kopyala",
     copySuccess: "{{count}} satır panoya kopyalandı",
   },
+  // 12.8 (§5.3a): ZTO wwwroot/js/recipe-table.js `rcpI18n.tr` (ZtoRcpTable). Metinlerin baş/son
+  // boşlukları bileşende; `<b>` vurgulu özet üç parçaya bölündü. Erişilebilirlik adları Blackrose eki.
+  rcp: {
+    show: "Sayfada göster:",
+    all: "Tümü",
+    records: "kayıt",
+    search: "Ara:",
+    placeholder: "Tabloda ara...",
+    notFound: "Kayıt bulunamadı",
+    emptyHint: "Henüz bu listede kayıt yok.",
+    emptyFilterHint: "Arama veya filtre ölçütlerine uyan kayıt yok.",
+    infoTotal: "Toplam",
+    infoFrom: "kayıttan",
+    infoShowing: "arası gösteriliyor",
+    sizeLabel: "Sayfada gösterilecek kayıt",
+    searchLabel: "Tabloda ara",
+    pageLabel: "Sayfa {{page}}",
+    previous: "Önceki sayfa",
+    next: "Sonraki sayfa",
+  },
 } as const;

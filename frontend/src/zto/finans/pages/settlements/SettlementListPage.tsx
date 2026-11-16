@@ -40,11 +40,12 @@ import {
   ZTO_SLUGS,
   accountTransactionsPath,
   fundTransactionsPath,
+  billsPath,
+  checksPath,
   paymentsPath,
   transferCenterPath,
 } from "../../navItems";
 import { useZtoRootClass } from "../../ZtoRootClassContext";
-import { PhaseButton } from "../accounts/AccountsMenu";
 import { todayIso } from "../fundTransactions/fundTransactionsLogic";
 import { CollectionModal, PaymentModal } from "../settlementModals";
 import { DailyReportModal } from "./DailyReportModal";
@@ -753,22 +754,18 @@ export function SettlementListPage({ type }: { type: SettlementType }) {
                       <span className="d-none d-md-inline">{h("payments")}</span>
                     </Link>
                   )}
-                  <PhaseButton
-                    step="12.3"
-                    className="erp-btn erp-btn-info"
-                    title={h("checksTitle")}
-                  >
+                  <Link to={checksPath()} className="erp-btn erp-btn-info" title={h("checksTitle")}>
                     <i className="fas fa-money-check" aria-hidden="true" />
                     <span className="d-none d-md-inline">{h("checks")}</span>
-                  </PhaseButton>
-                  <PhaseButton
-                    step="12.3"
+                  </Link>
+                  <Link
+                    to={billsPath()}
                     className="erp-btn erp-btn-warning"
                     title={h("notesTitle")}
                   >
                     <i className="fas fa-file-invoice-dollar" aria-hidden="true" />
                     <span className="d-none d-md-inline">{h("notes")}</span>
-                  </PhaseButton>
+                  </Link>
                   <div className="btn-divider" />
                   <button
                     type="button"

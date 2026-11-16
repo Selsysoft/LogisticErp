@@ -1,0 +1,268 @@
+/*
+ * Kaynak: ZtoFabrika/Views/ProductionExpenses/ExpenseGroupDetails.cshtml <style> :18-281 (12.7_TASARIM §5.3).
+ * Birebir kopya (FE-0); kurallar .zto-finans.zto-page-expense-group-details altına alınır (prefixTransform.ts).
+ * Değişiklikler: Razor kaçışı @@ → @.
+ */
+/* --- Views/ProductionExpenses/ExpenseGroupDetails.cshtml <style> :18-281 --- */
+/* Mevcut stiller aynı kalacak - değişiklik yok */
+.small-icon i {
+  font-size: 10px;
+}
+
+.custom-badge {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translate(0%, 70%);
+  background-color: white;
+  color: black;
+  border-radius: 16%;
+  padding: 2px 6px;
+  font-size: 10px;
+  border: 0.5px solid gray;
+}
+
+.welcome {
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 24px;
+  text-align: center;
+}
+
+.welcome-content {
+  margin-bottom: 5px;
+}
+
+.content {
+  margin-top: 20px;
+  margin-left: 10px;
+}
+
+.lower-opacity {
+  opacity: 0.7;
+}
+
+.dt-buttons .btn.btn-blue {
+  background-color: #007bff !important;
+  color: white !important;
+}
+
+.dt-buttons .btn.btn-green {
+  background-color: #28a745 !important;
+  color: white !important;
+}
+
+.dt-buttons .btn.btn-grey {
+  background-color: #505050 !important;
+  color: white !important;
+}
+
+.dt-buttons .btn.btn-red {
+  background-color: #dc3545 !important;
+  color: white !important;
+}
+
+.modal-lg-custom {
+  max-width: 90%;
+}
+
+.expense-item {
+  border-bottom: 1px solid #e9ecef;
+  padding: 10px 0;
+}
+
+.expense-item:last-child {
+  border-bottom: none;
+}
+
+.expense-header {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+.badge-success {
+  background-color: #28a745;
+}
+
+.badge-danger {
+  background-color: #dc3545;
+}
+
+.badge-warning {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.badge-secondary {
+  background-color: #6c757d;
+}
+
+.summary-card {
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 15px;
+  transition: all 0.3s ease;
+}
+
+.summary-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.summary-icon {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.progress-bar-custom {
+  height: 6px;
+  border-radius: 3px;
+}
+
+.amount-badge {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 10px;
+}
+
+.horizontal-scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: #007bff #f8f9fa;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar-thumb {
+  background: #007bff;
+  border-radius: 4px;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #0056b3;
+}
+
+.summary-card {
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.bg-primary {
+  background-color: #007bff !important;
+}
+
+.bg-success {
+  background-color: #28a745 !important;
+}
+
+.bg-info {
+  background-color: #17a2b8 !important;
+}
+
+.bg-warning {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+
+.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+.bg-secondary {
+  background-color: #6c757d !important;
+}
+
+.progress-bar.bg-white.bg-primary {
+  background-color: #007bff !important;
+}
+
+.progress-bar.bg-white.bg-success {
+  background-color: #28a745 !important;
+}
+
+.progress-bar.bg-white.bg-info {
+  background-color: #17a2b8 !important;
+}
+
+.progress-bar.bg-white.bg-warning {
+  background-color: #ffc107 !important;
+}
+
+.progress-bar.bg-white.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+.progress-bar.bg-white.bg-secondary {
+  background-color: #6c757d !important;
+}
+
+#categorySearch {
+  min-width: 200px;
+  transition: all 0.3s ease;
+}
+
+#categorySearch:focus {
+  box-shadow: 0 0 0 0.2rem rgba(23, 162, 184, 0.25);
+  border-color: #17a2b8;
+}
+
+#clearSearch {
+  transition: all 0.3s ease;
+}
+
+#clearSearch:hover {
+  background-color: #f8f9fa;
+  color: #dc3545;
+}
+
+.category-card {
+  transition: all 0.3s ease;
+}
+.group-header {
+  background-color: #17a2b8;
+  color: white;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+
+.summary-card {
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.summary-title {
+  font-weight: bold;
+  color: #495057;
+  margin-bottom: 10px;
+}
+
+.summary-value {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #17a2b8;
+}
+
+.back-button {
+  margin-bottom: 20px;
+}
+
+.category-badge {
+  font-size: 0.85em;
+  padding: 0.25em 0.5em;
+}

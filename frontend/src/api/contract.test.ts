@@ -43,6 +43,80 @@ const SCHEMA_OF: Record<string, string> = {
   "warehouse/CountDetail": "CountResponse",
   "warehouse/Contract": "WarehouseContractResponse",
   "warehouse/Balance": "WarehouseBalanceResponse",
+  // 12.3 (§4.3): yeni yanıt tipleri ad kuralıyla (TS adı = record − Response) bağlanır; açık eşleme
+  // yalnız kural dışı adlar içindir. B4 `InstrumentResponse`'u kaldırdı; detay/geçiş/PATCH/custody
+  // uçları `InstrumentListItemResponse` döner (`finance/Instrument` onun alt kümesi).
+  "finance/Instrument": "InstrumentListItemResponse",
+};
+
+/** 12.3 yanıt tipleri ve beklenen şemaları (B4 bitene kadar şemada yoksa kırmızı, §7). */
+const TWELVE_THREE_TYPES: Record<string, string> = {
+  "finance/InstrumentListItem": "InstrumentListItemResponse",
+  "finance/InstrumentDetail": "InstrumentDetailResponse",
+  "finance/InstrumentNumberCheck": "InstrumentNumberCheckResponse",
+  "finance/CheckBook": "CheckBookResponse",
+  "finance/CheckBookCreated": "CheckBookCreatedResponse",
+  "finance/CheckLeaf": "CheckLeafResponse",
+};
+
+/**
+ * 12.7 yanıt tipleri ve beklenen şemaları (12.7 §4.3, §5.2; Rev 1 F3: hepsi ad kuralıyla bağlanır,
+ * SCHEMA_OF girdisi yok). B2 (masraf) ve B3 (taşeron) bitene kadar şemada yoksa kırmızı (§7.1).
+ */
+const TWELVE_SEVEN_TYPES: Record<string, string> = {
+  "finance/ExpenseItem": "ExpenseItemResponse",
+  "finance/ExpenseLine": "ExpenseLineResponse",
+  "finance/ExpenseDetail": "ExpenseDetailResponse",
+  "finance/ExpenseListItem": "ExpenseListItemResponse",
+  "finance/ExpenseCurrencyTotal": "ExpenseCurrencyTotalResponse",
+  "finance/ExpenseItemSummary": "ExpenseItemSummaryResponse",
+  "finance/ExpenseCalendarEntry": "ExpenseCalendarEntryResponse",
+  "finance/ExpenseCalendarDay": "ExpenseCalendarDayResponse",
+  "finance/ExpenseAllTime": "ExpenseAllTimeResponse",
+  "finance/ExpenseCalendar": "ExpenseCalendarResponse",
+  "finance/ExpenseMonthly": "ExpenseMonthlyResponse",
+  "finance/ExpenseContextOption": "ExpenseContextOptionResponse",
+  "operations/SubcontractCurrencyAmount": "SubcontractCurrencyAmountResponse",
+  "operations/SubcontractCarrierRow": "SubcontractCarrierRowResponse",
+  "operations/SubcontractSummary": "SubcontractSummaryResponse",
+  "operations/SubcontractLedgerRef": "SubcontractLedgerRefResponse",
+  "operations/SubcontractCostRow": "SubcontractCostRowResponse",
+  "operations/SubcontractCarrierDetail": "SubcontractCarrierDetailResponse",
+};
+
+/**
+ * 12.8 yanıt tipleri ve beklenen şemaları (12.8 §4.3, §5.2; hepsi ad kuralıyla bağlanır, SCHEMA_OF
+ * girdisi yok; `FinanceReportDtos` şema adları benzersiz). B2 (kur farkı) ve B3 (raporlar) bitene kadar
+ * şemada yoksa kırmızı (§7.1). Genişletilen mevcut kayıtlar (`Aging`, `AccountDocument`,
+ * `TransferableTransaction`, `reports/PositionRow`, `fleet/VehicleCost`) genel alan testlerine girer.
+ */
+const TWELVE_EIGHT_TYPES: Record<string, string> = {
+  "finance/LedgerSummary": "LedgerSummaryResponse",
+  "finance/LedgerSummaryRow": "LedgerSummaryRowResponse",
+  "finance/LedgerAccounts": "LedgerAccountsResponse",
+  "finance/LedgerAccountRow": "LedgerAccountRowResponse",
+  "finance/AccountMethodTotal": "AccountMethodTotalResponse",
+  "finance/BalanceSheet": "BalanceSheetResponse",
+  "finance/BalanceSheetCompany": "BalanceSheetCompanyResponse",
+  "finance/ReportRate": "ReportRateResponse",
+  "finance/BalanceSheetWorkplace": "BalanceSheetWorkplaceResponse",
+  "finance/BalanceSheetCurrency": "BalanceSheetCurrencyResponse",
+  "finance/BalanceSheetAccount": "BalanceSheetAccountResponse",
+  "finance/ReportCurrencyAmount": "ReportCurrencyAmountResponse",
+  "finance/BalanceSheetIntercompany": "BalanceSheetIntercompanyResponse",
+  "finance/Treasury": "TreasuryResponse",
+  "finance/TreasuryFund": "TreasuryFundResponse",
+  "finance/TreasuryInstrument": "TreasuryInstrumentResponse",
+  "finance/TreasuryCurrency": "TreasuryCurrencyResponse",
+  "finance/TreasuryDaily": "TreasuryDailyResponse",
+  "finance/TreasuryDueBucket": "TreasuryDueBucketResponse",
+  "finance/CashFlow": "CashFlowResponse",
+  "finance/CashFlowWeek": "CashFlowWeekResponse",
+  "finance/AccountPerformanceRow": "AccountPerformanceRowResponse",
+  "finance/CurrencyPositionRow": "CurrencyPositionRowResponse",
+  "finance/FxDifferenceReport": "FxDifferenceReportResponse",
+  "finance/FxDifferenceRow": "FxDifferenceRowResponse",
+  "finance/FxDifferenceCut": "FxDifferenceCutResponse",
 };
 
 /** API yanıtı olmayan, yalnız ekranda kullanılan tipler. */
@@ -215,6 +289,33 @@ describe("API sözleşmesi", () => {
     expect(types.length).toBeGreaterThan(100);
   });
 
+  it("12.3 yanıt tipleri ad kuralıyla şemaya bağlanır", () => {
+    const keys = types.map((type) => type.key);
+    for (const [key, schema] of Object.entries(TWELVE_THREE_TYPES)) {
+      expect(keys, key).toContain(key);
+      expect(schemaFor(key), key).toBe(schema);
+    }
+  });
+
+  it("12.7 yanıt tipleri ad kuralıyla şemaya bağlanır (SCHEMA_OF girdisi yok)", () => {
+    const keys = types.map((type) => type.key);
+    for (const [key, schema] of Object.entries(TWELVE_SEVEN_TYPES)) {
+      expect(keys, key).toContain(key);
+      expect(SCHEMA_OF[key], key).toBeUndefined();
+      expect(schemaFor(key), key).toBe(schema);
+    }
+  });
+
+  it("12.8 yanıt tipleri ad kuralıyla şemaya bağlanır (SCHEMA_OF girdisi yok)", () => {
+    const keys = types.map((type) => type.key);
+    expect(Object.keys(TWELVE_EIGHT_TYPES)).toHaveLength(26);
+    for (const [key, schema] of Object.entries(TWELVE_EIGHT_TYPES)) {
+      expect(keys, key).toContain(key);
+      expect(SCHEMA_OF[key], key).toBeUndefined();
+      expect(schemaFor(key), key).toBe(schema);
+    }
+  });
+
   it("her API tipinin şemada karşılığı vardır", () => {
     const missing = types
       .filter((type) => !LOCAL.has(type.key))
@@ -329,6 +430,28 @@ describe("API sözleşmesi: opt-in null'lanabilirlik ve ondalık metin (12.2a §
     ["finance/DailyFundBalance", "balanceAtDate"],
     ["finance/DailyFundBalance", "balanceNow"],
     ["finance/DailyInstrumentMovement", "total"],
+    // 12.7 (§4.1, §5.2): masraf ve taşeron gideri tutarları ondalık metin.
+    ["finance/ExpenseLine", "unitPrice"],
+    ["finance/ExpenseLine", "totalAmount"],
+    ["finance/ExpenseDetail", "totalAmount"],
+    ["finance/ExpenseDetail", "tlAmount"],
+    ["finance/ExpenseListItem", "totalAmount"],
+    ["finance/ExpenseCurrencyTotal", "totalAmount"],
+    ["operations/TripCost", "vatAmount"],
+    ["operations/TripCost", "payableAmount"],
+    ["operations/SubcontractCurrencyAmount", "amount"],
+    ["operations/SubcontractCostRow", "payableAmount"],
+    // 12.8 (§4.0, §4.3): rapor ve kur farkı tutarları ondalık metin (Aging/PositionRow sayı kalır).
+    ["finance/LedgerSummaryRow", "net"],
+    ["finance/LedgerAccountRow", "closing"],
+    ["finance/BalanceSheet", "netTl"],
+    ["finance/BalanceSheetCurrency", "bankOverdraft"],
+    ["finance/BalanceSheetCurrency", "fxAdjustment"],
+    ["finance/TreasuryFund", "balance"],
+    ["finance/CashFlowWeek", "cumulative"],
+    ["finance/FxDifferenceRow", "tlAmount"],
+    ["finance/FxDifferenceRow", "openRemaining"],
+    ["finance/FxDifferenceCut", "amount"],
   ];
 
   it("Money ve ondalık para alanları TS'de string", () => {

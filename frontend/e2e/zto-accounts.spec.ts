@@ -31,9 +31,21 @@ async function pickFirstBranch(page: Page, root: Locator) {
     .click();
 }
 
-async function openRowMenu(root: Locator, name: string) {
-  await root.getByRole("button", { name: `${name} işlemleri` }).click();
-  return root.getByRole("menu");
+/**
+ * Satır menüsünü açıp öğeyi seçer. `ZtoMenuButton` kaydırma/yeniden çizimde kapanır (tıklamadan önceki
+ * otomatik kaydırma dahil, 2 işçili yükte sık); menü açık değilse yeniden açılır, öğe olayı
+ * kaydırmasız gönderilir (zto-checks.spec ile aynı desen).
+ */
+async function rowMenuItem(root: Locator, name: string, item: string) {
+  const button = root.getByRole("button", { name: `${name} işlemleri` });
+  await button.scrollIntoViewIfNeeded();
+  await expect(async () => {
+    const menu = root.getByRole("menu");
+    if (!(await menu.isVisible())) await button.click();
+    const menuItem = menu.getByRole("menuitem", { name: item, exact: true });
+    await expect(menuItem).toBeVisible({ timeout: 2_000 });
+    await menuItem.dispatchEvent("click");
+  }).toPass({ timeout: 30_000 });
 }
 
 async function findRow(root: Locator, name: string) {
@@ -80,11 +92,7 @@ test("Cari Kartlar: yeni cari, düzenle, banka hesapları, IBAN tekilliği, sil 
   await expect(row).toContainText(/TED-\d+/);
 
   // 2) Düzenle → telefon → Güncelle.
-  await (
-    await openRowMenu(root, first)
-  )
-    .getByRole("menuitem", { name: "Düzenle", exact: true })
-    .click();
+  await rowMenuItem(root, first, "Düzenle");
   await expect(page).toHaveURL(/\/cari-kartlar\/[^/]+\/duzenle$/);
   await expect(root.locator("#AccountCode")).toHaveValue(/TED-\d+/);
   await expect(root.getByText("Kayıt Bilgileri")).toBeVisible();
@@ -94,11 +102,7 @@ test("Cari Kartlar: yeni cari, düzenle, banka hesapları, IBAN tekilliği, sil 
 
   // 3) Banka Hesapları: IBAN maskeli, ekran okuyucu metni son dört hane.
   await findRow(root, first);
-  await (
-    await openRowMenu(root, first)
-  )
-    .getByRole("menuitem", { name: "Banka Hesapları", exact: true })
-    .click();
+  await rowMenuItem(root, first, "Banka Hesapları");
   await expect(page).toHaveURL(/\/banka-hesaplari$/);
   await expect(root).toHaveClass(/zto-page-bank-accounts/);
   const ibanCell = root.locator("#dataTable tbody td.iban").first();
@@ -153,11 +157,7 @@ test("Cari Kartlar: yeni cari, düzenle, banka hesapları, IBAN tekilliği, sil 
 
   // 5) Aynı IBAN ikinci cariye eklenemez (genel ileti).
   await findRow(root, second);
-  await (
-    await openRowMenu(root, second)
-  )
-    .getByRole("menuitem", { name: "Banka Hesapları", exact: true })
-    .click();
+  await rowMenuItem(root, second, "Banka Hesapları");
   await root.getByRole("link", { name: "Yeni Banka Hesabı" }).click();
   await expect(root).toHaveClass(/zto-page-bank-account-form/);
   await root.locator("#BankName").fill("Ziraat Bankası");
@@ -172,11 +172,7 @@ test("Cari Kartlar: yeni cari, düzenle, banka hesapları, IBAN tekilliği, sil 
   // 6) Sil → ZTO onayı → pasif; Pasifleri göster → Aktifleştir.
   await page.goto("/zto-finans/cari-kartlar");
   await findRow(root, first);
-  await (
-    await openRowMenu(root, first)
-  )
-    .getByRole("menuitem", { name: "Sil", exact: true })
-    .click();
+  await rowMenuItem(root, first, "Sil");
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("Cari kartı silmek istediğinizde emin misiniz?");
   await expect(dialog.getByRole("button", { name: "İptal" })).toBeFocused();
@@ -186,10 +182,6 @@ test("Cari Kartlar: yeni cari, düzenle, banka hesapları, IBAN tekilliği, sil 
   await root.getByLabel("Pasifleri göster").check();
   const passive = await findRow(root, first);
   await expect(passive).toHaveClass(/definition-row--inactive/);
-  await (
-    await openRowMenu(root, first)
-  )
-    .getByRole("menuitem", { name: "Aktifleştir", exact: true })
-    .click();
+  await rowMenuItem(root, first, "Aktifleştir");
   await expect(page.locator(".snackbar", { hasText: "Cari kart aktifleştirildi." })).toBeVisible();
 });

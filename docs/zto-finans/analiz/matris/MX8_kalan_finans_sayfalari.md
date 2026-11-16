@@ -1,6 +1,10 @@
 # MX-8 — Kalan finans sayfaları: SalesTruckExpenses, MaterialStockAll, BankAccounts, Finance*, AmountType/TransactionType, kapsanmayan controller'lar
 
 > **§3 (BankAccounts — cari IBAN'ları) 12.1 uygulandı (2026-11-14); uygulama belgesi [`docs/zto-finans/uygulama/12.1_TASARIM.md`](../../uygulama/12.1_TASARIM.md)** (§0.4 S-6, S-17; §3.3; §4.2; §5.9). IBAN/hesap no şifreli + hash + maskeli, aktif kartlarda IBAN tekil (mod-97), tam IBAN yalnız `FINANCE_MANAGE` sahibine; "Hesap İşlemleri" paneli 12.2a'ya kadar bilgi notu. Bu ekin diğer bölümleri sonraki adımlarda.
+>
+> **§1 (SalesTruckExpenses — taşeron/sevkiyat araç gideri) 12.7 uygulandı (2026-11-16); uygulama belgesi [`docs/zto-finans/uygulama/12.7_TASARIM.md`](../../uygulama/12.7_TASARIM.md)** (V39 `trip_cost` SUBCONTRACTOR genişletmesi; taşeron gideri hemen cariye, §6.2-Y6). §2 yakıt/lastik `vehicle_expense` olduğu gibi kaldı.
+>
+> **§6.2 (Currency, RecipeFinance FxReport + CashFlow) 12.8 uygulandı (2026-11-16); uygulama belgesi [`docs/zto-finans/uygulama/12.8_TASARIM.md`](../../uygulama/12.8_TASARIM.md)** (bu eki düzeltir: kur farkı = V28 `account_document` KUR_FARKI + bilgi amaçlı V33 `fin_income_expense` FX_DIFF — "V30 fin_income_expense" ifadesi geçersiz; kesim kuru/tarihi V41; Currency salt okunur kur ekranı; RecipeFinance Index ve ikinci `Aging` ÇIKAR). Masraf ayna kaydı yok (OK-12.8-12).
 
 > Tarih: 2026-11-13 · Durum: öneri (koordinatör onayı bekliyor)
 > Kaynak (salt okunur): `f:\visual studio zto\ZtoFabrika2026\ZtoFabrika` (kısaltma **ZTO**). Hedef: `F:\visual studio zto\LogisticErp` (kısaltma **BR**).

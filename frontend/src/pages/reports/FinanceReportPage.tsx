@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
 import { apiGet } from "../../api/client";
+import { useActiveCompanyId } from "../../auth/companyStore";
 import {
   DataTable,
   formatAmount,
@@ -13,6 +14,7 @@ import {
   shiftDays,
   today,
 } from "../finance/common";
+import { withCompany } from "../finance/companyQuery";
 import { reportQuery } from "./common";
 import { ExportButtons, PeriodFilter } from "./components";
 import { ForecastRow, PositionRow, SettlementPerformanceRow } from "./types";
@@ -24,19 +26,22 @@ export function FinanceReportPage() {
   const { t } = useTranslation();
   const [from, setFrom] = useState(shiftDays(today(), -DEFAULT_RANGE_DAYS));
   const [to, setTo] = useState(shiftDays(today(), DEFAULT_RANGE_DAYS));
+  // 12.8 (§0.2 madde 4, §5.11): pozisyon/öngörü/performans aktif şirkete göre; konsolidede (null)
+  // parametre yok ve sunucu grup şirketi carilerini dışlar. Tabloda şirket sütunu yok.
+  const companyId = useActiveCompanyId();
   const position = useQuery({
-    queryKey: ["reports", "position"],
-    queryFn: () => apiGet<PositionRow[]>("/reports/position"),
+    queryKey: ["reports", "position", companyId],
+    queryFn: () => apiGet<PositionRow[]>(withCompany("/reports/position", companyId)),
   });
   const forecast = useQuery({
-    queryKey: ["reports", "forecast"],
-    queryFn: () => apiGet<ForecastRow[]>("/reports/forecast"),
+    queryKey: ["reports", "forecast", companyId],
+    queryFn: () => apiGet<ForecastRow[]>(withCompany("/reports/forecast", companyId)),
   });
   const performance = useQuery({
-    queryKey: ["reports", "settlement-performance", from, to],
+    queryKey: ["reports", "settlement-performance", from, to, companyId],
     queryFn: () =>
       apiGet<SettlementPerformanceRow[]>(
-        `/reports/settlement-performance${reportQuery({ from, to })}`,
+        `/reports/settlement-performance${reportQuery({ from, to, companyId })}`,
       ),
     enabled: !!from && !!to,
   });
@@ -46,7 +51,7 @@ export function FinanceReportPage() {
     <Stack spacing={3}>
       <Card variant="outlined" sx={CARD_SX}>
         <SectionHeader title={t("reports.position.title")}>
-          <ExportButtons report="POSITION" />
+          <ExportButtons report="POSITION" companyId={companyId} />
           <Button component={RouterLink} to="/finance/reports">
             {t("reports.action.aging")}
           </Button>
@@ -84,7 +89,7 @@ export function FinanceReportPage() {
       </Card>
       <Card variant="outlined" sx={CARD_SX}>
         <SectionHeader title={t("reports.forecast.title")}>
-          <ExportButtons report="FORECAST" />
+          <ExportButtons report="FORECAST" companyId={companyId} />
         </SectionHeader>
         <Alert severity="info" sx={{ mb: 2 }}>
           {t("reports.forecast.note")}

@@ -35,6 +35,9 @@ public class InstrumentMovement extends AuditableEntity {
   private UUID toAccountId;
   private UUID accountTransferId;
 
+  /** Hareketin fonu (V37): banka/kasa ya da emanet kasası; para hareketi olmayabilir. */
+  private UUID fundAccountId;
+
   protected InstrumentMovement() {}
 
   public InstrumentMovement(
@@ -49,6 +52,18 @@ public class InstrumentMovement extends AuditableEntity {
     this.toStatus = toStatus;
     this.movementDate = movementDate;
     this.note = note;
+  }
+
+  /** Fonlu durum hareketi (12.3 §2.2): {@code AT_BANK}/{@code COLLECTED}/… ya da emanet kasası. */
+  public InstrumentMovement(
+      UUID instrumentId,
+      InstrumentStatus fromStatus,
+      InstrumentStatus toStatus,
+      LocalDate movementDate,
+      String note,
+      UUID fundAccountId) {
+    this(instrumentId, fromStatus, toStatus, movementDate, note);
+    this.fundAccountId = fundAccountId;
   }
 
   /** Cari taşıma hareketi: çekin durumu değişmez, yalnız bağlı cari {@code from → to} olur. */
@@ -107,5 +122,9 @@ public class InstrumentMovement extends AuditableEntity {
 
   public UUID getAccountTransferId() {
     return accountTransferId;
+  }
+
+  public UUID getFundAccountId() {
+    return fundAccountId;
   }
 }

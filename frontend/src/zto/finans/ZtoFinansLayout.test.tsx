@@ -7,7 +7,8 @@ import "../../i18n";
 import { useAuthStore } from "../../auth/authStore";
 import { useZtoSnackbar } from "../components/ZtoSnackbar";
 import { useQuickCari } from "./quickCariContext";
-import { SIDEBAR_LEAVE_DELAY_MS } from "./ZtoFinanceSidebar";
+import { useTreasuryModal } from "./treasuryContext";
+import { menuModalOf, SIDEBAR_LEAVE_DELAY_MS } from "./ZtoFinanceSidebar";
 import { ZtoFinansLayout } from "./ZtoFinansLayout";
 import { useZtoRootClass } from "./ZtoRootClassContext";
 import { addRootClass, removeRootClass, rootClassName } from "./rootClass";
@@ -22,14 +23,26 @@ vi.mock("./QuickCariModal", () => ({
     ) : null,
 }));
 
+// Hızlı Bakiye Özeti modalının içeriği FE-3'te (12.8 §5.10); burada yalnız bağlam ve `show` durumu.
+vi.mock("./TreasuryModal", () => ({
+  TreasuryModal: ({ show, onHide }: { show: boolean; onHide: () => void }) =>
+    show ? (
+      <div data-testid="treasury">
+        <button onClick={onHide}>hazine kapat</button>
+      </div>
+    ) : null,
+}));
+
 /** Cari Hareketler yer tutucusu: sayfa içeriği FE3'ün testlerinde; burada kabuk sınanır. */
 function AllTransactionsStub() {
   const quickCari = useQuickCari();
+  const treasury = useTreasuryModal();
   const snackbar = useZtoSnackbar();
   return (
     <div className="container-fluid bank-statement-page">
       <h6>Günlük Tüm Cari İşlemleri</h6>
       <button onClick={quickCari.open}>Hızlı Cari İşlemi aç</button>
+      <button onClick={treasury.open}>Finansal Varlık Durumu aç</button>
       <button onClick={() => snackbar.show("Kaydedildi", "success")}>bildir</button>
     </div>
   );
@@ -115,13 +128,20 @@ describe("ZtoFinansLayout", () => {
     expect(active.querySelector(".zt-icon > i.fas.fa-calendar-day")).not.toBeNull();
     expect(active.querySelector(".zt-label")?.textContent).toBe("Günlük Cari İşlemleri");
 
-    // Yazılmamış ekran pasif (Çekler 12.3); 12.2a Ödemeler / Tahsilatlar bağlantı.
+    // Yazılmamış ekran pasif (Ödeme Onay Yönetimi 12.4); 12.2a Ödemeler / Tahsilatlar ve 12.3 Çekler /
+    // Senetler bağlantı.
+    const approval = screen.getByText("Ödeme Onay Yönetimi").closest("a") as HTMLAnchorElement;
+    expect(approval.className).toBe("disabled");
+    expect(approval.hasAttribute("href")).toBe(false);
+    expect(approval.getAttribute("aria-disabled")).toBe("true");
+    expect(approval.title).toBe("Bu ekran Faz 12.4 ile gelecek.");
+    expect(approval.querySelector(".zt-phase")?.textContent).toBe("Faz 12.4");
     const checks = screen.getByText("Çekler").closest("a") as HTMLAnchorElement;
-    expect(checks.className).toBe("disabled");
-    expect(checks.hasAttribute("href")).toBe(false);
-    expect(checks.getAttribute("aria-disabled")).toBe("true");
-    expect(checks.title).toBe("Bu ekran Faz 12.3 ile gelecek.");
-    expect(checks.querySelector(".zt-phase")?.textContent).toBe("Faz 12.3");
+    expect(checks.getAttribute("href")).toBe("/zto-finans/cekler");
+    expect(checks.hasAttribute("aria-disabled")).toBe(false);
+    expect(checks.querySelector(".zt-phase")).toBeNull();
+    const bills = screen.getByText("Senetler").closest("a") as HTMLAnchorElement;
+    expect(bills.getAttribute("href")).toBe("/zto-finans/senetler");
     const payments = screen.getByText("Ödemeler").closest("a") as HTMLAnchorElement;
     expect(payments.getAttribute("href")).toBe("/zto-finans/odemeler");
     expect(payments.hasAttribute("aria-disabled")).toBe(false);
@@ -224,8 +244,17 @@ describe("ZtoFinansLayout", () => {
 
     useAuthStore.setState({ me: { fullName: "A", permissions: ["FINANCE_VIEW"] } as never });
     renderAt("/zto-finans/cari-hareketler");
-    expect(screen.queryByText("TEMEL TANIMLAR")).toBeNull();
+    // 12.7: Masraf Kalemleri FINANCE_VIEW ile görünür; iş yeri tanımları BRANCH_VIEW ister.
+    expect(screen.getByText("TEMEL TANIMLAR")).not.toBeNull();
+    expect(screen.getByText("Masraf Kalemleri").closest("a")?.getAttribute("href")).toBe(
+      "/zto-finans/tanimlar/masraf-kalemleri",
+    );
     expect(screen.queryByText("İş Yerleri")).toBeNull();
+    cleanup();
+
+    useAuthStore.setState({ me: { fullName: "A", permissions: ["SHIPMENT_VIEW"] } as never });
+    renderAt("/zto-finans/cari-hareketler");
+    expect(screen.queryByText("TEMEL TANIMLAR")).toBeNull();
   });
 
   it("sayfalar köke sınıf ekler (ZTO body sınıfı); alt yolda menü öğesi etkin kalır", () => {
@@ -318,5 +347,56 @@ describe("ZtoFinansLayout 12.1", () => {
     expect(region.parentElement).toBe(q(".zto-finans"));
     fireEvent.click(screen.getByText("bildir"));
     expect(region.querySelector(".snackbar.snackbar-success")?.textContent).toContain("Kaydedildi");
+  });
+});
+
+describe("ZtoFinansLayout 12.8 (Hızlı Bakiye Özeti, §5.3)", () => {
+  it("menü modal dağıtımı: quickTransaction → Hızlı Cari, quickBalance → hazine, diğer → yok", () => {
+    expect(menuModalOf("quickTransaction")).toBe("quickCari");
+    expect(menuModalOf("quickBalance")).toBe("treasury");
+    expect(menuModalOf("allTransactions")).toBeNull();
+    expect(menuModalOf("bilinmeyen")).toBeNull();
+  });
+
+  it("menüdeki Hızlı Bakiye Özeti hazine modalını açar (Hızlı Cari açılmaz); menü kapanır", async () => {
+    renderAt("/zto-finans/cari-hareketler");
+    const item = screen.getByText("Hızlı Bakiye Özeti").closest("a") as HTMLAnchorElement;
+    expect(item.getAttribute("role")).toBe("button");
+    expect(item.getAttribute("href")).toBe("#");
+    expect(item.className).toBe("");
+    expect(item.querySelector(".zt-phase")).toBeNull();
+    fireEvent.click(arrow());
+    fireEvent.click(item);
+    expect(await screen.findByTestId("treasury")).toBeTruthy();
+    expect(screen.queryByTestId("quick-cari")).toBeNull();
+    expect(sidebar().classList.contains("open")).toBe(false);
+    fireEvent.click(screen.getByText("hazine kapat"));
+    expect(screen.queryByTestId("treasury")).toBeNull();
+    // Sayfadan da açılır (Cari Kartlar "Finansal Varlık Durumu"); Boşluk tuşu da açar.
+    fireEvent.click(screen.getByText("Finansal Varlık Durumu aç"));
+    expect(await screen.findByTestId("treasury")).toBeTruthy();
+    fireEvent.click(screen.getByText("hazine kapat"));
+    fireEvent.keyDown(item, { key: " " });
+    expect(await screen.findByTestId("treasury")).toBeTruthy();
+  });
+
+  it("?treasury=1 modalı açar; ?quickcari=1 ile birlikte iki parametre tek gezinmeyle silinir", async () => {
+    renderAt("/zto-finans/cari-hareketler?treasury=1&quickcari=1&x=2");
+    expect(await screen.findByTestId("treasury")).toBeTruthy();
+    expect(await screen.findByTestId("quick-cari")).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByTestId("where").textContent).toBe("/zto-finans/cari-hareketler"),
+    );
+  });
+
+  it("12.8 rapor öğeleri FINANCE_VIEW ile bağlantı", () => {
+    renderAt("/zto-finans/cari-hareketler");
+    const href = (text: string) => screen.getByText(text).closest("a")?.getAttribute("href");
+    expect(href("Finans Raporları")).toBe("/zto-finans/finans-raporlari");
+    expect(href("Cari Hesap Raporları")).toBe("/zto-finans/cari-raporlari");
+    expect(href("Finansal Varlıklar & Bilanço")).toBe("/zto-finans/bilanco");
+    expect(href("Kur Farkı Raporu")).toBe("/zto-finans/kur-farki-raporu");
+    expect(href("Nakit Akış")).toBe("/zto-finans/nakit-akis");
+    expect(href("Para Birimleri")).toBe("/zto-finans/tanimlar/para-birimleri");
   });
 });

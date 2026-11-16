@@ -13,7 +13,13 @@ import { ZtoFinansLayout } from "../../ZtoFinansLayout";
  * oturum, ZtoFinansLayout içinde rota. `api/client` testte vi.mock ile `fakeApi`'ye bağlanır.
  */
 
-export type ApiCall = { method: string; path: string; body?: unknown };
+export type ApiCall = {
+  method: string;
+  path: string;
+  body?: unknown;
+  /** İstek başlıkları (ör. `Idempotency-Key`); yalnız başlık geçiren testler doldurur. */
+  headers?: Record<string, string>;
+};
 type Handler = (call: ApiCall) => unknown;
 
 export const fakeApi = {
@@ -30,8 +36,13 @@ export const fakeApi = {
       reply: typeof reply === "function" ? (reply as Handler) : () => reply,
     });
   },
-  async request(method: string, path: string, body?: unknown): Promise<unknown> {
-    const call = { method, path, body };
+  async request(
+    method: string,
+    path: string,
+    body?: unknown,
+    headers?: Record<string, string>,
+  ): Promise<unknown> {
+    const call: ApiCall = { method, path, body, headers };
     this.calls.push(call);
     const handler = this.handlers.find(
       (h) =>

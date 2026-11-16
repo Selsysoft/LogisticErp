@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSettlement } from "../../../../pages/finance/settlementApi";
 import type { SettlementDetail, SettlementType } from "../../../../pages/finance/types";
+import type { InstrumentDetailFields } from "../settlementModals/settlementFormLogic";
 import { ZtoModal, formatDate, formatDateTime, formatN2 } from "../../../components";
 import { MethodBadge, useSettlementErrorText } from "./settlementCells";
 import { amountText, rateText, sourceCell } from "./settlementListLogic";
@@ -79,7 +80,8 @@ function DetailBody({
   const ns = type === "PAYMENT" ? "payments" : "collections";
   const item = data.item;
   const source = sourceCell(item);
-  const instrument = data.instrument;
+  // 12.3 (§3.8): detay yanıtının çeki `InstrumentListItem` üst kümesidir; ek alanlar isteğe bağlı okunur.
+  const instrument = data.instrument as InstrumentDetailFields | null;
   const isNote = (instrument?.kind ?? item.instrumentKind) === "NOTE";
   const masked = tc("common.a11y.maskedEmployee");
   return (
@@ -262,8 +264,23 @@ function DetailBody({
                     <td>{instrument.bankName || "-"}</td>
                   </tr>
                   <tr>
+                    <th>{d("bankBranch")}</th>
+                    <td>{instrument.bankBranch || "-"}</td>
+                  </tr>
+                  {instrument.checkBookSerial && (
+                    <tr>
+                      <th>{d("checkBook")}</th>
+                      <td>
+                        {t("payments.list.detail.checkBookValue", {
+                          serial: instrument.checkBookSerial,
+                          leaf: instrument.leafNo ?? "-",
+                        })}
+                      </td>
+                    </tr>
+                  )}
+                  <tr>
                     <th>{d(isNote ? "noteIssue" : "issueDate")}</th>
-                    <td>-</td>
+                    <td>{formatDate(instrument.issueDate ?? null) || "-"}</td>
                   </tr>
                   <tr>
                     <th>{d(isNote ? "noteDue" : "dueDate")}</th>
@@ -277,6 +294,12 @@ function DetailBody({
                       })}
                     </td>
                   </tr>
+                  {instrument.description && (
+                    <tr>
+                      <th>{d("instrumentDescription")}</th>
+                      <td style={{ whiteSpace: "pre-wrap" }}>{instrument.description}</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

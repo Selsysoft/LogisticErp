@@ -61,7 +61,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("CollectionModal", { timeout: 60_000 }, () => {
-  it("çek tahsilatı Bankaya Yatırıldı: AT_BANK + banka gövdesi; 12.3 alanları devre dışı", async () => {
+  it("çek tahsilatı Bankaya Yatırıldı: AT_BANK + banka gövdesi; 12.3 alanları gönderilir", async () => {
     fakeApi.on("POST", "/finance/collections", settlement({ type: "COLLECTION", method: "CHECK" }));
     open({ presetAccountId: "a1", presetBranchId: "b1", presetMethod: "CHECK" });
     const root = await modal();
@@ -74,8 +74,14 @@ describe("CollectionModal", { timeout: 60_000 }, () => {
       (within(group).getByRole("radio", { name: /Bankaya Yatırıldı/ }) as HTMLInputElement).checked,
     ).toBe(true);
     for (const id of ["BranchName", "IssueDate", "CheckDescription"]) {
-      expect((root.querySelector(`#${id}`) as HTMLInputElement).disabled).toBe(true);
+      expect((root.querySelector(`#${id}`) as HTMLInputElement).disabled).toBe(false);
     }
+    fireEvent.change(root.querySelector("#BranchName") as HTMLInputElement, {
+      target: { value: "Merkez Şube" },
+    });
+    fireEvent.change(root.querySelector("#CheckDescription") as HTMLTextAreaElement, {
+      target: { value: "Açıklama" },
+    });
     fireEvent.change(root.querySelector("#CheckNumber") as HTMLInputElement, {
       target: { value: "1234567" },
     });
@@ -108,26 +114,35 @@ describe("CollectionModal", { timeout: 60_000 }, () => {
         bankName: "Ziraat Bankası",
         initialStatus: "AT_BANK",
         fundAccountId: "bk1",
+        bankBranch: "Merkez Şube",
+        description: "Açıklama",
       },
     });
+    expect((call?.body as { instrument: Record<string, unknown> }).instrument.issueDate).toMatch(
+      /^\d{4}-\d{2}-\d{2}$/,
+    );
     expect(await screen.findByText("Tahsilat başarıyla kaydedildi.")).toBeTruthy();
     // Tahsilatta plan modalı yok.
     expect(document.querySelector("#postPaymentPlanningModal")).toBeNull();
   });
 
-  it("Kasaya Al (Ciro) → PORTFOLIO, banka gönderilmez; kasa seçimi 12.3", async () => {
+  it("Kasaya Al (Ciro) → PORTFOLIO + emanet kasası (zorunlu), banka gönderilmez", async () => {
     fakeApi.on("POST", "/finance/collections", settlement({ type: "COLLECTION" }));
     open({ presetAccountId: "a1", presetBranchId: "b1", presetMethod: "CHECK" });
     const root = await modal();
     await waitFor(() => expect(root.querySelector("#checkTopFields")).not.toBeNull());
     fireEvent.click(within(root).getByRole("radio", { name: /Kasaya Al/ }));
-    expect((root.querySelector("#CheckCashID") as HTMLSelectElement).disabled).toBe(true);
     fireEvent.change(root.querySelector("#CheckNumber") as HTMLInputElement, {
       target: { value: "7654321" },
     });
     fireEvent.change(root.querySelector("#CollectionAmountInput") as HTMLInputElement, {
       target: { value: "10" },
     });
+    // Kasa seçilmeden kayıt: ZTO iletisi (cjs:2945-2948).
+    fireEvent.click(within(root).getByRole("button", { name: /Kaydet/ }));
+    await waitFor(() => expect(root.textContent).toContain("Çekin tutulduğu kasayı seçiniz."));
+    fireEvent.click(root.querySelector("#CheckCashID") as HTMLElement);
+    fireEvent.click(await within(root).findByRole("option", { name: /Merkez Kasa/ }));
     fireEvent.click(within(root).getByRole("button", { name: /Kaydet/ }));
     await waitFor(() => expect(onHide).toHaveBeenCalled(), { timeout: 20_000 });
     const body = fakeApi.calls.find((item) => item.path === "/finance/collections")?.body as {
@@ -135,6 +150,7 @@ describe("CollectionModal", { timeout: 60_000 }, () => {
     };
     expect(body.instrument.initialStatus).toBe("PORTFOLIO");
     expect(body.instrument.fundAccountId).toBeUndefined();
+    expect(body.instrument.custodyFundId).toBe("k1");
   });
 
   it("kalan alacak paneli: para birimi düğmesi, akordeon ve 4 kart", async () => {

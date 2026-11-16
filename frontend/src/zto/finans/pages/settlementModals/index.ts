@@ -5,6 +5,7 @@ import type {
   Fund,
   FundKind,
   Instrument,
+  NoteType,
   PayMethod,
   Settlement,
   SettlementType,
@@ -36,6 +37,11 @@ export type PaymentModalProps = {
   presetFundAccountId?: string;
   presetMethod?: PayMethod;
   presetCurrency?: string;
+  /**
+   * 12.3 (§5.4 M1): "Ciro Et" ile açılış — `presetMethod="CHECK"` + ciro kipi, bu portföy çeki seçili
+   * (tutar ve para birimi çekten kilitlenir).
+   */
+  presetEndorseInstrumentId?: string;
   /** Barındıran sayfa listeyi tazeler (ek olarak mutasyon ["finance"]'ı geçersizler). */
   onSaved?: (s: Settlement) => void;
 };
@@ -133,7 +139,10 @@ export type IssuedCheckMode = "OWN" | "ENDORSE";
  */
 export type ReceivedCheckStatus = "AT_BANK" | "PORTFOLIO" | "CASH_BOX";
 
-/** `CheckFields` form değeri (tarihler ISO; 12.3 alanları — keşide, açıklama, koçan — yok). */
+/**
+ * `CheckFields` form değeri (tarihler ISO). 12.3 alanları (§5.10) isteğe bağlı eklendi: 12.2a
+ * kurucuları (`emptyCheck`) derlenmeye devam etsin diye; FE-3 kurucuları doldurunca zorunlu yapabilir.
+ */
 export type CheckFieldsValue = {
   /** Yalnız `variant="issued"`. */
   mode: IssuedCheckMode;
@@ -149,6 +158,29 @@ export type CheckFieldsValue = {
   bankName: string;
   /** Vade (varsayılan bugün + 30, yerel takvim). */
   dueDate: string;
+  // 12.3 (§5.10).
+  /** issued + OWN: seçilen koçan yaprağı ("" = yok / manuel). */
+  checkLeafId?: string;
+  /** "Manuel Çek Numarası Gir" açık: yaprak yok, numara yazılabilir. */
+  manualNumber?: boolean;
+  /** Keşide tarihi (ISO; varsayılan bugün). */
+  issueDate?: string;
+  /** Şube Adı. */
+  bankBranch?: string;
+  /** Açıklama. */
+  description?: string;
+  /** received + CASH_BOX: "Çekin Tutulduğu Kasa". */
+  custodyFundId?: string;
+};
+
+/**
+ * `useCheckLeafGuard(number, fundAccountId, currentLeafId?)` sonucu (§5.10; CLG:57-85 iletileri):
+ * `free` = koçanda yok ya da düzenlenen kaydın kendi yaprağı/numarası; `leafUsed` = yaprak kullanılmış;
+ * `leafManualForbidden` = numara koçanda kayıtlı, elle girilemez. `message` ekranda gösterilecek metin.
+ */
+export type CheckLeafGuardResult = {
+  state: "idle" | "free" | "leafUsed" | "leafManualForbidden";
+  message: string | null;
 };
 
 /** Alan → gösterilecek ZTO doğrulama metni (etkileşim/gönderim sonrası; `fieldA11yProps`). */
@@ -169,6 +201,16 @@ export type CheckFieldsProps = {
   onEndorsedCheck?: (instrument: Instrument | null) => void;
   errors?: FieldErrors<CheckFieldsValue>;
   disabled?: boolean;
+  /**
+   * 12.3 düzenleme kipi (Rev 1 F1): eski yaprak koçan seçicisine eklenir ve seçili gelir; yaprak
+   * denetimi eski yaprağı/numarayı `free` sayar; ciro seçicisi eski çeki (`ENDORSED`) başa ekler.
+   */
+  editing?: { currentLeafId: string | null; currentInstrument: Instrument | null };
+  /**
+   * FE-3 eki: manuel numaranın koçan denetimi sonucu değişince (ödeme modalı kaydı engelli durumda
+   * durdurur; CLG "kaydetmeyi engeller").
+   */
+  onLeafGuardChange?: (state: CheckLeafGuardResult["state"]) => void;
 };
 
 /** `NoteFields` form değeri. */
@@ -180,6 +222,15 @@ export type NoteFieldsValue = {
   /** issued: seçilen fonun banka adı (salt okunur); received: "Banka Adı". */
   bankName: string;
   dueDate: string;
+  // 12.3 (§5.10); isteğe bağlı (bkz. `CheckFieldsValue`).
+  /** Senet Türü (Adi Senet / Emre Yazılı Senet / Bono). */
+  noteType?: NoteType;
+  /** Düzenlenme tarihi (ISO). */
+  issueDate?: string;
+  bankBranch?: string;
+  description?: string;
+  /** received: "Keşideci" metni (varsayılan cari adı). */
+  drawerName?: string;
 };
 
 /** `NoteFields` (issued: APM:919-1019; received: CMP). */

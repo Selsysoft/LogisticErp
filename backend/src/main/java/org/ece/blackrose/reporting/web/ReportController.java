@@ -133,22 +133,25 @@ public class ReportController {
 
   @GetMapping("/position")
   @PreAuthorize(FINANCE)
-  List<PositionRow> position() {
-    return reports.position();
+  List<PositionRow> position(
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(defaultValue = "false") boolean byCompany) {
+    return reports.position(companyId, byCompany);
   }
 
   @GetMapping("/forecast")
   @PreAuthorize(FINANCE)
-  List<ForecastRow> forecast() {
-    return reports.forecast();
+  List<ForecastRow> forecast(@RequestParam(required = false) UUID companyId) {
+    return reports.forecast(companyId);
   }
 
   @GetMapping("/settlement-performance")
   @PreAuthorize(FINANCE)
   List<SettlementPerformanceRow> settlementPerformance(
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-    return reports.settlementPerformance(from, to);
+      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+      @RequestParam(required = false) UUID companyId) {
+    return reports.settlementPerformance(from, to, companyId);
   }
 
   /** Her oturum açan kullanıcı çağırır; yalnız yetkili olduğu bölümler dolu döner. */
@@ -232,7 +235,8 @@ public class ReportController {
       @RequestParam(required = false) ProfitGroup group,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-      @RequestParam(required = false) UUID branchId) {
+      @RequestParam(required = false) UUID branchId,
+      @RequestParam(required = false) UUID companyId) {
     LocalDate end = to != null ? to : clock.today();
     LocalDate start = from != null ? from : end.minusDays(DASHBOARD_DAYS);
     String subtitle = start + " - " + end;
@@ -299,7 +303,7 @@ public class ReportController {
             scope.requireAll("POSITION");
             List<List<Object>> rows = new ArrayList<>();
             reports
-                .position()
+                .position(companyId, false)
                 .forEach(
                     row ->
                         rows.add(
@@ -320,7 +324,7 @@ public class ReportController {
             scope.requireAll("FORECAST");
             List<List<Object>> rows = new ArrayList<>();
             reports
-                .forecast()
+                .forecast(companyId)
                 .forEach(
                     row ->
                         rows.add(

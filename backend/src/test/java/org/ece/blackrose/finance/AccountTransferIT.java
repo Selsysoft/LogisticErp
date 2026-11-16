@@ -246,7 +246,7 @@ class AccountTransferIT extends AccountTestSupport {
     UUID c2 = account(w, AccountType.CUSTOMER, null);
 
     // Çekle tahsilat → bankaya → karşılıksız: çeke bağlı iki satır.
-    JsonNode collection = collectCheck(w, c1, "C-1", "300");
+    JsonNode collection = collectCheck(w, c1, "0000001", "300");
     String check = collection.get("instrumentId").asText();
     UUID collectionTx = tx(w, "SETTLEMENT", collection.get("id").asText());
     transition(w, check, "AT_BANK", bank);
@@ -311,7 +311,7 @@ class AccountTransferIT extends AccountTestSupport {
     UUID s1 = account(w, AccountType.SUPPLIER, null);
     UUID s2 = account(w, AccountType.SUPPLIER, null);
     UUID c3 = account(w, AccountType.CUSTOMER, null);
-    String endorsed = collectCheck(w, c3, "C-2", "200").get("instrumentId").asText();
+    String endorsed = collectCheck(w, c3, "0000002", "200").get("instrumentId").asText();
     Map<String, Object> pay = settlement("CHECK", s1, w.a1(), null, "200");
     pay.put("instrumentId", endorsed);
     String payment = id(sendJson(w.t(), null, post(FINANCE + "/payments"), pay));
@@ -327,7 +327,7 @@ class AccountTransferIT extends AccountTestSupport {
 
     // Çek başka cariye geçmişse taşınmaz, yanıtta skippedInstruments.
     UUID c4 = account(w, AccountType.CUSTOMER, null);
-    JsonNode third = collectCheck(w, c4, "C-3", "80");
+    JsonNode third = collectCheck(w, c4, "0000003", "80");
     jdbc.update(
         "update \"%s\".instrument set account_id = ? where id = ?".formatted(w.schema()),
         c3,
@@ -343,7 +343,7 @@ class AccountTransferIT extends AccountTestSupport {
                     null,
                     Map.of())
                 .andExpect(status().isCreated()));
-    assertThat(skipped.get("skippedInstruments").get(0).asText()).isEqualTo("C-3");
+    assertThat(skipped.get("skippedInstruments").get(0).asText()).isEqualTo("0000003");
     assertThat(skipped.get("instruments")).isEmpty();
   }
 
@@ -353,7 +353,7 @@ class AccountTransferIT extends AccountTestSupport {
     String bank = bankFund(w, w.a1());
     UUID c1 = account(w, AccountType.CUSTOMER, null);
     UUID c2 = account(w, AccountType.CUSTOMER, null);
-    JsonNode collection = collectCheck(w, c1, "C-9", "150");
+    JsonNode collection = collectCheck(w, c1, "0000009", "150");
     String check = collection.get("instrumentId").asText();
     String transferId =
         id(
@@ -798,6 +798,74 @@ class AccountTransferIT extends AccountTestSupport {
       assertThat(code(other)).isEqualTo(409);
       assertThat(body(other).get("code").asText()).isEqualTo("IDEMPOTENCY_IN_PROGRESS");
     }
+  }
+
+  // --- 12.8 kur farkı (§3.3.2, Rev 1 F5)
+
+  @Test
+  void kurFarkiKaynagiVeBelgesiTasinmazIptaldenSonraKaynakSerbest() throws Exception {
+    World w = world("trx");
+    // FxDifferenceIT ile aynı JPY kuru (kur tablosu kiracılar arası ortak).
+    jdbc.update(
+        "insert into admin.exchange_rate (id, currency, rate_date, rate, source, created_at)"
+            + " values (gen_random_uuid(), 'JPY', ?, 0.25, 'TEST', now()) on conflict do nothing",
+        TODAY.minusDays(30));
+    UUID from = account(w, AccountType.CUSTOMER, null);
+    UUID to = account(w, AccountType.CUSTOMER, null);
+    Map<String, Object> manual = new HashMap<>();
+    manual.put("branchId", w.a1());
+    manual.put("direction", "DEBIT");
+    manual.put("money", Map.of("amount", "1000", "currency", "JPY"));
+    manual.put("date", TODAY.minusDays(40).toString());
+    manual.put("exchangeRate", "0.20");
+    UUID source =
+        UUID.fromString(
+            id(
+                sendJson(
+                    w.t(), null, post(FINANCE + "/accounts/" + from + "/transactions"), manual)));
+    String fxDocument =
+        id(
+            sendJson(
+                w.t(),
+                null,
+                post(FINANCE + "/fx-differences"),
+                Map.of(
+                    "sourceTransactionId",
+                    source.toString(),
+                    "valuationDate",
+                    TODAY.minusDays(25).toString(),
+                    "expectedDifference",
+                    "50")));
+    UUID fxRow = tx(w, "ACCOUNT_DOCUMENT", fxDocument);
+
+    JsonNode listed = transferable(w, null, from);
+    assertThat(blockedReasonOf(listed, source)).isEqualTo("FX_DOCUMENT_OPEN");
+    assertThat(blockedReasonOf(listed, fxRow)).isEqualTo("FX_DOCUMENT");
+    transfer(w, null, from, to, List.of(source), null, Map.of())
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("FX_DOCUMENT_OPEN"))
+        .andExpect(jsonPath("$.details[0]").value("transactionId=" + source));
+    transfer(w, null, from, to, List.of(fxRow), null, Map.of())
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("FX_DOCUMENT_NOT_TRANSFERABLE"))
+        .andExpect(jsonPath("$.details[0]").value("transactionId=" + fxRow));
+
+    // Kur farkı iptal edilince kaynak serbest; belgenin satırı ve ters kaydı listede yok.
+    sendJson(w.t(), null, post(FINANCE + "/account-documents/" + fxDocument + "/cancel"), Map.of())
+        .andExpect(status().isOk());
+    listed = transferable(w, null, from);
+    assertThat(listed).hasSize(1);
+    assertThat(blockedReasonOf(listed, source)).isNull();
+    transfer(w, null, from, to, List.of(source), null, Map.of()).andExpect(status().isCreated());
+  }
+
+  private static String blockedReasonOf(JsonNode rows, UUID transactionId) {
+    for (JsonNode row : rows) {
+      if (transactionId.toString().equals(row.get("transactionId").asText())) {
+        return row.get("blockedReason").isNull() ? null : row.get("blockedReason").asText();
+      }
+    }
+    throw new AssertionError("Satır yok: " + transactionId);
   }
 
   // --- yaşlandırma

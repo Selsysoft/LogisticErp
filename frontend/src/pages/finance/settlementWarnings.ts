@@ -244,14 +244,16 @@ const LOCK_REASON_CODES: Record<SettlementLockReason, string> = {
   INTERCOMPANY: "SETTLEMENT_LINKED_TO_INTERCOMPANY",
   FX_SOURCE: "SETTLEMENT_USED_IN_FX_EXCHANGE",
   VEHICLE_EXPENSE: "SETTLEMENT_SOURCE_MANAGED",
+  // 12.7 (Rev 1 F1): Nakit/Banka masrafın settlement'ı yalnız masraf ekranından ters çevrilir.
+  EXPENSE: "SETTLEMENT_SOURCE_MANAGED",
   TRANSFERRED: "TRANSACTION_TRANSFERRED",
   NO_ACCOUNT: "SETTLEMENT_NOT_CORRECTABLE",
 };
 
 /**
- * Düzenlenemeyen kaydın nedeni olan hata kodu. Kilit nedeni yoksa (ör. personel maskesi, çek/senet
- * yöntemi) `SETTLEMENT_NOT_CORRECTABLE`; iptal edilmiş ve düzeltilmiş kayıtta
- * `SETTLEMENT_ALREADY_CORRECTED`.
+ * Düzenlenemeyen kaydın nedeni olan hata kodu. Kilit nedeni yoksa (ör. personel maskesi)
+ * `SETTLEMENT_NOT_CORRECTABLE`; iptal edilmiş ve düzeltilmiş kayıtta `SETTLEMENT_ALREADY_CORRECTED`.
+ * 12.3: çekli kayıt `CHECK` nedeniyle yalnız çek ilerlemişse kilitlidir.
  */
 export function settlementLockErrorCode(
   lockReason: SettlementLockReason | null | undefined,

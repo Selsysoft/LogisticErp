@@ -27,7 +27,7 @@ import type {
   SettlementType,
 } from "../../../../pages/finance/types";
 import { formatMoney, useZtoConfirm } from "../../../components";
-import type { PaymentModalProps } from "./index";
+import type { CheckFieldsProps, CheckLeafGuardResult, PaymentModalProps } from "./index";
 import { useBranchCompany, useModalText, type Notice } from "./parts";
 import { OFFER_DELAY_MS, shouldOffer } from "./postPlanningLogic";
 import {
@@ -48,6 +48,7 @@ import {
   validateCollection,
   validatePayment,
   type CorrectionOriginal,
+  type InstrumentDetailFields,
   type SettlementFormValues,
   type ValidationError,
 } from "./settlementFormLogic";
@@ -81,6 +82,7 @@ export function useSettlementModal(type: SettlementType, props: PaymentModalProp
     presetFundAccountId,
     presetMethod,
     presetCurrency,
+    presetEndorseInstrumentId,
     onSaved,
   } = props;
   const edit = mode === "edit";
@@ -99,6 +101,8 @@ export function useSettlementModal(type: SettlementType, props: PaymentModalProp
   const [allocationExceeded, setAllocationExceeded] = useState(false);
   const [ready, setReady] = useState(false);
   const [offer, setOffer] = useState<PlanOffer | null>(null);
+  /** "Kendi Çekimiz" manuel numaranın koçan denetimi (CheckFields bildirir; CLG kaydı engeller). */
+  const [leafGuard, setLeafGuard] = useState<CheckLeafGuardResult["state"]>("idle");
   const idempotencyKey = useIdempotencyKey(show);
   const { confirm, confirmModal } = useZtoConfirm();
 
@@ -159,6 +163,7 @@ export function useSettlementModal(type: SettlementType, props: PaymentModalProp
             fundAccountId: presetFundAccountId,
             method: presetMethod,
             currency: presetCurrency,
+            endorseInstrumentId: presetEndorseInstrumentId,
           },
           presetFund.data ?? null,
           todayIso(),
@@ -184,6 +189,7 @@ export function useSettlementModal(type: SettlementType, props: PaymentModalProp
     presetFundAccountId,
     presetMethod,
     presetCurrency,
+    presetEndorseInstrumentId,
     onHide,
     tm,
     errorMessage,
@@ -206,9 +212,9 @@ export function useSettlementModal(type: SettlementType, props: PaymentModalProp
   const errors: ValidationError[] = useMemo(
     () =>
       payment
-        ? validatePayment(form, { allocationExceeded })
+        ? validatePayment(form, { allocationExceeded, leafGuard })
         : validateCollection(form, { allocationExceeded, edit, editId: settlementId ?? null }),
-    [payment, form, allocationExceeded, edit, settlementId],
+    [payment, form, allocationExceeded, edit, settlementId, leafGuard],
   );
   const shownErrors = submitted ? errors : [];
 
@@ -383,6 +389,16 @@ export function useSettlementModal(type: SettlementType, props: PaymentModalProp
     [edit, payment, original],
   );
 
+  /** Düzenlemede çek alanlarının istisnaları (eski yaprak, eski ciro çeki; 12.3 Rev 1 F1). */
+  const checkEditing = useMemo<CheckFieldsProps["editing"]>(() => {
+    const instrument = edit ? (detail.data?.instrument ?? null) : null;
+    if (!instrument) return undefined;
+    return {
+      currentLeafId: (instrument as InstrumentDetailFields).checkLeafId ?? null,
+      currentInstrument: instrument,
+    };
+  }, [edit, detail.data]);
+
   const formRef = useRef<HTMLFormElement>(null);
   /** ZTO `btn-save` (type=button) → formun gönderimi; gönderim olayı kaydı çalıştırır. */
   const requestSave = useCallback(() => {
@@ -416,6 +432,8 @@ export function useSettlementModal(type: SettlementType, props: PaymentModalProp
     original,
     reconcileRate,
     detail: detail.data,
+    checkEditing,
+    setLeafGuard,
     presetFund: presetFund.data ?? null,
     setAllocationExceeded,
     formRef,

@@ -191,3 +191,17 @@ export function toIsoDate(value: DateInput): string | null {
   const parts = dateParts(value);
   return parts ? `${pad(parts.year, 4)}-${pad(parts.month)}-${pad(parts.day)}` : null;
 }
+
+/**
+ * Vergi kimlik numarası gösterimi (12.8 Rev 1 SEC-12.8-05, OK-12.8-27; MWG `privacy` veri en aza
+ * indirme): 11 haneli TCKN her kullanıcıda `*******` + son 4 hane olarak gösterilir (ekran, yazdırma,
+ * Excel; backend `PersonalDataProtector.maskTaxNumber` biçimi). 10 haneli VKN (tüzel kişi), zaten
+ * maskeli değer ve başka biçimler aynen döner; boş/null → null.
+ */
+export function maskTaxNumber(value: string | null, alreadyMasked: boolean): string | null {
+  if (value === null) return null;
+  const text = value.trim();
+  if (text === "") return null;
+  if (alreadyMasked || !/^\d{11}$/.test(text)) return value;
+  return `*******${text.slice(-4)}`;
+}

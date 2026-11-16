@@ -52,7 +52,9 @@ describe("DashboardWidgets", { timeout: 20_000 }, () => {
 
   it("position doluysa para birimi başına net pozisyon kutucuğu çizilir", async () => {
     vi.mocked(apiGet).mockResolvedValue(
-      finance([{ currency: "TRY", cash: 0, receivable: 100, payable: 0, net: 100 }]),
+      finance([
+        { currency: "TRY", cash: 0, receivable: 100, payable: 0, net: 100, companyId: null },
+      ]),
     );
     renderWidgets();
 

@@ -53,6 +53,8 @@ export interface PositionRow {
   receivable: number;
   payable: number;
   net: number;
+  /** 12.8 (§4.3): `byCompany=true` iken satırın şirketi; konsolide/tek şirkette null. */
+  companyId: string | null;
 }
 
 export interface SettlementPerformanceRow {

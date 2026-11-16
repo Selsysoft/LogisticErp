@@ -70,11 +70,21 @@ export const PAGE_SCOPE_ALIASES: Readonly<Record<string, string>> = {
  * kök sınıfa yazılır (`.zto-page-banks` ve `.zto-page-cashes`). Anahtar dosya adı, değer kök adları.
  * 12.2a §5.4: ödeme/tahsilat modallarının kuralları (`settlement-modals.css`) modalı barındıran dört
  * sayfanın köküne yazılır (Ödemeler, Tahsilatlar, Banka ve Kasa Hareketleri; modallar `.zto-finans`
- * köküne portal'lanır).
+ * köküne portal'lanır). 12.3 §5.3: Çekler ve Senetler de ödeme modalını açar (`checks`, `bills`).
+ * 12.8 §5.3: ZTO reçeteli finans teması (`wwwroot/css/recipe-theme.css` parçaları) Kur Farkı Raporu ve
+ * Nakit Akış sayfalarının ikisine de yazılır.
  */
 export const SHARED_SCOPES: Readonly<Record<string, readonly string[]>> = {
   banks: ["banks", "cashes"],
-  "settlement-modals": ["payments", "collections", "bank-transactions", "cash-transactions"],
+  "settlement-modals": [
+    "payments",
+    "collections",
+    "bank-transactions",
+    "cash-transactions",
+    "checks",
+    "bills",
+  ],
+  "recipe-report-common": ["fx-report", "cash-flow"],
 };
 
 /**

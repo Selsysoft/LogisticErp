@@ -49,11 +49,14 @@ import {
   accountBankAccountsPath,
   accountEditPath,
   accountTransactionsPath,
+  billsPath,
+  checksPath,
   collectionsPath,
   paymentsPath,
   statementPath,
   transferCenterPath,
 } from "../../navItems";
+import { useTreasuryModal } from "../../treasuryContext";
 import { useZtoRootClass } from "../../ZtoRootClassContext";
 import { ZtoTopPanel } from "../../ZtoTopPanel";
 import { useDefinitionNotice } from "../definitions/definitionHooks";
@@ -364,6 +367,7 @@ export function CustomerAccountsPage() {
   const companies = useAuthStore((state) => state.me?.companies);
   const snackbar = useZtoSnackbar();
   const { confirm, confirmModal } = useZtoConfirm();
+  const treasury = useTreasuryModal();
   const [notice, setNotice] = useDefinitionNotice();
   const today = localToday();
 
@@ -860,7 +864,7 @@ export function CustomerAccountsPage() {
                 title={t("accounts.buttons.checksTitle")}
                 icon="fas fa-money-check text-warning mr-2"
                 label={t("accounts.buttons.checks")}
-                to="/finance/instruments"
+                to={checksPath()}
               />
               <MenuItem
                 className="dropdown-item"
@@ -868,7 +872,7 @@ export function CustomerAccountsPage() {
                 title={t("accounts.buttons.billsTitle")}
                 icon="fas fa-file-invoice-dollar text-secondary mr-2"
                 label={t("accounts.buttons.bills")}
-                to="/finance/instruments"
+                to={billsPath()}
               />
             </ZtoMenuButton>
             <div className="btn-divider" />
@@ -882,12 +886,12 @@ export function CustomerAccountsPage() {
                 </>
               }
             >
-              <PhaseMenuItem
-                step="12.8"
+              <MenuItem
                 className="dropdown-item"
                 style={{ fontSize: 11 }}
                 icon="fas fa-money-bill-alt text-success mr-2"
                 label={t("accounts.buttons.treasury")}
+                onSelect={treasury.open}
               />
               <MenuItem
                 className="dropdown-item"

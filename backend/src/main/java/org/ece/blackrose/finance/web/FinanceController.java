@@ -5,35 +5,40 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.common.web.PageResponse;
-import org.ece.blackrose.finance.domain.ExpenseItem;
 import org.ece.blackrose.finance.domain.ExpenseType;
 import org.ece.blackrose.finance.domain.FinanceTypes.AccountType;
-import org.ece.blackrose.finance.domain.FinanceTypes.AgingType;
 import org.ece.blackrose.finance.domain.FinanceTypes.BalanceGroupBy;
 import org.ece.blackrose.finance.domain.FinanceTypes.DailyReportSort;
 import org.ece.blackrose.finance.domain.FinanceTypes.DateBasis;
 import org.ece.blackrose.finance.domain.FinanceTypes.DocumentPaymentMethod;
+import org.ece.blackrose.finance.domain.FinanceTypes.ExpenseContextType;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundAccountType;
 import org.ece.blackrose.finance.domain.FinanceTypes.FundKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.HeatmapPeriod;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentDirection;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentKind;
 import org.ece.blackrose.finance.domain.FinanceTypes.InstrumentStatus;
+import org.ece.blackrose.finance.domain.FinanceTypes.NoteType;
 import org.ece.blackrose.finance.domain.FinanceTypes.PlanStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.SettlementType;
 import org.ece.blackrose.finance.repository.FinanceRepositories.CurrencyRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.ExchangeRateRepository;
-import org.ece.blackrose.finance.repository.FinanceRepositories.ExpenseItemRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.ExpenseTypeRepository;
 import org.ece.blackrose.finance.service.AccountService;
 import org.ece.blackrose.finance.service.AccountService.AccountListQuery;
 import org.ece.blackrose.finance.service.AccountService.StatementQuery;
+import org.ece.blackrose.finance.service.ExpenseItemService;
+import org.ece.blackrose.finance.service.ExpenseService;
+import org.ece.blackrose.finance.service.ExpenseService.ExpenseSearch;
 import org.ece.blackrose.finance.service.FundQueryService;
 import org.ece.blackrose.finance.service.FundQueryService.FundSearch;
 import org.ece.blackrose.finance.service.FundService;
+import org.ece.blackrose.finance.service.InstrumentQueryService;
+import org.ece.blackrose.finance.service.InstrumentQueryService.InstrumentSearch;
 import org.ece.blackrose.finance.service.InstrumentService;
 import org.ece.blackrose.finance.service.PaymentPlanService;
 import org.ece.blackrose.finance.service.PaymentPlanService.PlanSearch;
@@ -45,7 +50,6 @@ import org.ece.blackrose.finance.service.SettlementQueryService.SettlementSearch
 import org.ece.blackrose.finance.service.SettlementService;
 import org.ece.blackrose.finance.web.FinanceDtos.AccountResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.AccountTransactionResponse;
-import org.ece.blackrose.finance.web.FinanceDtos.AgingResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.CreateFundRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.CreatePlanRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.CreatePurchaseInvoiceRequest;
@@ -53,15 +57,26 @@ import org.ece.blackrose.finance.web.FinanceDtos.CurrencyResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.DailyReportResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.DashboardResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.ExchangeRateResponse;
+import org.ece.blackrose.finance.web.FinanceDtos.ExpenseCalendarResponse;
+import org.ece.blackrose.finance.web.FinanceDtos.ExpenseContextOptionResponse;
+import org.ece.blackrose.finance.web.FinanceDtos.ExpenseDetailResponse;
+import org.ece.blackrose.finance.web.FinanceDtos.ExpenseItemActiveRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.ExpenseItemResponse;
+import org.ece.blackrose.finance.web.FinanceDtos.ExpenseItemSummaryResponse;
+import org.ece.blackrose.finance.web.FinanceDtos.ExpenseListItemResponse;
+import org.ece.blackrose.finance.web.FinanceDtos.ExpenseMonthlyResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.ExpenseTypeResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.FinanceSettingsResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.FundResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.FundTransactionResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.HeatmapCell;
+import org.ece.blackrose.finance.web.FinanceDtos.InstrumentCustodyRequest;
+import org.ece.blackrose.finance.web.FinanceDtos.InstrumentDetailResponse;
+import org.ece.blackrose.finance.web.FinanceDtos.InstrumentListItemResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.InstrumentMovementResponse;
-import org.ece.blackrose.finance.web.FinanceDtos.InstrumentResponse;
+import org.ece.blackrose.finance.web.FinanceDtos.InstrumentNumberCheckResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.InstrumentTransitionRequest;
+import org.ece.blackrose.finance.web.FinanceDtos.InstrumentUpdateRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.ManualAccountTransactionRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.ManualFundTransactionRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.OpenInvoiceResponse;
@@ -71,9 +86,12 @@ import org.ece.blackrose.finance.web.FinanceDtos.PlanNoteRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.PlanResponse;
 import org.ece.blackrose.finance.web.FinanceDtos.PostponePlanRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.PurchaseInvoiceResponse;
+import org.ece.blackrose.finance.web.FinanceDtos.ReverseExpenseRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.ReverseRequest;
+import org.ece.blackrose.finance.web.FinanceDtos.ReviseExpenseRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SaveAccountRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SaveExpenseItemRequest;
+import org.ece.blackrose.finance.web.FinanceDtos.SaveExpenseRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SaveExpenseTypeRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SaveFinanceSettingsRequest;
 import org.ece.blackrose.finance.web.FinanceDtos.SaveThresholdRequest;
@@ -92,8 +110,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -114,17 +134,20 @@ public class FinanceController {
   private static final String APPROVE = "hasAuthority('FINANCE_APPROVE')";
   private static final String IDEMPOTENCY_HEADER = "Idempotency-Key";
   private static final int ACCOUNT_PAGE_MAX = 2000;
+  private static final int EXPENSE_PAGE_MAX = 500;
 
   private final AccountService accounts;
   private final FundService funds;
   private final FundQueryService fundQueries;
   private final InstrumentService instruments;
+  private final InstrumentQueryService instrumentQueries;
   private final SettlementService settlements;
   private final SettlementQueryService settlementQueries;
   private final PurchaseInvoiceService invoices;
   private final PaymentPlanService plans;
   private final ExpenseTypeRepository expenseTypes;
-  private final ExpenseItemRepository expenseItems;
+  private final ExpenseItemService expenseItemService;
+  private final ExpenseService expenseService;
   private final CurrencyRepository currencies;
   private final ExchangeRateRepository rates;
   private final RateRefresher rateRefresher;
@@ -137,12 +160,14 @@ public class FinanceController {
       FundService funds,
       FundQueryService fundQueries,
       InstrumentService instruments,
+      InstrumentQueryService instrumentQueries,
       SettlementService settlements,
       SettlementQueryService settlementQueries,
       PurchaseInvoiceService invoices,
       PaymentPlanService plans,
       ExpenseTypeRepository expenseTypes,
-      ExpenseItemRepository expenseItems,
+      ExpenseItemService expenseItemService,
+      ExpenseService expenseService,
       CurrencyRepository currencies,
       ExchangeRateRepository rates,
       RateRefresher rateRefresher,
@@ -153,12 +178,14 @@ public class FinanceController {
     this.funds = funds;
     this.fundQueries = fundQueries;
     this.instruments = instruments;
+    this.instrumentQueries = instrumentQueries;
     this.settlements = settlements;
     this.settlementQueries = settlementQueries;
     this.invoices = invoices;
     this.plans = plans;
     this.expenseTypes = expenseTypes;
-    this.expenseItems = expenseItems;
+    this.expenseItemService = expenseItemService;
+    this.expenseService = expenseService;
     this.currencies = currencies;
     this.rates = rates;
     this.rateRefresher = rateRefresher;
@@ -273,17 +300,6 @@ public class FinanceController {
         id, new StatementQuery(currency, from, to, companyId, branchIds, dateBasis), page, size);
   }
 
-  /** {@code excludeIntercompany} yalnız konsolidede (companyId boş) uygulanır. */
-  @GetMapping("/reports/aging")
-  @PreAuthorize(VIEW)
-  List<AgingResponse> aging(
-      @RequestParam AgingType type,
-      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOf,
-      @RequestParam(required = false) UUID companyId,
-      @RequestParam(defaultValue = "true") boolean excludeIntercompany) {
-    return accounts.aging(type, asOf, companyId, excludeIntercompany);
-  }
-
   // Banka ve kasa
 
   /**
@@ -353,29 +369,93 @@ public class FinanceController {
 
   // Çek ve senet
 
+  /**
+   * Çek/senet listesi (12.3 §4.2). Sayfalama açık {@code page}/{@code size} ({@code size} 1–500);
+   * {@code status} ve {@code branchIds} tekrarlı.
+   */
   @GetMapping("/instruments")
   @PreAuthorize(VIEW)
-  PageResponse<InstrumentResponse> listInstruments(
-      @RequestParam(required = false) InstrumentStatus status,
-      @RequestParam(required = false) InstrumentDirection direction,
+  @SuppressWarnings("java:S107")
+  PageResponse<InstrumentListItemResponse> listInstruments(
       @RequestParam(required = false) InstrumentKind kind,
+      @RequestParam(required = false) InstrumentDirection direction,
+      @RequestParam(name = "status", required = false) List<InstrumentStatus> statuses,
+      @RequestParam(required = false) UUID accountId,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate dueFrom,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate dueTo,
+      @RequestParam(required = false) UUID checkBookId,
+      @RequestParam(required = false) NoteType noteType,
+      @RequestParam(required = false) Boolean endorsable,
+      @RequestParam(required = false) String q,
       @RequestParam(required = false) UUID companyId,
-      Pageable pageable) {
-    return PageResponse.from(
-        instruments.list(status, direction, kind, companyId, pageable), mapper::toResponse);
+      @RequestParam(required = false) List<UUID> branchIds,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "50") int size) {
+    InstrumentSearch search =
+        new InstrumentSearch(
+            kind,
+            direction,
+            statuses,
+            accountId,
+            dueFrom,
+            dueTo,
+            checkBookId,
+            noteType,
+            endorsable,
+            q,
+            companyId,
+            branchIds);
+    return PageResponse.from(instrumentQueries.list(search, page, size), item -> item);
+  }
+
+  /** Çek numarası ön denetimi (12.3 §3.9); {@code companyId} zorunlu. */
+  @GetMapping("/instruments/check-number")
+  @PreAuthorize(VIEW)
+  InstrumentNumberCheckResponse checkInstrumentNumber(
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(defaultValue = "CHECK") InstrumentKind kind,
+      @RequestParam InstrumentDirection direction,
+      @RequestParam String number,
+      @RequestParam(required = false) String bankName,
+      @RequestParam(required = false) UUID excludeId) {
+    return instrumentQueries.checkNumber(companyId, kind, direction, number, bankName, excludeId);
+  }
+
+  @GetMapping("/instruments/{id}")
+  @PreAuthorize(VIEW)
+  InstrumentDetailResponse instrumentDetail(@PathVariable UUID id) {
+    return instrumentQueries.detail(id);
   }
 
   @GetMapping("/instruments/{id}/movements")
   @PreAuthorize(VIEW)
   List<InstrumentMovementResponse> instrumentHistory(@PathVariable UUID id) {
-    return instruments.history(id).stream().map(mapper::toResponse).toList();
+    return instrumentQueries.movements(id);
   }
 
   @PostMapping("/instruments/{id}/transition")
   @PreAuthorize(POST)
-  InstrumentResponse transitionInstrument(
+  InstrumentListItemResponse transitionInstrument(
       @PathVariable UUID id, @Valid @RequestBody InstrumentTransitionRequest request) {
-    return mapper.toResponse(instruments.transition(id, request));
+    return instrumentQueries.view(instruments.transition(id, request).getId());
+  }
+
+  /** Finansal olmayan alan düzeltmesi (12.3 §3.2; defter yazmaz). */
+  @PatchMapping("/instruments/{id}")
+  @PreAuthorize(POST)
+  InstrumentListItemResponse updateInstrument(
+      @PathVariable UUID id, @Valid @RequestBody InstrumentUpdateRequest request) {
+    return instrumentQueries.view(instruments.updateDetails(id, request).getId());
+  }
+
+  /** Portföydeki alınan çekin emanet kasası (12.3 §3.2; para hareketi değil). */
+  @PutMapping("/instruments/{id}/custody")
+  @PreAuthorize(POST)
+  InstrumentListItemResponse moveInstrumentCustody(
+      @PathVariable UUID id, @Valid @RequestBody InstrumentCustodyRequest request) {
+    return instrumentQueries.view(instruments.moveCustody(id, request).getId());
   }
 
   // Ödeme ve tahsilat
@@ -738,20 +818,150 @@ public class FinanceController {
   @GetMapping("/expense-items")
   @PreAuthorize(VIEW)
   List<ExpenseItemResponse> listExpenseItems() {
-    return expenseItems.findAll().stream().map(mapper::toResponse).toList();
+    return expenseItemService.list();
   }
 
+  /** Kod boşsa {@code MK-00001} dizisinden üretilir (12.7 §3.1). */
   @PostMapping("/expense-items")
   @ResponseStatus(HttpStatus.CREATED)
   @PreAuthorize(MANAGE)
   ExpenseItemResponse createExpenseItem(@Valid @RequestBody SaveExpenseItemRequest request) {
-    if (!expenseTypes.existsById(request.expenseTypeId())) {
-      throw new BusinessException(
-          HttpStatus.BAD_REQUEST, "EXPENSE_TYPE_NOT_FOUND", "Gider tipi bulunamadı.");
+    return expenseItemService.create(request);
+  }
+
+  @PutMapping("/expense-items/{id}")
+  @PreAuthorize(MANAGE)
+  ExpenseItemResponse updateExpenseItem(
+      @PathVariable UUID id, @Valid @RequestBody SaveExpenseItemRequest request) {
+    return expenseItemService.update(id, request);
+  }
+
+  /** ZTO "Sil": aktif/pasif; sistem kalemi pasifleştirilemez (409 {@code EXPENSE_ITEM_SYSTEM}). */
+  @PutMapping("/expense-items/{id}/active")
+  @PreAuthorize(MANAGE)
+  ExpenseItemResponse setExpenseItemActive(
+      @PathVariable UUID id, @Valid @RequestBody ExpenseItemActiveRequest request) {
+    return expenseItemService.setActive(id, request.active());
+  }
+
+  // Genel masraf (12.7 §4.2)
+
+  @GetMapping("/expenses")
+  @PreAuthorize(VIEW)
+  PageResponse<ExpenseListItemResponse> listExpenses(
+      @RequestParam(required = false) UUID expenseItemId,
+      @RequestParam(required = false) String currency,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(required = false) List<UUID> branchIds,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "50") int size) {
+    return expenseService.list(
+        new ExpenseSearch(expenseItemId, currency, from, to, companyId, branchIds),
+        Math.max(0, page),
+        Math.max(1, Math.min(size, EXPENSE_PAGE_MAX)));
+  }
+
+  @GetMapping("/expenses/summary")
+  @PreAuthorize(VIEW)
+  List<ExpenseItemSummaryResponse> expenseSummary(
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(required = false) List<UUID> branchIds) {
+    return expenseService.summary(from, to, companyId, branchIds);
+  }
+
+  @GetMapping("/expenses/calendar")
+  @PreAuthorize(VIEW)
+  ExpenseCalendarResponse expenseCalendar(
+      @RequestParam int year,
+      @RequestParam int month,
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(required = false) List<UUID> branchIds) {
+    return expenseService.calendar(year, month, companyId, branchIds);
+  }
+
+  @GetMapping("/expenses/monthly")
+  @PreAuthorize(VIEW)
+  List<ExpenseMonthlyResponse> expenseMonthly(
+      @RequestParam(defaultValue = "6") int months,
+      @RequestParam(required = false) UUID companyId,
+      @RequestParam(required = false) List<UUID> branchIds) {
+    return expenseService.monthly(months, companyId, branchIds);
+  }
+
+  @GetMapping("/expenses/context-options")
+  @PreAuthorize(VIEW)
+  List<ExpenseContextOptionResponse> expenseContextOptions(
+      @RequestParam ExpenseContextType type,
+      @RequestParam(required = false) String q,
+      @RequestParam(required = false) UUID branchId) {
+    return expenseService.contextOptions(type, q, branchId);
+  }
+
+  @GetMapping("/expenses/{id}")
+  @PreAuthorize(VIEW)
+  ExpenseDetailResponse getExpense(@PathVariable UUID id) {
+    return expenseService.get(id);
+  }
+
+  /**
+   * Yeni masraf. Nakit/Banka masraf ayrıca {@code FINANCE_PAYMENT_CREATE} ister (403 {@code
+   * PAYMENT_PERMISSION_REQUIRED}). Eşzamanlı aynı anahtar yarışında bir kez yeniden denenir.
+   */
+  @PostMapping("/expenses")
+  @ResponseStatus(HttpStatus.CREATED)
+  @PreAuthorize(MANAGE)
+  ExpenseDetailResponse createExpense(
+      @Valid @RequestBody SaveExpenseRequest request,
+      @RequestHeader(name = IDEMPOTENCY_HEADER, required = false) String idempotencyKey,
+      Authentication authentication) {
+    scope.requireNew(request.branchId());
+    boolean canPay = canPay(authentication);
+    return retryOnce(() -> expenseService.create(request, idempotencyKey, canPay));
+  }
+
+  @PostMapping("/expenses/{id}/reverse")
+  @PreAuthorize(MANAGE)
+  ExpenseDetailResponse reverseExpense(
+      @PathVariable UUID id,
+      @Valid @RequestBody ReverseExpenseRequest request,
+      Authentication authentication) {
+    return expenseService.reverse(id, request, canPay(authentication));
+  }
+
+  /** Düzeltme: aynı anahtar aynı yeni kaydı döner (12.7 §3.2.2). */
+  @PostMapping("/expenses/{id}/revise")
+  @ResponseStatus(HttpStatus.CREATED)
+  @PreAuthorize(MANAGE)
+  ExpenseDetailResponse reviseExpense(
+      @PathVariable UUID id,
+      @Valid @RequestBody ReviseExpenseRequest request,
+      @RequestHeader(name = IDEMPOTENCY_HEADER, required = false) String idempotencyKey,
+      Authentication authentication) {
+    scope.requireNew(request.expense().branchId());
+    boolean canPay = canPay(authentication);
+    return retryOnce(() -> expenseService.revise(id, request, idempotencyKey, canPay));
+  }
+
+  private static boolean canPay(Authentication authentication) {
+    return authentication != null
+        && authentication.getAuthorities().stream()
+            .anyMatch(a -> "FINANCE_PAYMENT_CREATE".equals(a.getAuthority()));
+  }
+
+  /** Eşzamanlı aynı anahtarlı istek ({@code IDEMPOTENCY_IN_PROGRESS}) bir kez yeniden denenir. */
+  private static <T> T retryOnce(Supplier<T> call) {
+    try {
+      return call.get();
+    } catch (BusinessException ex) {
+      if ("IDEMPOTENCY_IN_PROGRESS".equals(ex.getCode())) {
+        return call.get();
+      }
+      throw ex;
     }
-    return mapper.toResponse(
-        expenseItems.save(
-            new ExpenseItem(request.expenseTypeId(), request.code(), request.name())));
   }
 
   // Para birimi ve kur

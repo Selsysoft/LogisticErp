@@ -210,7 +210,15 @@ describe("12.2 sayfa CSS iskeletleri ve paylaşılan kapsam (§5.4)", () => {
   it("banks.css iki köke yazılır; diğer dosyalar tek kök", () => {
     expect(SHARED_SCOPES).toEqual({
       banks: ["banks", "cashes"],
-      "settlement-modals": ["payments", "collections", "bank-transactions", "cash-transactions"],
+      "settlement-modals": [
+        "payments",
+        "collections",
+        "bank-transactions",
+        "cash-transactions",
+        "checks",
+        "bills",
+      ],
+      "recipe-report-common": ["fx-report", "cash-flow"],
     });
     const banks = "F:/p/frontend/src/zto/styles/pages/scoped/banks.css";
     expect(scopesForFile(banks)).toEqual([
@@ -254,6 +262,25 @@ describe("12.2 sayfa CSS iskeletleri ve paylaşılan kapsam (§5.4)", () => {
 
 describe("12.2a sayfa CSS iskeletleri ve modal kapsamı (12.2a §5.4)", () => {
   const PAGES_12_2A = ["payments", "collections", "settlement-modals", "daily-settlement-report"];
+  /** 12.3 §5.3 (FE-0 iskelet; FE-1/FE-2 doldurur). */
+  const PAGES_12_3 = [
+    "checks",
+    "check-detailed-report",
+    "bills",
+    "check-books",
+    "edit-instrument",
+    "check-documents",
+  ];
+  /** 12.7 §5.3 (FE-0 kopyası; FE-1/FE-2/FE-3 sayfaları kullanır). */
+  const PAGES_12_7 = [
+    "expense-items",
+    "general-expenses",
+    "expense-calendar",
+    "expense-group-details",
+    "expense-form",
+    "sales-truck-expenses",
+    "sales-truck-details",
+  ];
   const PAGES_12_2 = [
     "banks",
     "bank-form",
@@ -267,29 +294,49 @@ describe("12.2a sayfa CSS iskeletleri ve modal kapsamı (12.2a §5.4)", () => {
     "transfer-center",
     "exchange-break-report",
   ];
+  /** 12.8 §5.3 (FE-0 kopyası; FE-1/FE-2/FE-3 sayfaları kullanır). */
+  const PAGES_12_8 = [
+    "customer-account-report",
+    "finance-report",
+    "financial-balance-sheet",
+    "recipe-report-common",
+    "fx-report",
+    "cash-flow",
+  ];
 
-  it("_index.css: 12.2 bloğu ardından 12.2a bloğu sıralı; her dosyada kaynak", () => {
+  it("_index.css: 12.2, 12.2a, 12.3, 12.7 ve 12.8 blokları sıralı; her dosyada kaynak", () => {
     const imports = Array.from(
       read("pages/_index.css").matchAll(/^@import "([^"]+)";/gm),
       (m) => m[1],
     );
     const start = imports.indexOf("./scoped/banks.css");
     expect(start).toBeGreaterThan(imports.indexOf("./quick-cari.css"));
-    expect(imports.slice(start)).toEqual(
-      [...PAGES_12_2, ...PAGES_12_2A].map((p) => `./scoped/${p}.css`),
-    );
-    for (const page of PAGES_12_2A) {
+    expect(imports.slice(start)).toEqual([
+      ...[...PAGES_12_2, ...PAGES_12_2A, ...PAGES_12_3, ...PAGES_12_7, ...PAGES_12_8].map(
+        (p) => `./scoped/${p}.css`,
+      ),
+      // 12.8 §5.3: Hızlı Bakiye Özeti modalı kapsamsız (quick-cari.css deseni).
+      "./treasury-modal.css",
+    ]);
+    for (const page of [...PAGES_12_2A, ...PAGES_12_3, ...PAGES_12_7]) {
       expect(read(`pages/scoped/${page}.css`)).toMatch(/Kaynak: ZtoFabrika\//);
+    }
+    for (const page of [...PAGES_12_3, ...PAGES_12_7]) {
+      expect(scopesForFile(`F:/p/frontend/src/zto/styles/pages/scoped/${page}.css`)).toEqual([
+        `.zto-finans.zto-page-${page}`,
+      ]);
     }
   });
 
-  it("settlement-modals.css dört köke yazılır; liste ve rapor dosyaları tek kök", () => {
+  it("settlement-modals.css altı köke yazılır (12.3: checks, bills); liste ve rapor dosyaları tek kök", () => {
     const modals = "F:/p/frontend/src/zto/styles/pages/scoped/settlement-modals.css";
     expect(scopesForFile(modals)).toEqual([
       ".zto-finans.zto-page-payments",
       ".zto-finans.zto-page-collections",
       ".zto-finans.zto-page-bank-transactions",
       ".zto-finans.zto-page-cash-transactions",
+      ".zto-finans.zto-page-checks",
+      ".zto-finans.zto-page-bills",
     ]);
     expect(scopeForFile(modals)).toBe(".zto-finans.zto-page-payments");
     for (const page of ["payments", "collections", "daily-settlement-report"]) {
@@ -299,7 +346,7 @@ describe("12.2a sayfa CSS iskeletleri ve modal kapsamı (12.2a §5.4)", () => {
     }
   });
 
-  it("modal kuralı dört kökte bir kez; #id seçicisi ve @media korunur", async () => {
+  it("modal kuralı altı kökte bir kez; #id seçicisi ve @media korunur", async () => {
     const css = await scope(
       "#addPaymentModal .modal-dialog { width: 80vw } @media (max-width: 768px) { .erp-modal .x { margin: 0 } }",
       "C:\\p\\frontend\\src\\zto\\styles\\pages\\scoped\\settlement-modals.css",
@@ -308,7 +355,9 @@ describe("12.2a sayfa CSS iskeletleri ve modal kapsamı (12.2a §5.4)", () => {
       ".zto-finans.zto-page-payments #addPaymentModal .modal-dialog, " +
         ".zto-finans.zto-page-collections #addPaymentModal .modal-dialog, " +
         ".zto-finans.zto-page-bank-transactions #addPaymentModal .modal-dialog, " +
-        ".zto-finans.zto-page-cash-transactions #addPaymentModal .modal-dialog {",
+        ".zto-finans.zto-page-cash-transactions #addPaymentModal .modal-dialog, " +
+        ".zto-finans.zto-page-checks #addPaymentModal .modal-dialog, " +
+        ".zto-finans.zto-page-bills #addPaymentModal .modal-dialog {",
     );
     expect(css.match(/zto-page-cash-transactions \.erp-modal \.x/g)).toHaveLength(1);
     expect(css).toContain("@media (max-width: 768px)");
@@ -381,5 +430,111 @@ describe("zto-finans.css giriş sırası (ZTO _ExpertLayout ile birebir)", () =>
     expect(css).not.toContain("@@");
     // JS'e bağlı kart animasyonu alınmadı (kartlar görünmez kalırdı).
     expect(css).not.toMatch(/\.card\s*\{[^}]*opacity:\s*0/);
+  });
+});
+
+describe("12.7 sayfa CSS'leri (12.7 §5.3)", () => {
+  it("ZTO @keyframes pulse önekli; Razor kaçışı kalmaz; kurallar sayfa kökü altında", async () => {
+    const general = read("pages/scoped/general-expenses.css");
+    expect(general).toContain("@keyframes zto-gex-pulse");
+    expect(general).not.toMatch(/@keyframes pulse\s*\{/);
+    for (const page of ["expense-items", "expense-form", "sales-truck-details"]) {
+      expect(read(`pages/scoped/${page}.css`)).not.toMatch(/@@(media|keyframes)/);
+    }
+    const css = await scope(
+      "@media (max-width: 768px) { .expense-card { padding: 0 } }",
+      "F:/p/frontend/src/zto/styles/pages/scoped/expense-form.css",
+    );
+    expect(css).toContain(".zto-finans.zto-page-expense-form .expense-card");
+  });
+});
+
+describe("12.8 sayfa CSS'leri (12.8 §5.3)", () => {
+  const SCOPED_DIR = "F:/p/frontend/src/zto/styles/pages/scoped";
+
+  it("kaynak başlıkları; tek kök (recipe-report-common iki kök); Razor kaçışı kalmaz", () => {
+    for (const page of [
+      "customer-account-report",
+      "finance-report",
+      "financial-balance-sheet",
+      "fx-report",
+      "cash-flow",
+      "recipe-report-common",
+    ]) {
+      const css = read(`pages/scoped/${page}.css`);
+      expect(css, page).toMatch(/Kaynak: ZtoFabrika\//);
+      expect(css, page).not.toMatch(/@@(media|keyframes)/);
+    }
+    for (const page of [
+      "customer-account-report",
+      "finance-report",
+      "financial-balance-sheet",
+      "fx-report",
+      "cash-flow",
+    ]) {
+      expect(scopesForFile(`${SCOPED_DIR}/${page}.css`)).toEqual([`.zto-finans.zto-page-${page}`]);
+    }
+    expect(scopesForFile(`${SCOPED_DIR}/recipe-report-common.css`)).toEqual([
+      ".zto-finans.zto-page-fx-report",
+      ".zto-finans.zto-page-cash-flow",
+    ]);
+    expect(read("pages/treasury-modal.css")).toMatch(/Kaynak: ZtoFabrika\//);
+  });
+
+  it("rp-page sarmalayıcı altında: body.rp-page köke bağlanmaz (Rev 1 FE-ROOT-CLASS)", async () => {
+    const css = await scope(
+      read("pages/scoped/finance-report.css"),
+      `${SCOPED_DIR}/finance-report.css`,
+    );
+    expect(css).toContain(".zto-finans.zto-page-finance-report .rp-page {");
+    expect(css).toContain(".zto-finans.zto-page-finance-report .rp-page *,");
+    expect(css).toContain(".zto-finans.zto-page-finance-report .rp-page [hidden]");
+    expect(css).not.toContain(".zto-finans.zto-page-finance-report.rp-page");
+    expect(css).not.toMatch(/(^|[\s,}])body\.rp-page\s*\{/);
+    // stat-filter.css aynı dosyada; @page çıkarılır; yazdırmada kabuk yan menüsü gizlenir.
+    expect(css).toContain(".zto-finans.zto-page-finance-report .stat-filter");
+    expect(css).not.toMatch(/@page\s*\{/);
+    expect(css).toContain(".zto-finans.zto-page-finance-report .zt-sidebar {");
+  });
+
+  it("reçeteli tema iki köke yazılır; :root değişkenleri köke bağlanır; rcpdt kuralları var", async () => {
+    const css = await scope(
+      read("pages/scoped/recipe-report-common.css"),
+      `${SCOPED_DIR}/recipe-report-common.css`,
+    );
+    expect(css).toContain(
+      ".zto-finans.zto-page-fx-report .rcpdt-bar, .zto-finans.zto-page-cash-flow .rcpdt-bar {",
+    );
+    expect(css).toMatch(
+      /\.zto-finans\.zto-page-fx-report, \.zto-finans\.zto-page-cash-flow \{\s*--rcp-primary: #007bff;/,
+    );
+    for (const selector of [
+      ".rcpdt-foot",
+      ".rcpdt-pg",
+      ".rcpdt-btn.rcpdt-active",
+      ".rcp-page",
+      ".rcp-breadcrumb",
+      ".rcp-hero",
+    ]) {
+      expect(css, selector).toContain(`.zto-finans.zto-page-cash-flow ${selector}`);
+    }
+    expect(css).not.toMatch(/\.rcp-pimg\s*\{/);
+    expect(css).not.toMatch(/\.rcp-welcome\s*\{/);
+    expect(css).not.toContain("dataTables_wrapper");
+  });
+
+  it("bilanço alt şerit eki ve hazine modalı genişliği (kapsamsız)", async () => {
+    const fbs = await scope(
+      read("pages/scoped/financial-balance-sheet.css"),
+      `${SCOPED_DIR}/financial-balance-sheet.css`,
+    );
+    expect(fbs).toMatch(
+      /@media \(min-width: 1025px\) \{\s*\.zto-finans\.zto-page-financial-balance-sheet \.fbs-wp-footer \{\s*grid-template-columns: repeat\(3, 1fr\);/,
+    );
+    const treasury = await scope(
+      read("pages/treasury-modal.css"),
+      "F:/p/frontend/src/zto/styles/pages/treasury-modal.css",
+    );
+    expect(treasury).toContain(".zto-finans #treasuryModal .modal-dialog.zto-treasury-dialog {");
   });
 });

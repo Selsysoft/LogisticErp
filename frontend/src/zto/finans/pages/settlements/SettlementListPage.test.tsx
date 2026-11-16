@@ -224,7 +224,7 @@ describe("Ödemeler sayfası", () => {
     api([
       makeItem({ id: "cash" }),
       makeItem({ id: "card", displayMethod: "CREDIT_CARD" }),
-      makeItem({ id: "check", displayMethod: "CHECK", correctable: false }),
+      makeItem({ id: "check", displayMethod: "CHECK", correctable: false, reversible: false }),
       makeItem({
         id: "masked",
         employeeMasked: true,
@@ -528,7 +528,7 @@ describe("Tahsilatlar sayfası", () => {
     expect(rows[1].querySelector("div.btn.btn-sm.btn-group")).not.toBeNull();
   });
 
-  it("çekli tahsilatta Düzenle/Sil gizli (Ç5/Ç6); Kaynak yeni sekmede fon hareketleri", async () => {
+  it("çekli tahsilatta Düzenle/Sil sunucu bayraklarıyla (12.3); Kaynak yeni sekmede fon hareketleri", async () => {
     api(
       [],
       [
@@ -537,6 +537,9 @@ describe("Tahsilatlar sayfası", () => {
           type: "COLLECTION",
           displayMethod: "CHECK",
           instrumentNumber: "1234567",
+          reversible: false,
+          correctable: false,
+          lockReason: "CHECK",
         }),
         bankItem({ id: "b", type: "COLLECTION" }),
       ],

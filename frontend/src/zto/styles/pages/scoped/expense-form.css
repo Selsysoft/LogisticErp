@@ -1,0 +1,386 @@
+/*
+ * Kaynak: ZtoFabrika/Views/ProductionExpenses/Add.cshtml <style> :31-383 ∪ Edit.cshtml <style> :32-406 farkları (12.7_TASARIM §5.3).
+ * Birebir kopya (FE-0); kurallar .zto-finans.zto-page-expense-form altına alınır (prefixTransform.ts).
+ * Değişiklikler: Razor kaçışı @@ → @.
+ */
+/* --- Views/ProductionExpenses/Add.cshtml <style> :31-383 --- */
+.production-only {
+  display: none;
+}
+
+.category-wrapper {
+  display: block !important;
+}
+
+.static-category-wrapper {
+  display: none !important;
+}
+
+#TotalAmount {
+  background-color: #fff7d6;
+  font-weight: bold;
+}
+
+.expense-type-icon {
+  text-align: center;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.expense-type-icon img {
+  max-height: 150px;
+  margin-bottom: 10px;
+}
+
+.expense-type-icon p {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+.form-section {
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-left: 4px solid #007bff;
+}
+
+.form-section h5 {
+  color: #007bff;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.production-only .form-section {
+  border-left-color: #28a745;
+}
+
+.export-only .form-section {
+  border-left-color: #ffc107;
+}
+
+.other-only .form-section {
+  border-left-color: #6c757d;
+}
+
+.form-control,
+.input-group-text,
+select.form-control,
+input.form-control {
+  padding: 4px 8px !important;
+  font-size: 13px !important;
+  height: 32px;
+}
+
+label {
+  font-size: 12px !important;
+  margin-bottom: 2px;
+}
+
+.form-section {
+  padding: 8px !important;
+  margin-bottom: 10px !important;
+}
+
+.form-section h5 {
+  font-size: 14px !important;
+  margin-bottom: 10px !important;
+  padding-bottom: 5px;
+}
+
+.row > div[class*="col-"] {
+  margin-bottom: 8px !important;
+}
+
+.btn {
+  padding: 6px 12px !important;
+  font-size: 14px !important;
+}
+
+.input-group-text {
+  padding: 0px 6px !important;
+}
+
+.mb-3,
+.mb-4,
+.mt-3,
+.mt-4 {
+  margin-bottom: 8px !important;
+  margin-top: 8px !important;
+}
+
+.form-control[readonly] {
+  background-color: #f9f9f9 !important;
+}
+
+.form-control {
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+/* Material Card Styles */
+.expense-detail-card {
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
+}
+
+.expense-detail-card:hover {
+  border-color: #007bff;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.15);
+}
+
+.material-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.material-card-number {
+  background-color: #007bff;
+  color: white;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.material-card-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.material-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.material-row:last-child {
+  margin-bottom: 0;
+}
+
+.material-field {
+  flex: 1;
+  min-width: 150px;
+}
+
+.material-field-large {
+  flex: 2;
+  min-width: 200px;
+}
+
+.material-field-small {
+  flex: 0.8;
+  min-width: 120px;
+}
+
+.material-field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6c757d;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.material-field .form-control,
+.material-field .input-group {
+  font-size: 13px;
+}
+
+.material-field .input-group-text {
+  font-size: 12px;
+  padding: 6px 10px;
+  font-weight: 600;
+}
+
+.material-field .form-control[readonly] {
+  background-color: #f8f9fa;
+  cursor: not-allowed;
+  font-weight: 500;
+  border: 1px solid #e9ecef;
+}
+
+.material-totals-section {
+  background-color: #f8f9fa;
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 10px;
+}
+
+.material-totals-section .material-row {
+  margin-bottom: 5px;
+}
+
+.btn-remove-detail {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.bg-info-custom {
+  background-color: #17a2b8 !important;
+  color: white !important;
+}
+
+.bg-warning-custom {
+  background-color: #ffc107 !important;
+  color: white !important;
+}
+
+.bg-success-custom {
+  background-color: #28a745 !important;
+  color: white !important;
+}
+
+.bg-primary-custom {
+  background-color: #007bff !important;
+  color: white !important;
+}
+
+.document-upload-area {
+  border: 2px dashed #007bff;
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.document-upload-area:hover {
+  border-color: #0056b3;
+  background-color: #e9ecef;
+}
+
+.document-upload-area.dragover {
+  border-color: #28a745;
+  background-color: #d4edda;
+}
+
+.document-preview {
+  margin-top: 10px;
+  display: none;
+}
+
+.document-info {
+  display: flex;
+  align-items: center;
+  background-color: #fff;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  margin-bottom: 8px;
+}
+
+.document-icon {
+  font-size: 20px;
+  margin-right: 10px;
+  color: #007bff;
+}
+
+.document-details {
+  flex-grow: 1;
+}
+
+.document-name {
+  font-weight: bold;
+  margin-bottom: 3px;
+  font-size: 12px;
+}
+
+.document-size {
+  font-size: 11px;
+  color: #6c757d;
+}
+
+.remove-document {
+  color: #dc3545;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.upload-icon {
+  font-size: 32px;
+  color: #007bff;
+  margin-bottom: 8px;
+}
+
+.upload-text {
+  color: #495057;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+
+.upload-subtext {
+  color: #6c757d;
+  font-size: 11px;
+}
+
+.allowed-formats {
+  margin-top: 8px;
+  font-size: 10px;
+  color: #6c757d;
+}
+
+@media (max-width: 1200px) {
+  .material-field {
+    min-width: 130px;
+  }
+
+  .material-field-large {
+    min-width: 180px;
+  }
+}
+
+@media (max-width: 768px) {
+  .material-row {
+    flex-direction: column;
+  }
+
+  .material-field,
+  .material-field-large,
+  .material-field-small {
+    min-width: 100%;
+  }
+}
+
+/* --- Views/ProductionExpenses/Edit.cshtml <style> :32-406 (Add'de olmayan kurallar) --- */
+.existing-document {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.existing-document .document-info {
+  background-color: transparent;
+  border: none;
+}
+
+.existing-document .document-icon {
+  color: #28a745;
+}
+
+.btn-view-document {
+  margin-top: 5px;
+  font-size: 10px;
+}

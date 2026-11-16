@@ -23,6 +23,8 @@ export default {
   sectionEDocument: "E-DÖNÜŞÜM",
   // CARİ İŞLEMLERİ
   financeReports: "Finans Raporları",
+  // 12.8 (§5.3): Blackrose eki menü öğesi (ZTO CustomerAccountReport/Reports başlığı).
+  customerAccountReport: "Cari Hesap Raporları",
   allTransactions: "Günlük Cari İşlemleri",
   quickTransaction: "Hızlı Cari İşlemi",
   accounts: "Cari Kartlar",
@@ -45,6 +47,9 @@ export default {
   // FİNANSAL İŞLEMLER
   quickBalance: "Hızlı Bakiye Özeti",
   balanceSheet: "Finansal Varlıklar & Bilanço",
+  // 12.8: ZTO _SideMenu_Recipe_Finance.cshtml:86, :100
+  fxReport: "Kur Farkı Raporu",
+  cashFlow: "Nakit Akış",
   // KREDİ & YATIRIM
   credits: "Krediler",
   timeDeposits: "Vadeli Mevduatlar",
@@ -67,6 +72,10 @@ export default {
   bankAccounts: "Banka Hesapları",
   // TEMEL TANIMLAR (Blackrose eki; ZTO _Layout.cshtml:1263 "Temel Tanımlar", 12.1a §6.6)
   sectionBasicDefinitions: "TEMEL TANIMLAR",
+  // 12.7 (§5.9): ZTO _Layout.cshtml:1201 "Masraf Kalemleri".
+  expenseItems: "Masraf Kalemleri",
+  // 12.8 (§5.9): ZTO _Layout.cshtml:1268 "Para Birimleri".
+  currencies: "Para Birimleri",
   workPlaces: "İş Yerleri",
   branchGroups: "Şubeler",
   companies: "Şirketler",

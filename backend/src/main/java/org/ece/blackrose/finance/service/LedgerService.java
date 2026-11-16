@@ -2,12 +2,15 @@ package org.ece.blackrose.finance.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.ece.blackrose.common.error.BusinessException;
 import org.ece.blackrose.common.money.Money;
 import org.ece.blackrose.finance.domain.Account;
 import org.ece.blackrose.finance.domain.AccountTransaction;
+import org.ece.blackrose.finance.domain.FinanceTypes.AccountDocumentStatus;
 import org.ece.blackrose.finance.domain.FinanceTypes.Direction;
+import org.ece.blackrose.finance.repository.AccountRepositories.AccountDocumentRepository;
 import org.ece.blackrose.finance.repository.AccountRepositories.AccountTransferLineRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountRepository;
 import org.ece.blackrose.finance.repository.FinanceRepositories.AccountTransactionRepository;
@@ -48,18 +51,21 @@ public class LedgerService {
   private final AccountTransferLineRepository transferLines;
   private final ExchangeRateService rates;
   private final CompanyResolver companies;
+  private final AccountDocumentRepository fxDocuments;
 
   public LedgerService(
       AccountTransactionRepository transactions,
       AccountRepository accounts,
       AccountTransferLineRepository transferLines,
       ExchangeRateService rates,
-      CompanyResolver companies) {
+      CompanyResolver companies,
+      AccountDocumentRepository fxDocuments) {
     this.transactions = transactions;
     this.accounts = accounts;
     this.transferLines = transferLines;
     this.rates = rates;
     this.companies = companies;
+    this.fxDocuments = fxDocuments;
   }
 
   @Transactional
@@ -145,6 +151,19 @@ public class LedgerService {
   }
 
   /**
+   * Kaynak belgenin cari hareketini yalnız kilitler ({@code FOR UPDATE}); defter yazmaz, satır
+   * yoksa bir şey yapmaz. Çekli ödeme/tahsilat iptali ve düzeltmesi hareketi çekten önce kilitler;
+   * böylece cari taşımanın {@code account_transaction → instrument} sırası izlenir (12.3 §3.4 adım
+   * 8, Rev 1 F2). Sonraki {@link #reverse} aynı işlemde kilide yeniden girer.
+   */
+  @Transactional
+  public void lockSource(String sourceType, UUID sourceId) {
+    transactions
+        .findBySourceTypeAndSourceId(sourceType, sourceId)
+        .ifPresent(original -> transactions.findForUpdate(original.getId()));
+  }
+
+  /**
    * Ters kayıt. Orijinal satır kilitlenir (12.1 §3.11 F1; cari taşıma aynı satırı kilitler) ve
    * kilit altında taşınmışlık ile ters çevrilmişlik yeniden okunur: taşınmış hareketin kaynağı
    * iptal edilemez (409 {@code TRANSACTION_TRANSFERRED}), mevcut ters kayıt yeniden döner. Belge
@@ -164,6 +183,11 @@ public class LedgerService {
           "TRANSACTION_TRANSFERRED",
           "Bu hareket başka cariye taşınmış; önce cari taşımayı geri alın.");
     }
+    // 12.8 §3.3.1: kilitten sonra okunur; kur farkı kesimi aynı satırı kilitler.
+    if (fxDocuments.existsByFxSourceTransactionIdAndStatusAndDeletedFalse(
+        original.getId(), AccountDocumentStatus.OPEN)) {
+      throw fxDocumentOpen(original.getId());
+    }
     return transactions
         .findBySourceTypeAndSourceId(SOURCE_REVERSAL, original.getId())
         .orElseGet(
@@ -182,6 +206,18 @@ public class LedgerService {
                         LedgerDescriptions.fit(description),
                         SOURCE_REVERSAL,
                         original.getId())));
+  }
+
+  /**
+   * Kaynağına açık kur farkı belgesi kesilmiş hareket ters çevrilemez ve taşınamaz (12.8 §3.3.1,
+   * §3.3.2).
+   */
+  public static BusinessException fxDocumentOpen(UUID transactionId) {
+    return new BusinessException(
+        HttpStatus.CONFLICT,
+        "FX_DOCUMENT_OPEN",
+        "Bu harekete kesilmiş kur farkı belgesi var; önce kur farkı belgesini iptal edin.",
+        List.of("transactionId=" + transactionId));
   }
 
   private Account account(UUID id) {

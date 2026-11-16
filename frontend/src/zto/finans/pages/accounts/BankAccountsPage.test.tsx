@@ -190,7 +190,7 @@ describe("BankAccountsPage (ZTO BankAccounts/Index)", { timeout: 30_000 }, () =>
     expect(await screen.findByText("Banka hesabı başarıyla silindi.")).toBeTruthy();
     fireEvent.click(screen.getByLabelText("Pasifleri göster"));
     expect(await screen.findByText("Vakıfbank")).toBeTruthy();
-  });
+  }, 20_000);
   it("12.2a: Banka Hesabı İşlemleri — iki uç, POSTED + hesap süzgeci, tarih azalan, ZTO küçük tablo", async () => {
     fakeApi.on("GET", /^\/finance\/payments\?/, page([listItem()], 51));
     fakeApi.on(

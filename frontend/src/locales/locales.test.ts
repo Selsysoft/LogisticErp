@@ -57,6 +57,27 @@ const TWELVE_ONE_PARTS = ["accounts", "transactions", "allTransactions", "quickC
 const TWELVE_TWO_PARTS = ["funds", "fundTransactions", "transferCenter"] as const;
 /** 12.2a ekranlarının ztoFinans parçaları (12.2a §5.15; FE-0 iskelet, FE-1/FE-2 doldurur). */
 const TWELVE_TWO_A_PARTS = ["payments", "collections", "settlementModals", "dailyReport"] as const;
+/** 12.3 ekranlarının ztoFinans parçaları (12.3 §5.11; FE-0 iskelet ve `instruments`, FE-1/FE-2 doldurur). */
+const TWELVE_THREE_PARTS = [
+  "instruments",
+  "checks",
+  "bills",
+  "checkBooks",
+  "editInstrument",
+  "checkDocuments",
+] as const;
+/** 12.7 ekranlarının ztoFinans parçaları (12.7 §5.9; FE-0 iskelet, FE-1/FE-2/FE-3 doldurur). */
+const TWELVE_SEVEN_PARTS = ["expenseItems", "expenses", "salesTruckExpenses"] as const;
+/** 12.8 ekranlarının ztoFinans parçaları (12.8 §5.1; FE-0 iskelet, FE-1/FE-2/FE-3 doldurur). */
+const TWELVE_EIGHT_PARTS = [
+  "customerAccountReport",
+  "financeReport",
+  "balanceSheet",
+  "fxReport",
+  "cashFlow",
+  "currencies",
+  "treasury",
+] as const;
 
 const translationLeaves = flatten(tr.translation);
 const ztoLeaves = flatten(tr.ztoFinans);
@@ -178,10 +199,19 @@ describe("ztoFinans ad alanı", () => {
       "collections",
       "settlementModals",
       "dailyReport",
+      ...TWELVE_THREE_PARTS,
+      ...TWELVE_SEVEN_PARTS,
+      ...TWELVE_EIGHT_PARTS,
     ]);
     expect(i18n.options.ns).toEqual(["translation", "ztoFinans"]);
     // 12.2 parçaları kayıtlı nesneler (boş olabilir; sahipleri doldurur).
-    for (const part of [...TWELVE_TWO_PARTS, ...TWELVE_TWO_A_PARTS]) {
+    for (const part of [
+      ...TWELVE_TWO_PARTS,
+      ...TWELVE_TWO_A_PARTS,
+      ...TWELVE_THREE_PARTS,
+      ...TWELVE_SEVEN_PARTS,
+      ...TWELVE_EIGHT_PARTS,
+    ]) {
       expect(typeof tr.ztoFinans[part], part).toBe("object");
     }
     // 12.1 parçaları (FE0 iskelet, sahipleri doldurur): kayıtlı ve boş değil.
@@ -208,6 +238,7 @@ describe("ztoFinans ad alanı", () => {
       "table.info": ["end", "start", "total"],
       "table.infoFiltered": ["max"],
       "table.buttons.copySuccess": ["count"],
+      "table.rcp.pageLabel": ["page"],
       "select.inputTooLong": ["count"],
       "select.inputTooShort": ["count"],
       "select.maximumSelected": ["count"],
@@ -224,15 +255,20 @@ describe("ztoFinans ad alanı", () => {
       "definitions.errorPrefix": ["message"],
       "companies.uyLastSync": ["value"],
     };
-    // 12.1 ve 12.2 parçalarının yer tutucuları sahiplerinin testlerinde; burada genel denge testi
+    // 12.1, 12.2 ve 12.3 parçalarının yer tutucuları sahiplerinin testlerinde; burada genel denge testi
     // yeterli. Aşağıdaki temsilî 12.2 çağrıları yanlış değişken adını çözülmemiş "{{…}}" olarak yakalar.
     const actual = Object.fromEntries(
       ztoLeaves
         .filter(
           ([k]) =>
-            ![...TWELVE_ONE_PARTS, ...TWELVE_TWO_PARTS, ...TWELVE_TWO_A_PARTS].some((part) =>
-              k.startsWith(`${part}.`),
-            ),
+            ![
+              ...TWELVE_ONE_PARTS,
+              ...TWELVE_TWO_PARTS,
+              ...TWELVE_TWO_A_PARTS,
+              ...TWELVE_THREE_PARTS,
+              ...TWELVE_SEVEN_PARTS,
+              ...TWELVE_EIGHT_PARTS,
+            ].some((part) => k.startsWith(`${part}.`)),
         )
         .filter(([, v]) => variables(v).length > 0)
         .map(([k, v]) => [k, variables(v)]),
@@ -272,7 +308,14 @@ describe("ztoFinans ad alanı", () => {
 });
 
 describe("kaynak koddaki literal anahtarlar", () => {
-  const files = sourceFiles(SRC);
+  // Kaynak taraması makineye ve paralel yüke bağlı (12.8 ile ~10 bin satır t() eklendi; varsayılan 5 sn
+  // aşılabiliyor). Süre yalnız bu iki tarama testine verilir; genel testTimeout değişmez.
+  const SCAN_TIMEOUT_MS = 30_000;
+  // Dosyalar bir kez okunur; iki test paylaşır.
+  const sources = sourceFiles(SRC).map((file) => ({
+    code: readFileSync(file, "utf8"),
+    where: relative(SRC, file).replace(/\\/g, "/"),
+  }));
   const translationTop = new Set(Object.keys(tr.translation));
 
   /** Dosyanın useTranslation ile bildirdiği ad alanları; bildirimsiz → translation. */
@@ -296,56 +339,60 @@ describe("kaynak koddaki literal anahtarlar", () => {
     return candidates.some((ns) => NAMESPACES[ns] !== undefined && hasKey(NAMESPACES[ns], key));
   }
 
-  it('t("...") çağrılarındaki literal anahtarlar mevcut', () => {
-    const missing: string[] = [];
-    let checked = 0;
-    for (const file of files) {
-      const code = readFileSync(file, "utf8");
-      const nss = namespacesOf(code);
-      const where = relative(SRC, file).replace(/\\/g, "/");
-      // t("a.b") / t("a.b", { ns: "x" }); şablon dizesindeki ${...} dinamik sayılır, atlanır.
-      for (const m of code.matchAll(
-        /\bt\(\s*(["'`])([^"'`$\\]+)\1\s*(?:,\s*\{[^}]*?\bns:\s*["']([^"']+)["'])?/g,
-      )) {
-        checked++;
-        if (!resolves(m[2], nss, m[3])) missing.push(`${where}: ${m[2]}`);
-      }
-      // t(koşul ? "a.b" : "c.d")
-      for (const m of code.matchAll(
-        /\bt\(\s*[^"'`()?]+\?\s*(["'])([^"']+)\1\s*:\s*(["'])([^"']+)\3/g,
-      )) {
-        for (const key of [m[2], m[4]]) {
+  it(
+    't("...") çağrılarındaki literal anahtarlar mevcut',
+    () => {
+      const missing: string[] = [];
+      let checked = 0;
+      for (const { code, where } of sources) {
+        const nss = namespacesOf(code);
+        // t("a.b") / t("a.b", { ns: "x" }); şablon dizesindeki ${...} dinamik sayılır, atlanır.
+        for (const m of code.matchAll(
+          /\bt\(\s*(["'`])([^"'`$\\]+)\1\s*(?:,\s*\{[^}]*?\bns:\s*["']([^"']+)["'])?/g,
+        )) {
           checked++;
-          if (!resolves(key, nss)) missing.push(`${where}: ${key}`);
+          if (!resolves(m[2], nss, m[3])) missing.push(`${where}: ${m[2]}`);
+        }
+        // t(koşul ? "a.b" : "c.d")
+        for (const m of code.matchAll(
+          /\bt\(\s*[^"'`()?]+\?\s*(["'])([^"']+)\1\s*:\s*(["'])([^"']+)\3/g,
+        )) {
+          for (const key of [m[2], m[4]]) {
+            checked++;
+            if (!resolves(key, nss)) missing.push(`${where}: ${key}`);
+          }
         }
       }
-    }
-    expect(checked).toBeGreaterThan(500);
-    expect(missing).toEqual([]);
-  });
+      expect(checked).toBeGreaterThan(500);
+      expect(missing).toEqual([]);
+    },
+    SCAN_TIMEOUT_MS,
+  );
 
-  it('veri olarak taşınan anahtarlar (label: "nav.finance" gibi) mevcut', () => {
-    // translation üst düzey modül adıyla başlayan, yalnız anahtar karakterleri içeren dizeler.
-    // MUI palet yolları ("error.light") çeviri anahtarı değildir.
-    const notKeys = /^error\.(main|light|dark|contrastText)$/;
-    const missing: string[] = [];
-    for (const file of files) {
-      const code = readFileSync(file, "utf8");
-      const where = relative(SRC, file).replace(/\\/g, "/");
-      for (const m of code.matchAll(/(["'])([a-z][A-Za-z]*)\.([A-Za-z0-9_.]*[A-Za-z0-9_])\1/g)) {
-        if (!translationTop.has(m[2])) continue;
-        // t("…") bağımsız değişkenini önceki test dosyanın ad alanına göre denetler (ztoFinans'ta
-        // "common.back" gibi anahtarlar translation'da olmayabilir).
-        if (/\bt\(\s*$/.test(code.slice(Math.max(0, m.index - 20), m.index))) continue;
-        const key = `${m[2]}.${m[3]}`;
-        if (notKeys.test(key)) continue;
-        if (!hasKey(tr.translation, key) && !hasPrefix(tr.translation, key)) {
-          missing.push(`${where}: ${key}`);
+  it(
+    'veri olarak taşınan anahtarlar (label: "nav.finance" gibi) mevcut',
+    () => {
+      // translation üst düzey modül adıyla başlayan, yalnız anahtar karakterleri içeren dizeler.
+      // MUI palet yolları ("error.light") çeviri anahtarı değildir.
+      const notKeys = /^error\.(main|light|dark|contrastText)$/;
+      const missing: string[] = [];
+      for (const { code, where } of sources) {
+        for (const m of code.matchAll(/(["'])([a-z][A-Za-z]*)\.([A-Za-z0-9_.]*[A-Za-z0-9_])\1/g)) {
+          if (!translationTop.has(m[2])) continue;
+          // t("…") bağımsız değişkenini önceki test dosyanın ad alanına göre denetler (ztoFinans'ta
+          // "common.back" gibi anahtarlar translation'da olmayabilir).
+          if (/\bt\(\s*$/.test(code.slice(Math.max(0, m.index - 20), m.index))) continue;
+          const key = `${m[2]}.${m[3]}`;
+          if (notKeys.test(key)) continue;
+          if (!hasKey(tr.translation, key) && !hasPrefix(tr.translation, key)) {
+            missing.push(`${where}: ${key}`);
+          }
         }
       }
-    }
-    expect(missing).toEqual([]);
-  });
+      expect(missing).toEqual([]);
+    },
+    SCAN_TIMEOUT_MS,
+  );
 });
 
 /** Dinamik anahtar öneki (t(`finance.method.${m}`) için "finance.method" gibi) bir alt ağaç mı? */

@@ -295,21 +295,36 @@ type ActionRow = Pick<
   "displayMethod" | "reversible" | "correctable" | "fxUsed" | "employeeMasked"
 >;
 
-/** Ödemeler: Düzenle yalnız `correctable` ve Nakit/Banka (Kredi Kartı satırında yok — ZTO birebir). */
+/**
+ * Ödemeler: Düzenle `correctable` ve Nakit/Banka/Çek/Senet (Kredi Kartı satırında yok — ZTO birebir).
+ * 12.3: çekli kayıt sunucunun `correctable` bayrağıyla düzenlenir (OK-12.2a-21 kapandı).
+ */
 export function canEdit(type: SettlementType, row: ActionRow): boolean {
   const method = payMethodOf(row);
-  if (type === "PAYMENT") return row.correctable && (method === "CASH" || method === "BANK");
+  if (type === "PAYMENT") return row.correctable && method !== "CREDIT_CARD";
   return canDelete(type, row) && row.correctable;
 }
 
 /**
- * Sil: `reversible` ve Çek/Senet değil (çekli kayıt 12.3'e kadar iptal edilemez). Tahsilatta ayrıca
- * döviz bozumunda hiç kullanılmamış olmalı (cjs:3778 `exchangeStatus === 'Bekliyor'`).
+ * Sil: sunucunun `reversible` bayrağı (12.3: çekli kayıt da; çek ilerlemişse sunucu `false` döner).
+ * Tahsilatta ayrıca döviz bozumunda hiç kullanılmamış olmalı (cjs:3778 `exchangeStatus === 'Bekliyor'`).
  */
 export function canDelete(type: SettlementType, row: ActionRow): boolean {
-  const method = payMethodOf(row);
-  if (!row.reversible || method === "CHECK" || method === "NOTE") return false;
+  if (!row.reversible) return false;
   return type === "PAYMENT" || cmpDec(row.fxUsed, "0") === 0;
+}
+
+/**
+ * Çekli kaydın Sil onayındaki ek uyarı (12.3 §5.9): köken kayıt (tahsilat + alınan çek, ödeme + verilen
+ * çek) → çek iptal edilir, yaprak "İptal"; ciro kaydı (ödeme + alınan çek) → çek portföye döner.
+ */
+export function reverseInstrumentNotice(
+  type: SettlementType,
+  instrument: { direction: "RECEIVED" | "ISSUED" } | null | undefined,
+): "checkOrigin" | "checkEndorse" | null {
+  if (!instrument) return null;
+  if (type === "PAYMENT" && instrument.direction === "RECEIVED") return "checkEndorse";
+  return "checkOrigin";
 }
 
 /** Detay: maskeli personel satırında gizli (sunucu 404 SETTLEMENT_NOT_FOUND döner, OK-12.2a-8). */

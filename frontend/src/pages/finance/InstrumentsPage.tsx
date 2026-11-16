@@ -27,7 +27,8 @@ import {
   useFunds,
   usePaging,
 } from "./common";
-import { Instrument, InstrumentMovement, Page } from "./types";
+import { nextStatuses } from "./instrumentsPageLogic";
+import { InstrumentListItem, InstrumentMovement, Page } from "./types";
 
 const STATUSES = [
   "PORTFOLIO",
@@ -38,17 +39,11 @@ const STATUSES = [
   "BOUNCED",
   "ISSUED",
   "PAID",
+  "PROTESTED",
+  "COLLATERAL",
+  "RETURNED",
+  "CANCELLED",
 ];
-
-/** Backend'deki geçiş tablosunun ekrandaki karşılığı; ciro ödeme ekranından yapılır. */
-const NEXT: Record<string, Record<string, string[]>> = {
-  RECEIVED: {
-    PORTFOLIO: ["AT_BANK", "COLLECTED_TO_CASH"],
-    AT_BANK: ["COLLECTED", "BOUNCED", "PORTFOLIO"],
-    ENDORSED: ["BOUNCED"],
-  },
-  ISSUED: { ISSUED: ["PAID", "BOUNCED"] },
-};
 
 export function InstrumentsPage() {
   const { t } = useTranslation();
@@ -59,13 +54,13 @@ export function InstrumentsPage() {
   const companyId = useActiveCompanyId();
   const paging = usePaging();
   const [status, setStatus] = useState("");
-  const [moving, setMoving] = useState<Instrument | null>(null);
-  const [viewing, setViewing] = useState<Instrument | null>(null);
+  const [moving, setMoving] = useState<InstrumentListItem | null>(null);
+  const [viewing, setViewing] = useState<InstrumentListItem | null>(null);
 
   const list = useQuery({
     queryKey: ["finance", "instruments", status, paging.page, paging.size, companyId],
     queryFn: () =>
-      apiGet<Page<Instrument>>(
+      apiGet<Page<InstrumentListItem>>(
         withCompany(
           `/finance/instruments?page=${paging.page}&size=${paging.size}&sort=dueDate${status ? `&status=${status}` : ""}`,
           companyId,
@@ -78,7 +73,8 @@ export function InstrumentsPage() {
     queryFn: () => apiGet<InstrumentMovement[]>(`/finance/instruments/${viewing?.id}/movements`),
     enabled: !!viewing,
   });
-  const accountName = (id: string) => accounts.data?.find((a) => a.id === id)?.name ?? "—";
+  const accountName = (row: InstrumentListItem) =>
+    row.accountName ?? accounts.data?.find((a) => a.id === row.accountId)?.name ?? "—";
 
   return (
     <>
@@ -117,7 +113,7 @@ export function InstrumentsPage() {
               header: t("finance.field.direction"),
               render: (r) => t(`finance.instrumentDirection.${r.direction}`),
             },
-            { header: t("finance.field.account"), render: (r) => accountName(r.accountId) },
+            { header: t("finance.field.account"), render: (r) => accountName(r) },
             { header: t("finance.field.dueDate"), render: (r) => formatDate(r.dueDate) },
             {
               header: t("finance.field.status"),
@@ -133,7 +129,7 @@ export function InstrumentsPage() {
               align: "right",
               render: (r) => (
                 <>
-                  {canPost && (NEXT[r.direction][r.status] ?? []).length > 0 && (
+                  {canPost && nextStatuses(r).length > 0 && (
                     <Button size="small" onClick={() => setMoving(r)}>
                       {t("finance.action.move")}
                     </Button>
@@ -163,7 +159,7 @@ export function InstrumentsPage() {
               label: t("finance.field.target"),
               type: "select",
               required: true,
-              options: (NEXT[moving.direction][moving.status] ?? []).map((value) => ({
+              options: nextStatuses(moving).map((value) => ({
                 value,
                 label: t(`finance.instrumentStatus.${value}`),
               })),
